@@ -181,8 +181,11 @@ npm run size         # bundle budget check (size-limit)
 
 ## Open Contract Questions
 
-Tracked here so they are not silently guessed at. Resolve with the backend
-before the corresponding UI is finalized.
+**Full detail lives in `BACKEND-CONTRACT-GAPS.md`** — sixteen items, each with
+the gap, why the frontend is blocked, and a proposed wire shape. Keep it
+current: when a gap is closed, remove the item and record the decision here.
+
+The ones most likely to bite an unsuspecting session:
 
 - **`resolutions[].action` has no closed vocabulary.** Known values:
   `increase_page_limit`, `review_pins`, `keep_top_pinned`, `sign_up`. Bölüm
