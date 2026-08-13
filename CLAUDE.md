@@ -195,6 +195,19 @@ before the corresponding UI is finalized.
   requires the ephemeral profile to become permanent _without_ re-running
   extraction or measurement. Bölüm 35.2 has no such route.
 
+## Deferred by Decision
+
+Things deliberately left undone, so they are not mistaken for oversights.
+
+- **Dark mode is not wired up.** shadcn's init bound the dark variant to a
+  `.dark` class and dropped the `prefers-color-scheme` media query that
+  create-next-app had. Nothing adds that class, so the app is light-only. The
+  spec never mentions theming. A theme toggle **is planned** as its own task —
+  it needs a provider, persistence, and flash-before-hydration handling
+  (`guides/preventing-flash-before-hydration.md` in the bundled Next docs).
+  Until then, do not half-implement it by re-adding the media query: that
+  would give users a theme they cannot change.
+
 ## How We Work Together
 
 1. **Apply the documented decisions as written.** Raise disagreements or gaps
