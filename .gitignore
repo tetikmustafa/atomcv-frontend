@@ -1,0 +1,24 @@
+# Secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Build output
+build/
+.gradle/
+out/
+bin/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary
+*.log
+/tmp/
