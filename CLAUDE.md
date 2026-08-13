@@ -318,31 +318,29 @@ Things deliberately left undone, so they are not mistaken for oversights.
 
 <!-- Update this section as work progresses -->
 
-**Stage 0 — Skeleton.** Backend exposes only `/actuator/health`, so everything
-here runs against MSW.
+**Stage 0 is complete.** Backend exposes only `/actuator/health`, so everything
+here runs against MSW. Stage 1 begins with `npm run gen:api` — see below.
+
+**npm 11 is required** and pinned in CI and the Dockerfile. The lock file
+records optional native packages the way npm 11 resolves them; npm 10, which
+node:22 still bundles, reads the same file as incomplete and fails `npm ci`.
+This was found by building the image, not by reading — a local `npm ci` on
+Windows passes either way.
 
 Done: scaffold and tooling · `[locale]` routing · shadcn on Radix · next-intl ·
 TanStack Query and Zustand · API client, error envelope and dev proxy · MSW
 handlers · app shell and a11y baseline.
 
-Remaining, in order:
+Landing and legal pages · Vitest, Testing Library and `jest-axe` with MSW ·
+Playwright · the bundle budget · CI and secrets scanning · Dockerfile, README
+and an MIT licence.
 
-| #   | Task                                                                    |
-| --- | ----------------------------------------------------------------------- |
-| 13  | Landing content, `legal/privacy` and `legal/terms` placeholders         |
-| 14  | Vitest + Testing Library + `jest-axe`, MSW node server wired into tests |
-| 15  | Playwright config and first e2e tests                                   |
-| 16  | `size-limit` and the bundle budget decision                             |
-| 17  | `ci.yml` and `secrets-scan.yml`                                         |
-| 18  | `Dockerfile`, `README.md`, `LICENSE` (MIT)                              |
+Notes worth keeping:
 
-Notes carried into those tasks:
-
-- **Task 13** puts legal pages under `[locale]`, not beside it as XI-B.3 shows
-  — outside the segment they cannot be translated.
-- **Task 14** owes two tests that were promised and deferred: an ICU plural
-  assertion (Bölüm 38.2 makes ICU mandatory and nothing exercises it yet) and
-  a `buildPatch` unit test covering the empty-patch case.
+- Legal pages live under `[locale]`, not beside it as XI-B.3 shows — outside
+  the segment they cannot be translated.
+- **`deploy.yml` is still not written.** There is no server to deploy to yet
+  (agreed during planning). It lands with the VPS.
 - **Task 15 answered the SSE question: yes.** MSW's service worker feeds a
   browser `EventSource`, and frames arrive incrementally rather than buffered.
   Bölüm 36.4's `EventSource` stands; no fallback is needed. Verified by

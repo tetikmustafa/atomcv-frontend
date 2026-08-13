@@ -7,6 +7,12 @@ const apiProxyTarget = process.env.API_PROXY_TARGET;
 
 const nextConfig: NextConfig = {
   /**
+   * Emits a self-contained server bundle with only the dependencies actually
+   * reached, so the runtime image does not carry node_modules.
+   */
+  output: 'standalone',
+
+  /**
    * Development-only proxy to the Spring backend.
    *
    * In production nginx serves both under one origin, so `/api/*` reaches

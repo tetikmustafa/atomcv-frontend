@@ -22,6 +22,12 @@ jobs:
           node-version: '22'
           cache: npm
 
+      # node:22 and setup-node still bundle npm 10, which reads this lock file
+      # differently from the npm 11 that wrote it and reports its optional
+      # native packages as missing. Pinning keeps CI, the Docker image and a
+      # developer machine consistent.
+      - run: npm install -g npm@11.6.2
+
       - run: npm ci
 
       - name: Formatting
@@ -60,6 +66,12 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+
+      # node:22 and setup-node still bundle npm 10, which reads this lock file
+      # differently from the npm 11 that wrote it and reports its optional
+      # native packages as missing. Pinning keeps CI, the Docker image and a
+      # developer machine consistent.
+      - run: npm install -g npm@11.6.2
 
       - run: npm ci
 
