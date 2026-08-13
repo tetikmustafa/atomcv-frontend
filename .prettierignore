@@ -1,6 +1,7 @@
 # Generated — never reformat
 src/types/api.d.ts
 next-env.d.ts
+public/mockServiceWorker.js
 
 # Read-only copy synced from the backend repository
 docs/
