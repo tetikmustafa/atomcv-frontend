@@ -1,0 +1,21 @@
+{
+  "$comment": [
+    "Initial JS per route, gzipped. Checked by scripts/check-bundle-size.mjs.",
+    "Bolum 52.6: changing a budget must be a visible decision, so these numbers",
+    "live in a file a reviewer sees rather than inside a command.",
+    "",
+    "totalKb        - the ceiling from Bolum 52.3. Applies to every route.",
+    "sharedKb       - chunks every route loads: the React and Next runtime plus",
+    "                 whatever the root layout pulls in. This should only move",
+    "                 when a dependency is added or upgraded. Measured at 168.1.",
+    "perRouteOwnKb  - everything a route loads beyond the shared baseline. This",
+    "                 is the part feature work controls, and the only number a",
+    "                 normal change should ever push against.",
+    "",
+    "Marketing routes currently sit at 0.0 KB of own code: they are server",
+    "components with no client JavaScript at all."
+  ],
+  "totalKb": 200,
+  "sharedKb": 172,
+  "perRouteOwnKb": 28
+}

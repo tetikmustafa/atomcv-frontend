@@ -348,11 +348,12 @@ Notes carried into those tasks:
   Bölüm 36.4's `EventSource` stands; no fallback is needed. Verified by
   `tests/e2e/mock-plumbing.spec.ts`, which asserts ordering rather than an
   exact count at an instant — the count assertion races the stream.
-- **Task 16** should not set one absolute number. The framework floor is
-  ~178 KB gzipped of the 200 KB budget (Bölüm 52.3), leaving ~22 KB — a
-  tripwire that trips on the third feature teaches everyone to ignore it.
-  Propose two thresholds instead: a recorded framework baseline that moves
-  only on dependency upgrades, and a per-route budget for our own code.
+- **Task 16 is done. `bundle-budget.json` holds three numbers**, checked by
+  `scripts/check-bundle-size.mjs` (`npm run size`). `sharedKb` is the floor
+  every route pays and should only move on a dependency change;
+  `perRouteOwnKb` is the part feature work controls and the only one a normal
+  change should push against; `totalKb` is Bölüm 52.3's ceiling.
+  See "The 200 KB ceiling will not survive the editor" below.
 
 **The `(app)` subtree is exercised by a development-only route.**
 `[locale]/(app)/dev/mocks` is the harness that mounts the shell, the
@@ -365,6 +366,30 @@ Keep it working — it is what makes the Stage 0 plumbing testable at all.
 
 Derived from `docs/backend-contract-response.md` and XI-B.9.2. Not a schedule
 — a list of what must be true before each piece of work is correct.
+
+### The 200 KB ceiling will not survive the editor
+
+Measured after Stage 0: the shared baseline is **168.1 KB gzipped** and the
+marketing routes add **0.0 KB** of their own — they are server components with
+no client JavaScript at all. That leaves roughly 30 KB under Bölüm 52.3's
+200 KB ceiling.
+
+The profile editor's own dependencies do not fit in 30 KB. dnd-kit,
+React Hook Form and Zod together are in the same range before a single one of
+our components is written. So one of these has to happen, and it is a decision
+to take deliberately rather than discover in a red CI run:
+
+1. Split aggressively inside the editor route — the drag-and-drop and form
+   machinery load on interaction rather than on navigation. Keeps one number
+   for every route.
+2. Budget marketing and app routes separately. Bölüm 52.3 already separates
+   them for LCP (2.0s landing, 2.5s editor) and the reasoning carries: the
+   landing page is first contact and the thinnest point of the anonymous
+   funnel, while the editor is reached by a committed user after a deliberate
+   action.
+
+Option 2 is the more honest reading of the spec, but it raises a documented
+number, so it needs sign-off rather than a quiet edit to the budget file.
 
 ### Stage 1 — profile CRUD against a real API
 
