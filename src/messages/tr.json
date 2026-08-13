@@ -1,0 +1,12 @@
+{
+  "Landing": {
+    "tagline": "Profilini bir kez oluştur, her iş ilanına özel CV üret.",
+    "getStarted": "Başla",
+    "tryAnonymously": "Hesapsız dene"
+  },
+  "LocaleSwitcher": {
+    "label": "Dil",
+    "en": "English",
+    "tr": "Türkçe"
+  }
+}

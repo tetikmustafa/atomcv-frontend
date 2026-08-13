@@ -1,0 +1,12 @@
+{
+  "Landing": {
+    "tagline": "Build your profile once, generate a tailored resume for every job posting.",
+    "getStarted": "Get started",
+    "tryAnonymously": "Try without an account"
+  },
+  "LocaleSwitcher": {
+    "label": "Language",
+    "en": "English",
+    "tr": "Türkçe"
+  }
+}

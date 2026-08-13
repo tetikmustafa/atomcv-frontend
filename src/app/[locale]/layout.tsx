@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { notFound } from 'next/navigation';
-import { isLocale, locales } from '@/lib/i18n/locales';
+import { hasLocale, NextIntlClientProvider } from 'next-intl';
+import { setRequestLocale } from 'next-intl/server';
+import { locales } from '@/lib/i18n/locales';
+import { routing } from '@/lib/i18n/routing';
 import '@/styles/globals.css';
 
 const geistSans = Geist({
@@ -16,7 +19,6 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'AtomCV',
-  description: 'Build your profile once, generate a tailored resume for every job posting.',
 };
 
 export function generateStaticParams() {
@@ -31,14 +33,22 @@ export function generateStaticParams() {
 export default async function RootLayout({ children, params }: LayoutProps<'/[locale]'>) {
   const { locale } = await params;
 
-  if (!isLocale(locale)) notFound();
+  // The `[locale]` segment also catches unknown paths, so an unsupported value
+  // must 404 rather than fall back to the default language.
+  if (!hasLocale(routing.locales, locale)) notFound();
+
+  // Opts this route into static rendering; without it next-intl forces the
+  // page to render dynamically.
+  setRequestLocale(locale);
 
   return (
     <html
       lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+      </body>
     </html>
   );
 }
