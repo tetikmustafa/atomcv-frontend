@@ -30,6 +30,9 @@
     },
     "openSourceNote": "MIT lisanslı, ücretsiz ve açık kaynak. Tek kişi tarafından yürütülüyor ve hizmet garantisi yok — kapatılması halinde en az 30 gün önceden bildirilir."
   },
+  "Generation": {
+    "pageCount": "{count, plural, =1 {# sayfa} other {# sayfa}}"
+  },
   "Footer": {
     "privacy": "Gizlilik",
     "terms": "Kullanım Şartları",

@@ -30,6 +30,9 @@
     },
     "openSourceNote": "Free and open source under the MIT licence. Run by one person, with no service guarantee — if it is ever shut down, notice comes at least 30 days in advance."
   },
+  "Generation": {
+    "pageCount": "{count, plural, =1 {# page} other {# pages}}"
+  },
   "Footer": {
     "privacy": "Privacy",
     "terms": "Terms",
