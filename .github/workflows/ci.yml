@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push makes an in-flight run irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Types, lint and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # node:22 and setup-node still bundle npm 10, which reads this lock file
+      # differently from the npm 11 that wrote it and reports its optional
+      # native packages as missing. Pinning keeps CI, the Docker image and a
+      # developer machine consistent.
+      - run: npm install -g npm@11.6.2
+
+      - run: npm ci
+
+      - name: Formatting
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      # Runs `next typegen` first: PageProps and LayoutProps are generated
+      # into .next/types, and a clean checkout has none of them.
+      - name: Types
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # Reads the prerendered output the build just produced, so it must not
+      # rebuild. `npm run size` is the local convenience wrapper that does.
+      - name: Bundle budget
+        run: npm run size:check
+
+      # TODO(stage-1): once the backend publishes an OpenAPI schema, run
+      # `npm run gen:api:ci` here and fail on a diff against the committed
+      # src/types/api.d.ts — Bölüm 35.8's contract drift check.
+
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # node:22 and setup-node still bundle npm 10, which reads this lock file
+      # differently from the npm 11 that wrote it and reports its optional
+      # native packages as missing. Pinning keeps CI, the Docker image and a
+      # developer machine consistent.
+      - run: npm install -g npm@11.6.2
+
+      - run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Playwright starts its own dev server (playwright.config.ts). MSW is
+      # disabled in production builds by design, so these run against `next
+      # dev` — without it there is no API to test against at all.
+      - name: Playwright
+        run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

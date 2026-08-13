@@ -1,0 +1,9 @@
+# Normalize line endings: LF in the repository, native in the working copy.
+* text=auto eol=lf
+
+# Generated from the backend OpenAPI schema — keep diffs out of review noise.
+src/types/api.d.ts linguist-generated=true
+package-lock.json linguist-generated=true
+
+# Read-only copy synced from the backend repository.
+docs/** linguist-documentation=true

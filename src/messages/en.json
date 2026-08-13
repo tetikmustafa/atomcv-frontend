@@ -1,0 +1,74 @@
+{
+  "A11y": {
+    "skipToContent": "Skip to content"
+  },
+  "Landing": {
+    "tagline": "Build your profile once, generate a tailored resume for every job posting.",
+    "intro": "Your professional history is structured data, not a document. AtomCV keeps it that way, then produces a resume for each posting from that data — inside a page limit that is calculated rather than hoped for.",
+    "featuresHeading": "What makes it different",
+    "features": {
+      "pageLimit": {
+        "title": "A page limit that holds",
+        "body": "Every item's height is measured in the real template. Selection is solved as an optimization problem, so the limit is a constraint rather than a request."
+      },
+      "deterministic": {
+        "title": "Same input, same output",
+        "body": "Scoring and selection run in code, not in a language model. Two runs of the same posting produce the same resume."
+      },
+      "noInvention": {
+        "title": "Nothing invented",
+        "body": "The model never writes free content. It chooses from what you wrote and rewrites narrowly, and every rewrite is checked for lost numbers, changed names and added technologies."
+      },
+      "formats": {
+        "title": "Content independent of format",
+        "body": "The same profile renders to PDF, DOCX or source. No formatting is baked into your data."
+      },
+      "transparency": {
+        "title": "Reasons you can inspect",
+        "body": "Every item shows its score and the keywords it matched. Content left out is listed and can be added back in one click."
+      }
+    },
+    "openSourceNote": "Free and open source under the MIT licence. Run by one person, with no service guarantee — if it is ever shut down, notice comes at least 30 days in advance."
+  },
+  "Generation": {
+    "pageCount": "{count, plural, =1 {# page} other {# pages}}"
+  },
+  "Footer": {
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "sourceCode": "Source code"
+  },
+  "Legal": {
+    "draftNotice": "This document is a draft. It lists what must be covered and is not yet a published policy. It must be completed and reviewed before the service accepts real users.",
+    "privacy": {
+      "title": "Privacy Policy",
+      "collect": "What we collect",
+      "collectBody": "Profile content taken from your CV, your email address, and usage metrics.",
+      "why": "Why we collect it",
+      "whyBody": "To generate resumes, manage your account, and improve the service.",
+      "share": "Who we share it with",
+      "shareBody": "AI providers receive the content needed to analyse a posting and rewrite your own wording. The current list of providers, what is sent to each, and whether any free tier may use that data for model training must be stated here explicitly. Email is sent through Resend, files are stored on Cloudflare R2, and analytics are anonymous and cookie-free.",
+      "retention": "How long we keep it",
+      "retentionBody": "Account data for as long as the account exists. Anonymous sessions expire two hours after your last activity. Generated PDFs are kept 14 days, or indefinitely if you archive them. Logs are kept 30 days.",
+      "rights": "Your rights",
+      "rightsBody": "Access, correction, deletion, and export of your data in JSON and Markdown.",
+      "deletion": "How to delete everything",
+      "deletionBody": "Deleting your account removes your profile, generated documents, sessions and connected accounts. It is permanent and cannot be undone.",
+      "contact": "Data controller",
+      "contactBody": "Contact details to be added before publication."
+    },
+    "terms": {
+      "title": "Terms of Use",
+      "noGuarantee": "No employment guarantee",
+      "noGuaranteeBody": "AtomCV helps you present the experience you already have. It does not promise interviews or offers.",
+      "estimate": "The fit report is an estimate",
+      "estimateBody": "It shows how well your resume reflects the terms used in a posting. It does not reproduce the behaviour of any particular applicant tracking system, and real hiring decisions depend on far more than keyword coverage.",
+      "accuracy": "You are responsible for accuracy",
+      "accuracyBody": "Review what you send. The generated document is built from content you provided, and you remain responsible for it.",
+      "abuse": "Abuse",
+      "abuseBody": "Accounts used to attack the service, to extract model output for unrelated purposes, or to generate content about people other than yourself may be suspended.",
+      "noSla": "Free, with no service level",
+      "noSlaBody": "The service is free and offered as a personal project. There is no uptime guarantee and no support commitment. If it is discontinued, notice will be given at least 30 days in advance, and your data will remain exportable during that period."
+    }
+  }
+}

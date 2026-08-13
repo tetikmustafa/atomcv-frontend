@@ -1,0 +1,19 @@
+# Generated — never reformat
+src/types/api.d.ts
+next-env.d.ts
+public/mockServiceWorker.js
+
+# Read-only copy synced from the backend repository
+docs/
+
+# Build output and dependencies
+.next/
+out/
+build/
+coverage/
+node_modules/
+package-lock.json
+
+# Playwright output
+test-results/
+playwright-report/

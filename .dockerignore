@@ -1,0 +1,28 @@
+# Rebuilt inside the image
+node_modules
+.next
+out
+
+# Never belongs in an image
+.env
+.env.local
+.git
+.github
+
+# The mock service worker is development tooling. Nothing registers it in
+# production, but shipping a reachable interceptor script is needless surface.
+public/mockServiceWorker.js
+
+# Test and tooling output
+test-results
+playwright-report
+blob-report
+coverage
+
+# Not needed at build or runtime
+docs
+tests
+*.md
+!README.md
+.vscode
+.idea
