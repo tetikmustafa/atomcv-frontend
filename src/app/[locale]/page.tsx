@@ -19,7 +19,11 @@ export default async function LandingPage({ params }: PageProps<'/[locale]'>) {
   const t = await getTranslations('Landing');
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-1 flex-col justify-center gap-4 p-8">
+    <main
+      id="main"
+      tabIndex={-1}
+      className="mx-auto flex max-w-2xl flex-1 flex-col justify-center gap-4 p-8 outline-none"
+    >
       <h1 className="text-3xl font-semibold">AtomCV</h1>
       <p className="text-base">{t('tagline')}</p>
     </main>

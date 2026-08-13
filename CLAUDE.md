@@ -44,6 +44,13 @@ development the same-origin illusion is preserved by a **rewrite** in
 `next.config.ts` (`/api/v1/*` → `http://localhost:8080/api/v1/*`), not by a
 route handler. This keeps `SameSite=Strict` cookies working and avoids CORS.
 
+**Client providers live in `[locale]/(app)/layout.tsx`, not the root layout.**
+The landing and legal pages are static marketing surface that fetches nothing;
+anything the app shell pulls in would otherwise be paid on first contact with
+the product, which is where the anonymous funnel is thinnest (Bölüm 12).
+Moving TanStack Query alone off the landing route saved 7 KB gzipped. Do not
+hoist a provider to the root layout for convenience.
+
 ## Tech Stack
 
 - Next.js 16 (App Router, Turbopack), React 19, TypeScript (strict)

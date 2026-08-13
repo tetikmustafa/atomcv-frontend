@@ -129,4 +129,25 @@
   html {
     @apply font-sans;
   }
+
+  /* Every interactive element must show where the keyboard is (rule 5).
+     `:focus-visible` rather than `:focus` so a mouse click does not leave a
+     ring behind, which is what usually tempts someone to remove it. */
+  :focus-visible {
+    @apply outline-ring outline-2 outline-offset-2;
+  }
+
+  /* Honour a reduced-motion preference globally rather than per-component;
+     the drag-and-drop and progress animations would otherwise each have to
+     remember. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }

@@ -1,4 +1,7 @@
 {
+  "A11y": {
+    "skipToContent": "İçeriğe geç"
+  },
   "Landing": {
     "tagline": "Profilini bir kez oluştur, her iş ilanına özel CV üret.",
     "getStarted": "Başla",

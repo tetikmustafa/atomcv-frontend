@@ -1,4 +1,7 @@
 {
+  "A11y": {
+    "skipToContent": "Skip to content"
+  },
   "Landing": {
     "tagline": "Build your profile once, generate a tailored resume for every job posting.",
     "getStarted": "Get started",

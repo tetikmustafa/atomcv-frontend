@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
-import { AppProviders } from '@/components/providers/AppProviders';
+import { SkipLink } from '@/components/layout/SkipLink';
 import { locales } from '@/lib/i18n/locales';
 import { routing } from '@/lib/i18n/routing';
 import '@/styles/globals.css';
@@ -49,7 +49,8 @@ export default async function RootLayout({ children, params }: LayoutProps<'/[lo
     >
       <body className="flex min-h-full flex-col">
         <NextIntlClientProvider>
-          <AppProviders>{children}</AppProviders>
+          <SkipLink />
+          {children}
         </NextIntlClientProvider>
       </body>
     </html>
