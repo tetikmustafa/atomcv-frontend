@@ -160,6 +160,11 @@ where backend-shaped types may be hand-written, and nothing outside
   back as a synchronous 4xx body; in-flight failures arrive as the SSE
   `failed` event. Both carry `code` + `params` + `resolutions`. One shared
   renderer handles both — never two parallel `switch (code)` blocks.
+- **The anonymous session expires two hours after the last activity, not two
+  hours after it started.** The wording matters: the sliding TTL was chosen
+  precisely so nobody gets cut off mid-review, and copy promising a flat two
+  hours re-creates the anxiety the decision removed. Warn from a freshly read
+  `anonymousExpiresAt`, never from a cached one.
 
 ## Development Commands
 
@@ -186,35 +191,100 @@ npm run size         # bundle budget check (size-limit)
 - Commit format: Conventional Commits
 - Prefer server components where possible; `'use client'` only when needed
 
-## Open Contract Questions
+## Contract Decisions
 
-**Full detail lives in `BACKEND-CONTRACT-GAPS.md`** — sixteen items, each with
-the gap, why the frontend is blocked, and a proposed wire shape. Keep it
-current: when a gap is closed, remove the item and record the decision here.
+The sixteen gaps in `BACKEND-CONTRACT-GAPS.md` were answered in
+`docs/backend-contract-response.md`. Read the response document before
+starting anything that touches the API — it is the authority, this section is
+the working summary.
 
-The ones most likely to bite an unsuspecting session:
+Note the standing caveat from the backend: **prose is not authoritative, the
+OpenAPI schema is.** Six items (3, 4, 6, 9, 10, 13) close themselves once
+springdoc lands with the first endpoint and `npm run gen:api` can run.
 
-- **`resolutions[].action` has no closed vocabulary.** Known values:
-  `increase_page_limit`, `review_pins`, `keep_top_pinned`, `sign_up`. Bölüm
-  11.5 implies two more ("paste the full posting", "continue as general CV")
-  that are unnamed. Every action needs an i18n key and a client behavior;
-  keep the union in one place in `src/types/domain.ts`.
-- **Error `code` list is partial.** Bölüm 35.5 defines ten pipeline codes;
-  ingestion errors (scanned PDF, unreadable file) have no codes yet.
-- **The CSRF scheme is named but never defined.** Bölüm 40.1 says a session
-  cookie needs a token, and XI-B.3 puts CSRF in `client.ts`, but no token
-  name, header name or delivery mechanism appears anywhere in `docs/`. The
-  seam is marked `TODO(csrf)` in `src/lib/api/client.ts`. The cookie is
-  `SameSite=Strict`, so the cross-site vector is already closed; the token is
-  defence in depth and lands with auth in Aşama 3.
-- **Server-side API calls have no decided origin.** `client.ts` is
-  browser-only and throws a descriptive error if used while rendering on the
-  server. A server-side call needs an absolute origin _and_ a way to forward
-  the HttpOnly session cookie; in production the frontend container would
-  reach the backend over the internal network, not through nginx.
-- **No endpoint claims an anonymous profile after sign-up.** Senaryo 2
-  requires the ephemeral profile to become permanent _without_ re-running
-  extraction or measurement. Bölüm 35.2 has no such route.
+### Decided — build against these now
+
+- **`title` is developer-facing.** Confirmed. Rule 8 stands: log it, never
+  render it.
+- **ETag exists on six resources only:** `profiles`, `sections`, `entries`,
+  `atoms`, `atom_variants`, `applications`. Format `ETag: "7"` on
+  single-resource GETs, plus a `version` field on every item inside collection
+  responses.
+- **⚠️ `generations` has no `version` column and will not carry an ETag.**
+  Do **not** build `If-Match` or 412 conflict handling into the result screen.
+  If optimistic concurrency turns out to be needed there, raise it as a schema
+  change request rather than working around it client-side.
+- **No `GET /profile/atoms/{id}`.** Seed the per-atom cache from the collection
+  response, which carries `version` per item. The editor must never issue N
+  requests to learn N versions. A single-atom endpoint arrives only when
+  something concrete needs it — Bölüm 37.5's staleness flow is the likely
+  first caller.
+- **Anonymous sessions use the same `sid` cookie.** Authentication stays
+  purely a `capabilities` question on the client.
+- **⚠️ The anonymous TTL slides — it refreshes on activity.** Two
+  consequences, both easy to get wrong:
+  1. Re-read `anonymousExpiresAt` from **every** response. Caching the first
+     value and scheduling a warning against it fires a false alarm at someone
+     who is actively working.
+  2. The copy says "two hours after your last activity", never "two hours".
+     That string is ours to get right; Bölüm 9's literal wording is the thing
+     the sliding TTL was chosen to avoid.
+- **Server rendering never calls the API.** The descriptive throw in
+  `client.ts` is permanent behaviour, not a placeholder. Server components
+  render shell and static content only.
+- **Export selects format with `?format=json|markdown`,** matching download.
+- **`/api/v1/warmup` is operational only** — not in the schema, not routed
+  through nginx. If it ever shows up in generated types, something is wrong.
+- **The frontend never invents resolutions.** The server owns the list. A
+  plain dismiss control outside the resolution row is fine; a synthesised
+  action inside it is not.
+
+### Accepted, arriving with their stage
+
+- **Stage 1 — action and code vocabularies.** Both proposed tables accepted as
+  the starting set, to be published as OpenAPI enums with each code's exact
+  `params` keys and types. Until then keep `ResolutionAction` an open union and
+  keep rendering unknown actions as buttons.
+- **Stage 1 — pagination.** `GET /profile/atoms` unpaginated. Cursor
+  pagination (`{ items, nextCursor }`) for `/generations` and `/applications`
+  when those land in Stage 2.
+- **Stage 1 — download.** Bytes served directly with
+  `Content-Disposition: attachment`, filename carrying company and position.
+  After the 14-day retention: `410 Gone` + `GENERATION_ARTIFACT_EXPIRED` +
+  a `retry` resolution. Expiry never costs the user their work because
+  `selection_state` is a permanent snapshot — so the expiry screen should
+  offer regeneration, not condolences.
+- **Stage 2 — job contract.** `id` on every SSE event, `Last-Event-ID`
+  honoured on reconnect, `GET /jobs/{id}` in the proposed shape with
+  `generationId` on completion and `error` on failure. Polling that endpoint
+  is the sanctioned fallback when a stream closes without a terminal event.
+- **Stage 2 — idempotency.** Honoured on `/generations`,
+  `/generations/{id}/edits`, `/generations/{id}/cover-letter/regenerate` and
+  `/ingestion/cv`; keys retained 24 hours.
+- **Stage 2 — quota.** `Retry-After` on 429 plus `resetsAt` in `params`, and
+  the counters exposed in `capabilities` so the limit is visible before it is
+  hit rather than discovered by failing.
+- **Stage 3 — CSRF.** Spring Security double-submit: `XSRF-TOKEN` cookie,
+  `X-XSRF-TOKEN` header, unsafe methods only, `403` + `CSRF_TOKEN_INVALID` on
+  mismatch. The seam is already marked `TODO(csrf)` in `client.ts`.
+- **Stage 3 — `POST /api/v1/profile/claim`.** `200`, `404
+NO_ANONYMOUS_PROFILE`, `409 PROFILE_ALREADY_EXISTS`.
+  **⚠️ The 409 offers replace or keep only — merge is never coming.** Atom-level
+  deduplication is Stage 4 work, and the API will not name a resolution it
+  cannot honour. Keep the union open, but do not write a merge branch.
+
+### Still open — do not design around these yet
+
+- **Daily counter rollover timezone.** `usage_counters.period` is a `DATE` and
+  nothing defines the boundary. UTC or Europe/Istanbul? Blocks `resetsAt`, and
+  it is user-visible — a UTC rollover lands at 03:00 for a Turkish user. The
+  quota UI cannot state a reset time until this is answered.
+- **Anonymous idempotency does not dedupe.** The V1 unique index is keyed on
+  `(user_id, idempotency_key)` and `user_id` is NULL for anonymous requests,
+  which Postgres treats as distinct — so the same key opens a second job. A
+  migration is planned. Until it lands, **the client must guard anonymous
+  double-submits itself** (disable the control while a request is in flight);
+  the server will not.
 
 ## Deferred by Decision
 
@@ -241,6 +311,99 @@ Things deliberately left undone, so they are not mistaken for oversights.
 
 <!-- Update this section as work progresses -->
 
-**Stage 0 — Skeleton.** Next.js setup, Tailwind, shadcn/ui, folder structure,
-base layout, i18n scaffolding, CI pipeline. Backend not yet available —
-using MSW mocks.
+**Stage 0 — Skeleton.** Backend exposes only `/actuator/health`, so everything
+here runs against MSW.
+
+Done: scaffold and tooling · `[locale]` routing · shadcn on Radix · next-intl ·
+TanStack Query and Zustand · API client, error envelope and dev proxy · MSW
+handlers · app shell and a11y baseline.
+
+Remaining, in order:
+
+| #   | Task                                                                    |
+| --- | ----------------------------------------------------------------------- |
+| 13  | Landing content, `legal/privacy` and `legal/terms` placeholders         |
+| 14  | Vitest + Testing Library + `jest-axe`, MSW node server wired into tests |
+| 15  | Playwright config and first e2e tests                                   |
+| 16  | `size-limit` and the bundle budget decision                             |
+| 17  | `ci.yml` and `secrets-scan.yml`                                         |
+| 18  | `Dockerfile`, `README.md`, `LICENSE` (MIT)                              |
+
+Notes carried into those tasks:
+
+- **Task 13** puts legal pages under `[locale]`, not beside it as XI-B.3 shows
+  — outside the segment they cannot be translated.
+- **Task 14** owes two tests that were promised and deferred: an ICU plural
+  assertion (Bölüm 38.2 makes ICU mandatory and nothing exercises it yet) and
+  a `buildPatch` unit test covering the empty-patch case.
+- **Task 15** owes the open verification: **can MSW's service worker feed a
+  browser `EventSource`?** Streaming over `fetch` under Node is verified;
+  the browser path is not. If it fails, the fallback is consuming SSE via
+  `fetch` + `ReadableStream` — but Bölüm 36.4 documents `EventSource`, so
+  that is a decision to raise, not to make silently.
+- **Task 16** should not set one absolute number. The framework floor is
+  ~178 KB gzipped of the 200 KB budget (Bölüm 52.3), leaving ~22 KB — a
+  tripwire that trips on the third feature teaches everyone to ignore it.
+  Propose two thresholds instead: a recorded framework baseline that moves
+  only on dependency upgrades, and a per-route budget for our own code.
+
+**Not yet exercised.** `(app)/layout.tsx` builds but has no routes beneath it,
+so the shell, the providers and MSW itself do not mount anywhere. The first
+Stage 1 route is what actually proves them.
+
+## What Later Stages Need From The Frontend
+
+Derived from `docs/backend-contract-response.md` and XI-B.9.2. Not a schedule
+— a list of what must be true before each piece of work is correct.
+
+### Stage 1 — profile CRUD against a real API
+
+- **Run `npm run gen:api` first.** springdoc lands with the first endpoint.
+  Delete `src/mocks/contracts.ts` and rebind handlers to the generated types
+  the moment it succeeds — that file has a stated end date and this is it.
+- Verify the schema carries the `resolutions[].action` and error `code` enums,
+  and each code's `params` keys. If it only carries happy-path payloads, say
+  so before building error screens on prose.
+- Profile editor: `useAutosave` with debounce per Bölüm 37.1, optimistic
+  update, `If-Match` from the item `version` in the collection response, and a
+  412 dialog that offers "mine / theirs" without auto-merging.
+- Atom cache seeded from the collection. One list request, then
+  `setQueryData` per item; invalidation must not refetch all 200 atoms when
+  one changes.
+- Mandatory post-extraction review screen: sections collapsed by default,
+  problem areas auto-opened, "Confirm" disabled until critical warnings are
+  resolved (Bölüm 31.6).
+
+### Stage 2 — generation flow
+
+- `useJobStream` with `Last-Event-ID` resumption and a `GET /jobs/{id}`
+  reconciliation on any disconnect. A spinner that can outlive its job is a
+  P4 violation, not a cosmetic issue.
+- Progress announced through the existing `Announcer`, not by the bar alone.
+- Result screen: **no `If-Match`, no 412 handling** — generations carry no
+  version. Toggles and natural-language edits post to the server and the whole
+  result is refetched.
+- Fit report renders counts, never a percentage; `MatchLevel` is a label, not
+  a score.
+- Guard anonymous double-submits client-side until the backend's idempotency
+  index is fixed for NULL `user_id`.
+- Quota UI can show counters from `capabilities` immediately, but cannot state
+  a reset time until the rollover timezone is decided.
+
+### Stage 3 — accounts and anonymous conversion
+
+- Add the CSRF header at the marked seam in `client.ts`.
+- Anonymous expiry warning driven by a freshly read `anonymousExpiresAt`,
+  with copy that says "after your last activity".
+- `POST /profile/claim` on sign-up when an ephemeral profile exists.
+  Handle 200, 404 and 409 — **replace and keep only**.
+- Magic-link verify page must POST, never GET (Bölüm 40.3): corporate mail
+  scanners click links automatically and would burn the token.
+
+### Stage 4 and beyond
+
+- Theme toggle (see Deferred by Decision).
+- Revisit `next/root-params` in `src/lib/i18n/request.ts` once it is supported
+  in Route Handlers; `requestLocale` is deprecated but currently the only
+  option that covers every case.
+- Translate `docs/` to English before the repository goes public (XI-B.0).

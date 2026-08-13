@@ -1,5 +1,14 @@
 # Backend Contract Gaps
 
+> **All sixteen items have been answered.** See
+> `docs/backend-contract-response.md` for the verdicts and
+> `CLAUDE.md` → "Contract Decisions" for the working summary.
+>
+> This document is kept as the record of what was asked and why. Two items
+> still carry open questions of their own — the daily counter rollover
+> timezone (item 13) and anonymous idempotency deduplication (item 12) — both
+> tracked in CLAUDE.md.
+
 Things the frontend needs decided on the backend side. Found while building
 Stage 0 against `docs/`.
 
