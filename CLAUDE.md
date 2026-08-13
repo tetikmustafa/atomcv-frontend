@@ -191,6 +191,17 @@ before the corresponding UI is finalized.
   keep the union in one place in `src/types/domain.ts`.
 - **Error `code` list is partial.** Bölüm 35.5 defines ten pipeline codes;
   ingestion errors (scanned PDF, unreadable file) have no codes yet.
+- **The CSRF scheme is named but never defined.** Bölüm 40.1 says a session
+  cookie needs a token, and XI-B.3 puts CSRF in `client.ts`, but no token
+  name, header name or delivery mechanism appears anywhere in `docs/`. The
+  seam is marked `TODO(csrf)` in `src/lib/api/client.ts`. The cookie is
+  `SameSite=Strict`, so the cross-site vector is already closed; the token is
+  defence in depth and lands with auth in Aşama 3.
+- **Server-side API calls have no decided origin.** `client.ts` is
+  browser-only and throws a descriptive error if used while rendering on the
+  server. A server-side call needs an absolute origin _and_ a way to forward
+  the HttpOnly session cookie; in production the frontend container would
+  reach the backend over the internal network, not through nginx.
 - **No endpoint claims an anonymous profile after sign-up.** Senaryo 2
   requires the ephemeral profile to become permanent _without_ re-running
   extraction or measurement. Bölüm 35.2 has no such route.
