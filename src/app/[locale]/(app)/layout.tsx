@@ -1,6 +1,9 @@
-import type { ReactNode } from 'react';
+import { notFound } from 'next/navigation';
+import { hasLocale, NextIntlClientProvider } from 'next-intl';
+import { setRequestLocale } from 'next-intl/server';
 import { AppShell } from '@/components/layout/AppShell';
 import { AppProviders } from '@/components/providers/AppProviders';
+import { routing } from '@/lib/i18n/routing';
 
 /**
  * Shell for the authenticated application.
@@ -12,12 +15,23 @@ import { AppProviders } from '@/components/providers/AppProviders';
  * (Bölüm 12). Keeping them apart also stops the mock worker's startup gate
  * from blanking the landing page in development.
  *
+ * `NextIntlClientProvider` is one of those providers: it serialises the
+ * message catalogue into the HTML so client components can read it, which
+ * only pays for itself where client components exist.
+ *
  * The auth guard belongs here too, once sessions exist.
  */
-export default function AppLayout({ children }: { children: ReactNode }) {
+export default async function AppLayout({ children, params }: LayoutProps<'/[locale]'>) {
+  const { locale } = await params;
+
+  if (!hasLocale(routing.locales, locale)) notFound();
+  setRequestLocale(locale);
+
   return (
-    <AppProviders>
-      <AppShell>{children}</AppShell>
-    </AppProviders>
+    <NextIntlClientProvider>
+      <AppProviders>
+        <AppShell>{children}</AppShell>
+      </AppProviders>
+    </NextIntlClientProvider>
   );
 }

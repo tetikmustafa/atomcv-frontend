@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { notFound } from 'next/navigation';
-import { hasLocale, NextIntlClientProvider } from 'next-intl';
+import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
+import { SiteFooter } from '@/components/layout/SiteFooter';
 import { SkipLink } from '@/components/layout/SkipLink';
 import { locales } from '@/lib/i18n/locales';
 import { routing } from '@/lib/i18n/routing';
@@ -47,11 +48,18 @@ export default async function RootLayout({ children, params }: LayoutProps<'/[lo
       lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      {/*
+        There is no NextIntlClientProvider here. Server components read
+        translations from the request config directly, and the provider
+        serialises the entire message catalogue into the HTML for the client.
+        On the marketing pages that meant shipping the full legal text to
+        every visitor who never opened it. The provider lives in `(app)`,
+        where client components actually exist.
+      */}
       <body className="flex min-h-full flex-col">
-        <NextIntlClientProvider>
-          <SkipLink />
-          {children}
-        </NextIntlClientProvider>
+        <SkipLink />
+        {children}
+        <SiteFooter />
       </body>
     </html>
   );

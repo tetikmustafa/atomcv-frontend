@@ -4,12 +4,68 @@
   },
   "Landing": {
     "tagline": "Profilini bir kez oluştur, her iş ilanına özel CV üret.",
-    "getStarted": "Başla",
-    "tryAnonymously": "Hesapsız dene"
+    "intro": "Profesyonel geçmişin bir doküman değil, yapılandırılmış bir veri kümesi. AtomCV onu öyle tutar ve her ilan için o veriden bir CV üretir — umut edilen değil, hesaplanan bir sayfa sınırı içinde.",
+    "featuresHeading": "Farkı ne",
+    "features": {
+      "pageLimit": {
+        "title": "Tutan bir sayfa sınırı",
+        "body": "Her maddenin yüksekliği gerçek şablonda ölçülür. Seçim bir optimizasyon problemi olarak çözülür; sayfa sınırı bir rica değil, bir kısıttır."
+      },
+      "deterministic": {
+        "title": "Aynı girdi, aynı çıktı",
+        "body": "Skorlama ve seçim dil modelinde değil kodda çalışır. Aynı ilanı iki kez çalıştırmak aynı CV'yi verir."
+      },
+      "noInvention": {
+        "title": "Uydurma yok",
+        "body": "Model serbest içerik yazmaz. Senin yazdıklarından seçer ve dar kapsamlı yeniden yazar; her yeniden yazım kaybolan sayı, değişen özel isim ve eklenen teknoloji için denetlenir."
+      },
+      "formats": {
+        "title": "Formattan bağımsız içerik",
+        "body": "Aynı profil PDF, DOCX veya ham kaynak olarak render edilir. Verinin içine hiçbir biçimlendirme gömülmez."
+      },
+      "transparency": {
+        "title": "İnceleyebileceğin gerekçeler",
+        "body": "Her madde kendi skorunu ve eşleştiği anahtar kelimeleri gösterir. Dışarıda kalan içerik listelenir ve tek tıkla geri eklenir."
+      }
+    },
+    "openSourceNote": "MIT lisanslı, ücretsiz ve açık kaynak. Tek kişi tarafından yürütülüyor ve hizmet garantisi yok — kapatılması halinde en az 30 gün önceden bildirilir."
   },
-  "LocaleSwitcher": {
-    "label": "Dil",
-    "en": "English",
-    "tr": "Türkçe"
+  "Footer": {
+    "privacy": "Gizlilik",
+    "terms": "Kullanım Şartları",
+    "sourceCode": "Kaynak kodu"
+  },
+  "Legal": {
+    "draftNotice": "Bu belge bir taslaktır. Nelerin yer alması gerektiğini listeler; henüz yayımlanmış bir politika değildir. Hizmet gerçek kullanıcı kabul etmeden önce tamamlanmalı ve gözden geçirilmelidir.",
+    "privacy": {
+      "title": "Gizlilik Politikası",
+      "collect": "Hangi veriyi topluyoruz",
+      "collectBody": "CV'nden alınan profil içeriği, e-posta adresin ve kullanım metrikleri.",
+      "why": "Neden topluyoruz",
+      "whyBody": "CV üretmek, hesabını yönetmek ve hizmeti iyileştirmek için.",
+      "share": "Kimlerle paylaşıyoruz",
+      "shareBody": "AI sağlayıcıları, bir ilanı analiz etmek ve senin kendi ifadelerini yeniden yazmak için gereken içeriği alır. Güncel sağlayıcı listesi, her birine ne gönderildiği ve herhangi bir ücretsiz katmanın bu veriyi model eğitiminde kullanıp kullanamayacağı burada açıkça belirtilmelidir. E-posta Resend üzerinden gönderilir, dosyalar Cloudflare R2'de saklanır, analitik anonim ve çerezsizdir.",
+      "retention": "Ne kadar saklıyoruz",
+      "retentionBody": "Hesap verisi, hesap var olduğu sürece. Anonim oturumlar son işleminden iki saat sonra sona erer. Üretilen PDF'ler 14 gün, arşivlersen süresiz saklanır. Loglar 30 gün tutulur.",
+      "rights": "Hakların",
+      "rightsBody": "Verine erişme, düzeltme, silme ve JSON ile Markdown olarak dışa aktarma.",
+      "deletion": "Her şey nasıl silinir",
+      "deletionBody": "Hesabını silmek profilini, üretilmiş dokümanlarını, oturumlarını ve bağlı hesaplarını kaldırır. Kalıcıdır ve geri alınamaz.",
+      "contact": "Veri sorumlusu",
+      "contactBody": "İletişim bilgileri yayımdan önce eklenecek."
+    },
+    "terms": {
+      "title": "Kullanım Şartları",
+      "noGuarantee": "İş bulma garantisi yok",
+      "noGuaranteeBody": "AtomCV, halihazırda sahip olduğun deneyimi sunmana yardım eder. Mülakat ya da teklif vaat etmez.",
+      "estimate": "Uygunluk raporu bir tahmindir",
+      "estimateBody": "CV'nin bir ilandaki terimleri ne kadar yansıttığını gösterir. Herhangi bir başvuru takip sisteminin davranışını birebir yeniden üretmez ve gerçek işe alım kararları anahtar kelime kapsamasından çok daha fazlasına dayanır.",
+      "accuracy": "Doğruluktan sen sorumlusun",
+      "accuracyBody": "Gönderdiğini gözden geçir. Üretilen doküman senin sağladığın içerikten oluşturulur ve sorumluluğu sende kalır.",
+      "abuse": "Kötüye kullanım",
+      "abuseBody": "Hizmete saldırmak, model çıktısını ilgisiz amaçlarla elde etmek veya kendin dışındaki kişiler hakkında içerik üretmek için kullanılan hesaplar askıya alınabilir.",
+      "noSla": "Ücretsiz, hizmet seviyesi taahhüdü olmadan",
+      "noSlaBody": "Hizmet ücretsizdir ve kişisel bir proje olarak sunulur. Çalışma süresi garantisi ve destek taahhüdü yoktur. Sonlandırılması halinde en az 30 gün önceden bildirilir ve bu süre boyunca verini dışa aktarabilirsin."
+    }
   }
 }

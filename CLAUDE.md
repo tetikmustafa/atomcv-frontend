@@ -51,6 +51,13 @@ the product, which is where the anonymous funnel is thinnest (Bölüm 12).
 Moving TanStack Query alone off the landing route saved 7 KB gzipped. Do not
 hoist a provider to the root layout for convenience.
 
+`NextIntlClientProvider` is one of them. It serialises the **entire** message
+catalogue into the HTML, so at the root it shipped the full legal text to
+every landing visitor. Server components read translations from the request
+config without it. The cost of that placement: next-intl's `Link` and any
+client component calling `useTranslations` only work under `(app)` — outside
+it, use a plain anchor with an explicit `/${locale}` prefix.
+
 ## Tech Stack
 
 - Next.js 16 (App Router, Turbopack), React 19, TypeScript (strict)
