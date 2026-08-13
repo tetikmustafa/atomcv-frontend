@@ -13,3 +13,7 @@ build/
 coverage/
 node_modules/
 package-lock.json
+
+# Playwright output
+test-results/
+playwright-report/

@@ -343,20 +343,23 @@ Notes carried into those tasks:
 - **Task 14** owes two tests that were promised and deferred: an ICU plural
   assertion (Bölüm 38.2 makes ICU mandatory and nothing exercises it yet) and
   a `buildPatch` unit test covering the empty-patch case.
-- **Task 15** owes the open verification: **can MSW's service worker feed a
-  browser `EventSource`?** Streaming over `fetch` under Node is verified;
-  the browser path is not. If it fails, the fallback is consuming SSE via
-  `fetch` + `ReadableStream` — but Bölüm 36.4 documents `EventSource`, so
-  that is a decision to raise, not to make silently.
+- **Task 15 answered the SSE question: yes.** MSW's service worker feeds a
+  browser `EventSource`, and frames arrive incrementally rather than buffered.
+  Bölüm 36.4's `EventSource` stands; no fallback is needed. Verified by
+  `tests/e2e/mock-plumbing.spec.ts`, which asserts ordering rather than an
+  exact count at an instant — the count assertion races the stream.
 - **Task 16** should not set one absolute number. The framework floor is
   ~178 KB gzipped of the 200 KB budget (Bölüm 52.3), leaving ~22 KB — a
   tripwire that trips on the third feature teaches everyone to ignore it.
   Propose two thresholds instead: a recorded framework baseline that moves
   only on dependency upgrades, and a per-route budget for our own code.
 
-**Not yet exercised.** `(app)/layout.tsx` builds but has no routes beneath it,
-so the shell, the providers and MSW itself do not mount anywhere. The first
-Stage 1 route is what actually proves them.
+**The `(app)` subtree is exercised by a development-only route.**
+`[locale]/(app)/dev/mocks` is the harness that mounts the shell, the
+providers, the mock worker, the API client and an `EventSource` together. It
+calls `notFound()` in production builds, so it can never become accidental
+product surface (the same rule Bölüm 51.5 applies to backend dev endpoints).
+Keep it working — it is what makes the Stage 0 plumbing testable at all.
 
 ## What Later Stages Need From The Frontend
 
