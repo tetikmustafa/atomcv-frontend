@@ -14,7 +14,9 @@ During local development the backend runs at `http://localhost:8080`.
 ## Architecture Documents
 
 Full specifications live in `docs/` (Turkish). These are a **read-only copy**
-synced from the backend repository — never edit them here.
+synced from the backend repository — never edit them here. They are re-synced
+as the backend is built, so a section can change under you; when they do,
+read EK D.9 first.
 
 | Task                         | Read section                                        |
 | ---------------------------- | --------------------------------------------------- |
@@ -30,9 +32,23 @@ synced from the backend repository — never edit them here.
 | Performance budgets          | Bölüm 52.3                                          |
 | Folder structure             | Bölüm XI-B.3                                        |
 
-`docs/backend-contract-response.md` is also authoritative: it answers the
-sixteen questions in `BACKEND-CONTRACT-GAPS.md`. Read it before touching
-anything API-shaped — "Contract Decisions" below is only the summary.
+**EK D is where decisions taken during construction live** — deviations,
+additions and corrections that the body of the document does not carry. It is
+appended to as the backend is built, so read it before trusting a body
+section:
+
+| Appendix   | Covers                                                             |
+| ---------- | ------------------------------------------------------------------ |
+| EK D.2     | The run/mark content model and its invariants                      |
+| EK D.6     | The API contract: enums, ETag scope, SSE, quota, CSRF, claim       |
+| **EK D.9** | **Everything with a frontend consequence, collected in one table** |
+
+**D.9 is the frontend's index into EK D.** New topics are inserted before it,
+so it stays last. Check it whenever the docs are re-synced.
+
+`BACKEND-CONTRACT-GAPS.md` and `docs/backend-contract-response.md` no longer
+exist — the sixteen contract questions and their verdicts were folded into
+EK D.6, which is now the single source. Do not recreate either file.
 
 ## Critical Architecture Rule
 
@@ -104,6 +120,49 @@ in review.
   generated into `.next/types`, so `npm run typecheck` runs `next typegen`
   first. A bare `tsc` on a clean checkout reports errors that do not exist and
   misses ones that do.
+
+## The Content Model — Rules `richContent.ts` Must Enforce
+
+Atom text is a list of runs, not a string (Bölüm 12.3, 14.1). Marks are
+semantic (`technology`, `metric`, `emphasis`, `link`, `organization`), never
+stylistic — a template decides what bold means, and the rewrite validator
+reads `metric` runs directly to check numbers survived.
+
+```json
+{
+  "v": 1,
+  "runs": [
+    { "t": "Engineered ", "m": [] },
+    { "t": "ETL", "m": ["technology"] }
+  ]
+}
+```
+
+These come from EK D.2 and D.9. They are invariants, not preferences — the
+backend rejects content that breaks the first two.
+
+1. **`href` belongs to `link` runs and only to them.** Required when `link` is
+   present, forbidden otherwise. An `href` that will never render must not be
+   stored silently. Enforce it in `richContent.ts`, not at each call site.
+2. **Unknown marks must survive a round trip.** The mark list is open. The
+   backend reads, keeps and plain-renders a mark it does not recognise, and the
+   editor has to do the same — forward compatibility only works if both ends
+   honour it. Drop one and a newer version's markup disappears the moment the
+   user edits that sentence, which is exactly the silent loss of work P8 exists
+   to prevent.
+3. **`v` is the server's.** Send `runs`; the server stamps the version. If one
+   is sent it may not exceed the current version — the backend refuses to read
+   a newer stamp rather than guess at a field it does not understand.
+4. **`m` is always an array.** Even an unmarked run carries `"m": []`, so
+   `undefined` checks are noise.
+5. **`content_hash` is the hash of the plain text.** Re-marking a sentence
+   does not change it, which is deliberate: measured render costs survive a
+   formatting-only edit. Anything asking "did this change enough to re-measure"
+   must read the hash, not the run structure.
+6. **Vocabularies travel lowercase.** `kind`, `layout`, `source`, `created_by`
+   and `tone` are `bullet_list`, `about_paragraph` and so on over the wire.
+   Watch the Turkish locale trap when casing them — always `toLowerCase('en')`
+   or a plain map, never a locale-sensitive transform.
 
 ## API Types Are Generated, Not Written
 
@@ -252,14 +311,13 @@ escaping to the network in a test is a bug in the test.
 
 ## Contract Decisions
 
-The sixteen gaps in `BACKEND-CONTRACT-GAPS.md` were answered in
-`docs/backend-contract-response.md`. Read the response document before
-starting anything that touches the API — it is the authority, this section is
-the working summary.
+**EK D.6 is the authority; this section is the working summary.** Read it
+before starting anything API-shaped.
 
-Note the standing caveat from the backend: **prose is not authoritative, the
-OpenAPI schema is.** Six items (3, 4, 6, 9, 10, 13) close themselves once
-springdoc lands with the first endpoint and `npm run gen:api` can run.
+Its own standing caveat: **prose is not authoritative, the published OpenAPI
+schema is.** Six of the sixteen items close themselves once springdoc lands
+with the first endpoint and `npm run gen:api` can run — but only if the schema
+carries the enums and headers, not just happy-path payloads.
 
 ### Decided — build against these now
 
@@ -300,10 +358,19 @@ springdoc lands with the first endpoint and `npm run gen:api` can run.
 
 ### Accepted, arriving with their stage
 
-- **Stage 1 — action and code vocabularies.** Both proposed tables accepted as
-  the starting set, to be published as OpenAPI enums with each code's exact
-  `params` keys and types. Until then keep `ResolutionAction` an open union and
-  keep rendering unknown actions as buttons.
+- **The `resolutions[].action` vocabulary is now closed** (EK D.6.1, eight
+  values, mirrored in `src/types/domain.ts`). The union stays open in TypeScript
+  anyway: an action the server adds later must still render as a button rather
+  than crash the panel. **Still open work on the backend side:** each error
+  code's exact `params` keys _and types_. The ICU message cannot be written
+  without them — "your pinned content runs to 2.3 pages, your limit is 1" needs
+  `pinnedPages: number` and `maxPages: number`. Ask for these before writing
+  `errors.*` messages.
+- **Error codes for ingestion and anonymous limits are named** in EK D.6.1
+  (`PDF_NOT_TEXT_BASED`, `EXTRACTION_EMPTY`, `PDF_ENCRYPTED`,
+  `LANGUAGE_UNDETECTED`, `EXTRACTION_TIMEOUT`, `PROFILE_QUOTA_EXCEEDED`,
+  `ANONYMOUS_SESSION_EXPIRED`, `ATOM_LIMIT_EXCEEDED`), on top of Bölüm 35.5's
+  ten pipeline codes.
 - **Stage 1 — pagination.** `GET /profile/atoms` unpaginated. Cursor
   pagination (`{ items, nextCursor }`) for `/generations` and `/applications`
   when those land in Stage 2.
@@ -344,6 +411,12 @@ NO_ANONYMOUS_PROFILE`, `409 PROFILE_ALREADY_EXISTS`.
   migration is planned. Until it lands, **the client must guard anonymous
   double-submits itself** (disable the control while a request is in flight);
   the server will not.
+- **Whether the anonymous flow uses the job queue at all** (EK D.1, D.6.5). It
+  blocks the idempotency fix above, so the client-side guard is the standing
+  answer rather than a stopgap with a known end date.
+- **`Scope.EPHEMERAL` does not exist server-side yet** (EK D.4). It arrives
+  with the anonymous flow in Stage 3, so nothing anonymous can be built end to
+  end before then — the mocks are the only anonymous surface until it lands.
 
 ## Deferred by Decision
 
@@ -410,8 +483,8 @@ Standing facts a new session needs:
 
 ## What Later Stages Need From The Frontend
 
-Derived from `docs/backend-contract-response.md` and XI-B.9.2. Not a schedule
-— a list of what must be true before each piece of work is correct.
+Derived from EK D.6, EK D.9 and XI-B.9.2. Not a schedule — a list of what must
+be true before each piece of work is correct.
 
 ### The 200 KB ceiling will not survive the editor
 
@@ -442,6 +515,11 @@ number, so it needs sign-off rather than a quiet edit to the budget file.
 - **Run `npm run gen:api` first.** springdoc lands with the first endpoint.
   Delete `src/mocks/contracts.ts` and rebind handlers to the generated types
   the moment it succeeds — that file has a stated end date and this is it.
+- **`src/lib/content/richContent.ts` before any editor component.** It owns the
+  run/mark types and the invariants in "The Content Model" above, with tests
+  for the two the backend enforces: `href` only on `link` runs, and an unknown
+  mark surviving a parse-and-serialise round trip. Every editor path goes
+  through it, so those cannot be re-litigated per component.
 - Verify the schema carries the `resolutions[].action` and error `code` enums,
   and each code's `params` keys. If it only carries happy-path payloads, say
   so before building error screens on prose.

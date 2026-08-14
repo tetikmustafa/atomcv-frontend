@@ -49,7 +49,7 @@
       "share": "Kimlerle paylaşıyoruz",
       "shareBody": "AI sağlayıcıları, bir ilanı analiz etmek ve senin kendi ifadelerini yeniden yazmak için gereken içeriği alır. Güncel sağlayıcı listesi, her birine ne gönderildiği ve herhangi bir ücretsiz katmanın bu veriyi model eğitiminde kullanıp kullanamayacağı burada açıkça belirtilmelidir. E-posta Resend üzerinden gönderilir, dosyalar Cloudflare R2'de saklanır, analitik anonim ve çerezsizdir.",
       "retention": "Ne kadar saklıyoruz",
-      "retentionBody": "Hesap verisi, hesap var olduğu sürece. Anonim oturumlar son işleminden iki saat sonra sona erer. Üretilen PDF'ler 14 gün, arşivlersen süresiz saklanır. Loglar 30 gün tutulur.",
+      "retentionBody": "Hesap verisi, hesap var olduğu sürece. Anonim oturumlar son etkinliğinden iki saat sonra sona erer. Üretilen PDF'ler 14 gün, arşivlersen süresiz saklanır. Loglar 30 gün tutulur.",
       "rights": "Hakların",
       "rightsBody": "Verine erişme, düzeltme, silme ve JSON ile Markdown olarak dışa aktarma.",
       "deletion": "Her şey nasıl silinir",

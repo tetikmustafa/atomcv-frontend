@@ -11,12 +11,24 @@
 /**
  * Actions the server may offer as a way out of an error (Bölüm 35.4).
  *
- * The list is open on purpose. The vocabulary is not fully specified yet, and
- * an unknown action must still render as a button rather than crash the panel
- * — silently dropping the user's only way forward would break P4.
+ * The vocabulary is closed as of EK D.6.1 — these eight, published as an
+ * OpenAPI enum. The union below stays open anyway: an action added later must
+ * still render as a button rather than crash the panel, because silently
+ * dropping the user's only way forward would break P4.
+ *
+ * The frontend never invents one. The server owns the list; a plain dismiss
+ * control outside the resolution row is fine, a synthesised action inside it
+ * is not.
  */
 export type KnownResolutionAction =
-  'increase_page_limit' | 'review_pins' | 'keep_top_pinned' | 'sign_up';
+  | 'increase_page_limit'
+  | 'review_pins'
+  | 'keep_top_pinned'
+  | 'sign_up'
+  | 'paste_full_posting'
+  | 'continue_as_general_cv'
+  | 'switch_to_manual_form'
+  | 'retry';
 
 export type ResolutionAction = KnownResolutionAction | (string & {});
 

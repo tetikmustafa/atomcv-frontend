@@ -100,10 +100,12 @@ at a time.
 `docs/` holds the full product and architecture specification (Turkish). It is
 a read-only copy synced from the backend repository.
 
+Its appendix EK D records decisions taken while building, and **EK D.9
+collects everything with a frontend consequence** — the content model
+invariants, the API contract verdicts, and what is still open.
+
 `CLAUDE.md` is the working context: the decisions taken, the ones deliberately
-deferred, and what each later stage needs. `BACKEND-CONTRACT-GAPS.md` records
-the questions the frontend raised about the API contract, answered in
-`docs/backend-contract-response.md`.
+deferred, and what each later stage needs.
 
 ## Licence
 
