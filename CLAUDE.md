@@ -583,6 +583,15 @@ arrive in two shapes (bare `version` on collection items, quoted `ETag` on
 the header) and both go through `toIfMatch`. The client also throws rather
 than sending a write whose `version` key is present but undefined.
 
+**The version comes from the cache, not from the caller.** `usePatchAtom` and
+`usePatchVariant` take no `version`; they read it from the seeded entry when
+the request is built. A version threaded through a component was read at some
+render and is stale by the second save, and after a 412 it is stale by
+definition — this way "keep mine" is refetch-then-send with nothing to
+thread. It depends on one thing: **the optimistic update must leave `version`
+alone.** A test pins that, because an optimistic write that bumped it would
+make every save after the first conflict against nobody.
+
 **Atoms are cached per item and written through, never invalidated.** There is
 no `GET /profile/atoms/{id}`, so the collection response is the only source of
 per-atom versions: `useAtoms` seeds `profileKeys.atom(id)` as it lands, and
@@ -640,11 +649,33 @@ PRECONDITION_REQUIRED`, stale one is `412 VERSION_CONFLICT` with a `retry`
 - `completeness` is recomputed on every read — do not calculate it client-side.
 - `GET /profile/export` is live with `?format=json|markdown`.
 
-Still to build here: `useAutosave` (the debounces in Bölüm 37.1 — 1200ms for
-text, 500ms for a slider, 0 for a toggle or a drop — over the mutations that
-already exist), the 412 dialog offering "mine / theirs" without auto-merging,
-the editor components themselves, the `errors.*` ICU catalogue, and the
-mandatory post-extraction review screen (Bölüm 31.6) once ingestion exists.
+**`useAutosave` is built** (`src/hooks/useAutosave.ts`), with the debounces
+from Bölüm 37.1 — 1200ms text, 500ms slider, 0 for a toggle or a drop, keyed
+by gesture rather than by field. Four things in it are load-bearing:
+
+- **A pending edit survives unmount.** The cleanup flushes rather than
+  cancels: a collapsing section must not be a way to lose a sentence finished
+  900ms ago (P8).
+- **An edit that arrives mid-flight is sent, not swallowed.** Reporting
+  "saved" while a newer value sits in the browser is the moment a user stops
+  worrying about work that is not stored.
+- **A 412 is `conflict`, not `error`.** It offers "keep mine / take theirs"
+  (Bölüm 37.4), never an automatic merge. That pair is the editor's own
+  affordance for one status — it is _not_ a `resolutions` row, so rule 7 is
+  not being bent.
+- **`conflict` still counts as unsaved** for the `beforeunload` guard. It
+  reads as handled because it has buttons; until one is pressed the work is
+  exactly as unsaved as a failure.
+
+`SaveStatus` (`src/components/editor/SaveStatus.tsx`) renders the dot plus its
+own `role="status"` region — deliberately not the app-wide `Announcer`, which
+is for pipeline progress and would be talked over by two hundred fields. The
+region renders at every status including idle-and-empty, because assistive
+technology has to be watching a node before its content changes.
+
+Still to build here: the editor components themselves, the `errors.*` ICU
+catalogue, and the mandatory post-extraction review screen (Bölüm 31.6) once
+ingestion exists.
 
 The mutation surface is partial by intent: `usePatchAtom` and `usePatchVariant`
 exist because autosave needs them. Create, delete and reorder have endpoint
