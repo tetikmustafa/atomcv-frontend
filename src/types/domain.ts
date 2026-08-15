@@ -11,10 +11,13 @@
 /**
  * Actions the server may offer as a way out of an error (Bölüm 35.4).
  *
- * The vocabulary is closed as of EK D.6.1 — these eight, published as an
- * OpenAPI enum. The union below stays open anyway: an action added later must
- * still render as a button rather than crash the panel, because silently
- * dropping the user's only way forward would break P4.
+ * Nine values as of EK D.9 · 23, published as an OpenAPI enum. This list is a
+ * mirror, not the source — once `npm run gen:api` runs, check it against the
+ * generated `ResolutionAction` and delete this one if they agree.
+ *
+ * The union stays open regardless: an action added later must still render as
+ * a button rather than crash the panel, because silently dropping the user's
+ * only way forward would break P4.
  *
  * The frontend never invents one. The server owns the list; a plain dismiss
  * control outside the resolution row is fine, a synthesised action inside it
@@ -28,7 +31,10 @@ export type KnownResolutionAction =
   | 'paste_full_posting'
   | 'continue_as_general_cv'
   | 'switch_to_manual_form'
-  | 'retry';
+  | 'retry'
+  // Opens the profile editor. Arrives with INSUFFICIENT_PROFILE, whose
+  // `params.missing` names the part that is short (`atoms`, `sections`).
+  | 'complete_profile';
 
 export type ResolutionAction = KnownResolutionAction | (string & {});
 

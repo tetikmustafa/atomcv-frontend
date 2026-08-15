@@ -41,10 +41,14 @@ section:
 | ---------- | ------------------------------------------------------------------ |
 | EK D.2     | The run/mark content model and its invariants                      |
 | EK D.6     | The API contract: enums, ETag scope, SSE, quota, CSRF, claim       |
+| EK D.7     | **Progress record** — what the backend has shipped, step by step   |
+| EK D.8.x   | Per-step backend build notes (Stage 1)                             |
 | **EK D.9** | **Everything with a frontend consequence, collected in one table** |
 
 **D.9 is the frontend's index into EK D.** New topics are inserted before it,
-so it stays last. Check it whenever the docs are re-synced.
+so it stays last. Check it whenever the docs are re-synced, and read D.7 to
+see what the backend has actually shipped — the body sections describe the
+design, not the state.
 
 `BACKEND-CONTRACT-GAPS.md` and `docs/backend-contract-response.md` no longer
 exist — the sixteen contract questions and their verdicts were folded into
@@ -358,19 +362,22 @@ carries the enums and headers, not just happy-path payloads.
 
 ### Accepted, arriving with their stage
 
-- **The `resolutions[].action` vocabulary is now closed** (EK D.6.1, eight
-  values, mirrored in `src/types/domain.ts`). The union stays open in TypeScript
-  anyway: an action the server adds later must still render as a button rather
-  than crash the panel. **Still open work on the backend side:** each error
-  code's exact `params` keys _and types_. The ICU message cannot be written
-  without them — "your pinned content runs to 2.3 pages, your limit is 1" needs
-  `pinnedPages: number` and `maxPages: number`. Ask for these before writing
-  `errors.*` messages.
-- **Error codes for ingestion and anonymous limits are named** in EK D.6.1
-  (`PDF_NOT_TEXT_BASED`, `EXTRACTION_EMPTY`, `PDF_ENCRYPTED`,
-  `LANGUAGE_UNDETECTED`, `EXTRACTION_TIMEOUT`, `PROFILE_QUOTA_EXCEEDED`,
-  `ANONYMOUS_SESSION_EXPIRED`, `ATOM_LIMIT_EXCEEDED`), on top of Bölüm 35.5's
-  ten pipeline codes.
+- **The error catalogue is complete and shipped** — 27 codes with typed
+  `params`, published as an OpenAPI enum (EK D.7, D.9 · 10). `en.json` and
+  `tr.json` can finally be written. Codes with no ICU message yet:
+  `RESOURCE_NOT_FOUND`, `VERSION_CONFLICT`, `VALIDATION_FAILED`,
+  `PRECONDITION_REQUIRED`, `INTERNAL_ERROR`.
+- **`resolutions[].action` has nine values** (EK D.9 · 23), mirrored in
+  `src/types/domain.ts` until `gen:api` makes that mirror redundant. The union
+  stays open in TypeScript anyway: an action the server adds later must render
+  as a button rather than crash the panel.
+- **The server sends only declared `params`.** An undeclared key is refused, so
+  a missing field is fixed in the catalogue — never by hand-adding it to a
+  body, because that value will never arrive (D.9 · 11).
+- **`type` is a relative path** (`/errors/conflicting-preferences`), and every
+  error carries a `code` — including `INTERNAL_ERROR` on a 500, so the client's
+  error path always works. An unknown URL is `404 RESOURCE_NOT_FOUND`, not a
+  500 (D.9 · 12).
 - **Stage 1 — pagination.** `GET /profile/atoms` unpaginated. Cursor
   pagination (`{ items, nextCursor }`) for `/generations` and `/applications`
   when those land in Stage 2.
@@ -512,26 +519,57 @@ number, so it needs sign-off rather than a quiet edit to the budget file.
 
 ### Stage 1 — profile CRUD against a real API
 
-- **Run `npm run gen:api` first.** springdoc lands with the first endpoint.
-  Delete `src/mocks/contracts.ts` and rebind handlers to the generated types
-  the moment it succeeds — that file has a stated end date and this is it.
+**The backend finished Stage 1 (EK D.7).** Profile, section, entry, atom and
+variant CRUD all exist, springdoc publishes `/v3/api-docs`, and there is one
+endpoint that returns a PDF. The frontend is the side that is behind.
+
+- **Run `npm run gen:api` first** — it works now, with the backend running
+  locally. Then delete `src/mocks/contracts.ts` and rebind the handlers to the
+  generated types; that file's stated end date has arrived. Check the schema
+  really carries the `ResolutionAction` and `ErrorCode` enums and the `ETag`
+  header before building on it.
 - **`src/lib/content/richContent.ts` before any editor component.** It owns the
   run/mark types and the invariants in "The Content Model" above, with tests
   for the two the backend enforces: `href` only on `link` runs, and an unknown
   mark surviving a parse-and-serialise round trip. Every editor path goes
   through it, so those cannot be re-litigated per component.
-- Verify the schema carries the `resolutions[].action` and error `code` enums,
-  and each code's `params` keys. If it only carries happy-path payloads, say
-  so before building error screens on prose.
-- Profile editor: `useAutosave` with debounce per Bölüm 37.1, optimistic
-  update, `If-Match` from the item `version` in the collection response, and a
-  412 dialog that offers "mine / theirs" without auto-merging.
-- Atom cache seeded from the collection. One list request, then
-  `setQueryData` per item; invalidation must not refetch all 200 atoms when
-  one changes.
-- Mandatory post-extraction review screen: sections collapsed by default,
-  problem areas auto-opened, "Confirm" disabled until critical warnings are
-  resolved (Bölüm 31.6).
+
+What the shipped API already settles (EK D.9 · 13-20):
+
+- **`GET /profile` never 404s.** The profile is created server-side on first
+  use, so a new user gets a real, empty profile with `completeness: 0`. There
+  is no "you have no profile yet" state to build.
+- **`If-Match` is required on writes.** Missing header is `428
+PRECONDITION_REQUIRED`, stale one is `412 VERSION_CONFLICT` with a `retry`
+  resolution. Collection responses carry `version` per item, so nothing needs
+  a second read before editing.
+- **`PUT /profile` replaces** — an omitted field is cleared, so the form must
+  send every field. Preferences are a separate endpoint and take **`PUT`, not
+  `PATCH`** (Bölüm 35.2's list is out of date; D.9 · 15 is right).
+- **Entry `PATCH` distinguishes absent from `null`:** omit to keep, send
+  `null` to clear. That is how an end date is removed to mean "current".
+- **Atoms are created with content**; `PATCH /atoms/{id}` changes only the
+  controls, and text is edited through the variant endpoint with the whole
+  content sent. Variants come back primary-first.
+- **Reordering takes the complete list.** A partial list is a 400, and
+  `displayOrder` cannot be patched directly.
+- `completeness` is recomputed on every read — do not calculate it client-side.
+- `GET /profile/export` is live with `?format=json|markdown`.
+
+Still to build here: the profile editor (`useAutosave` with the debounces in
+Bölüm 37.1, optimistic update, and a 412 dialog that offers "mine / theirs"
+without auto-merging), the atom cache seeded from the collection so
+invalidation never refetches all 200, and the mandatory post-extraction review
+screen (Bölüm 31.6) once ingestion exists.
+
+**Do not attach a permanent screen to `POST /generations/general`** (D.9 · 22).
+It is synchronous, Stage-1-only, stores nothing, and is replaced by Bölüm
+35.3's `202` + job flow in Stage 2. It is useful for proving the pipeline end
+to end, not for building on.
+
+**`PAGE_LIMIT_EXCEEDED` must not offer "retry"** (D.9 · 21). The server already
+tried shrinking the content twice before returning it, so retrying unchanged
+is guaranteed to fail again. Offer raising the page limit or removing content.
 
 ### Stage 2 — generation flow
 
