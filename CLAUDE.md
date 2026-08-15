@@ -181,6 +181,30 @@ backend running.
 **Never hand-write types that mirror backend DTOs.** That is a
 synchronization bug waiting to happen.
 
+**It has been run.** `api.d.ts` is the real schema — 15 paths, 32 schemas,
+Stage 1 only. Three things were checked before building on it, all present:
+the 27-code `ErrorCode` enum, the 9-value `ResolutionAction` enum, and the
+`ETag` response header.
+
+Where the client needs a shape the generated one does not give, **derive,
+never restate** — `Omit<…>` plus the narrowing, so the next `gen:api`
+surfaces a wire change as a typecheck failure. `src/types/domain.ts` and
+`richContent.ts` both do this. Two reasons it is always needed:
+
+- **springdoc marks almost nothing required.** `ApiError.code` and `.status`
+  are optional in the schema although EK D.9 · 12 guarantees both. `domain.ts`
+  requires them so the error path has no undefined branch.
+- **Closed enums must be re-opened.** A generated enum is a snapshot of the
+  day `gen:api` last ran. `ResolutionAction` stays `| (string & {})`: an
+  action the server adds later has to render as a button, not crash the panel.
+
+**Where the schema and the docs disagree, the schema wins** (EK D.6's standing
+caveat) — but write down which, because it is usually the schema that is
+incomplete. Two live cases, both handled defensively in `richContent.ts`:
+`Run.m` and `Content.v` are optional on the wire while D.9 · 4 says `m` is
+always an array. The running server does send both; the parser supplies `[]`
+for a missing `m` and does not invent a missing `v`.
+
 ## Local Development Against Mocks
 
 The backend does not exist yet. MSW provides the API surface, with **one set
@@ -201,11 +225,22 @@ Playwright (e2e). One source of truth, no dev/test drift.
   progression, `409` + `resolutions`, `412` conflict, `429` quota, anonymous
   vs. authenticated `capabilities`.
 
-**Time-boxed exception:** until `gen:api` can run, mock handlers are typed by
-`src/mocks/contracts.ts`, marked `SCAFFOLDING`. It is deleted the moment the
-backend publishes an OpenAPI schema (XI-B.9.2, step 4). It is the only place
-where backend-shaped types may be hand-written, and nothing outside
-`src/mocks/` may import it.
+**Time-boxed exception:** mock handlers are typed by `src/mocks/contracts.ts`,
+marked `SCAFFOLDING`. It is the only place where backend-shaped types may be
+hand-written, and nothing outside `src/mocks/` may import it.
+
+**XI-B.9.2 step 4 says to delete it once `gen:api` works. It does, and the
+file has to stay** — the instruction assumed the schema would cover the
+mocked surface, and it does not. The published schema is Stage 1: profile
+CRUD plus the synchronous `/generations/general`. Every endpoint the mocks
+cover — `/auth/session`, the asynchronous `/generations`, `/jobs/{id}` and its
+stream — is Stage 2 or 3 with no generated counterpart. Deleting the file
+would not remove a mirror; it would leave the mocks untyped.
+
+So it empties **per type, as each endpoint is published**, not in one step.
+Nothing in it may describe a Stage 1 endpoint. The error envelope has already
+moved out: `FailedEvent` uses `ProblemDetail['code']` and `Resolution` from
+`@/types/domain`, so a mock cannot emit a code the renderer would not know.
 
 ## Absolute Rules — Never Violate
 
@@ -367,10 +402,10 @@ carries the enums and headers, not just happy-path payloads.
   `tr.json` can finally be written. Codes with no ICU message yet:
   `RESOURCE_NOT_FOUND`, `VERSION_CONFLICT`, `VALIDATION_FAILED`,
   `PRECONDITION_REQUIRED`, `INTERNAL_ERROR`.
-- **`resolutions[].action` has nine values** (EK D.9 · 23), mirrored in
-  `src/types/domain.ts` until `gen:api` makes that mirror redundant. The union
-  stays open in TypeScript anyway: an action the server adds later must render
-  as a button rather than crash the panel.
+- **`resolutions[].action` has nine values** (EK D.9 · 23), confirmed against
+  the published enum. `src/types/domain.ts` no longer transcribes them — it
+  derives from the generated type and re-opens the union, because an action
+  the server adds later must render as a button rather than crash the panel.
 - **The server sends only declared `params`.** An undeclared key is refused, so
   a missing field is fixed in the catalogue — never by hand-adding it to a
   body, because that value will never arrive (D.9 · 11).
@@ -450,9 +485,16 @@ Things deliberately left undone, so they are not mistaken for oversights.
 
 <!-- Update this section as work progresses -->
 
-**Stage 0 is complete and merged to `main`** (PR #1, CI green). The backend
-exposes only `/actuator/health`, so everything here runs against MSW. Stage 1
-begins with `npm run gen:api` — see below.
+**Stage 0 is complete and merged to `main`** (PR #1, CI green).
+
+**Stage 1 has started.** The backend's Stage 1 API is live locally, `gen:api`
+has run against it, the error envelope derives from the generated types, and
+`richContent.ts` exists with its invariants under test. Next is the profile
+editor — see "Stage 1" below for what the running server settled and what is
+left.
+
+MSW still covers everything the schema does not, which is all of Stage 2 and 3. With the backend running, `NEXT_PUBLIC_API_MOCKING=disabled` sends Stage 1
+calls through the dev proxy to the real thing.
 
 Built: scaffold and tooling · `[locale]` routing with `proxy.ts` · shadcn on
 Radix · next-intl with ICU · TanStack Query and Zustand · API client, error
@@ -517,11 +559,25 @@ prevent.
 variant CRUD all exist, springdoc publishes `/v3/api-docs`, and there is one
 endpoint that returns a PDF. The frontend is the side that is behind.
 
-- **Run `npm run gen:api` first** — it works now, with the backend running
-  locally. Then delete `src/mocks/contracts.ts` and rebind the handlers to the
-  generated types; that file's stated end date has arrived. Check the schema
-  really carries the `ResolutionAction` and `ErrorCode` enums and the `ETag`
-  header before building on it.
+**Done: `gen:api`, the error envelope, and `richContent.ts`.** `contracts.ts`
+was narrowed rather than deleted — see "Local Development Against Mocks" for
+why the documented deletion could not happen.
+
+Verified against the running backend rather than read off the schema, because
+the schema understates it in two places:
+
+- **A write answers with the new version.** `PATCH` returns both `ETag: "2"`
+  and `version` in the body, so autosave never needs a read between saves.
+  The schema declares the `ETag` header on `GET`/`PUT /profile` and
+  `PUT /preferences` only — the header is real everywhere, just undeclared.
+- **The error paths are exactly as specified.** A stale `If-Match` gives
+  `412 VERSION_CONFLICT` with a single `retry` resolution; a missing one gives
+  `428 PRECONDITION_REQUIRED` with none. `type` is relative
+  (`/errors/version-conflict`), and `params` is absent rather than `{}`.
+- **Atom and variant versions move independently.** Patching an atom's
+  controls bumps the atom and leaves its variants at their own version. The
+  editor must hold both, not one per atom.
+
 - **`src/lib/content/richContent.ts` before any editor component.** It owns the
   run/mark types and the invariants in "The Content Model" above, with tests
   for the two the backend enforces: `href` only on `link` runs, and an unknown
