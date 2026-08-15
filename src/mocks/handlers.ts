@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw';
+import type { ProblemDetail } from '@/types/domain';
 import type { Capabilities, JobAccepted, SessionResponse } from './contracts';
 
 /**
@@ -73,22 +74,26 @@ export const handlers = [
     const maxPages = body.options?.maxPages ?? 1;
 
     if (pinned > 3 * maxPages) {
-      return HttpResponse.json(
-        {
-          type: 'https://atomcv.mustafatetik.com/errors/conflicting-preferences',
-          title: 'Pinned content exceeds the page limit',
-          status: 409,
-          instance: '/api/v1/generations',
-          code: 'CONFLICTING_PREFERENCES',
-          params: { pinnedPages: 2.3, maxPages },
-          resolutions: [
-            { action: 'increase_page_limit', params: { maxPages: 3 } },
-            { action: 'review_pins' },
-            { action: 'keep_top_pinned', params: { keep: 3 } },
-          ],
-        },
-        { status: 409 },
-      );
+      // Annotated on the way in rather than at HttpResponse.json, which infers
+      // the resolver's whole body type from its first call and would then
+      // reject the 202 below.
+      const problem: ProblemDetail = {
+        // Relative, as D.9 · 12 settled it. An absolute URL here would let
+        // the mock train the client on a shape the server does not send.
+        type: '/errors/conflicting-preferences',
+        title: 'Pinned content exceeds the page limit',
+        status: 409,
+        instance: '/api/v1/generations',
+        code: 'CONFLICTING_PREFERENCES',
+        params: { pinnedPages: 2.3, maxPages },
+        resolutions: [
+          { action: 'increase_page_limit', params: { maxPages: 3 } },
+          { action: 'review_pins' },
+          { action: 'keep_top_pinned', params: { keep: 3 } },
+        ],
+      };
+
+      return HttpResponse.json(problem, { status: 409 });
     }
 
     return HttpResponse.json<JobAccepted>(
@@ -102,9 +107,9 @@ export const handlers = [
   }),
 
   /**
-   * Progress stream. Frames carry an `id` so a reconnect can resume — the
-   * backend contract does not define this yet (BACKEND-CONTRACT-GAPS item 9),
-   * so the mock models the shape we proposed rather than the gap.
+   * Progress stream. Frames carry an `id` so a reconnect can resume, which
+   * EK D.6 accepted for Stage 2 in exactly this shape. The endpoint is not in
+   * the published schema yet, so the mock is the only place it exists.
    */
   http.get('*/api/v1/jobs/:jobId/stream', () => {
     const encoder = new TextEncoder();
