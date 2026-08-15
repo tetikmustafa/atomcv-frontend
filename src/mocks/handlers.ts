@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import type { ProblemDetail } from '@/types/domain';
 import type { Capabilities, JobAccepted, SessionResponse } from './contracts';
+import { profileHandlers } from './profileHandlers';
 
 /**
  * Mock API surface. One set of handlers, shared by the browser worker, Vitest
@@ -50,6 +51,10 @@ function sseFrame(event: string, data: unknown, id: number) {
 }
 
 export const handlers = [
+  // Stage 1, typed from the generated schema. Kept in their own file because
+  // they carry state — versions that move — and the rest of this file does not.
+  ...profileHandlers,
+
   /**
    * Anonymous by default. The UI must gate itself on this object rather than
    * on hardcoded assumptions about what anonymous users can do.

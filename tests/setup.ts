@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { toHaveNoViolations } from 'jest-axe';
 import { server } from '@/mocks/node';
+import { resetProfileFixture } from '@/mocks/profileFixture';
 
 expect.extend(toHaveNoViolations);
 
@@ -18,6 +19,10 @@ beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 
 afterEach(() => {
   server.resetHandlers();
+  // The profile handlers keep state, because optimistic concurrency cannot be
+  // mocked without it. Left alone, one test's writes would set the next
+  // test's starting versions.
+  resetProfileFixture();
   cleanup();
 });
 
