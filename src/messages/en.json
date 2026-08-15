@@ -30,7 +30,8 @@
     "PRECONDITION_REQUIRED": "That change was sent without saying which version it was based on, so it wasn't applied.",
     "VALIDATION_FAILED": "Some of what was sent couldn't be accepted: {fields}.",
     "INTERNAL_ERROR": "Something broke on our side. Nothing you'd entered was lost.",
-    "UNEXPECTED_ERROR": "Something went wrong, and the response didn’t say what."
+    "UNEXPECTED_ERROR": "Something went wrong, and the response didn’t say what.",
+    "NETWORK_UNREACHABLE": "We couldn't reach the server. Your connection may be down."
   },
   "resolutions": {
     "increase_page_limit": "Allow {maxPages, plural, =1 {one page} other {# pages}}",
@@ -42,6 +43,10 @@
     "switch_to_manual_form": "Enter it by hand",
     "retry": "Try again",
     "complete_profile": "Open the profile editor"
+  },
+  "ErrorPanel": {
+    "dismiss": "Dismiss",
+    "retry": "Try again"
   },
   "Landing": {
     "tagline": "Build your profile once, generate a tailored resume for every job posting.",

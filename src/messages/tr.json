@@ -30,7 +30,8 @@
     "PRECONDITION_REQUIRED": "Bu değişiklik, hangi sürüme dayandığı belirtilmeden gönderildi; o yüzden uygulanmadı.",
     "VALIDATION_FAILED": "Gönderilenlerin bir kısmı kabul edilemedi: {fields}.",
     "INTERNAL_ERROR": "Bizim tarafımızda bir şey bozuldu. Girdiğin hiçbir şey kaybolmadı.",
-    "UNEXPECTED_ERROR": "Bir şeyler ters gitti ve yanıt ne olduğunu söylemedi."
+    "UNEXPECTED_ERROR": "Bir şeyler ters gitti ve yanıt ne olduğunu söylemedi.",
+    "NETWORK_UNREACHABLE": "Sunucuya ulaşamadık. Bağlantın kopmuş olabilir."
   },
   "resolutions": {
     "increase_page_limit": "{maxPages, plural, =1 {Bir sayfaya} other {# sayfaya}} izin ver",
@@ -42,6 +43,10 @@
     "switch_to_manual_form": "Elle gir",
     "retry": "Tekrar dene",
     "complete_profile": "Profil düzenleyiciyi aç"
+  },
+  "ErrorPanel": {
+    "dismiss": "Kapat",
+    "retry": "Tekrar dene"
   },
   "Landing": {
     "tagline": "Profilini bir kez oluştur, her iş ilanına özel CV üret.",
