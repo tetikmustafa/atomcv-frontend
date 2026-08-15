@@ -85,6 +85,24 @@
       "conflict": "Bu maddeyi başka bir sekmede değiştirmişsin.",
       "keepMine": "Benim halimi kullan",
       "useTheirs": "Diğer halini kullan"
+    },
+    "atom": {
+      "loading": "Yükleniyor…",
+      "text": "Metin",
+      "marksDropped": "Bunu kaydetmek kelimeleri korur, üzerlerindeki işaretlemeyi düşürür. İşaretlemeyi koruyan editör henüz yazılmadı.",
+      "importance": "Önem",
+      "active": {
+        "label": "Kullanılabilir",
+        "hint": "Kapatırsan profilinde kalır ama hiçbir CV’de kullanılmaz."
+      },
+      "alwaysInclude": {
+        "label": "Her zaman ekle",
+        "hint": "Yer daralsa bile seçim bunu çıkaramaz."
+      },
+      "verbatim": {
+        "label": "Yeniden yazma",
+        "hint": "İfaden yazdığın gibi kullanılır, yeniden yazılmaz."
+      }
     }
   },
   "Generation": {

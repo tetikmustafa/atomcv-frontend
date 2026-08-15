@@ -85,6 +85,24 @@
       "conflict": "You changed this item in another tab.",
       "keepMine": "Keep mine",
       "useTheirs": "Use the other version"
+    },
+    "atom": {
+      "loading": "Loading…",
+      "text": "Text",
+      "marksDropped": "Saving this will keep the words and drop the highlighting on them. The editor that keeps it is not built yet.",
+      "importance": "Importance",
+      "active": {
+        "label": "Available",
+        "hint": "Turn off to keep it in your profile without ever using it in a resume."
+      },
+      "alwaysInclude": {
+        "label": "Always include",
+        "hint": "Selection may not drop it, even when space is tight."
+      },
+      "verbatim": {
+        "label": "Never reword",
+        "hint": "Your wording is used exactly as written, with no rewriting."
+      }
     }
   },
   "Generation": {
