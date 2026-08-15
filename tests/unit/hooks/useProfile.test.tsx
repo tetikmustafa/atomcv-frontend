@@ -4,7 +4,8 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { useAtom, useAtoms, usePatchAtom } from '@/hooks/useProfile';
 import { profileKeys } from '@/lib/api/queryKeys';
-import type { Atom } from '@/lib/api/endpoints/profile';
+import { patchAtom, type Atom } from '@/lib/api/endpoints/profile';
+import { isApiError } from '@/lib/api/errors';
 import { server } from '@/mocks/node';
 
 function makeClient() {
@@ -92,7 +93,10 @@ describe('writing an atom', () => {
     await waitFor(() => expect(collection.result.current.isSuccess).toBe(true));
 
     const { result } = renderHook(() => usePatchAtom(), { wrapper });
-    result.current.mutate({ id: 'atom-1', patch: { importance: 0.9 }, version: 0 });
+    // No version passed: it is read from the cache, which every write keeps
+    // current. A version threaded through the caller is one read at some
+    // render, and stale by the second save.
+    result.current.mutate({ id: 'atom-1', patch: { importance: 0.9 } });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -109,6 +113,34 @@ describe('writing an atom', () => {
   });
 
   /**
+   * The version is read from the cache when the request is built, which is
+   * after the optimistic write has already touched that entry. So the
+   * optimistic write must leave `version` alone — if it ever bumped it, every
+   * save after the first would quote a version the server has not issued and
+   * conflict against nobody.
+   */
+  it('leaves the version untouched while the change is still optimistic', async () => {
+    const client = makeClient();
+    const wrapper = wrapperFor(client);
+
+    const collection = renderHook(() => useAtoms(), { wrapper });
+    await waitFor(() => expect(collection.result.current.isSuccess).toBe(true));
+
+    const { result } = renderHook(() => usePatchAtom(), { wrapper });
+
+    let optimistic: Atom | undefined;
+    client.getQueryCache().subscribe(() => {
+      optimistic ??= client.getQueryData<Atom>(profileKeys.atom('atom-1'));
+    });
+
+    result.current.mutate({ id: 'atom-1', patch: { importance: 0.9 } });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(optimistic?.importance).toBe(0.9);
+    expect(optimistic?.version).toBe(0);
+  });
+
+  /**
    * A slider that waits for a round trip feels broken (Bölüm 37.2), so the
    * change lands first — and has to be taken back cleanly when the write is
    * refused, version included, or the next attempt fails too.
@@ -120,12 +152,15 @@ describe('writing an atom', () => {
     const collection = renderHook(() => useAtoms(), { wrapper });
     await waitFor(() => expect(collection.result.current.isSuccess).toBe(true));
 
-    const { result } = renderHook(() => usePatchAtom(), { wrapper });
+    // Somebody else writes — another tab, or the same profile in another
+    // window. The server moves on; this client's cache does not hear about it.
+    await patchAtom('atom-1', { importance: 0.75 }, 0);
 
-    // Version 3 has not happened; the server answers 412.
-    result.current.mutate({ id: 'atom-1', patch: { importance: 0.1 }, version: 3 });
+    const { result } = renderHook(() => usePatchAtom(), { wrapper });
+    result.current.mutate({ id: 'atom-1', patch: { importance: 0.1 } });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(isApiError(result.current.error) && result.current.error.code).toBe('VERSION_CONFLICT');
 
     const restored = client.getQueryData<Atom>(profileKeys.atom('atom-1'));
     expect(restored?.importance).toBe(0.6);

@@ -137,6 +137,22 @@ function writeAtomThrough(client: QueryClient, atom: Atom) {
   );
 }
 
+/**
+ * The version a write to this atom must quote.
+ *
+ * Left `undefined` when the atom was never seeded, so `toIfMatch` throws with
+ * its own explanation rather than a request going out without the header.
+ */
+function versionOf(client: QueryClient, id: string): Version {
+  return client.getQueryData<Atom>(profileKeys.atom(id))?.version as Version;
+}
+
+/** The version of one wording, which moves independently of its atom's. */
+function variantVersionOf(client: QueryClient, atomId: string, variantId: string): Version {
+  const atom = client.getQueryData<Atom>(profileKeys.atom(atomId));
+  return atom?.variants?.find((variant) => variant.id === variantId)?.version as Version;
+}
+
 /** Applies a change to an atom in both caches, and reports how to undo it. */
 function updateAtomThrough(client: QueryClient, id: string, change: (atom: Atom) => Atom) {
   const previous = client.getQueryData<Atom>(profileKeys.atom(id));
@@ -155,8 +171,18 @@ export function usePatchAtom() {
   const client = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, patch, version }: { id: string; patch: AtomPatch; version: Version }) =>
-      patchAtom(id, patch, version),
+    // The version comes from the cache, not from the caller. Every write puts
+    // the server's copy back, so the cache always holds the current one —
+    // whereas a version passed in was read at some render and may be two
+    // saves old. It also makes retrying after a 412 correct for free: refetch,
+    // then send again, and the fresh version is picked up without the caller
+    // threading it through.
+    //
+    // Read here, after `onMutate` has run. That is safe because the optimistic
+    // write preserves `version` — a test pins that, because an optimistic
+    // update that touched it would make every following save conflict.
+    mutationFn: ({ id, patch }: { id: string; patch: AtomPatch }) =>
+      patchAtom(id, patch, versionOf(client, id)),
 
     onMutate: async ({ id, patch }) => {
       // Stop an in-flight read from landing on top of the optimistic value.
@@ -193,13 +219,11 @@ export function usePatchVariant() {
       atomId,
       variantId,
       body,
-      version,
     }: {
       atomId: string;
       variantId: string;
       body: VariantWrite;
-      version: Version;
-    }) => patchVariant(atomId, variantId, body, version),
+    }) => patchVariant(atomId, variantId, body, variantVersionOf(client, atomId, variantId)),
 
     onMutate: async ({ atomId, variantId, body }) => {
       await client.cancelQueries({ queryKey: profileKeys.atom(atomId) });
