@@ -1,5 +1,5 @@
-﻿/**
- * The run/mark content model (BÃ¶lÃ¼m 12.3, 14.1; invariants in EK D.2 and D.9).
+/**
+ * The run/mark content model (Bölüm 12.3, 14.1; invariants in EK D.2 and D.9).
  *
  * Atom text is a list of runs, not a string. Marks are semantic rather than
  * stylistic: a template decides what `technology` looks like, and the rewrite
@@ -7,9 +7,16 @@
  *
  * Every editor path goes through this module. The rules below are enforced
  * here and nowhere else, so they cannot drift component by component.
+ *
+ * The shapes come from the generated schema rather than being restated, so a
+ * change to `Content` or `Run` on the wire lands here as a typecheck failure.
+ * What is added on top is the one narrowing the schema cannot express: a
+ * parsed run always carries its mark array.
  */
 
-/** The vocabulary today. Deliberately not exhaustive â€” see `Mark`. */
+import type { components } from '@/types/api';
+
+/** The vocabulary today. Deliberately not exhaustive — see `Mark`. */
 export const KNOWN_MARKS = ['technology', 'metric', 'emphasis', 'link', 'organization'] as const;
 
 export type KnownMark = (typeof KNOWN_MARKS)[number];
@@ -21,34 +28,38 @@ export type KnownMark = (typeof KNOWN_MARKS)[number];
  * mark it does not recognise, and this side has to do the same: forward
  * compatibility only works if both honour it. Narrowing this to `KnownMark`
  * would delete a newer version's markup the moment a user edits that sentence
- * â€” the silent loss of work P8 exists to prevent.
+ * — the silent loss of work P8 exists to prevent.
  */
 export type Mark = KnownMark | (string & {});
 
-export type Run = {
-  /** Text content. */
-  t: string;
-  /** Always an array; an unmarked run carries `[]` rather than `undefined`. */
-  m: Mark[];
-  /** Only ever present on a `link` run, where it is required. */
-  href?: string;
-};
+type WireRun = components['schemas']['Run'];
+type WireContent = components['schemas']['Content'];
 
-export type RichContent = {
-  /** The server owns this. Read it, never invent it. */
-  v: number;
-  runs: Run[];
-};
+/**
+ * A run as this side holds it.
+ *
+ * `m` is optional on the wire and required here: the schema permits a writer
+ * to leave it out, and `parseRichContent` supplies `[]` when one does, so
+ * everything downstream is spared an `undefined` check (D.9 · 4).
+ */
+export type Run = Omit<WireRun, 'm'> & { m: Mark[] };
 
-/** What a write sends: runs only, because `v` is the server's (D.9 Â· 3). */
-export type RichContentPayload = { runs: Run[] };
+/**
+ * `v` stays optional, exactly as the schema has it. The server owns the
+ * value — read it, never invent one — and the client has nothing to do with
+ * it beyond dropping it before a write.
+ */
+export type RichContent = Omit<WireContent, 'runs'> & { runs: Run[] };
+
+/** What a write sends: runs only, because `v` is the server's (D.9 · 3). */
+export type RichContentPayload = Omit<WireContent, 'v' | 'runs'> & { runs: Run[] };
 
 /**
  * Malformed content.
  *
  * The message names the position and never the text. Content must not reach a
  * log through an error string any more than through a logger argument
- * (BÃ¶lÃ¼m 48.2, EK D.2).
+ * (Bölüm 48.2, EK D.2).
  */
 export class RichContentError extends Error {
   constructor(message: string) {
@@ -70,8 +81,8 @@ function assertHrefInvariant(run: { m: Mark[]; href?: string }, where: string) {
 
   // Both directions matter. A `link` without a target renders as nothing a
   // user can follow; an `href` on a non-link run is stored, never rendered,
-  // and silently lost â€” which is worse than being refused, because nobody
-  // finds out. The backend rejects either with a 400 (D.9 Â· 18).
+  // and silently lost — which is worse than being refused, because nobody
+  // finds out. The backend rejects either with a 400 (D.9 · 18).
   if (isLink && !run.href) {
     throw new RichContentError(`${where} has the link mark but no href`);
   }
@@ -103,10 +114,13 @@ function parseRun(value: unknown, index: number): Run {
   if (typeof candidate.t !== 'string') {
     throw new RichContentError(`${where} has no text`);
   }
-  if (!Array.isArray(candidate.m)) {
-    throw new RichContentError(`${where} has no mark array`);
+  // Absent means unmarked. The schema makes `m` optional and the server has
+  // always sent `[]`, so this branch exists for the day it economises — which
+  // would otherwise break every atom rather than one run.
+  if (candidate.m !== undefined && !Array.isArray(candidate.m)) {
+    throw new RichContentError(`${where} has a mark field that is not an array`);
   }
-  if (candidate.m.some((mark) => typeof mark !== 'string')) {
+  if (Array.isArray(candidate.m) && candidate.m.some((mark) => typeof mark !== 'string')) {
     throw new RichContentError(`${where} has a non-string mark`);
   }
   if (candidate.href !== undefined && typeof candidate.href !== 'string') {
@@ -115,7 +129,7 @@ function parseRun(value: unknown, index: number): Run {
 
   // Marks are copied through untouched. Filtering to the known vocabulary here
   // is the exact bug this model is designed to avoid.
-  const marks = [...(candidate.m as Mark[])];
+  const marks = [...((candidate.m ?? []) as Mark[])];
   const run: Run =
     candidate.href === undefined
       ? { t: candidate.t, m: marks }
@@ -129,7 +143,7 @@ function parseRun(value: unknown, index: number): Run {
  * Parses content that came from the server.
  *
  * Throws rather than repairing. Dropping a field we do not understand and
- * saving the result would corrupt the row on the next write â€” P4, and the
+ * saving the result would corrupt the row on the next write — P4, and the
  * same stance the backend takes when it meets a version stamp from the
  * future (EK D.2).
  */
@@ -140,17 +154,18 @@ export function parseRichContent(value: unknown): RichContent {
 
   const candidate = value as Record<string, unknown>;
 
-  if (typeof candidate.v !== 'number') {
-    throw new RichContentError('Content has no version');
+  // `v` is optional on the wire and opaque here, so its absence is not an
+  // error — but a `v` that is not a number means the field has been
+  // repurposed, and guessing at that is how a client corrupts a row.
+  if (candidate.v !== undefined && typeof candidate.v !== 'number') {
+    throw new RichContentError('Content has a version that is not a number');
   }
   if (!Array.isArray(candidate.runs)) {
     throw new RichContentError('Content has no runs array');
   }
 
-  return {
-    v: candidate.v,
-    runs: candidate.runs.map(parseRun),
-  };
+  const runs = candidate.runs.map(parseRun);
+  return candidate.v === undefined ? { runs } : { v: candidate.v, runs };
 }
 
 /**

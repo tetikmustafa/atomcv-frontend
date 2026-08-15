@@ -9,6 +9,7 @@ import {
   toContentPayload,
   type RichContent,
 } from '@/lib/content/richContent';
+import type { components } from '@/types/api';
 
 const SAMPLE: RichContent = {
   v: 1,
@@ -29,8 +30,37 @@ describe('parseRichContent', () => {
     expect(hasMark(parsed.runs[1]!, 'technology')).toBe(true);
   });
 
-  it('rejects content without a version rather than inventing one', () => {
-    expect(() => parseRichContent({ runs: [] })).toThrow(RichContentError);
+  /**
+   * `v` is optional in the published schema and opaque to the client, which
+   * only ever drops it before a write. Refusing content that omits it would
+   * turn a body the server is allowed to send into a broken editor.
+   */
+  it('accepts content without a version, and does not invent one', () => {
+    const parsed = parseRichContent({ runs: [{ t: 'Shipped', m: [] }] });
+
+    expect(parsed.v).toBeUndefined();
+    expect(parsed.runs).toHaveLength(1);
+  });
+
+  it('rejects a version that is not a number', () => {
+    expect(() => parseRichContent({ v: '1', runs: [] })).toThrow(RichContentError);
+  });
+
+  /**
+   * The schema marks `m` optional too, so an unmarked run may arrive without
+   * it. Normalising to `[]` here is what lets rule D.9 · 4 hold everywhere
+   * else: no consumer of a parsed run needs an `undefined` check.
+   */
+  it('supplies the mark array when a run arrives without one', () => {
+    const parsed = parseRichContent({ v: 1, runs: [{ t: 'Shipped' }] });
+
+    expect(parsed.runs[0]!.m).toEqual([]);
+  });
+
+  it('rejects a mark field that is not an array', () => {
+    expect(() => parseRichContent({ v: 1, runs: [{ t: 'Shipped', m: 'metric' }] })).toThrow(
+      RichContentError,
+    );
   });
 
   /**
@@ -111,6 +141,17 @@ describe('unknown marks', () => {
 });
 
 describe('toContentPayload', () => {
+  /**
+   * The annotation is the assertion: a payload this module builds has to be
+   * something the generated wire type accepts, or the derivation has drifted
+   * from the schema `gen:api` last read.
+   */
+  it('produces a body the generated Content type accepts', () => {
+    const payload: components['schemas']['Content'] = toContentPayload(SAMPLE);
+
+    expect(payload.runs).toHaveLength(4);
+  });
+
   /** D.9 · 3: the server stamps the version; a client-sent one is refused. */
   it('drops the version', () => {
     const payload = toContentPayload(SAMPLE);
