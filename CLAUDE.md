@@ -470,13 +470,10 @@ Standing facts a new session needs:
 - **SSE over MSW's service worker is verified working** in a real browser,
   with frames arriving incrementally. Bölüm 36.4's `EventSource` stands and no
   `fetch` + `ReadableStream` fallback is needed.
-- **`bundle-budget.json` holds three numbers**, checked by
-  `scripts/check-bundle-size.mjs`. `sharedKb` is the floor every route pays
-  and should only move on a dependency change; `perRouteOwnKb` is the part
-  feature work controls and the only one a normal change should push against;
-  `totalKb` is Bölüm 52.3's ceiling. Not size-limit: it measures files you can
-  name, and Next emits content-hashed chunks that say nothing about which
-  route pulls them.
+- **`bundle-budget.json` enforces Bölüm 52.3**, checked by
+  `scripts/check-bundle-size.mjs` — see "The bundle budget has two ceilings"
+  below. Not size-limit: it measures files you can name, and Next emits
+  content-hashed chunks that say nothing about which route pulls them.
 - **Legal pages live under `[locale]`**, not beside it as XI-B.3 shows —
   outside the segment they cannot be translated. They are drafts that say so
   on the page; no legal prose was invented for the undecided parts, and the
@@ -493,29 +490,26 @@ Standing facts a new session needs:
 Derived from EK D.6, EK D.9 and XI-B.9.2. Not a schedule — a list of what must
 be true before each piece of work is correct.
 
-### The 200 KB ceiling will not survive the editor
+### The bundle budget has two ceilings — this is settled
 
-Measured after Stage 0: the shared baseline is **168.1 KB gzipped** and the
-marketing routes add **0.0 KB** of their own — they are server components with
-no client JavaScript at all. That leaves roughly 30 KB under Bölüm 52.3's
-200 KB ceiling.
+Bölüm 52.3 was split by route class after Stage 0 measured the problem: the
+shared baseline alone is **168.1 KB gzipped** and the marketing routes add
+**0.0 KB** of their own. The ~30 KB that used to be left under a single 200 KB
+ceiling does not hold dnd-kit, React Hook Form and Zod, let alone our own
+components.
 
-The profile editor's own dependencies do not fit in 30 KB. dnd-kit,
-React Hook Form and Zod together are in the same range before a single one of
-our components is written. So one of these has to happen, and it is a decision
-to take deliberately rather than discover in a red CI run:
+| Ceiling                  | Value                    |
+| ------------------------ | ------------------------ |
+| Shared baseline          | 175 KB                   |
+| Marketing routes (total) | 200 KB                   |
+| App routes (total)       | 280 KB, own share 105 KB |
 
-1. Split aggressively inside the editor route — the drag-and-drop and form
-   machinery load on interaction rather than on navigation. Keeps one number
-   for every route.
-2. Budget marketing and app routes separately. Bölüm 52.3 already separates
-   them for LCP (2.0s landing, 2.5s editor) and the reasoning carries: the
-   landing page is first contact and the thinnest point of the anonymous
-   funnel, while the editor is reached by a committed user after a deliberate
-   action.
-
-Option 2 is the more honest reading of the spec, but it raises a documented
-number, so it needs sign-off rather than a quiet edit to the budget file.
+`bundle-budget.json` is the enforcing copy and classifies each route by path;
+anything that matches no marketing pattern is budgeted as an app route, so a
+new route starts strict rather than inheriting the loosest ceiling. **Do not
+raise these without a decision** — the numbers are Bölüm 52.3's, and raising
+one quietly is exactly the failure the three-number split was designed to
+prevent.
 
 ### Stage 1 — profile CRUD against a real API
 

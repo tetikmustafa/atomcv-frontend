@@ -110,28 +110,45 @@ const shared = [...routes[0].scripts].filter((src) =>
 );
 const sharedBytes = shared.reduce((total, src) => total + gzipBytes(toChunkPath(src)), 0);
 
+/**
+ * First matching class wins, so an unrecognised route falls through to the
+ * strictest one that matches — `app` matches everything. A new route is
+ * budgeted tightly until someone decides otherwise, rather than silently
+ * inheriting the most generous ceiling.
+ */
+function classify(name) {
+  for (const [className, config] of Object.entries(budget.classes)) {
+    if (config.match.some((pattern) => new RegExp(pattern).test(name))) {
+      return { className, ...config };
+    }
+  }
+  throw new Error(`No budget class matches ${name}. Give one class a ".*" pattern.`);
+}
+
 const measured = routes.map((route) => {
   const total = [...route.scripts].reduce((sum, src) => sum + gzipBytes(toChunkPath(src)), 0);
-  return { name: route.name, total, own: total - sharedBytes };
+  return { name: route.name, total, own: total - sharedBytes, budget: classify(route.name) };
 });
 
 const failures = [];
 
 console.log('\nInitial JS per route (gzipped)\n');
-console.log('  route                          total      own');
-console.log('  ' + '-'.repeat(48));
+console.log('  route                        class        total      own');
+console.log('  ' + '-'.repeat(60));
 
 for (const route of measured) {
-  const overTotal = kb(route.total) > budget.totalKb;
-  const overOwn = kb(route.own) > budget.perRouteOwnKb;
+  const overTotal = kb(route.total) > route.budget.totalKb;
+  const overOwn = kb(route.own) > route.budget.ownKb;
   if (overTotal || overOwn) failures.push({ route, overTotal, overOwn });
 
-  const flag = overTotal || overOwn ? ' <-- over budget' : '';
-  console.log(`  ${route.name.padEnd(28)} ${fmt(route.total)} ${fmt(route.own)}${flag}`);
+  const flag = overTotal || overOwn ? ' <-- over' : '';
+  console.log(
+    `  ${route.name.padEnd(28)} ${route.budget.className.padEnd(10)} ${fmt(route.total)} ${fmt(route.own)}${flag}`,
+  );
 }
 
-console.log('  ' + '-'.repeat(48));
-console.log(`  shared by every route        ${fmt(sharedBytes)}\n`);
+console.log('  ' + '-'.repeat(60));
+console.log(`  shared by every route                    ${fmt(sharedBytes)}\n`);
 
 const sharedOver = kb(sharedBytes) > budget.sharedKb;
 
@@ -147,14 +164,15 @@ for (const { route, overTotal, overOwn } of failures) {
   if (overOwn) {
     console.error(
       `${route.name}: our own code is ${kb(route.own).toFixed(1)} KB, budget ` +
-        `${budget.perRouteOwnKb} KB.\n` +
+        `${route.budget.ownKb} KB for a ${route.budget.className} route.\n` +
         'Check for a heavy import that should be behind next/dynamic (CLAUDE.md rule 4).\n',
     );
   }
   if (overTotal) {
     console.error(
-      `${route.name}: total is ${kb(route.total).toFixed(1)} KB, over the ${budget.totalKb} KB ` +
-        'ceiling from Bölüm 52.3.\n',
+      `${route.name}: total is ${kb(route.total).toFixed(1)} KB, over the ` +
+        `${route.budget.totalKb} KB ceiling for a ${route.budget.className} route ` +
+        '(Bölüm 52.3).\n',
     );
   }
 }

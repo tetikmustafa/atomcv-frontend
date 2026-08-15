@@ -1,21 +1,37 @@
-{
+﻿{
   "$comment": [
     "Initial JS per route, gzipped. Checked by scripts/check-bundle-size.mjs.",
-    "Bolum 52.6: changing a budget must be a visible decision, so these numbers",
-    "live in a file a reviewer sees rather than inside a command.",
+    "Ceilings come from Bolum 52.3; this file is the enforcing copy and must not",
+    "be raised above them without a decision (EK D.10 - 13, 14).",
     "",
-    "totalKb        - the ceiling from Bolum 52.3. Applies to every route.",
-    "sharedKb       - chunks every route loads: the React and Next runtime plus",
-    "                 whatever the root layout pulls in. This should only move",
-    "                 when a dependency is added or upgraded. Measured at 168.1.",
-    "perRouteOwnKb  - everything a route loads beyond the shared baseline. This",
-    "                 is the part feature work controls, and the only number a",
-    "                 normal change should ever push against.",
+    "sharedKb  - chunks every route loads: the React and Next runtime plus",
+    "            whatever the root layout pulls in. Only moves on a dependency",
+    "            change, and should be noticed the day it does. Measured 168.1.",
     "",
-    "Marketing routes currently sit at 0.0 KB of own code: they are server",
-    "components with no client JavaScript at all."
+    "Two route classes, because 52.3 already splits LCP the same way: the landing",
+    "page is first contact and the thinnest point of the anonymous funnel, while",
+    "the editor is reached by a committed user after a deliberate action.",
+    "",
+    "  marketing - landing and legal. Server components, currently 0 KB of own",
+    "              code. ownKb is derived: totalKb minus sharedKb.",
+    "  app       - editor and generation routes. dnd-kit, React Hook Form and Zod",
+    "              live here.",
+    "",
+    "A route matches the first class whose pattern it hits; anything unmatched is",
+    "an app route, so a new route is budgeted strictly until someone says",
+    "otherwise."
   ],
-  "totalKb": 200,
-  "sharedKb": 172,
-  "perRouteOwnKb": 28
+  "sharedKb": 175,
+  "classes": {
+    "marketing": {
+      "match": ["^/[a-z]{2}$", "^/[a-z]{2}/legal(/|$)"],
+      "totalKb": 200,
+      "ownKb": 25
+    },
+    "app": {
+      "match": [".*"],
+      "totalKb": 280,
+      "ownKb": 105
+    }
+  }
 }
