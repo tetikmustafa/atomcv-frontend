@@ -673,9 +673,37 @@ is for pipeline progress and would be talked over by two hundred fields. The
 region renders at every status including idle-and-empty, because assistive
 technology has to be watching a node before its content changes.
 
-Still to build here: the editor components themselves, the `errors.*` ICU
-catalogue, and the mandatory post-extraction review screen (Bölüm 31.6) once
-ingestion exists.
+**The error catalogue and `ErrorPanel` are built.** All 27 codes in both
+languages plus the nine resolution labels, `UNEXPECTED_ERROR` (what
+`toApiError` synthesises for an unreadable body) and `NETWORK_UNREACHABLE`
+(ours — a request that never arrived has no server code). Four things to know
+before touching any of it:
+
+- **`{completeness, number, percent}` is wrong.** ICU's percent style
+  multiplies by 100 and `completeness` already arrives as 28, so that renders
+  "2,800%" — a plausible sentence with a wrong number, which nothing
+  type-checks. The catalogue uses `::percent scale/0.01`.
+- **Array params must go through `formatErrorParams`.** ICU has no list
+  argument, and next-intl does not throw on a raw array — it returns the key,
+  so the user reads `errors.INSUFFICIENT_PROFILE` on the screen meant to
+  explain things. Five codes carry a `string[]`.
+- **`PARAMS` in `tests/unit/i18n/errorCatalogue.test.ts` is exhaustive by
+  typecheck.** A code added by `gen:api` fails compilation naming itself,
+  rather than reaching a user as an untranslated key. Add the message and the
+  sample params together.
+- **`toErrorLike` recognises the SSE payload structurally.** A `failed` event
+  is a plain object with no status and never passed through `fetch`, so
+  keying on `ApiError` alone would call every in-flight failure unexpected.
+  That is what makes one renderer serve both transports.
+
+`ErrorPanel` renders `resolutions` and knows no codes at all. Its own retry
+and dismiss sit **outside** that row — the rule is that the frontend never
+invents a resolution, and a control the server did not offer must not look
+like one it did. A resolution whose action has no label is dropped rather
+than rendered unnamed.
+
+Still to build here: the editor components themselves, and the mandatory
+post-extraction review screen (Bölüm 31.6) once ingestion exists.
 
 The mutation surface is partial by intent: `usePatchAtom` and `usePatchVariant`
 exist because autosave needs them. Create, delete and reorder have endpoint
