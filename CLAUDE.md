@@ -559,17 +559,49 @@ prevent.
 variant CRUD all exist, springdoc publishes `/v3/api-docs`, and there is one
 endpoint that returns a PDF. The frontend is the side that is behind.
 
-**Done: `gen:api`, the error envelope, and `richContent.ts`.** `contracts.ts`
-was narrowed rather than deleted — see "Local Development Against Mocks" for
-why the documented deletion could not happen.
+**Done: `gen:api`, the error envelope, `richContent.ts`, and the API layer.**
+`contracts.ts` was narrowed rather than deleted — see "Local Development
+Against Mocks" for why the documented deletion could not happen.
 
-Verified against the running backend rather than read off the schema, because
-the schema understates it in two places:
+The API layer is `src/lib/api/{etag,queryKeys}.ts`,
+`src/lib/api/endpoints/profile.ts` and `src/hooks/useProfile.ts`. Three
+things in it are load-bearing and easy to undo by accident.
+
+**⚠️ PATCH goes out as `application/json`, not `application/merge-patch+json`.**
+Bölüm 35.6 specifies the merge-patch type and the running backend answers
+**500 `INTERNAL_ERROR`** to it; the schema declares `application/json` on
+every PATCH. The semantics are unchanged — omitted keys stay, `null` clears —
+only the media type. A test pins it, because "fixing" the client to match the
+prose breaks every save in the editor. Raised in `DOC-SYNC-REQUEST.md`; do
+not change it back without that being settled.
+
+**⚠️ `If-Match` must be quoted, and only `toIfMatch` builds it.** `If-Match: 2`
+against version 2 answers **412**, verified — Spring compares literally. That
+is the same response a real conflict gives, so the mistake surfaces as a
+"someone else edited this" dialog shown to a user editing alone. Versions
+arrive in two shapes (bare `version` on collection items, quoted `ETag` on
+the header) and both go through `toIfMatch`. The client also throws rather
+than sending a write whose `version` key is present but undefined.
+
+**Atoms are cached per item and written through, never invalidated.** There is
+no `GET /profile/atoms/{id}`, so the collection response is the only source of
+per-atom versions: `useAtoms` seeds `profileKeys.atom(id)` as it lands, and
+mutations put the server's copy into both caches. Invalidating the collection
+to learn one atom's new version is the 200-atom refetch the design exists to
+avoid. `useAtom`'s `queryFn` deliberately throws — nothing can fetch a single
+atom, so reaching it means seeding was skipped. Never invalidate a per-atom
+key; invalidate the collection, whose refetch re-seeds them.
+
+Also verified against the running backend rather than read off the schema:
 
 - **A write answers with the new version.** `PATCH` returns both `ETag: "2"`
   and `version` in the body, so autosave never needs a read between saves.
   The schema declares the `ETag` header on `GET`/`PUT /profile` and
   `PUT /preferences` only — the header is real everywhere, just undeclared.
+  It also survives the `next.config.ts` dev proxy, checked end to end.
+- **A write that changes nothing does not bump the version.** Same version
+  back, `200`. So a debounce firing after a typed-then-undone edit does not
+  invalidate the version other editors hold.
 - **The error paths are exactly as specified.** A stale `If-Match` gives
   `412 VERSION_CONFLICT` with a single `retry` resolution; a missing one gives
   `428 PRECONDITION_REQUIRED` with none. `type` is relative
@@ -577,6 +609,8 @@ the schema understates it in two places:
 - **Atom and variant versions move independently.** Patching an atom's
   controls bumps the atom and leaves its variants at their own version. The
   editor must hold both, not one per atom.
+- **`?format=markdown` on export returns `text/markdown`,** not JSON, and the
+  schema declares only the JSON half. Hence `api.getText` and two functions.
 
 - **`src/lib/content/richContent.ts` before any editor component.** It owns the
   run/mark types and the invariants in "The Content Model" above, with tests
@@ -606,11 +640,16 @@ PRECONDITION_REQUIRED`, stale one is `412 VERSION_CONFLICT` with a `retry`
 - `completeness` is recomputed on every read — do not calculate it client-side.
 - `GET /profile/export` is live with `?format=json|markdown`.
 
-Still to build here: the profile editor (`useAutosave` with the debounces in
-Bölüm 37.1, optimistic update, and a 412 dialog that offers "mine / theirs"
-without auto-merging), the atom cache seeded from the collection so
-invalidation never refetches all 200, and the mandatory post-extraction review
-screen (Bölüm 31.6) once ingestion exists.
+Still to build here: `useAutosave` (the debounces in Bölüm 37.1 — 1200ms for
+text, 500ms for a slider, 0 for a toggle or a drop — over the mutations that
+already exist), the 412 dialog offering "mine / theirs" without auto-merging,
+the editor components themselves, the `errors.*` ICU catalogue, and the
+mandatory post-extraction review screen (Bölüm 31.6) once ingestion exists.
+
+The mutation surface is partial by intent: `usePatchAtom` and `usePatchVariant`
+exist because autosave needs them. Create, delete and reorder have endpoint
+functions but no hooks — those land with the components that call them, so
+each arrives with a caller that shows it works.
 
 **Do not attach a permanent screen to `POST /generations/general`** (D.9 · 22).
 It is synchronous, Stage-1-only, stores nothing, and is replaced by Bölüm

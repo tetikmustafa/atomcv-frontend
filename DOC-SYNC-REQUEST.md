@@ -1,14 +1,16 @@
 # Doc sync request — from the frontend, after binding to the published schema
 
-Written 2026-08-15, after `npm run gen:api` ran against the live Stage 1 API
-and the frontend was rebound to the generated types.
+Written 2026-08-15, after `npm run gen:api` ran against the live Stage 1 API,
+the frontend was rebound to the generated types, and the profile API layer was
+built and exercised against the running backend through the dev proxy.
 
 Same round-trip as the last two: these are proposals for `docs/`, not edits.
-Fold the ones you accept into EK D and delete this file. Nothing here blocks
-frontend work — every item has already been handled defensively on this side,
-and each says how.
+Fold the ones you accept into EK D and delete this file.
 
-The frontend commits this covers: `8b75f3b`, `7194a5e`, `7c3a31e`.
+**A.2 is the one to read first** — it is the only item that describes
+something broken rather than something unstated, and following the
+specification there produces an editor that cannot save. Everything else is
+handled defensively on this side already, and each item says how.
 
 ---
 
@@ -41,12 +43,53 @@ already carries._ The error envelope has already moved out under that rule.
 **Frontend state:** narrowed, with the reasoning in its header comment and in
 CLAUDE.md. No action needed on this side.
 
+### A.2 — the PATCH media type in Bölüm 35.6 does not work
+
+**This one is behavioural, not annotation, and it is the only item here that
+would have shipped a broken editor.**
+
+Bölüm 35.6 specifies:
+
+```http
+PATCH /api/v1/profile/atoms/{id}
+Content-Type: application/merge-patch+json
+```
+
+Sent exactly that way, the running backend answers **500 `INTERNAL_ERROR`**.
+With `Content-Type: application/json` the same request answers 200. The
+published schema agrees with the server: all four PATCH operations declare
+`application/json`, and nothing anywhere declares the merge-patch type.
+
+Two separate things to decide:
+
+1. **Which is right.** Either the controllers should consume
+   `application/merge-patch+json` — it is the registered type for these
+   semantics (RFC 7396) and what the spec has always said — or Bölüm 35.6
+   should stop naming it. The semantics are not in question either way:
+   omitted keys are left alone and `null` clears, which is what the API does
+   and what `buildPatch` is built around.
+2. **A 500 is the wrong answer regardless.** An unsupported media type is
+   `415`, and a 500 means something threw where a content negotiation failure
+   belongs. It also misleads: the client's error panel tells the user the
+   server broke, when the request never should have been accepted for
+   processing.
+
+While that is open the frontend follows the schema and sends
+`application/json`, with a test pinning it — otherwise a well-meant
+correction toward the spec silently breaks every save.
+
+**One more thing in the same section:** the example reads
+`If-Match: "v7"`. Real ETags carry no prefix (`"7"`), and the header is
+compared literally — an unquoted or prefixed value answers 412, which is
+indistinguishable from a genuine conflict. Worth fixing where someone might
+copy it.
+
 ---
 
 ## B. Schema completeness
 
-Three places where the published schema says less than the API actually
-promises. All three are `@Schema` annotations rather than behaviour changes.
+Six places where the published schema says less than the API actually
+promises. All six are annotations rather than behaviour changes.
 
 The reason to care is mechanical: the generated client can only see what the
 schema declares. An undeclared guarantee is one nobody can rely on and one
@@ -111,6 +154,63 @@ on parse, which is what makes D.9 · 4 true for everything downstream; a
 missing `v` is left missing rather than invented. A non-array `m` or a
 non-numeric `v` still throws, because those mean the field was repurposed.
 
+### B.4 — ten operations declare no success response
+
+Not a missing field: a missing `200`. These declare only `404`, `412` and
+`428`, so a generated client has no response type for any of them.
+
+| Operation                      | Really answers           |
+| ------------------------------ | ------------------------ |
+| `GET /profile/sections`        | `200` `Section[]`        |
+| `GET /profile/entries`         | `200` `Entry[]`          |
+| `GET /profile/atoms`           | `200` `Atom[]`           |
+| `PATCH /profile/sections/{id}` | `200` `Section` + `ETag` |
+| `PATCH /profile/entries/{id}`  | `200` `Entry` + `ETag`   |
+| `PATCH /profile/atoms/{id}`    | `200` `Atom` + `ETag`    |
+| `PATCH …/variants/{variantId}` | `200` `Variant` + `ETag` |
+| the three `POST …/reorder`     | `200`                    |
+
+Between them that is every collection read and every partial write — the two
+things the profile editor does constantly. `@ApiResponse` on each would close
+it.
+
+**Frontend state:** `src/lib/api/endpoints/profile.ts` states the response
+types from `components['schemas']` and says why in its header. The item
+schemas are complete, so the shapes are still generated; only the wrapper is
+asserted, and it is checked against the running server.
+
+### B.5 — `EntryPatch` cannot express the clear it documents
+
+`organization` and `endDate` carry "Send null to clear" / "Send null when the
+job becomes ongoing again" in their descriptions, and are typed plain
+`string`. So the generated `EntryPatch` rejects the exact body D.9 · 16 is
+about — the one that removes an end date to mean "current".
+
+**Proposed:** mark both nullable. In OpenAPI 3.1 that is
+`"type": ["string", "null"]`.
+
+**Frontend state:** widened locally in `endpoints/profile.ts`, marked as
+temporary.
+
+### B.6 — `/profile/export` has a second, undeclared response type
+
+`?format=json` answers `application/json` with `ProfileExport`.
+`?format=markdown` answers `text/markdown`, and the schema declares only the
+first. A client that trusts it parses markdown as JSON and throws on the
+first character.
+
+**Proposed:** declare both media types on the 200.
+
+**Frontend state:** split into `exportProfileAsJson` and
+`exportProfileAsMarkdown`, the latter reading text.
+
+### B.7 — operation ids are positional
+
+`list`, `list_1`, `list_2`, `create_2`, `reorder_1`. Generators name things
+from these — ours produces `operations["list_2"]` for "read the atoms". Not
+harmful, but `@Operation(operationId = …)` would make the generated surface
+legible if anything ever binds to it.
+
 ---
 
 ## C. For EK D.9, if you want them there
@@ -139,3 +239,13 @@ Verified end to end, so D.6 can be trusted here without re-testing:
 
 This one caught a bug on our side rather than yours: the 409 mock was sending
 an absolute `type` URL. Fixed in `8b75f3b`.
+
+### C.3 — a write that changes nothing does not bump the version
+
+`PATCH` with values identical to the stored ones answers `200` with the
+**same** version; a real change bumps it. Checked deliberately, twice in a
+row, not inferred from a single call.
+
+Good behaviour, and load-bearing for autosave: a debounce that fires after a
+user typed and then undid their change does not invalidate the version every
+other open editor is holding.
