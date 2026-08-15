@@ -9,6 +9,20 @@ import { expect, test } from '@playwright/test';
  * These run against the development harness, the only route where the shell,
  * the providers, the worker and the client all mount together.
  */
+/**
+ * Opens the harness and waits until it is actually live.
+ *
+ * A rendered button is not a working one: Playwright's click waits for
+ * actionability, not for React to have bound the handler, so on a cold `next
+ * dev` compile a click can land on inert markup and the job never starts.
+ * The resolved session proves all three — hydrated, providers mounted, worker
+ * answering — and it is the cheapest thing that does.
+ */
+async function openHarness(page: import('@playwright/test').Page) {
+  await page.goto('/en/dev/mocks');
+  await expect(page.getByTestId('authenticated')).toHaveText('false');
+}
+
 test.describe('mock plumbing', () => {
   test('the service worker answers API calls in the browser', async ({ page }) => {
     await page.goto('/en/dev/mocks');
@@ -19,7 +33,7 @@ test.describe('mock plumbing', () => {
   });
 
   test('EventSource receives streamed phases and a terminal event', async ({ page }) => {
-    await page.goto('/en/dev/mocks');
+    await openHarness(page);
     await page.getByTestId('start-job').click();
 
     // Incremental delivery is the property under test, and asserting an exact
@@ -37,7 +51,7 @@ test.describe('mock plumbing', () => {
   });
 
   test('progress is announced, not just drawn', async ({ page }) => {
-    await page.goto('/en/dev/mocks');
+    await openHarness(page);
     await page.getByTestId('start-job').click();
 
     // Rule 6: a moving bar is invisible to a screen reader. The live region
