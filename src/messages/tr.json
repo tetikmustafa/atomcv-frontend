@@ -30,6 +30,17 @@
     },
     "openSourceNote": "MIT lisanslı, ücretsiz ve açık kaynak. Tek kişi tarafından yürütülüyor ve hizmet garantisi yok — kapatılması halinde en az 30 gün önceden bildirilir."
   },
+  "Editor": {
+    "save": {
+      "saving": "Kaydediliyor…",
+      "saved": "Kaydedildi",
+      "failed": "Kaydedilemedi.",
+      "retry": "Tekrar dene",
+      "conflict": "Bu maddeyi başka bir sekmede değiştirmişsin.",
+      "keepMine": "Benim halimi kullan",
+      "useTheirs": "Diğer halini kullan"
+    }
+  },
   "Generation": {
     "pageCount": "{count, plural, =1 {# sayfa} other {# sayfa}}"
   },

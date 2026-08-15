@@ -30,6 +30,17 @@
     },
     "openSourceNote": "Free and open source under the MIT licence. Run by one person, with no service guarantee — if it is ever shut down, notice comes at least 30 days in advance."
   },
+  "Editor": {
+    "save": {
+      "saving": "Saving…",
+      "saved": "Saved",
+      "failed": "Couldn't save.",
+      "retry": "Try again",
+      "conflict": "You changed this item in another tab.",
+      "keepMine": "Keep mine",
+      "useTheirs": "Use the other version"
+    }
+  },
   "Generation": {
     "pageCount": "{count, plural, =1 {# page} other {# pages}}"
   },
