@@ -102,11 +102,21 @@ async function send(
 }
 
 async function readBody<T>(response: Response): Promise<T> {
-  if (response.status === 204 || response.headers.get('Content-Length') === '0') {
-    return undefined as T;
-  }
+  if (response.status === 204) return undefined as T;
 
-  return (await response.json()) as T;
+  // Read as text first. `Content-Length` is not a reliable emptiness check —
+  // a chunked or worker-served response can carry no body and no length
+  // header at all, and `response.json()` then throws a bare SyntaxError from
+  // outside the fetch try/catch. The reorder endpoints answer exactly that
+  // way: 200, nothing to say.
+  const body = await response.text();
+  if (body === '') return undefined as T;
+
+  try {
+    return JSON.parse(body) as T;
+  } catch (cause) {
+    throw new NetworkError(cause);
+  }
 }
 
 async function request<T>(

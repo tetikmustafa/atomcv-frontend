@@ -1,7 +1,13 @@
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { ApiError, isApiError } from '@/lib/api/errors';
-import { getProfile, listAtoms, patchAtom, patchVariant } from '@/lib/api/endpoints/profile';
+import {
+  getProfile,
+  listAtoms,
+  patchAtom,
+  patchVariant,
+  reorderAtoms,
+} from '@/lib/api/endpoints/profile';
 import { server } from '@/mocks/node';
 
 async function captured(promise: Promise<unknown>): Promise<ApiError> {
@@ -35,6 +41,31 @@ describe('the patch media type', () => {
     await patchAtom('atom-1', { importance: 0.5 }, 0);
 
     expect(seen).toBe('application/json');
+  });
+});
+
+/**
+ * The reorder endpoints answer 200 with nothing to say, and `Content-Length`
+ * is not always there to prove it — a worker-served or chunked response can
+ * carry neither. `response.json()` then throws a bare SyntaxError from
+ * outside the fetch try/catch, which surfaced in the browser as an uncaught
+ * error rather than as a failed request.
+ */
+describe('a response with no body', () => {
+  it('is read as nothing rather than as broken JSON', async () => {
+    server.use(
+      http.post('*/api/v1/profile/atoms/reorder', () => new HttpResponse(null, { status: 200 })),
+    );
+
+    await expect(reorderAtoms('sec-experience', ['atom-1', 'atom-2'])).resolves.toBeUndefined();
+  });
+
+  it('still reports a body that is genuinely malformed', async () => {
+    server.use(
+      http.get('*/api/v1/profile/atoms', () => new HttpResponse('{oh no', { status: 200 })),
+    );
+
+    await expect(listAtoms()).rejects.toThrow();
   });
 });
 
