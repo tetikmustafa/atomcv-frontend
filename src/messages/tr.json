@@ -116,6 +116,13 @@
     "section": {
       "loading": "Yükleniyor…",
       "empty": "Bu bölümde henüz bir şey yok."
+    },
+    "profile": {
+      "title": "Profilin",
+      "loading": "Profilin yükleniyor…",
+      "untitled": "Adsız profil",
+      "completenessLabel": "Profil tamamlanma oranı",
+      "completeness": "Profil: {percent} tamamlandı"
     }
   },
   "Generation": {

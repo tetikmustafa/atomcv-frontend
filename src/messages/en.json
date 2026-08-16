@@ -116,6 +116,13 @@
     "section": {
       "loading": "Loading…",
       "empty": "Nothing in this section yet."
+    },
+    "profile": {
+      "title": "Your profile",
+      "loading": "Loading your profile…",
+      "untitled": "Untitled profile",
+      "completenessLabel": "Profile completeness",
+      "completeness": "Profile: {percent} complete"
     }
   },
   "Generation": {
