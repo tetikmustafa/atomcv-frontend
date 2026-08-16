@@ -102,6 +102,18 @@
       "verbatim": {
         "label": "Yeniden yazma",
         "hint": "İfaden yazdığın gibi kullanılır, yeniden yazılmaz."
+      },
+      "skills": {
+        "label": "Yetkinlikler",
+        "hint": "Bunu bir ilanla eşleştirmek için kullanılan standart adlar."
+      },
+      "metrics": {
+        "label": "Sayılar",
+        "hint": "Yeniden yazımın kaybetmesine ya da değiştirmesine izin verilmeyen rakamlar."
+      },
+      "properNouns": {
+        "label": "Adlar",
+        "hint": "Yeniden yazımın uyduramayacağı ya da değiştiremeyeceği kişi, ürün ve şirket adları."
       }
     },
     "reorder": {
@@ -123,6 +135,18 @@
       "untitled": "Adsız profil",
       "completenessLabel": "Profil tamamlanma oranı",
       "completeness": "Profil: {percent} tamamlandı"
+    },
+    "tags": {
+      "placeholder": "Yaz ve Enter’a bas",
+      "remove": "{value} sil"
+    },
+    "variants": {
+      "listLabel": "İfadeler",
+      "primary": "varsayılan",
+      "staleBadge": "güncel değil",
+      "staleExplained": "Bunun dayandığı ifade o zamandan beri değişti. Yeniden üretmek henüz yazılmadı; güncellemenin yolu buradan düzenlemek.",
+      "makePrimary": "Varsayılan olarak bunu kullan",
+      "unknownLanguage": "Bilinmeyen dil"
     }
   },
   "Generation": {

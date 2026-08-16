@@ -245,9 +245,26 @@ export function usePatchVariant() {
 
     onSuccess: (variant, { atomId, body }) => {
       if (body.primary) {
-        // Only the collections. Invalidating the per-atom key would run
-        // `useAtom`'s diagnostic throw — there is no request behind it. The
-        // refetch re-seeds those entries on its way through anyway.
+        // Promotion changes wordings the response does not mention: the server
+        // demotes whichever was primary and re-sorts primary-first. Applying
+        // that here is what makes the change visible at once — invalidating
+        // alone would not, because a query with no observer never refetches,
+        // and `AtomEditor` can be rendered without the list that has one.
+        //
+        // The invalidation still follows, so the server has the last word if
+        // it decides anything differently. Never the per-atom key: there is no
+        // request behind it, and refetching it runs `useAtom`'s diagnostic
+        // throw. The collection's refetch re-seeds those entries anyway.
+        updateAtomThrough(client, atomId, (atom) => ({
+          ...atom,
+          variants: atom.variants
+            ?.map((cached) => ({
+              ...(cached.id === variant.id ? variant : cached),
+              primary: cached.id === variant.id,
+            }))
+            .sort((a, b) => Number(b.primary) - Number(a.primary)),
+        }));
+
         void client.invalidateQueries({ queryKey: ATOM_COLLECTIONS });
         return;
       }

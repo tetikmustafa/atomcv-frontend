@@ -28,19 +28,38 @@ import { SaveStatus } from '@/components/editor/SaveStatus';
 import { ImportanceSlider } from '@/components/profile/ImportanceSlider';
 import { LockToggles, type LockToggle } from '@/components/profile/LockToggles';
 import { RichText } from '@/components/profile/RichText';
+import { TagInput } from '@/components/profile/TagInput';
+import { VariantTabs } from '@/components/profile/VariantTabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useAutosave } from '@/hooks/useAutosave';
 import { useAtom, usePatchAtom, usePatchVariant } from '@/hooks/useProfile';
 import { plainText } from '@/lib/content/plainText';
 import { parseRichContent, type Run } from '@/lib/content/richContent';
-import type { AtomPatch } from '@/lib/api/endpoints/profile';
+import type { AtomPatch, Variant } from '@/lib/api/endpoints/profile';
 
 export type AtomEditorProps = { atomId: string };
+
+/**
+ * The three lists, with the lengths the schema declares. Copied rather than
+ * derived because `openapi-typescript` emits no runtime values for
+ * `maxLength` — but they are the server's numbers, and letting the field
+ * enforce them means a rejected write never happens in the first place.
+ */
+const TAG_FIELDS = [
+  { field: 'skills', maxLength: 80 },
+  { field: 'metrics', maxLength: 80 },
+  { field: 'properNouns', maxLength: 120 },
+] as const satisfies ReadonlyArray<{ field: keyof AtomPatch & string; maxLength: number }>;
 
 /** Whether anything would be lost by replacing this content with plain text. */
 function hasMarks(runs: Run[]): boolean {
   return runs.some((run) => run.m.length > 0);
+}
+
+/** A variant's runs, stripped of anything the write body must not carry. */
+function runsOf(variant: Variant): Run[] {
+  return variant.content ? parseRichContent(variant.content).runs : [];
 }
 
 function AtomEditorImpl({ atomId }: AtomEditorProps) {
@@ -50,8 +69,13 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
   const patchAtom = usePatchAtom();
   const patchVariant = usePatchVariant();
 
-  const primary = atom?.variants?.[0];
-  const content = primary?.content ? parseRichContent(primary.content) : undefined;
+  const variants = atom?.variants ?? [];
+  // Variants come back primary-first, so the first one is the wording used
+  // when nothing more specific is asked for — the right thing to open on.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = variants.find((variant) => variant.id === selectedId) ?? variants[0];
+
+  const content = selected?.content ? parseRichContent(selected.content) : undefined;
   const runs = content?.runs ?? [];
 
   // Local text is seeded once and then owned by the field. Re-seeding it from
@@ -75,7 +99,7 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
     save: (next) =>
       patchVariant.mutateAsync({
         atomId,
-        variantId: primary!.id!,
+        variantId: selected!.id!,
         // The whole content every time — there is no partial text update.
         body: { content: { runs: [{ t: next, m: [] }] } },
       }),
@@ -83,52 +107,89 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
 
   if (isPending) return <p className="text-muted-foreground text-sm">{t('loading')}</p>;
   if (readError) return <ErrorPanel error={readError} />;
-  if (!atom || !primary) return null;
+  if (!atom || !selected) return null;
 
   const failed = wording.error ?? importance.error ?? controls.error;
   const showMarkWarning = hasMarks(runs) && draft !== null;
 
+  const wordingField = (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={`${atomId}-text`}>{t('text')}</Label>
+
+      {/*
+        The stored content, as it will be read. Kept visible while editing:
+        it is the only place the marks are still shown, and the textarea
+        below cannot represent them.
+      */}
+      <p className="text-muted-foreground text-sm">
+        <RichText runs={runs} />
+      </p>
+
+      <Textarea
+        id={`${atomId}-text`}
+        value={text}
+        rows={2}
+        onChange={(event) => {
+          setDraft(event.target.value);
+          wording.change(event.target.value);
+        }}
+        onBlur={wording.flush}
+      />
+
+      {showMarkWarning && (
+        <p role="status" className="text-muted-foreground text-xs">
+          {t('marksDropped')}
+        </p>
+      )}
+
+      <SaveStatus
+        status={wording.status}
+        onRetry={wording.retry}
+        onDiscard={() => {
+          wording.discard();
+          // Back to the server's copy, which is what "take theirs" means.
+          setDraft(null);
+        }}
+      />
+    </div>
+  );
+
   return (
     <article className="flex flex-col gap-4 rounded-lg border p-4" data-atom-id={atomId}>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor={`${atomId}-text`}>{t('text')}</Label>
-
-        {/*
-          The stored content, as it will be read. Kept visible while editing:
-          it is the only place the marks are still shown, and the textarea
-          below cannot represent them.
-        */}
-        <p className="text-muted-foreground text-sm">
-          <RichText runs={runs} />
-        </p>
-
-        <Textarea
-          id={`${atomId}-text`}
-          value={text}
-          rows={2}
-          onChange={(event) => {
-            setDraft(event.target.value);
-            wording.change(event.target.value);
-          }}
-          onBlur={wording.flush}
-        />
-
-        {showMarkWarning && (
-          <p role="status" className="text-muted-foreground text-xs">
-            {t('marksDropped')}
-          </p>
-        )}
-
-        <SaveStatus
-          status={wording.status}
-          onRetry={wording.retry}
-          onDiscard={() => {
-            wording.discard();
-            // Back to the server's copy, which is what "take theirs" means.
+      {/*
+        One wording needs no tab strip, and today every atom has exactly one.
+        Rendering tabs for a single variant would be chrome around nothing.
+      */}
+      {variants.length > 1 ? (
+        <VariantTabs
+          variants={variants}
+          selectedId={selected.id!}
+          onSelect={(id) => {
+            // The draft belongs to the wording it was typed into. Carrying it
+            // across a tab switch would write one language's sentence into
+            // another's — and `useAutosave` flushes on unmount, so it would
+            // actually be saved there.
+            wording.flush();
             setDraft(null);
+            setSelectedId(id);
           }}
-        />
-      </div>
+          onPromote={(variant) =>
+            patchVariant.mutate({
+              atomId,
+              variantId: variant.id!,
+              // `content` is required on this endpoint even when the write is
+              // only about `primary`, so the wording is resent unchanged. The
+              // `If-Match` is what makes that safe: a stale copy is refused
+              // rather than overwriting a newer one.
+              body: { content: { runs: runsOf(variant) }, primary: true },
+            })
+          }
+        >
+          {() => wordingField}
+        </VariantTabs>
+      ) : (
+        wordingField
+      )}
 
       <ImportanceSlider
         value={atom.importance ?? 0}
@@ -148,6 +209,26 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
         }}
         onChange={(toggle: LockToggle, value) => controls.change({ [toggle]: value })}
       />
+
+      {/*
+        The lists the pipeline reads: `skills` is what matching scores
+        against, and `metrics` and `properNouns` are what the rewrite
+        validator checks a model did not lose or invent. Each patch replaces
+        the whole list, which is why `TagInput` hands back the complete array.
+        Grouped with the toggles on the 0ms gesture — adding a tag is one
+        decision, not a stream of keystrokes.
+      */}
+      {TAG_FIELDS.map(({ field, maxLength }) => (
+        <TagInput
+          key={field}
+          label={t(`${field}.label`)}
+          hint={t(`${field}.hint`)}
+          maxLength={maxLength}
+          values={atom[field] ?? []}
+          onChange={(values) => controls.change({ [field]: values })}
+        />
+      ))}
+
       <SaveStatus status={controls.status} onRetry={controls.retry} onDiscard={controls.discard} />
 
       {/*

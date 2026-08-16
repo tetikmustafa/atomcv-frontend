@@ -100,6 +100,10 @@ function initial(): ProfileFixture {
         source: 'manual',
         verified: false,
         version: 0,
+        // Two wordings, primary first, and the second one stale — the shape
+        // Bölüm 37.6 is about. No atom on the running server has this yet
+        // (every seeded atom has one Turkish wording), so the mock is the
+        // only place the multi-variant path exists at all.
         variants: [
           {
             id: 'variant-2',
@@ -110,6 +114,17 @@ function initial(): ProfileFixture {
             contentHash: 'seeded',
             createdBy: 'user',
             stale: false,
+            version: 0,
+          },
+          {
+            id: 'variant-2-tr',
+            primary: false,
+            language: 'tr',
+            content: { v: 1, runs: [{ t: 'ETL hatları kurdum', m: [] }] },
+            plainText: 'ETL hatları kurdum',
+            contentHash: 'seeded',
+            createdBy: 'llm_translate',
+            stale: true,
             version: 0,
           },
         ],

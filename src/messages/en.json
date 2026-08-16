@@ -102,6 +102,18 @@
       "verbatim": {
         "label": "Never reword",
         "hint": "Your wording is used exactly as written, with no rewriting."
+      },
+      "skills": {
+        "label": "Skills",
+        "hint": "Canonical names used to match this against a posting."
+      },
+      "metrics": {
+        "label": "Numbers",
+        "hint": "Figures a rewrite is not allowed to lose or change."
+      },
+      "properNouns": {
+        "label": "Names",
+        "hint": "People, products and companies a rewrite may not invent or alter."
       }
     },
     "reorder": {
@@ -123,6 +135,18 @@
       "untitled": "Untitled profile",
       "completenessLabel": "Profile completeness",
       "completeness": "Profile: {percent} complete"
+    },
+    "tags": {
+      "placeholder": "Type and press Enter",
+      "remove": "Remove {value}"
+    },
+    "variants": {
+      "listLabel": "Wordings",
+      "primary": "default",
+      "staleBadge": "out of date",
+      "staleExplained": "The wording this was based on has changed since. Regenerating it is not built yet — editing it here is the way to bring it up to date.",
+      "makePrimary": "Use this one by default",
+      "unknownLanguage": "Unknown language"
     }
   },
   "Generation": {

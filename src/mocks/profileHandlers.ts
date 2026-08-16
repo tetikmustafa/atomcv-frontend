@@ -150,10 +150,24 @@ export const profileHandlers = [
     const refused = precondition(request, instance, variant.version ?? 0);
     if (refused) return refused;
 
-    const body = (await request.json()) as { content: NonNullable<typeof variant.content> };
+    const body = (await request.json()) as {
+      content: NonNullable<typeof variant.content>;
+      primary?: boolean;
+    };
+
     variant.content = body.content;
     variant.plainText = (body.content.runs ?? []).map((run) => run.t).join('');
     variant.version = (variant.version ?? 0) + 1;
+
+    // Promotion is not a local change. The server demotes whichever wording
+    // was primary and re-sorts the list primary-first, while the response
+    // carries only the variant that was written — which is exactly why
+    // `usePatchVariant` refetches on this write instead of merging.
+    if (body.primary) {
+      const atom = findAtom(id)!;
+      for (const other of atom.variants ?? []) other.primary = other.id === variantId;
+      atom.variants?.sort((a, b) => Number(b.primary) - Number(a.primary));
+    }
 
     return HttpResponse.json(variant, { headers: { ETag: `"${variant.version}"` } });
   }),
