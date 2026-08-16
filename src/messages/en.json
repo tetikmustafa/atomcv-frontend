@@ -103,6 +103,19 @@
         "label": "Never reword",
         "hint": "Your wording is used exactly as written, with no rewriting."
       }
+    },
+    "reorder": {
+      "moveUp": "Move {label} up",
+      "moveDown": "Move {label} down",
+      "drag": "Reorder {label}",
+      "picked": "Picked up {label}.",
+      "over": "{label} is now at position {position, number}.",
+      "dropped": "Dropped {label} at position {position, number}.",
+      "cancelled": "Left {label} where it was."
+    },
+    "section": {
+      "loading": "Loading…",
+      "empty": "Nothing in this section yet."
     }
   },
   "Generation": {

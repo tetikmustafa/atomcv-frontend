@@ -103,6 +103,19 @@
         "label": "Yeniden yazma",
         "hint": "İfaden yazdığın gibi kullanılır, yeniden yazılmaz."
       }
+    },
+    "reorder": {
+      "moveUp": "{label} yukarı taşı",
+      "moveDown": "{label} aşağı taşı",
+      "drag": "{label} sırasını değiştir",
+      "picked": "{label} tutuldu.",
+      "over": "{label} şimdi {position, number}. sırada.",
+      "dropped": "{label} {position, number}. sıraya bırakıldı.",
+      "cancelled": "{label} olduğu yerde bırakıldı."
+    },
+    "section": {
+      "loading": "Yükleniyor…",
+      "empty": "Bu bölümde henüz bir şey yok."
     }
   },
   "Generation": {
