@@ -554,6 +554,13 @@ raise these without a decision** — the numbers are Bölüm 52.3's, and raising
 one quietly is exactly the failure the three-number split was designed to
 prevent.
 
+**The first app route has now been measured.** `/[locale]/profile` is
+**234.0 KB total, 65.8 KB own** — carrying dnd-kit, TanStack Query, the
+next-intl client runtime and the Radix primitives. That leaves roughly 39 KB
+of own share, and React Hook Form and Zod have not landed yet: they arrive
+with the first real form. Treat that number as the budget's early warning,
+not as spare room.
+
 ### Stage 1 — profile CRUD against a real API
 
 **The backend finished Stage 1 (EK D.7).** Profile, section, entry, atom and
@@ -747,14 +754,26 @@ listed it long before anything depended on it.
   `useAutosave` flushes rather than cancels. Keeping them mounted and hidden
   would hold two hundred editors and their cache subscriptions alive behind
   every closed section (Bölüm 37.7).
-- **⚠️ The bundle budget has not seen dnd-kit yet.** `check-bundle-size.mjs`
-  measures prerendered routes, and no app route exists — the profile page is
-  the first one that will carry it, so expect the app-route numbers to appear
-  only when that lands.
+  **The profile route exists**: `[locale]/(app)/profile`, a server component
+  rendering `ProfileEditor`, with `CompletenessBar` above `SectionList`. It is
+  the first measured app route — see the budget section.
 
-Still to build here: `VariantTabs`, `TagInput`, `CompletenessBar`, the
-profile route that composes them, and the mandatory post-extraction review
-screen (Bölüm 31.6) once ingestion exists.
+- **Completeness is a percentage on purpose**, and it is the one case that
+  looks like the fit report and is not. A fit report shows countable facts
+  because a percentage would imply precision nobody has; completeness is a
+  proportion of a server-owned checklist, so a percentage is what it is. It
+  arrives as 0-100 and `Intl` percent wants a fraction — the same trap the
+  error catalogue hit, from the other direction.
+- **A 200 with an empty body used to throw.** The reorder endpoints answer
+  exactly that, and `Content-Length` is not always present to prove it, so
+  `response.json()` raised a bare `SyntaxError` from outside the fetch
+  try/catch — an uncaught error in the browser rather than a failed request.
+  `readBody` now reads text first. Found by the e2e suite, not by any unit
+  test, because MSW's Node interceptor sets the header and its service worker
+  does not.
+
+Still to build here: `VariantTabs`, `TagInput`, and the mandatory
+post-extraction review screen (Bölüm 31.6) once ingestion exists.
 
 The mutation surface is partial by intent: `usePatchAtom` and `usePatchVariant`
 exist because autosave needs them. Create, delete and reorder have endpoint
