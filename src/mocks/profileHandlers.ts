@@ -18,6 +18,7 @@ function problem(
   code: string,
   instance: string,
   resolutions: ProblemDetail['resolutions'] = [],
+  params?: Record<string, unknown>,
 ): ProblemDetail {
   return {
     type: `/errors/${code.toLowerCase().replaceAll('_', '-')}`,
@@ -25,6 +26,8 @@ function problem(
     status,
     instance,
     code,
+    // Absent rather than `{}` when a code declares none, as the real API does.
+    ...(params ? { params } : {}),
     ...(resolutions.length ? { resolutions } : {}),
   };
 }
@@ -77,6 +80,41 @@ export const profileHandlers = [
           (!sectionId || atom.sectionId === sectionId) && (!entryId || atom.entryId === entryId),
       ),
     );
+  }),
+
+  /**
+   * Reordering takes the **complete** list of the group being ordered; a
+   * partial one is a 400 (D.9 · 19). The mock enforces that, because a client
+   * that sends only the moved items works perfectly against a lenient mock
+   * and fails against the real API.
+   */
+  http.post('*/api/v1/profile/atoms/reorder', async ({ request }) => {
+    const instance = '/api/v1/profile/atoms/reorder';
+    const body = (await request.json()) as { sectionId: string; entryId?: string; ids: string[] };
+
+    const group = fixture.atoms.filter(
+      (atom) =>
+        atom.sectionId === body.sectionId &&
+        (body.entryId === undefined || atom.entryId === body.entryId),
+    );
+
+    const named = new Set(body.ids);
+    const complete = group.length === body.ids.length && group.every((atom) => named.has(atom.id!));
+
+    if (!complete) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['ids'] }),
+        { status: 400 },
+      );
+    }
+
+    body.ids.forEach((id, index) => {
+      const atom = findAtom(id);
+      if (atom) atom.displayOrder = index;
+    });
+    fixture.atoms.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+
+    return new HttpResponse(null, { status: 200 });
   }),
 
   /** Controls only. Text goes through the variant endpoint. */

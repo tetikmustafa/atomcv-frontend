@@ -24,6 +24,7 @@ import {
   listSections,
   patchAtom,
   patchVariant,
+  reorderAtoms,
   type Atom,
   type AtomPatch,
   type VariantWrite,
@@ -255,6 +256,67 @@ export function usePatchVariant() {
         ...atom,
         variants: atom.variants?.map((cached) => (cached.id === variant.id ? variant : cached)),
       }));
+    },
+  });
+}
+
+/**
+ * Reordering atoms within a section, or within an entry inside it.
+ *
+ * The complete list goes to the server every time — a partial one is a 400,
+ * and `displayOrder` cannot be patched directly (D.9 · 19). No `If-Match`
+ * either: order is a property of the collection, and collections have no
+ * version.
+ *
+ * Optimistic, because a list that snaps back to its old order for the length
+ * of a round trip reads as a failed drop. Reconciled by invalidating on
+ * success rather than by trusting the optimistic copy: the server renumbers
+ * `displayOrder`, and while nothing renders that field today, leaving the
+ * cache holding numbers that disagree with the order is the kind of quiet
+ * inconsistency that only surfaces once something does read it. A drop is a
+ * deliberate, occasional gesture, so it can afford the refetch that a
+ * keystroke cannot.
+ */
+export function useReorderAtoms() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      sectionId,
+      ids,
+      entryId,
+    }: {
+      sectionId: string;
+      ids: string[];
+      entryId?: string;
+    }) => reorderAtoms(sectionId, ids, entryId),
+
+    onMutate: async ({ ids }) => {
+      await client.cancelQueries({ queryKey: ATOM_COLLECTIONS });
+
+      const previous = client.getQueriesData<Atom[]>({ queryKey: ATOM_COLLECTIONS });
+
+      client.setQueriesData<Atom[]>({ queryKey: ATOM_COLLECTIONS }, (list) => {
+        if (!list) return list;
+        const byId = new Map(list.map((atom) => [atom.id, atom]));
+        const moved = ids.map((id) => byId.get(id)).filter((atom): atom is Atom => Boolean(atom));
+        // Anything the reorder did not name stays where it was — the call is
+        // scoped to one group, and other groups share the same cached list.
+        const untouched = list.filter((atom) => !ids.includes(atom.id!));
+        return [...moved, ...untouched];
+      });
+
+      return { previous };
+    },
+
+    onError: (_error, _variables, context) => {
+      for (const [key, list] of context?.previous ?? []) {
+        client.setQueryData(key, list);
+      }
+    },
+
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: ATOM_COLLECTIONS });
     },
   });
 }
