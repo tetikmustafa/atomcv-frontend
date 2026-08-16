@@ -1,16 +1,23 @@
 # Doc sync request — from the frontend, after binding to the published schema
 
-Written 2026-08-15, after `npm run gen:api` ran against the live Stage 1 API,
-the frontend was rebound to the generated types, and the profile API layer was
-built and exercised against the running backend through the dev proxy.
+Written 2026-08-15 and extended 2026-08-17, as the profile editor was built
+and every claim in it was checked against the running backend through the dev
+proxy — not read off the schema.
 
 Same round-trip as the last two: these are proposals for `docs/`, not edits.
 Fold the ones you accept into EK D and delete this file.
 
-**A.2 is the one to read first** — it is the only item that describes
-something broken rather than something unstated, and following the
-specification there produces an editor that cannot save. Everything else is
-handled defensively on this side already, and each item says how.
+Two to read first:
+
+- **A.2** is the only item that describes something broken rather than
+  something unstated. Following the specification there produces an editor
+  that cannot save a single field.
+- **A.3** is a decision rather than a defect: Bölüm 37.6 draws controls that
+  Stage 1 has no endpoint for, and the next session to read it will build
+  them.
+
+Everything else is handled defensively on this side already, and each item
+says how.
 
 ---
 
@@ -83,6 +90,27 @@ correction toward the spec silently breaks every save.
 compared literally — an unquoted or prefixed value answers 412, which is
 indistinguishable from a genuine conflict. Worth fixing where someone might
 copy it.
+
+### A.3 — Bölüm 37.6 draws two buttons that nothing can answer
+
+37.6 shows a stale wording with `[ Yeniden üret ] [ Benimkini koru ]`, and
+`Variant.stale` is published with the description "the source has moved on;
+this wording needs regenerating".
+
+Stage 1 has **no endpoint that regenerates a variant**, and no background job
+that would ever set `stale` in the first place — 37.5's chain (TR edited →
+EN marked stale → translation job) is Stage 2 work. So today the flag is
+always false, and if it were true there would be nothing to do about it.
+
+**What we need decided:** whether 37.6's flow is Stage 2 (almost certainly),
+and if so a line in D.9 saying so. The reason it matters is that a frontend
+session reading 37.6 will build the buttons, and a control that cannot work
+is worse than none on a screen already telling the user something is wrong.
+
+**Frontend state:** `VariantTabs` shows the badge and an explanation, and
+deliberately renders no regenerate control. Editing the wording by hand is
+offered instead, since that is the one thing that does work. Revisit when the
+job exists.
 
 ---
 
@@ -204,6 +232,31 @@ first character.
 **Frontend state:** split into `exportProfileAsJson` and
 `exportProfileAsMarkdown`, the latter reading text.
 
+### B.8 — `content` is required on the variant PATCH, so promoting resends it
+
+`PATCH /profile/atoms/{id}/variants/{variantId}` takes `VariantWrite`, where
+`content` is required. Every other field merge-patches correctly — verified:
+omitting `language` keeps it — but a write that is only about `primary` is
+refused:
+
+```
+PATCH …/variants/{id}   {"primary": true}
+→ 400 VALIDATION_FAILED, params.fields = ["content"]
+```
+
+So making a wording the default means resending its entire text, on a write
+that is not a text edit at all. It works, and `If-Match` keeps it safe — a
+stale copy is refused rather than overwriting a newer one — but the client
+has to be holding the full content to perform an operation that has nothing
+to do with content.
+
+**Proposed:** make `content` optional on the PATCH body while keeping it
+required on `POST …/variants`. The endpoint is already merge-patch in
+everything else; this is the one field that is not.
+
+**Frontend state:** `AtomEditor` resends the wording unchanged when
+promoting, with the reason in a comment so nobody "simplifies" it later.
+
 ### B.7 — operation ids are positional
 
 `list`, `list_1`, `list_2`, `create_2`, `reorder_1`. Generators name things
@@ -249,3 +302,27 @@ row, not inferred from a single call.
 Good behaviour, and load-bearing for autosave: a debounce that fires after a
 user typed and then undid their change does not invalidate the version every
 other open editor is holding.
+
+### C.4 — an atom will not let go of its last primary wording
+
+`DELETE …/variants/{id}` on the primary answers `400 VALIDATION_FAILED` with
+`params.fields = ["primary"]`, rather than deleting it and promoting
+something else. Correct — an atom with no default wording has nothing to
+render — and worth writing down, because the client has to promote another
+wording first and there is no way to discover that except by trying.
+
+### C.5 — promoting a wording demotes the previous one and re-sorts
+
+`PATCH …/variants/{id}` with `primary: true` demotes whichever wording was
+primary and returns the list primary-first on the next read. The response
+carries only the wording that was written, so a client that merges it without
+knowing this ends up with two wordings both claiming to be the default.
+
+Verified, and `usePatchVariant` applies the demotion locally _and_
+invalidates, so the server still has the last word.
+
+**One note on the seed data**, not a request: no atom on the running server
+has more than one variant, and every wording is `tr` while
+`enabledLanguages` is `["en"]`. So the multi-variant path — tabs, promotion,
+staleness — has no coverage on either side except our mocks. A seeded atom
+with two wordings would make it real for both of us.

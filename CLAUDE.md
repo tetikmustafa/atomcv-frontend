@@ -555,7 +555,7 @@ one quietly is exactly the failure the three-number split was designed to
 prevent.
 
 **The first app route has now been measured.** `/[locale]/profile` is
-**234.0 KB total, 65.8 KB own** — carrying dnd-kit, TanStack Query, the
+**237.8 KB total, 69.7 KB own** — carrying dnd-kit, TanStack Query, the
 next-intl client runtime and the Radix primitives. That leaves roughly 39 KB
 of own share, and React Hook Form and Zod have not landed yet: they arrive
 with the first real form. Treat that number as the budget's early warning,
@@ -772,8 +772,33 @@ listed it long before anything depended on it.
   test, because MSW's Node interceptor sets the header and its service worker
   does not.
 
-Still to build here: `VariantTabs`, `TagInput`, and the mandatory
-post-extraction review screen (Bölüm 31.6) once ingestion exists.
+**`VariantTabs` and `TagInput` are built**, and `AtomEditor` composes both.
+
+- **⚠️ Nothing can regenerate a stale wording.** Bölüm 37.6 draws
+  `[ Yeniden üret ] [ Benimkini koru ]`; Stage 1 publishes no endpoint for
+  either, and no job that would ever set `stale`. The badge and its
+  explanation are rendered and no regenerate control is — a button that
+  cannot work is worse than none on a screen already saying something is
+  wrong. **Do not add one before the endpoint exists**; raised as A.3.
+- **Promoting a wording resends its whole text.** `content` is required on
+  the variant PATCH, so `{primary: true}` alone is a `400`. Verified, and the
+  reason is in a comment at the call site so it is not "simplified" away.
+  `If-Match` is what keeps it safe.
+- **Promotion is applied locally _and_ invalidated.** The server demotes the
+  old primary and re-sorts, while the response carries only the wording that
+  was written. Invalidating alone was not enough: a query with no observer
+  never refetches, and `AtomEditor` can be rendered without the list that
+  has one.
+- **The multi-variant path exists only in the mocks.** No atom on the running
+  server has a second wording, so tabs, promotion and staleness have no
+  coverage on the backend side either.
+- **Tag lengths are copied, not derived.** `openapi-typescript` emits no
+  runtime values for `maxLength`, so the 80/80/120 in `AtomEditor` are the
+  schema's numbers written down. Enforcing them in the field means a rejected
+  write never happens.
+
+Still to build here: the mandatory post-extraction review screen (Bölüm 31.6)
+once ingestion exists.
 
 The mutation surface is partial by intent: `usePatchAtom` and `usePatchVariant`
 exist because autosave needs them. Create, delete and reorder have endpoint
