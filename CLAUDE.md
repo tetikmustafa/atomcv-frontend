@@ -728,10 +728,33 @@ than fetched by the shadcn CLI.
   more truthful — jsdom has no layout — so anything that genuinely depends on
   measured size belongs in the Playwright suite.
 
-Still to build here: `SectionList` and `EntryCard` with dnd-kit reordering
-(keyboard sensor **and** explicit move buttons, rule 5), `VariantTabs`,
-`TagInput`, `CompletenessBar`, the profile route that composes them, and the
-mandatory post-extraction review screen (Bölüm 31.6) once ingestion exists.
+**`SortableList` and `SectionList` are built**, and dnd-kit is now actually
+installed (`core`, `sortable`, `utilities`, `modifiers`) — the tech stack
+listed it long before anything depended on it.
+
+- **Rule 5 lives in `SortableList`, once.** Three collections reorder, and
+  implementing it per collection is how a keyboard user ends up able to
+  reorder some lists and not others. Both halves are there and neither is
+  redundant: the keyboard sensor is a _mode_ you have to know about and
+  enter, while the move buttons are the same operation with no mode — and the
+  only form a switch device or voice control can reach. The drag handle is a
+  real `Button`, because a `div` carrying listeners never enters the tab
+  order.
+- **`onReorder` always hands over every id** (D.9 · 19). The mock refuses a
+  partial list with a 400, the way the server does — a lenient mock would let
+  a partial-list client pass every test and fail in production.
+- **Collapsing a section unmounts its editors**, which is exactly why
+  `useAutosave` flushes rather than cancels. Keeping them mounted and hidden
+  would hold two hundred editors and their cache subscriptions alive behind
+  every closed section (Bölüm 37.7).
+- **⚠️ The bundle budget has not seen dnd-kit yet.** `check-bundle-size.mjs`
+  measures prerendered routes, and no app route exists — the profile page is
+  the first one that will carry it, so expect the app-route numbers to appear
+  only when that lands.
+
+Still to build here: `VariantTabs`, `TagInput`, `CompletenessBar`, the
+profile route that composes them, and the mandatory post-extraction review
+screen (Bölüm 31.6) once ingestion exists.
 
 The mutation surface is partial by intent: `usePatchAtom` and `usePatchVariant`
 exist because autosave needs them. Create, delete and reorder have endpoint
