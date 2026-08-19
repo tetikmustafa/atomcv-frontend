@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { http, HttpResponse } from 'msw';
 import { NextIntlClientProvider } from 'next-intl';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
@@ -9,6 +10,7 @@ import { AtomEditor } from '@/components/profile/AtomEditor';
 import { listAtoms, type Atom } from '@/lib/api/endpoints/profile';
 import { profileKeys } from '@/lib/api/queryKeys';
 import en from '@/messages/en.json';
+import { server } from '@/mocks/node';
 
 async function renderEditor(atomId: string, locale: 'en' | 'tr' = 'en') {
   const client = new QueryClient({
@@ -130,6 +132,36 @@ describe('an atom with several wordings', () => {
       expect(variants.find((v) => v.id === 'variant-2-tr')?.primary).toBe(true);
       expect(variants.find((v) => v.id === 'variant-2')?.primary).toBe(false);
     });
+  });
+
+  /**
+   * A promote carries `primary` and nothing else.
+   *
+   * It used to resend the whole wording, because `content` was required on
+   * this endpoint even for a write that had nothing to do with content — and
+   * that request cleared the user's `tone` every time (handoff B-028). The
+   * server no longer requires it, so sending it again would be re-creating a
+   * bug that has already been fixed once.
+   */
+  it('sends only what changes, so a promote cannot clear the tone', async () => {
+    const user = userEvent.setup();
+    let body: Record<string, unknown> | undefined;
+
+    server.use(
+      http.patch('*/api/v1/profile/atoms/:id/variants/:variantId', async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ id: 'variant-2-tr', primary: true, version: 1 });
+      }),
+    );
+
+    await renderEditor('atom-2');
+    await user.click(screen.getByRole('tab', { name: /Turkish/ }));
+    await user.click(screen.getByRole('button', { name: 'Use this one by default' }));
+
+    await waitFor(() => expect(body).toBeDefined());
+    expect(body).toEqual({ primary: true });
+    expect(body).not.toHaveProperty('content');
+    expect(body).not.toHaveProperty('tone');
   });
 
   it('offers no promote control on the wording that is already the default', async () => {

@@ -27,7 +27,7 @@ import {
   reorderAtoms,
   type Atom,
   type AtomPatch,
-  type VariantWrite,
+  type VariantPatch,
 } from '@/lib/api/endpoints/profile';
 
 export type AtomFilter = { sectionId?: string; entryId?: string };
@@ -223,7 +223,7 @@ export function usePatchVariant() {
     }: {
       atomId: string;
       variantId: string;
-      body: VariantWrite;
+      body: VariantPatch;
     }) => patchVariant(atomId, variantId, body, variantVersionOf(client, atomId, variantId)),
 
     onMutate: async ({ atomId, variantId, body }) => {

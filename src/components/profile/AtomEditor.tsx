@@ -36,7 +36,7 @@ import { useAutosave } from '@/hooks/useAutosave';
 import { useAtom, usePatchAtom, usePatchVariant } from '@/hooks/useProfile';
 import { plainText } from '@/lib/content/plainText';
 import { parseRichContent, type Run } from '@/lib/content/richContent';
-import type { AtomPatch, Variant } from '@/lib/api/endpoints/profile';
+import type { AtomPatch } from '@/lib/api/endpoints/profile';
 
 export type AtomEditorProps = { atomId: string };
 
@@ -55,11 +55,6 @@ const TAG_FIELDS = [
 /** Whether anything would be lost by replacing this content with plain text. */
 function hasMarks(runs: Run[]): boolean {
   return runs.some((run) => run.m.length > 0);
-}
-
-/** A variant's runs, stripped of anything the write body must not carry. */
-function runsOf(variant: Variant): Run[] {
-  return variant.content ? parseRichContent(variant.content).runs : [];
 }
 
 function AtomEditorImpl({ atomId }: AtomEditorProps) {
@@ -177,11 +172,13 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
             patchVariant.mutate({
               atomId,
               variantId: variant.id!,
-              // `content` is required on this endpoint even when the write is
-              // only about `primary`, so the wording is resent unchanged. The
-              // `If-Match` is what makes that safe: a stale copy is refused
-              // rather than overwriting a newer one.
-              body: { content: { runs: runsOf(variant) }, primary: true },
+              // Only what changes. This used to resend the whole wording,
+              // because `content` was required even on a write that was not
+              // about content — and that request cleared the user's `tone`
+              // every time (handoff B-028, fixed server-side). `tone` is
+              // three-state now: omitted keeps it, `null` returns it to the
+              // neutral register.
+              body: { primary: true },
             })
           }
         >

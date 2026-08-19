@@ -151,12 +151,27 @@ export const profileHandlers = [
     if (refused) return refused;
 
     const body = (await request.json()) as {
-      content: NonNullable<typeof variant.content>;
+      content?: NonNullable<typeof variant.content>;
+      tone?: string | null;
       primary?: boolean;
     };
 
-    variant.content = body.content;
-    variant.plainText = (body.content.runs ?? []).map((run) => run.t).join('');
+    // Nothing is required. A promote is `{ primary: true }` and carries no
+    // content — resending the wording used to be the only way, and it cleared
+    // `tone` every time (handoff B-028). A mock that still demanded `content`
+    // would let that regression back in unnoticed.
+    if (body.content) {
+      variant.content = body.content;
+      variant.plainText = (body.content.runs ?? []).map((run) => run.t).join('');
+    }
+
+    // Three-state: absent keeps what is there, `null` returns to the neutral
+    // register, a value sets it.
+    if ('tone' in body) {
+      if (body.tone === null) delete variant.tone;
+      else variant.tone = body.tone as typeof variant.tone;
+    }
+
     variant.version = (variant.version ?? 0) + 1;
 
     // Promotion is not a local change. The server demotes whichever wording
