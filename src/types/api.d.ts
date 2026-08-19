@@ -63,10 +63,10 @@ export interface paths {
          * List the sections in display order
          * @description Every item carries its own version, so editing one needs no extra read.
          */
-        get: operations["list"];
+        get: operations["listSections"];
         put?: never;
         /** Add a section at the end */
-        post: operations["create"];
+        post: operations["createSection"];
         delete?: never;
         options?: never;
         head?: never;
@@ -86,7 +86,7 @@ export interface paths {
          * Put the sections in this order
          * @description The list must name every section. A partial one would leave the rest to be guessed; sending all of them also makes the call idempotent.
          */
-        post: operations["reorder"];
+        post: operations["reorderSections"];
         delete?: never;
         options?: never;
         head?: never;
@@ -101,10 +101,10 @@ export interface paths {
             cookie?: never;
         };
         /** List entries, optionally within one section */
-        get: operations["list_1"];
+        get: operations["listEntries"];
         put?: never;
         /** Add an entry at the end of its section */
-        post: operations["create_1"];
+        post: operations["createEntry"];
         delete?: never;
         options?: never;
         head?: never;
@@ -124,7 +124,7 @@ export interface paths {
          * Put one section's entries in this order
          * @description The list must name every entry of that section.
          */
-        post: operations["reorder_1"];
+        post: operations["reorderEntries"];
         delete?: never;
         options?: never;
         head?: never;
@@ -142,13 +142,13 @@ export interface paths {
          * List atoms with their wordings
          * @description Unpaginated: a profile holds tens to a few hundred atoms and the editor loads all of them (EK D.6.2).
          */
-        get: operations["list_2"];
+        get: operations["listAtoms"];
         put?: never;
         /**
          * Add an atom and its first wording
          * @description Content is required: an atom with no wording is a fact nobody can read, and nothing downstream can render or measure it.
          */
-        post: operations["create_2"];
+        post: operations["createAtom"];
         delete?: never;
         options?: never;
         head?: never;
@@ -188,7 +188,7 @@ export interface paths {
          * Put one group of atoms in this order
          * @description The atoms of an entry, or the ones hanging straight off a section.
          */
-        post: operations["reorder_2"];
+        post: operations["reorderAtoms"];
         delete?: never;
         options?: never;
         head?: never;
@@ -231,14 +231,14 @@ export interface paths {
          * Delete a section
          * @description Takes its entries, atoms and variants with it. Requires If-Match, so a section someone else has changed since you read it is not removed on stale information.
          */
-        delete: operations["delete_1"];
+        delete: operations["deleteSection"];
         options?: never;
         head?: never;
         /**
          * Change part of a section
          * @description A field left out is left alone. Requires If-Match.
          */
-        patch: operations["patch"];
+        patch: operations["patchSection"];
         trace?: never;
     };
     "/api/v1/profile/entries/{id}": {
@@ -255,14 +255,14 @@ export interface paths {
          * Delete an entry
          * @description Takes its atoms and their variants with it. Requires If-Match.
          */
-        delete: operations["delete_2"];
+        delete: operations["deleteEntry"];
         options?: never;
         head?: never;
         /**
          * Change part of an entry
          * @description A field left out is left alone; a nullable field sent as null is cleared. Requires If-Match.
          */
-        patch: operations["patch_1"];
+        patch: operations["patchEntry"];
         trace?: never;
     };
     "/api/v1/profile/atoms/{id}": {
@@ -279,14 +279,14 @@ export interface paths {
          * Delete an atom
          * @description Takes its wordings with it.
          */
-        delete: operations["delete_3"];
+        delete: operations["deleteAtom"];
         options?: never;
         head?: never;
         /**
          * Change an atom's controls
          * @description Importance, locks, verification and the scoring inputs. Text lives on a wording. Requires If-Match.
          */
-        patch: operations["patch_2"];
+        patch: operations["patchAtom"];
         trace?: never;
     };
     "/api/v1/profile/atoms/{id}/variants/{variantId}": {
@@ -307,8 +307,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Replace a wording's text
-         * @description The whole content, not a run at a time. Changing the words clears the measured render costs, because the same sentence is what made them true. Requires If-Match.
+         * Change a wording
+         * @description Content is optional: making a wording the default is not a text edit and does not need the sentence back. When content is sent it is the whole of it, not a run at a time, and changing the words clears the measured render costs — the same sentence is what made them true. Requires If-Match.
          */
         patch: operations["patchVariant"];
         trace?: never;
@@ -429,7 +429,7 @@ export interface components {
              * @description HTTP status
              * @example 409
              */
-            status?: number;
+            status: number;
             /**
              * @description The path that produced it
              * @example /api/v1/generations
@@ -439,7 +439,7 @@ export interface components {
              * @description Translation key: the client resolves errors.{CODE}
              * @enum {string}
              */
-            code?: "INSUFFICIENT_PROFILE" | "UNPARSEABLE_JOB_DESCRIPTION" | "CONFLICTING_PREFERENCES" | "FEATURE_REQUIRES_ACCOUNT" | "QUOTA_EXCEEDED" | "ALL_PROVIDERS_UNAVAILABLE" | "COMPILATION_FAILED" | "PAGE_LIMIT_EXCEEDED" | "REWRITE_VALIDATION_FAILED" | "EMBEDDING_UNAVAILABLE" | "PDF_NOT_TEXT_BASED" | "PDF_ENCRYPTED" | "EXTRACTION_EMPTY" | "EXTRACTION_TIMEOUT" | "LANGUAGE_UNDETECTED" | "PROFILE_QUOTA_EXCEEDED" | "ANONYMOUS_SESSION_EXPIRED" | "ATOM_LIMIT_EXCEEDED" | "NO_ANONYMOUS_PROFILE" | "PROFILE_ALREADY_EXISTS" | "GENERATION_ARTIFACT_EXPIRED" | "CSRF_TOKEN_INVALID" | "RESOURCE_NOT_FOUND" | "VERSION_CONFLICT" | "PRECONDITION_REQUIRED" | "VALIDATION_FAILED" | "INTERNAL_ERROR";
+            code: "INSUFFICIENT_PROFILE" | "UNPARSEABLE_JOB_DESCRIPTION" | "CONFLICTING_PREFERENCES" | "FEATURE_REQUIRES_ACCOUNT" | "QUOTA_EXCEEDED" | "ALL_PROVIDERS_UNAVAILABLE" | "COMPILATION_FAILED" | "PAGE_LIMIT_EXCEEDED" | "REWRITE_VALIDATION_FAILED" | "EMBEDDING_UNAVAILABLE" | "PDF_NOT_TEXT_BASED" | "PDF_ENCRYPTED" | "EXTRACTION_EMPTY" | "EXTRACTION_TIMEOUT" | "LANGUAGE_UNDETECTED" | "PROFILE_QUOTA_EXCEEDED" | "ANONYMOUS_SESSION_EXPIRED" | "ATOM_LIMIT_EXCEEDED" | "NO_ANONYMOUS_PROFILE" | "PROFILE_ALREADY_EXISTS" | "GENERATION_ARTIFACT_EXPIRED" | "CSRF_TOKEN_INVALID" | "RESOURCE_NOT_FOUND" | "VERSION_CONFLICT" | "PRECONDITION_REQUIRED" | "VALIDATION_FAILED" | "INTERNAL_ERROR" | "METHOD_NOT_ALLOWED" | "NOT_ACCEPTABLE" | "UNSUPPORTED_MEDIA_TYPE";
             /**
              * @description Values the translated message interpolates. Keys and types are fixed per code; the server refuses to publish anything undeclared.
              * @example {
@@ -775,16 +775,16 @@ export interface components {
         EntryPatch: {
             title?: string;
             /** @description Send null to clear */
-            organization?: string;
-            location?: string;
+            organization?: string | null;
+            location?: string | null;
             /** Format: date */
-            startDate?: string;
+            startDate?: string | null;
             /**
              * Format: date
              * @description Send null when the job becomes ongoing again
              */
-            endDate?: string;
-            url?: string;
+            endDate?: string | null;
+            url?: string | null;
             /** Format: float */
             importance?: number;
             active?: boolean;
@@ -809,6 +809,19 @@ export interface components {
             skills?: string[];
             metrics?: string[];
             properNouns?: string[];
+        };
+        VariantPatch: {
+            /** @description The replacement wording. Leave it out to change nothing but the fields below. */
+            content?: components["schemas"]["Content"];
+            /** @example en */
+            language?: string;
+            /**
+             * @description Send null to return the wording to the neutral register
+             * @enum {string|null}
+             */
+            tone?: "formal" | "casual" | "technical" | null;
+            /** @description Make this the wording used by default */
+            primary?: boolean;
         };
         EntryExport: {
             entry?: components["schemas"]["Entry"];
@@ -986,7 +999,7 @@ export interface operations {
             };
         };
     };
-    list: {
+    listSections: {
         parameters: {
             query?: never;
             header?: never;
@@ -995,6 +1008,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Every section, primary order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Section"][];
+                };
+            };
             /** @description RESOURCE_NOT_FOUND */
             404: {
                 headers: {
@@ -1024,7 +1046,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    createSection: {
         parameters: {
             query?: never;
             header?: never;
@@ -1040,6 +1062,8 @@ export interface operations {
             /** @description Created */
             201: {
                 headers: {
+                    /** @description Current version as a quoted number, for If-Match on writes. Sent as: "7" */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1075,7 +1099,7 @@ export interface operations {
             };
         };
     };
-    reorder: {
+    reorderSections: {
         parameters: {
             query?: never;
             header?: never;
@@ -1088,6 +1112,15 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Every section, in the new order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Section"][];
+                };
+            };
             /** @description RESOURCE_NOT_FOUND */
             404: {
                 headers: {
@@ -1117,7 +1150,7 @@ export interface operations {
             };
         };
     };
-    list_1: {
+    listEntries: {
         parameters: {
             query?: {
                 sectionId?: string;
@@ -1128,6 +1161,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Every matching entry, in display order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entry"][];
+                };
+            };
             /** @description RESOURCE_NOT_FOUND */
             404: {
                 headers: {
@@ -1157,7 +1199,7 @@ export interface operations {
             };
         };
     };
-    create_1: {
+    createEntry: {
         parameters: {
             query?: never;
             header?: never;
@@ -1173,6 +1215,8 @@ export interface operations {
             /** @description Created */
             201: {
                 headers: {
+                    /** @description Current version as a quoted number, for If-Match on writes. Sent as: "7" */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1208,7 +1252,7 @@ export interface operations {
             };
         };
     };
-    reorder_1: {
+    reorderEntries: {
         parameters: {
             query?: never;
             header?: never;
@@ -1221,6 +1265,15 @@ export interface operations {
             };
         };
         responses: {
+            /** @description That section's entries, in the new order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entry"][];
+                };
+            };
             /** @description RESOURCE_NOT_FOUND */
             404: {
                 headers: {
@@ -1250,7 +1303,7 @@ export interface operations {
             };
         };
     };
-    list_2: {
+    listAtoms: {
         parameters: {
             query?: {
                 sectionId?: string;
@@ -1262,6 +1315,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Every matching atom, in display order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Atom"][];
+                };
+            };
             /** @description RESOURCE_NOT_FOUND */
             404: {
                 headers: {
@@ -1291,7 +1353,7 @@ export interface operations {
             };
         };
     };
-    create_2: {
+    createAtom: {
         parameters: {
             query?: never;
             header?: never;
@@ -1307,6 +1369,8 @@ export interface operations {
             /** @description Created */
             201: {
                 headers: {
+                    /** @description Current version as a quoted number, for If-Match on writes. Sent as: "7" */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1360,6 +1424,8 @@ export interface operations {
             /** @description Created */
             201: {
                 headers: {
+                    /** @description Current version as a quoted number, for If-Match on writes. Sent as: "7" */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1395,7 +1461,7 @@ export interface operations {
             };
         };
     };
-    reorder_2: {
+    reorderAtoms: {
         parameters: {
             query?: never;
             header?: never;
@@ -1408,6 +1474,15 @@ export interface operations {
             };
         };
         responses: {
+            /** @description That group's atoms, in the new order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Atom"][];
+                };
+            };
             /** @description RESOURCE_NOT_FOUND */
             404: {
                 headers: {
@@ -1488,7 +1563,7 @@ export interface operations {
             };
         };
     };
-    delete_1: {
+    deleteSection: {
         parameters: {
             query?: never;
             header?: {
@@ -1537,7 +1612,7 @@ export interface operations {
             };
         };
     };
-    patch: {
+    patchSection: {
         parameters: {
             query?: never;
             header?: {
@@ -1554,6 +1629,17 @@ export interface operations {
             };
         };
         responses: {
+            /** @description The section as it now stands */
+            200: {
+                headers: {
+                    /** @description Current version as a quoted number, for If-Match on writes. Sent as: "7" */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Section"];
+                };
+            };
             /** @description RESOURCE_NOT_FOUND */
             404: {
                 headers: {
@@ -1583,7 +1669,7 @@ export interface operations {
             };
         };
     };
-    delete_2: {
+    deleteEntry: {
         parameters: {
             query?: never;
             header?: {
@@ -1632,7 +1718,7 @@ export interface operations {
             };
         };
     };
-    patch_1: {
+    patchEntry: {
         parameters: {
             query?: never;
             header?: {
@@ -1649,6 +1735,17 @@ export interface operations {
             };
         };
         responses: {
+            /** @description The entry as it now stands */
+            200: {
+                headers: {
+                    /** @description Current version as a quoted number, for If-Match on writes. Sent as: "7" */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entry"];
+                };
+            };
             /** @description RESOURCE_NOT_FOUND */
             404: {
                 headers: {
@@ -1678,7 +1775,7 @@ export interface operations {
             };
         };
     };
-    delete_3: {
+    deleteAtom: {
         parameters: {
             query?: never;
             header?: {
@@ -1727,7 +1824,7 @@ export interface operations {
             };
         };
     };
-    patch_2: {
+    patchAtom: {
         parameters: {
             query?: never;
             header?: {
@@ -1744,6 +1841,17 @@ export interface operations {
             };
         };
         responses: {
+            /** @description The atom as it now stands */
+            200: {
+                headers: {
+                    /** @description Current version as a quoted number, for If-Match on writes. Sent as: "7" */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Atom"];
+                };
+            };
             /** @description RESOURCE_NOT_FOUND */
             404: {
                 headers: {
@@ -1837,10 +1945,21 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["VariantWrite"];
+                "application/json": components["schemas"]["VariantPatch"];
             };
         };
         responses: {
+            /** @description The wording as it now stands */
+            200: {
+                headers: {
+                    /** @description Current version as a quoted number, for If-Match on writes. Sent as: "7" */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Variant"];
+                };
+            };
             /** @description RESOURCE_NOT_FOUND */
             404: {
                 headers: {
@@ -1892,6 +2011,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProfileExport"];
+                    "text/markdown": string;
                 };
             };
             /** @description VALIDATION_FAILED — unknown format */
