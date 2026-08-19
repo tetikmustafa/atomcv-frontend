@@ -20,12 +20,18 @@ async function captured(promise: Promise<unknown>): Promise<ApiError> {
 }
 
 /**
- * Bölüm 35.6 specifies `application/merge-patch+json`. The running backend
- * answers 500 to exactly that value and 200 to `application/json`, which is
- * also what the published schema declares on every PATCH. Following the prose
- * here would mean an editor that cannot save a single field, and the failure
- * arrives as INTERNAL_ERROR — a message blaming the server for the client's
- * header. Pinned so a well-meaning correction toward the spec is caught here.
+ * `application/json`, and now for a stated reason rather than only because
+ * the server accepted it.
+ *
+ * Bölüm 35.6 used to specify `application/merge-patch+json`; that was an
+ * error, corrected in the third doc round. Only `EntryPatch` implements RFC
+ * 7396's semantics — elsewhere `null` means "leave alone" because the columns
+ * cannot be null — so declaring the registered type would have been a false
+ * claim in the contract. A client that sends it now gets **415**; it used to
+ * get 500, which told the user the server had broken.
+ *
+ * Pinned so a well-meaning correction back toward the old prose is caught here
+ * rather than by every save in the editor failing.
  */
 describe('the patch media type', () => {
   it('is application/json, which is what this API accepts', async () => {

@@ -33,22 +33,26 @@ export type Atom = Schemas['Atom'];
 export type AtomCreate = Schemas['AtomCreate'];
 export type AtomPatch = Schemas['AtomPatch'];
 export type Variant = Schemas['Variant'];
+/** Creating a wording: the content is the point, so it is required. */
 export type VariantWrite = Schemas['VariantWrite'];
-export type ProfileExport = Schemas['ProfileExport'];
 
 /**
- * Fields an entry patch may clear by sending `null`.
+ * Changing one. Nothing is required — a promote is `{ primary: true }` and
+ * carries no content, which is the whole difference from `VariantWrite`.
  *
- * D.9 · 16: omit to keep, `null` to clear — which is how an end date is
- * removed to mean "this job is current". The schema documents that in prose
- * but types both fields as plain `string`, so the generated `EntryPatch`
- * cannot express the operation the API is built around. Widened here rather
- * than at each call site, and raised in `DOC-SYNC-REQUEST.md`.
+ * `tone` is three-state: omit it to keep what is there, send `null` to return
+ * to the neutral register.
  */
-export type EntryPatch = Omit<Schemas['EntryPatch'], 'organization' | 'endDate'> & {
-  organization?: string | null;
-  endDate?: string | null;
-};
+export type VariantPatch = Schemas['VariantPatch'];
+
+/**
+ * `organization` and `endDate` are `["string", "null"]` in the schema, so the
+ * generated type already expresses the clear that D.9 · 16 is about — sending
+ * `null` to remove an end date and mean "this job is current". This used to be
+ * widened by hand here (handoff B-029).
+ */
+export type EntryPatch = Schemas['EntryPatch'];
+export type ProfileExport = Schemas['ProfileExport'];
 
 function query(params: Record<string, string | undefined>): string {
   const search = new URLSearchParams();
@@ -182,8 +186,11 @@ export function reorderAtoms(sectionId: string, ids: string[], entryId?: string)
 /* ------------------------------- variants ------------------------------ */
 
 /**
- * Wording. The whole content is sent every time — there is no partial text
- * update — and the atom's own version is not involved: variants version
+ * Wording. A text edit sends the whole content — there is no partial text
+ * update — but a patch that is not about text sends only what changes, and
+ * must: resending the wording used to clear the user's `tone` (B-028).
+ *
+ * The atom's own version is not involved either way: variants version
  * independently of the atom that owns them.
  */
 export function addVariant(atomId: string, body: VariantWrite) {
@@ -193,7 +200,7 @@ export function addVariant(atomId: string, body: VariantWrite) {
 export function patchVariant(
   atomId: string,
   variantId: string,
-  body: VariantWrite,
+  body: VariantPatch,
   version: Version,
 ) {
   return api.patch<Variant>(`/profile/atoms/${atomId}/variants/${variantId}`, body, { version });

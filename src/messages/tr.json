@@ -29,6 +29,9 @@
     "VERSION_CONFLICT": "Sen bunun üzerinde çalışırken başka bir yerde değişti.",
     "PRECONDITION_REQUIRED": "Bu değişiklik, hangi sürüme dayandığı belirtilmeden gönderildi; o yüzden uygulanmadı.",
     "VALIDATION_FAILED": "Gönderilenlerin bir kısmı kabul edilemedi: {fields}.",
+    "METHOD_NOT_ALLOWED": "Uygulama, bu adresin kabul etmediği bir istek gönderdi. Bu bizim tarafımızda bir hata, senin yaptığın bir şey değil.",
+    "NOT_ACCEPTABLE": "Uygulama, sunucunun üretemeyeceği bir biçim istedi. Bu bizim tarafımızda bir hata, senin yaptığın bir şey değil.",
+    "UNSUPPORTED_MEDIA_TYPE": "Uygulama, sunucunun kabul etmediği bir biçimde veri gönderdi. Bu bizim tarafımızda bir hata, senin yaptığın bir şey değil.",
     "INTERNAL_ERROR": "Bizim tarafımızda bir şey bozuldu. Girdiğin hiçbir şey kaybolmadı.",
     "UNEXPECTED_ERROR": "Bir şeyler ters gitti ve yanıt ne olduğunu söylemedi.",
     "NETWORK_UNREACHABLE": "Sunucuya ulaşamadık. Bağlantın kopmuş olabilir."

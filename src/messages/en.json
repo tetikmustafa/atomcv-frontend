@@ -29,6 +29,9 @@
     "VERSION_CONFLICT": "This changed somewhere else while you were working on it.",
     "PRECONDITION_REQUIRED": "That change was sent without saying which version it was based on, so it wasn't applied.",
     "VALIDATION_FAILED": "Some of what was sent couldn't be accepted: {fields}.",
+    "METHOD_NOT_ALLOWED": "The app sent a request this address doesn't accept. That's a fault on our side, not something you did.",
+    "NOT_ACCEPTABLE": "The app asked for a format the server can't produce. That's a fault on our side, not something you did.",
+    "UNSUPPORTED_MEDIA_TYPE": "The app sent data in a format the server doesn't accept. That's a fault on our side, not something you did.",
     "INTERNAL_ERROR": "Something broke on our side. Nothing you'd entered was lost.",
     "UNEXPECTED_ERROR": "Something went wrong, and the response didn’t say what.",
     "NETWORK_UNREACHABLE": "We couldn't reach the server. Your connection may be down."

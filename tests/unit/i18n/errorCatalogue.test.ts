@@ -45,6 +45,13 @@ const PARAMS = {
   VERSION_CONFLICT: {},
   PRECONDITION_REQUIRED: {},
   VALIDATION_FAILED: { fields: ['headline', 'contact.email'] },
+  // 405, 406 and 415. Parameterless, and none of them is an error a
+  // correct client ever sees — they are in the catalogue so that a
+  // protocol-level refusal still carries a `code` rather than an empty
+  // body (handoff B-025).
+  METHOD_NOT_ALLOWED: {},
+  NOT_ACCEPTABLE: {},
+  UNSUPPORTED_MEDIA_TYPE: {},
   INTERNAL_ERROR: {},
 } satisfies Record<ErrorCode, Record<string, unknown>>;
 
