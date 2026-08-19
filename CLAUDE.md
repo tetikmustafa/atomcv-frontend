@@ -528,75 +528,57 @@ Standing facts a new session needs:
   runtime with a deprecation warning. Upgrading to `@v5` is its own task, not
   a drive-by edit.
 
-## ⏸ Resume Here — work in flight (2026-08-19)
+## ⏸ Resume Here — one workstream left (2026-08-19)
 
-Two workstreams are open at once. Neither is half-applied: the first has an
-uncommitted `gen:api` run and nothing else, the second has not started.
+### 1. The third doc round — **applied**
 
-### 1. The third doc round landed, and it changed the API
+`83c0ced` synced the docs and consumed `DOC-SYNC-REQUEST.md`. The backend
+fixed three of its items as real server defects, `gen:api` has been re-run,
+and every local workaround they retired is gone. Nothing is outstanding here
+except one verification (below).
 
-`83c0ced` synced the docs and **deleted `DOC-SYNC-REQUEST.md`** — applied, per
-the round-trip. The backend fixed three of its items as real server defects,
-so several local workarounds are now wrong rather than merely unnecessary.
-The channel for this is now `docs/handoff/to-frontend.md` (see §2); the items
-are `B-025`…`B-032` there.
+What the round settled, now reflected in the code:
 
-**Done:** `npm run gen:api` has been re-run. `src/types/api.d.ts` is modified
-and **uncommitted** — that is the only change in the tree.
+- **PATCH goes out as `application/json`, and the reason is now stated.**
+  Bölüm 35.6's `application/merge-patch+json` was an error: only `EntryPatch`
+  implements RFC 7396's semantics — elsewhere `null` means "leave alone",
+  because the columns cannot be null — so declaring the registered type would
+  have been a false claim. Sending it now answers **415**, not 500. The test
+  pinning the media type stays; do not "correct" it back.
+- **A promote sends `{ primary: true }` and nothing else.** It used to resend
+  the whole wording, because `content` was required even on a write that was
+  not about content, **and that request cleared the user's `tone` every time**
+  (B-028). There is a `VariantPatch` schema now, with nothing required, and a
+  test asserts the request body is exactly `{ primary: true }`. `tone` is
+  three-state: omit to keep, `null` for the neutral register.
+- **Three new error codes**, all parameterless: `METHOD_NOT_ALLOWED`,
+  `NOT_ACCEPTABLE`, `UNSUPPORTED_MEDIA_TYPE` (405/406/415, which used to be
+  500s). None is an error a correct client sees — they exist so a
+  protocol-level refusal still carries a `code`. Their copy says the fault is
+  ours, because it is.
+- **Workarounds removed:** the `EntryPatch` null widening (the schema types
+  those fields `["string","null"]` now) and the re-required `code`/`status` in
+  `ProblemDetail`. `ErrorCode` still re-opens the union — `UNEXPECTED_ERROR`
+  and `NETWORK_UNREACHABLE` are ours, not the server's.
+- Every operation declares a success response and every single-resource write
+  declares `ETag`. Operation ids are legible (`listAtoms`, `createEntry`).
 
-What the new schema settles, all read off it rather than assumed:
+**Not done: verifying this round against the running backend.** It was down
+at the end of the session. Two things want checking when it is back, and
+**both need `make db-reset && make dev`** — B-032 reseeds a profile whose
+first Experience atom carries two wordings, and the seeder deliberately
+leaves an existing profile alone (P8):
 
-| Was                                          | Now                                        |
-| -------------------------------------------- | ------------------------------------------ |
-| 10 operations declared no `2xx`              | every operation declares one               |
-| `ETag` undeclared on writes                  | declared on every single-resource write    |
-| `ApiError.code`/`.status` optional           | **required**                               |
-| `EntryPatch` clearable fields typed `string` | `["string","null"]`                        |
-| variant PATCH required `content`             | new `VariantPatch`, nothing required       |
-| `list_2`, `create_1`, `patch`                | `listAtoms`, `createEntry`, `patchSection` |
-| merge-patch media type → `500`               | → `415`, and Bölüm 35.6 no longer names it |
+1. A promote against the real API, confirming `tone` survives it.
+2. Tabs, primary-first ordering and the stale badge against real data rather
+   than the mock fixture, which is currently the only place a second wording
+   exists.
 
-**⚠️ One of these is a live bug in our code, not just a stale workaround.**
-`AtomEditor`'s promote resends the whole wording with `{primary: true}`
-because `content` used to be required. B-028 says that request **was wiping
-the user's `tone`**. `VariantPatch` now takes `{primary: true}` alone, and
-`tone` is three-state: omit to keep, `null` for the neutral register. Fix this
-before anything else in this list.
-
-Then, in any order:
-
-- **Three new error codes have no ICU message** — `METHOD_NOT_ALLOWED`,
-  `NOT_ACCEPTABLE`, `UNSUPPORTED_MEDIA_TYPE`. The enum is 30 codes now, up
-  from 27. `tests/unit/i18n/errorCatalogue.test.ts` is exhaustive by
-  typecheck, so this currently **fails compilation** naming them — which is
-  the design working. Add the message and the sample params together, in both
-  catalogues.
-- **Undo the workarounds B-029 retires:** the `EntryPatch` null widening in
-  `endpoints/profile.ts`, and the re-required `code`/`status` in
-  `ProblemDetail`. Keep `code` an open union — `UNEXPECTED_ERROR` and
-  `NETWORK_UNREACHABLE` are ours, not the server's, and that reason survives.
-- **Consider binding response types to `operations` now.** They were stated
-  from `components['schemas']` only because no success response was declared;
-  that reason is gone, and the operation ids are finally legible. Deriving
-  from `operations` would catch a change to the response _wrapper_, which the
-  schema shapes alone cannot.
-- **Update the media-type test comment** in `profileEndpoints.test.ts`: it
-  says the backend answers 500, and it now answers 415. The assertion itself
-  stands — `application/json` is still correct, and now for a stated reason
-  (§ 35.6's correction: only `EntryPatch` implements merge-patch semantics,
-  so declaring the registered type would have been a false claim).
-- **Re-verify against the running backend, then run all seven gates.**
-
-**B-032 removes the last excuse for mock-only coverage.** The seed profile now
-has an atom with two wordings (`senior_backend_tr`, `enabledLanguages:
-["tr","en"]`), so tabs, promote and primary-first ordering can be exercised
-against the real server. Needs `make db-reset && make dev` on the backend —
-the seeder leaves an existing profile alone (P8).
-
-Also confirmed by the same round, and matching what is already built:
-**B-024** — `Variant.stale` is always false in Stage 1 and there is no
-regeneration endpoint, so showing the badge and drawing no control is right.
-**B-021** and **B-022** restate decisions already recorded below.
+`endpoints/profile.ts` still states response types from
+`components['schemas']`. That was forced when ten operations declared no
+`2xx`; the reason is gone, so **deriving them from `operations` is now
+possible** and would additionally catch a change to the response _wrapper_.
+Worth doing, not urgent.
 
 ### 2. `docs/_incoming/docs-split/` — a docs restructuring, not started
 
@@ -614,9 +596,12 @@ Do not distribute it on your own initiative — it rewrites where every document
 lives and replaces this file (`_CLAUDE-md-replacement.md`). The frontend step
 is meant to run _after_ the backend's, which has already happened.
 
-What it changes for us once applied: `docs/handoff/to-frontend.md` replaces
-`DOC-SYNC-REQUEST.md` as the channel, with `OPEN` → `ACK` items carrying
-stable ids, and `docs/notes/current.md` replaces the running deviation log.
+Once applied, `docs/handoff/to-frontend.md` replaces `DOC-SYNC-REQUEST.md` as
+the channel — `OPEN` → `ACK` items with stable ids (`B-nnn`) — and
+`docs/notes/current.md` replaces the running deviation log. **It is already
+the better source for what the backend has changed:** the round above is
+`B-025`…`B-032` there, and `B-021`, `B-022`, `B-024` are open items that
+restate decisions this file already records.
 
 ## What Later Stages Need From The Frontend
 
