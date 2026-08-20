@@ -11,6 +11,31 @@
 
 ## OPEN
 
+### F-002 · `POST /profile/entries` ters tarih aralığını kabul ediyor
+**Since:** frontend commit `d5f33e3` · Adım 1 · create yüzeyi yazılırken
+**Neden:** `endDate` `startDate`'ten önce olan bir entry **201** dönüyor. Ölçüldü:
+
+```
+{"sectionId":"…","title":"Backwards","startDate":"2022-01-01","endDate":"2019-01-01"}
+→ 201, kaydedildi
+```
+
+Aynı uç boş `title`'ı **400** + `params.fields: ["title"]` ile, `POST /profile/sections`
+geçersiz `kind`'ı yine 400 ile reddediyor — yani validasyon var, bu kural eksik.
+
+Sonucu görünür: entry başlığı "Oca 2022 – Oca 2019" diye render ediliyor ve bu değer
+CV üretimine de girer. Kullanıcı bunu bir daha okumaz, çünkü makul görünür.
+
+**İstenen:** İkisi de doluysa `endDate >= startDate` şartı; ihlalde `400 VALIDATION_FAILED`,
+`params.fields: ["endDate"]`. `PATCH /profile/entries/{id}` için de aynısı — orada
+tek alan güncellendiğinde diğerinin mevcut değeriyle karşılaştırılmalı.
+
+**Frontend:** İstemci şimdilik kendisi engelliyor (`lib/forms/profileSchemas.ts`, testli).
+Ama bu bir veri garantisi değil — başka bir istemci, doğrudan API çağrısı ya da
+ingestion hattı hâlâ ters aralık yazabilir. Siz kapattığınızda istemci kontrolü
+**kalacak** (round trip'ten önce söylemek daha iyi), yalnız tek savunma olmaktan çıkacak.
+**Spec:** `spec/08-api.md` § 35 · entry uçları
+
 ### F-001 · Promote'ta demote edilen varyantın `version`'ı artmıyor
 **Since:** frontend commit `272edaa` · B-032 doğrulaması sırasında · Adım 1
 **Neden:** `PATCH /profile/atoms/{id}/variants/{vid}` ile bir varyant birincil yapıldığında

@@ -131,7 +131,8 @@
     "section": {
       "loading": "Loading…",
       "empty": "Nothing in this section yet.",
-      "entryEmpty": "Nothing under this one yet."
+      "entryEmpty": "Nothing under this one yet.",
+      "none": "Your profile has no sections yet. Add one to start."
     },
     "profile": {
       "title": "Your profile",
@@ -162,6 +163,49 @@
       "submit": "Add",
       "adding": "Adding…",
       "added": "Added."
+    },
+    "addSection": {
+      "open": "Add a section",
+      "kind": "What kind",
+      "title": "Name",
+      "submit": "Add section",
+      "adding": "Adding…",
+      "cancel": "Cancel",
+      "added": "Added the section {title}.",
+      "loadingForm": "Opening the form…"
+    },
+    "sectionKind": {
+      "about": "About",
+      "education": "Education",
+      "experience": "Experience",
+      "projects": "Projects",
+      "skills": "Skills",
+      "soft_skills": "Soft skills",
+      "languages": "Languages",
+      "custom": "Something else"
+    },
+    "addEntry": {
+      "open": "Add a position",
+      "title": "Title",
+      "organization": "Organisation",
+      "location": "Location",
+      "startDate": "Started",
+      "endDate": "Ended",
+      "endDateHint": "Leave the end date blank if this is where you are now.",
+      "submit": "Add position",
+      "adding": "Adding…",
+      "cancel": "Cancel",
+      "added": "Added {title}.",
+      "loadingForm": "Opening the form…"
+    },
+    "validation": {
+      "titleRequired": "This needs a name.",
+      "titleTooLong": "That is too long.",
+      "organizationTooLong": "That is too long.",
+      "locationTooLong": "That is too long.",
+      "endBeforeStart": "The end cannot come before the start.",
+      "invalid": "That does not look right.",
+      "invalidDate": "That is not a date."
     }
   },
   "Generation": {

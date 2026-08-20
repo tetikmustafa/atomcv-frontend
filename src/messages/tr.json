@@ -131,7 +131,8 @@
     "section": {
       "loading": "Yükleniyor…",
       "empty": "Bu bölümde henüz bir şey yok.",
-      "entryEmpty": "Bunun altında henüz bir şey yok."
+      "entryEmpty": "Bunun altında henüz bir şey yok.",
+      "none": "Profilinde henüz bölüm yok. Başlamak için bir tane ekle."
     },
     "profile": {
       "title": "Profilin",
@@ -162,6 +163,49 @@
       "submit": "Ekle",
       "adding": "Ekleniyor…",
       "added": "Eklendi."
+    },
+    "addSection": {
+      "open": "Bölüm ekle",
+      "kind": "Türü",
+      "title": "Adı",
+      "submit": "Bölümü ekle",
+      "adding": "Ekleniyor…",
+      "cancel": "Vazgeç",
+      "added": "{title} bölümü eklendi.",
+      "loadingForm": "Form açılıyor…"
+    },
+    "sectionKind": {
+      "about": "Hakkımda",
+      "education": "Eğitim",
+      "experience": "Deneyim",
+      "projects": "Projeler",
+      "skills": "Beceriler",
+      "soft_skills": "Kişisel beceriler",
+      "languages": "Diller",
+      "custom": "Başka bir şey"
+    },
+    "addEntry": {
+      "open": "Pozisyon ekle",
+      "title": "Unvan",
+      "organization": "Kurum",
+      "location": "Konum",
+      "startDate": "Başlangıç",
+      "endDate": "Bitiş",
+      "endDateHint": "Hâlâ buradaysan bitiş tarihini boş bırak.",
+      "submit": "Pozisyonu ekle",
+      "adding": "Ekleniyor…",
+      "cancel": "Vazgeç",
+      "added": "{title} eklendi.",
+      "loadingForm": "Form açılıyor…"
+    },
+    "validation": {
+      "titleRequired": "Buranın bir adı olmalı.",
+      "titleTooLong": "Bu fazla uzun.",
+      "organizationTooLong": "Bu fazla uzun.",
+      "locationTooLong": "Bu fazla uzun.",
+      "endBeforeStart": "Bitiş, başlangıçtan önce olamaz.",
+      "invalid": "Bu doğru görünmüyor.",
+      "invalidDate": "Bu bir tarih değil."
     }
   },
   "Generation": {

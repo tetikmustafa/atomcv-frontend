@@ -11,7 +11,28 @@
 
 import { http, HttpResponse } from 'msw';
 import type { ProblemDetail } from '@/types/domain';
-import { fixture, type MockAtom } from './profileFixture';
+import { fixture, type MockAtom, type MockEntry, type MockSection } from './profileFixture';
+
+/**
+ * The kinds the server accepts, so the mock refuses exactly what the server
+ * refuses — a `400` naming `kind`, verified against the running API.
+ *
+ * `satisfies` checks each of these is a real kind. It does **not** check the
+ * list is complete, so a kind added upstream would be rejected here while the
+ * server accepted it. What catches that is the reverse assertion in
+ * `lib/forms/profileSchemas.ts`, which fails the build for the dropdown; this
+ * list is updated in the same edit.
+ */
+const SECTION_KINDS = [
+  'about',
+  'education',
+  'experience',
+  'projects',
+  'skills',
+  'soft_skills',
+  'languages',
+  'custom',
+] as const satisfies readonly NonNullable<MockSection['kind']>[];
 
 function problem(
   status: number,
@@ -67,6 +88,99 @@ export const profileHandlers = [
   ),
 
   http.get('*/api/v1/profile/sections', () => HttpResponse.json(fixture.sections)),
+
+  /**
+   * Creating a section. **201** with the whole section, `layout` defaulted to
+   * `bullet_list`, `displayOrder` appended — measured against the running
+   * server, which also refuses an unknown `kind` with a `400` naming it.
+   */
+  http.post('*/api/v1/profile/sections', async ({ request }) => {
+    const instance = '/api/v1/profile/sections';
+    const body = (await request.json()) as {
+      kind?: MockSection['kind'];
+      title?: string;
+      layout?: MockSection['layout'];
+    };
+
+    const fields = [
+      ...(body.kind && SECTION_KINDS.includes(body.kind) ? [] : ['kind']),
+      ...(body.title?.trim() ? [] : ['title']),
+    ];
+
+    if (fields.length > 0) {
+      return HttpResponse.json(problem(400, 'VALIDATION_FAILED', instance, [], { fields }), {
+        status: 400,
+      });
+    }
+
+    const created: MockSection = {
+      id: `sec-new-${fixture.sections.length + 1}`,
+      kind: body.kind!,
+      title: body.title!.trim(),
+      layout: body.layout ?? 'bullet_list',
+      displayOrder: fixture.sections.length,
+      active: true,
+      alwaysInclude: false,
+      verbatim: false,
+      version: 0,
+    };
+
+    fixture.sections.push(created);
+    return HttpResponse.json(created, { status: 201 });
+  }),
+
+  /**
+   * Creating an entry. **201** with the whole entry, `importance` 0.5 and
+   * `minAtoms` 2 defaulted, `displayOrder` appended within its section.
+   *
+   * **A backwards date range is accepted**, deliberately, because the running
+   * server accepts it — verified: `startDate` 2022 with `endDate` 2019 answers
+   * `201`. Raised as `F-002`. A mock that refused it would make the client's
+   * own check look redundant and invite someone to delete it, which is exactly
+   * how the nonsense range would reach a CV.
+   */
+  http.post('*/api/v1/profile/entries', async ({ request }) => {
+    const instance = '/api/v1/profile/entries';
+    const body = (await request.json()) as {
+      sectionId?: string;
+      title?: string;
+      organization?: string;
+      location?: string;
+      startDate?: string;
+      endDate?: string;
+    };
+
+    if (!body.title?.trim() || !body.sectionId) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], {
+          fields: body.title?.trim() ? ['sectionId'] : ['title'],
+        }),
+        { status: 400 },
+      );
+    }
+
+    const siblings = fixture.entries.filter((entry) => entry.sectionId === body.sectionId);
+
+    const created: MockEntry = {
+      id: `entry-new-${fixture.entries.length + 1}`,
+      sectionId: body.sectionId,
+      title: body.title.trim(),
+      ...(body.organization ? { organization: body.organization } : {}),
+      ...(body.location ? { location: body.location } : {}),
+      ...(body.startDate ? { startDate: body.startDate } : {}),
+      ...(body.endDate ? { endDate: body.endDate } : {}),
+      displayOrder: siblings.length,
+      importance: 0.5,
+      active: true,
+      alwaysInclude: false,
+      verbatim: false,
+      minAtoms: 2,
+      version: 0,
+    };
+
+    fixture.entries.push(created);
+    return HttpResponse.json(created, { status: 201 });
+  }),
 
   http.get('*/api/v1/profile/entries', ({ request }) => {
     const sectionId = new URL(request.url).searchParams.get('sectionId');

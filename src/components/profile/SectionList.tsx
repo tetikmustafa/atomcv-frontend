@@ -28,6 +28,8 @@
 import { useTranslations } from 'next-intl';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { AddAtom } from '@/components/profile/AddAtom';
+import { AddEntry } from '@/components/profile/AddEntry';
+import { AddSection } from '@/components/profile/AddSection';
 import { AtomEditor } from '@/components/profile/AtomEditor';
 import { EntryHeading } from '@/components/profile/EntryHeading';
 import { SortableList } from '@/components/profile/SortableList';
@@ -131,18 +133,26 @@ function SectionAtoms({ section }: { section: Section }) {
     an ordered subsequence of it.
   */
   const loose = atoms.filter((atom) => !atom.entryId);
+  const empty = atoms.length === 0 && entries.length === 0;
 
-  // Nothing at all: no entries to hang bullets on and no bullets of its own.
-  // `AtomGroup` handles an empty group, so render one rather than a dead end.
-  if (atoms.length === 0 && entries.length === 0) {
-    return <AtomGroup section={section} atoms={[]} />;
-  }
+  /*
+    Which of the two shapes to offer.
+
+    A section is either grouped into entries or flat, and the data says which:
+    an atom has an `entryId` or it does not. Offering the other shape's control
+    on a section that has already committed invites a mixture — loose bullets
+    sitting above headed jobs — that no real profile contains and that reads as
+    a rendering fault rather than a choice. So a section keeps its shape, and
+    only an **empty** one is asked which it wants.
+  */
+  const showLoose = loose.length > 0 || empty;
+  const showAddEntry = entries.length > 0 || empty;
 
   return (
     <div className="flex flex-col gap-5">
-      {/* The section's own atoms, if it has any. For a skills section this is
-          the whole of it; for an experience section it is usually empty. */}
-      {loose.length > 0 && <AtomGroup section={section} atoms={loose} />}
+      {/* The section's own atoms. For a skills section this is the whole of
+          it; for an experience section it is usually empty. */}
+      {showLoose && <AtomGroup section={section} atoms={loose} />}
 
       {entries.map((entry) => {
         const headingId = `entry-${entry.id}-heading`;
@@ -172,6 +182,8 @@ function SectionAtoms({ section }: { section: Section }) {
           </div>
         );
       })}
+
+      {showAddEntry && <AddEntry section={section} />}
     </div>
   );
 }
@@ -224,9 +236,19 @@ export function SectionList() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/*
+        A profile with no sections is the state a new account starts in, not an
+        edge case: `GET /profile` never 404s, so the first thing anyone sees is
+        an empty list. Until this said so and offered a way out, that screen
+        was a headline, a completeness of 0, and nothing to do.
+      */}
+      {sections.length === 0 && <p className="text-muted-foreground text-sm">{t('none')}</p>}
+
       {sections.map((section) => (
         <SectionRow key={section.id} section={section} />
       ))}
+
+      <AddSection />
     </div>
   );
 }

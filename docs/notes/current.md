@@ -55,7 +55,7 @@ CLAUDE.md 927 satırdan 347'ye inerken buraya taşındı (handoff · B-033).
 |---|---|
 | **Metin düzenleme düz metin, mark'ları düşürüyor** | Mark farkında editör kural 4'ün lazy-load edeceği bileşen ve henüz yok. Kabul edilebilir olmasının tek sebebi **söylenmesi**: atomun gerçekten mark'ı varsa kaydetmeden **önce** uyarı çıkıyor (P8). Uyarıyı, onu gereksiz kılan editörü yazmadan kaldırma. |
 | **Bayat sözcüklemeyi yeniden üretecek kontrol yok** | Aşama 1 ne uç ne de `stale`'i true yapacak iş yayınlıyor (B-024). Rozet ve açıklaması var, düğme yok — çalışamayacak düğme, zaten bir şeyin bozuk olduğunu söyleyen ekranda hiç yoktan kötü. |
-| **Mutation yüzeyi kısmi** | `usePatchAtom`, `usePatchVariant`, `useReorderAtoms` ve `useCreateAtom` var — her biri kendisini kullanan bileşenle birlikte geldi. Bölüm/entry create'i ile delete'lerin endpoint fonksiyonu var, hook'u yok; aynı kural. **Boş profil hâlâ çıkışsız:** bölüm eklemek yok, yani hiç bölümü olmayan bir kullanıcı hiçbir şey ekleyemiyor. |
+| **Mutation yüzeyi kısmi** | Okuma, yama, sıralama ve **üç create** var — her biri kendisini kullanan bileşenle birlikte geldi. **Delete'lerin hâlâ hook'u yok**: endpoint fonksiyonları duruyor, silme UI'ı gelince bağlanır. Aynı kural. |
 | **`POST /generations/general`'a kalıcı ekran bağlı değil** | Senkron, Aşama 1'e özgü, hiçbir yere kaydetmiyor (B-022). Aşama 2'de 202 + iş akışıyla değişecek. |
 
 ### Dosyalar arasına yayılan değişmezler
@@ -92,8 +92,8 @@ CLAUDE.md 927 satırdan 347'ye inerken buraya taşındı (handoff · B-033).
 
 İlk app rotası ölçüldü: `/[locale]/profile` **238.3 KB toplam, 70.2 KB kendi
 payı** — dnd-kit, TanStack Query, next-intl client runtime ve Radix taşıyor.
-(Entry katmanı +0.5, madde ekleme +0.5 KB getirdi; ilk ölçüm 237.8 / 69.7 idi.
-Güncel: **238.8 / 70.7**.) Kendi payından
+(Entry katmanı +0.5, madde ekleme +0.5, create formları +2.6 KB getirdi; ilk
+ölçüm 237.8 / 69.7 idi. Güncel: **241.5 / 73.3**.) Kendi payından
 ~39 KB kalıyor ve **React Hook Form ile Zod henüz inmedi**; ilk gerçek formla
 gelecekler. Bu sayıyı boş alan değil, bütçenin erken uyarısı say.
 
@@ -234,3 +234,50 @@ istek gitti, grubun sonuna eklendi, ve **Türkçe karakterler sağ çıktı** �
 ayrıca sınadım çünkü aynı gövdeyi `curl` ile gönderirken kabuk bozmuştu ve
 sunucu 400 `VALIDATION_FAILED` dönmüştü. Hata istemcide değil kabuktaydı;
 tarayıcı yolunda böyle bir sorun yok.
+
+### Create yüzeyi — ve bütçenin ilk gerçek çarpması
+
+Üç create bitti: bölüm, entry, madde. Boş profil artık çıkışsız değil —
+`GET /profile` 404 dönmediği için yeni hesabın gördüğü ilk ekran boş bölüm
+listesiydi ve basılacak hiçbir şey yoktu.
+
+**RHF + Zod indi ve bütçeyi kırdı.** Tahminim ~23 KB'dı; gerçek **75 KB gzip**.
+Rotanın kendi payı 70.7 → **145.7 KB** oldu, `bundle-budget.json`'ın 105 KB
+tavanının çok üstünde. Çözüm kural 4'ün kendisi: formlar zaten bir düğmenin
+arkasında, `next/dynamic` + `ssr: false` ile ayrıldı (`SectionForm`,
+`EntryForm`; `AddSection`/`AddEntry` yalnız düğme ve açık/kapalı durumu tutuyor).
+**73.3 KB**'a döndü. **Ders: bütçeyi kütüphane eklerken tahmin etme, ölç** —
+ve "düğme arkasındaki form" lazy-load için ideal şekil.
+
+**Validasyon dar tutuldu, çünkü çoğunu sunucu zaten yapıyor.** Boş `title` →
+400 + `fields: ["title"]`, geçersiz `kind` → 400 + `fields: ["kind"]`, ikisi de
+ölçüldü. Sunucunun sahip olduğu bir kuralı istemcide tekrarlamak ikisinin
+ayrışma yolu. İstemci **iki** şey için var:
+- **Sunucunun hiç bakmadığı şey:** ters tarih aralığı **201** dönüyor
+  (`F-002`). Başlık "Oca 2022 – Oca 2019" diye render ediliyor ve makul
+  göründüğü için kimse bir daha okumuyor. Bugün tek savunma bu.
+- **Round trip'i boşa harcayan şey:** boş başlığı yerinde söylemek.
+
+**Zod mesajları anahtar taşıyor, cümle değil** — `validationKey()` bilinmeyeni
+`invalid`'e düşürüyor. Zod kendi İngilizce varsayılanını ("Invalid input") her
+adsız hataya iliştiriyor; onu ham basmak Türk kullanıcıya çevrilmemiş bir iç
+metin göstermek olurdu. Kural 8'in sunucu hata kodları için dediğinin aynısı.
+
+**`kind` listesi çift yönlü bağlandı.** `Extends<>` iddiası hem yeniden
+adlandırmayı hem de **sunucunun eklediği yeni bir türü** derlemede kırıyor —
+`ResolutionAction`'ın kasten açık bırakılmasının tersi bir karar, çünkü bu liste
+*sunuyor*, *render etmiyor*: bilinmeyen bir değer çökme değil, yazmadığımız bir
+özellik. Negatif kontrolle doğrulandı.
+
+**Bölüm iki şekilden birini seçer.** Entry'li bir bölümde gevşek madde eklemek,
+gevşek maddeli bir bölümde entry eklemek sunulmuyor; yalnız **boş** bölüme ikisi
+de sunuluyor. Karışık bölüm gerçek veride yok ve ekranda hata gibi okunuyor.
+
+**Native `<select>`, Radix listbox değil.** Bölüm 39.1 Radix'i doğal karşılığı
+olmayan widget'lar için alıyor; select'in var, klavye ve ekran okuyucuda
+yardımsız doğru, telefonda platform seçicisi. Kural 4 gerisini söylüyor.
+
+Doğrulandı, gerçek backend'de: bölüm oluştu ve listede belirdi, boş bölüm iki
+şekli de sundu, ters tarih **kullanıcının dilinde** reddedildi ve **sunucuya hiç
+gitmedi**, geçerli entry grup olarak render edildi, açık uçlu iş "günümüz" dedi.
+Her create için tam **bir** istek.

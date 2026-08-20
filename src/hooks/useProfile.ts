@@ -19,6 +19,8 @@ import { profileKeys } from '@/lib/api/queryKeys';
 import type { Version } from '@/lib/api/etag';
 import {
   createAtom,
+  createEntry,
+  createSection,
   getProfile,
   listAtoms,
   listEntries,
@@ -29,6 +31,8 @@ import {
   type Atom,
   type AtomCreate,
   type AtomPatch,
+  type EntryCreate,
+  type SectionCreate,
   type VariantPatch,
 } from '@/lib/api/endpoints/profile';
 
@@ -153,6 +157,42 @@ export function useCreateAtom() {
     // collection by hand instead would skip the seed and leave the new row
     // unable to save.
     onSuccess: () => client.invalidateQueries({ queryKey: ATOM_COLLECTIONS }),
+  });
+}
+
+/**
+ * Adding a section. Same shape as `useCreateAtom`, same reason for it: the
+ * server assigns the id and the `displayOrder`, and no version exists to make
+ * the write conditional on. The caller owns the double-submit guard.
+ */
+export function useCreateSection() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: SectionCreate) => createSection(body),
+    onSuccess: () => client.invalidateQueries({ queryKey: profileKeys.sections() }),
+  });
+}
+
+/**
+ * Adding an entry.
+ *
+ * Invalidates the atom collections as well as the entries. Nothing about the
+ * atoms changed — but a section renders its entries and its atoms from two
+ * queries side by side, and leaving the second one untouched is how a new job
+ * appears with the wrong bullets under it for as long as the stale list lives.
+ */
+export function useCreateEntry() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: EntryCreate) => createEntry(body),
+    onSuccess: () => {
+      // Argument-less, which is the prefix every per-section entry query
+      // shares — not just the unfiltered one.
+      void client.invalidateQueries({ queryKey: profileKeys.entries() });
+      void client.invalidateQueries({ queryKey: ATOM_COLLECTIONS });
+    },
   });
 }
 
