@@ -11,14 +11,28 @@
 
 ## OPEN
 
-### B-032 · Seed profilinde iki sözcüklemeli atom var
-`senior_backend_tr` artık `enabledLanguages: ["tr","en"]`; Deneyim'in ilk maddesi Türkçe birincilin yanında İngilizce alternatif taşıyor.
-**Aksiyon:** Sekmeler, promote ve birincil-önce sıralama mock'suz test edilebilir. `make db-reset && make dev` gerekiyor — seeder mevcut profile dokunmuyor (P8).
-**Frontend:** Backend ayakta olmadığı için doğrulanamadı — tek açık madde bu. `notes/current.md` § "Kapanmadan Aşama 2'ye girilmez" · 1.
+*(şu an açık madde yok)*
 
 ---
 
 ## ACK — frontend tamamladı, backend arşivleyebilir
+
+### B-032 · Seed profilinde iki sözcüklemeli atom var
+`senior_backend_tr` artık `enabledLanguages: ["tr","en"]`; Deneyim'in ilk maddesi Türkçe birincilin yanında İngilizce alternatif taşıyor.
+**Aksiyon:** Sekmeler, promote ve birincil-önce sıralama mock'suz test edilebilir. `make db-reset && make dev` gerekiyor — seeder mevcut profile dokunmuyor (P8).
+**Frontend:** Doğrulandı — gerçek uca karşı, MSW kapalı, 13 kontrolün 13'ü. Sekmeler iki
+sözcüklemeyi de çiziyor, sıralama birincil-önce geliyor, rozet yalnız birincide, `tone` etikette
+görünüyor (`English · technical`), bayat rozeti yok (B-024 ile tutarlı). Promote `{"primary":true}`
+gönderiyor, `tone` sağ çıkıyor ve karşı sözcükleme sunucuda demote ediliyor. `gen:api` yeniden
+çalıştırıldı: üretilen şema commit'lideki ile **birebir aynı**, yani B-029/B-030 zaten uygulanmış.
+
+Doğrulama **mock'ların yakalamadığı bir hata çıkardı** ve düzeltildi: promote `content`
+göndermiyor, ama iyimser güncelleme onu koşulsuz yazıyordu — yani "dokunma" anlamına gelen
+yokluk "temizle"ye dönüşüyor, kullanıcının okuduğu sözcükleme gidiş-dönüş boyunca ekrandan
+siliniyordu. Ayrıntı `notes/current.md`.
+
+Bir de sözleşme gözlemi: demote edilen satırın `version`'ı artmıyor. Bizi kırmıyor,
+`to-backend.md` · **F-001** olarak açıldı.
 
 ### B-033 · Doküman yapısı bölündü — aynısını sizde de kurun
 **Since:** commit `221a7c1`, `02441b3`, `4f890fe` · **Spec:** `docs/INDEX.md`

@@ -164,6 +164,56 @@ describe('an atom with several wordings', () => {
     expect(body).not.toHaveProperty('tone');
   });
 
+  /**
+   * The other half of "send only what changes": a promote carries no content,
+   * and absent content means "change nothing" — but the optimistic pass wrote
+   * it through regardless, turning that absence into a clear. The wording the
+   * user was reading blanked, textarea and preview both, until the response
+   * landed and put it back.
+   *
+   * Nothing failed and the promote still worked, so this is only visible while
+   * the request is in flight. The handler is held open to make that window an
+   * ordering rather than a race: once the request has started, `onMutate` has
+   * certainly run.
+   */
+  it('keeps the wording on screen while the promote is in flight', async () => {
+    const user = userEvent.setup();
+    let started = false;
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    server.use(
+      http.patch('*/api/v1/profile/atoms/:id/variants/:variantId', async () => {
+        started = true;
+        await held;
+        return HttpResponse.json({ id: 'variant-2-tr', primary: true, version: 1 });
+      }),
+    );
+
+    const { client } = await renderEditor('atom-2');
+    await user.click(screen.getByRole('tab', { name: /Turkish/ }));
+    expect(screen.getByLabelText('Text')).toHaveValue('ETL hatları kurdum');
+
+    await user.click(screen.getByRole('button', { name: 'Use this one by default' }));
+    await waitFor(() => expect(started).toBe(true));
+
+    expect(screen.getByLabelText('Text')).toHaveValue('ETL hatları kurdum');
+    // The preview is the only place the marks are still shown, so it blanking
+    // is the more expensive half of the same bug. It has no role of its own,
+    // and the two paragraphs that do are the stale note and the mark warning.
+    const preview = screen.getByRole('tabpanel').querySelector('p:not([role="status"])');
+    expect(preview).toHaveTextContent('ETL hatları kurdum');
+
+    release();
+    await waitFor(() =>
+      expect(
+        cached(client, 'atom-2')?.variants?.find((v) => v.id === 'variant-2-tr')?.primary,
+      ).toBe(true),
+    );
+  });
+
   it('offers no promote control on the wording that is already the default', async () => {
     await renderEditor('atom-2');
 

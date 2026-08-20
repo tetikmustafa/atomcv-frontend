@@ -229,6 +229,19 @@ export function usePatchVariant() {
     onMutate: async ({ atomId, variantId, body }) => {
       await client.cancelQueries({ queryKey: profileKeys.atom(atomId) });
 
+      // Only a write that carries content may touch it. `content` is optional
+      // on this endpoint and absent means "change nothing" — but writing it
+      // through unconditionally turned that absence into a clear, and a
+      // promote sends `{ primary: true }` and no content. The wording the user
+      // was reading blanked for the length of the round trip, textarea and
+      // rich-text preview both, then came back when the response landed.
+      //
+      // `primary` deliberately stays out of the optimistic copy: promoting one
+      // demotes another, and only the success path knows to re-sort. So a
+      // body without content changes nothing here, and leaves nothing to roll
+      // back — the `undefined` says that to `onError` rather than to the type.
+      if (body.content === undefined) return { previous: undefined };
+
       return {
         previous: updateAtomThrough(client, atomId, (atom) => ({
           ...atom,

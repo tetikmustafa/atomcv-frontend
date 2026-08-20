@@ -93,10 +93,7 @@ gerçek formla gelecekler. Bu sayıyı boş alan değil, bütçenin erken uyarı
 
 ### Kapanmadan Aşama 2'ye girilmez
 
-1. **B-032 doğrulaması** — `make db-reset && make dev` sonrası gerçek API'ye
-   karşı promote (`tone` hayatta kalıyor mu) ve sekmeler / birincil-önce
-   sıralama / bayat rozeti. Şu an ikinci sözcüklemenin var olduğu tek yer mock
-   fixture'ı.
+1. ~~**B-032 doğrulaması**~~ — **yapıldı**, aşağıda.
 2. **`endpoints/profile.ts` hâlâ yanıt tiplerini `components['schemas']`'tan
    yazıyor.** On operasyon `2xx` beyan etmediği için zorunluydu; B-029 ile o
    sebep ortadan kalktı, yani artık `operations`'tan türetmek mümkün ve yanıt
@@ -106,3 +103,45 @@ gerçek formla gelecekler. Bu sayıyı boş alan değil, bütçenin erken uyarı
    kontrolü devre dışı bırakmak bizim işimiz.
 4. **Kota UI'ı sıfırlanma saatini söyleyemez** — gün dönümü zaman dilimi
    kararlaşmadı (`STATUS.md` · açık kararlar).
+
+### Gerçek backend'e karşı ilk doğrulama (B-032)
+
+Backend ayağa kalktı; sözcükleme yüzeyi MSW kapalıyken, `next dev` 3100'de,
+seed'lenmiş `senior_backend_tr` profiline karşı sürüldü. On üç kontrolün on üçü
+geçti — ayrıntı handoff'ta. Burada yalnız **koda bakarak görülmeyen** kısım var.
+
+**`gen:api` yeni bir şey getirmedi.** Üretilen dosya commit'lidekiyle birebir
+aynı çıktı, yani B-029/B-030 zaten uygulanmıştı. Yukarıdaki 2. madde bu yüzden
+hâlâ açık ama artık **bloke değil**: türetmeyi engelleyen sebep gitti.
+
+**Mock'ların yakalayamadığı hata: promote sözcüklemeyi ekrandan siliyordu.**
+`usePatchVariant`'ın iyimser geçişi `content`'i koşulsuz yazıyordu. Sözcükleme
+yazarken bu doğru; **promote'ta gövde `content` taşımıyor** ve şemada yokluk
+"dokunma" demek — iyimser kopya onu `undefined` yapınca "temizle"ye dönüşüyordu.
+Kullanıcının o anda okuduğu cümle, textarea'sı ve mark'ları gösteren önizlemesi
+ile birlikte, gidiş-dönüş boyunca boşalıyor ve yanıt inince geri geliyordu.
+
+Neden hiçbir test görmedi: **promote çalışmaya devam ediyordu.** Son durum
+doğru, istek doğru, sunucu doğru. Yalnız uçuş anında yanlış. Bunu yakalayan test
+handler'ı açık tutuyor — `started` bayrağı bekleniyor, çünkü istek başladıysa
+`onMutate` kesinlikle koşmuştur; bu bir zamanlama değil **sıralama** garantisi.
+Düzeltme, `content` taşımayan bir gövdede iyimser geçişi tamamen atlıyor;
+`primary` bilerek dışarıda kalmaya devam ediyor, çünkü birini yükseltmek
+diğerini düşürüyor ve yeniden sıralamayı yalnız başarı yolu bilebilir.
+
+**Bu, f8ca51a'nın açtığı bir kapıydı.** O commit `content`'i göndermeyi
+bıraktı — doğru olan buydu, B-028'i kapatıyordu — ama gönderilmeyen alanın
+iyimser tarafta hâlâ yazıldığını kimse kontrol etmedi. Bir alanı istekten
+çıkarırken, onu önbelleğe yazan yolun da aynı koşula bağlı olup olmadığına bak.
+
+**Sözleşme gözlemi, `to-backend.md` · F-001.** Promote'ta demote edilen satırın
+`version`'ı artmıyor. Bizi kırmıyor — yerel demote de sürüme dokunmuyor, yani
+tesadüfen hizalıyız — ama Bölüm 35.6'nın "`@Version` → ETag" ifadesiyle
+çelişiyor. Backend davranışı değiştirirse yerel demote'un da sürümü artması
+gerekir.
+
+**Doğrulama betiği commit edilmedi.** Çalışan bir Spring örneğine ve seed'e
+bağlı; CI'da koşamaz, koşarsa da yanlış sebeple kırmızı yanar. Tekrarlanması
+gerekirse: MSW kapalı `next dev`, Playwright, `p:not([role="status"])` ile
+önizleme paragrafı — birim testi `VariantTabs.test.tsx`'te aynı davranışı
+mock'lara karşı sabitliyor.
