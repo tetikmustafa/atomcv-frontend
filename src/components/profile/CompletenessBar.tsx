@@ -9,7 +9,7 @@
  * is a proportion of a checklist the server owns, so a percentage is what it
  * actually is.
  *
- * The number is recomputed server-side on every read (D.9 · 20) — never
+ * The number is recomputed server-side on every read (`spec/08-api.md`) — never
  * derived here, or two answers to the same question start disagreeing.
  */
 

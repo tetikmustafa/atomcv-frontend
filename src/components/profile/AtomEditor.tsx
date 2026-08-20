@@ -5,7 +5,7 @@
  * with it.
  *
  * Two saves, not one, because the API splits them and so does the versioning
- * (D.9 · 17). `PATCH /atoms/{id}` changes controls only; text goes through the
+ * (`spec/08-api.md`). `PATCH /atoms/{id}` changes controls only; text goes through the
  * variant endpoint, and the variant carries its own version that moves
  * independently of the atom's. Each half gets its own `useAutosave`, so a
  * slider dragged while a sentence is still settling does not cancel it.

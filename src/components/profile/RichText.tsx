@@ -1,7 +1,7 @@
 /**
  * Renders run/mark content.
  *
- * Marks are semantic, not stylistic (Bölüm 12.3, EK D.2) — the template
+ * Marks are semantic, not stylistic (`spec/04-data-model.md` § 14.1) — the template
  * decides what `technology` looks like in a CV, and this is the editor's own
  * decision about what it looks like on screen. They are two different
  * questions with two different answers, which is the point of storing meaning

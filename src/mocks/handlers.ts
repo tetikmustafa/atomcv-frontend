@@ -83,7 +83,7 @@ export const handlers = [
       // the resolver's whole body type from its first call and would then
       // reject the 202 below.
       const problem: ProblemDetail = {
-        // Relative, as D.9 · 12 settled it. An absolute URL here would let
+        // Relative, as `spec/08b-api-contract.md` settled it. An absolute URL here would let
         // the mock train the client on a shape the server does not send.
         type: '/errors/conflicting-preferences',
         title: 'Pinned content exceeds the page limit',
@@ -113,7 +113,7 @@ export const handlers = [
 
   /**
    * Progress stream. Frames carry an `id` so a reconnect can resume, which
-   * EK D.6 accepted for Stage 2 in exactly this shape. The endpoint is not in
+   * `spec/08-api.md` accepted for Stage 2 in exactly this shape. The endpoint is not in
    * the published schema yet, so the mock is the only place it exists.
    */
   http.get('*/api/v1/jobs/:jobId/stream', () => {

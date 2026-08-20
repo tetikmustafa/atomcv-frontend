@@ -57,7 +57,7 @@ describe('the section list', () => {
 
   /**
    * The reorder endpoint takes the complete group; a partial list is a 400
-   * (D.9 · 19), and the mock refuses one for the same reason the server does.
+   * (`spec/08-api.md`), and the mock refuses one for the same reason the server does.
    * So this asserts the server actually accepted it, not merely that a
    * request was made.
    */

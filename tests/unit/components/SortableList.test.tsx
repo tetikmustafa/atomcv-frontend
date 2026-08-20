@@ -61,7 +61,7 @@ describe('moving an item without dragging it', () => {
 
     await user.click(screen.getByRole('button', { name: 'Move Third up' }));
 
-    // D.9 · 19: a partial list is a 400, and `displayOrder` cannot be patched
+    // `spec/08-api.md`: a partial list is a 400, and `displayOrder` cannot be patched
     // directly — so every id travels, every time.
     expect(onReorder).toHaveBeenCalledWith(['a', 'c', 'b']);
   });

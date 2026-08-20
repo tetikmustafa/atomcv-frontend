@@ -84,7 +84,7 @@ export const profileHandlers = [
 
   /**
    * Reordering takes the **complete** list of the group being ordered; a
-   * partial one is a 400 (D.9 · 19). The mock enforces that, because a client
+   * partial one is a 400 (`spec/08-api.md`). The mock enforces that, because a client
    * that sends only the moved items works perfectly against a lenient mock
    * and fails against the real API.
    */

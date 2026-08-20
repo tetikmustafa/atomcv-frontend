@@ -5,7 +5,7 @@
  * debounces and its conflict dialog, is `useAutosave` and is built on these.
  *
  * The one non-obvious thing here is atom caching. There is no
- * `GET /profile/atoms/{id}` (EK D.6), so the collection response is the only
+ * `GET /profile/atoms/{id}` (`spec/08-api.md`), so the collection response is the only
  * place a per-atom `version` ever comes from, and an `If-Match` cannot be
  * built without one. Two bad answers follow if that is ignored: refetch the
  * whole collection after every edit — 200 atoms to learn one version — or
@@ -53,7 +53,7 @@ function seedAtomCache(client: QueryClient, atoms: Atom[]) {
  * The profile head and the version a write to it must quote.
  *
  * `version` is the `ETag`, because `Profile` carries no version field. Never
- * answers 404 — an account without a profile gets an empty one (D.9 · 13),
+ * answers 404 — an account without a profile gets an empty one (`spec/08-api.md`),
  * so there is no empty state to branch on, only `completeness: 0`.
  */
 export function useProfile() {
@@ -281,7 +281,7 @@ export function usePatchVariant() {
  * Reordering atoms within a section, or within an entry inside it.
  *
  * The complete list goes to the server every time — a partial one is a 400,
- * and `displayOrder` cannot be patched directly (D.9 · 19). No `If-Match`
+ * and `displayOrder` cannot be patched directly (`spec/08-api.md`). No `If-Match`
  * either: order is a property of the collection, and collections have no
  * version.
  *

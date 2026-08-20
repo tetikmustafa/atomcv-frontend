@@ -7,16 +7,16 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '/api/v1';
 /**
  * PATCH bodies go out as plain JSON.
  *
- * Bölüm 35.6 specifies `application/merge-patch+json`, and the running
- * backend answers **500** to it while accepting `application/json` — checked
- * directly, not inferred. The published schema agrees with the server: every
- * PATCH declares `application/json` and nothing declares the merge-patch
- * type. Raised in `DOC-SYNC-REQUEST.md`; until it is settled the wire follows
- * the schema, because a client that follows the prose cannot write at all.
+ * `application/merge-patch+json` was an error in the prose and is now
+ * refused with **415** (handoff B-025). Only `EntryPatch` implements RFC
+ * 7396's semantics; elsewhere `null` means "leave alone" because the columns
+ * cannot be null, so declaring the registered type would have been a false
+ * claim. `spec/08-api.md` § 35.6 carries the corrected version.
  *
  * Only the media type is affected. The *semantics* are still merge-patch —
- * an omitted key is left alone, an explicit `null` clears (D.9 · 16) — which
- * is what `buildPatch` is built around.
+ * an omitted key is left alone, an explicit `null` clears — which is what
+ * `buildPatch` is built around. A test pins the media type: "fixing" it back
+ * to the registered one breaks every save in the editor.
  */
 const PATCH_CONTENT_TYPE = 'application/json';
 

@@ -48,8 +48,9 @@ describe('parseRichContent', () => {
 
   /**
    * The schema marks `m` optional too, so an unmarked run may arrive without
-   * it. Normalising to `[]` here is what lets rule D.9 · 4 hold everywhere
-   * else: no consumer of a parsed run needs an `undefined` check.
+   * it. Normalising to `[]` here is what lets the "`m` is always an array"
+   * rule hold everywhere else: no consumer of a parsed run needs an
+   * `undefined` check.
    */
   it('supplies the mark array when a run arrives without one', () => {
     const parsed = parseRichContent({ v: 1, runs: [{ t: 'Shipped' }] });
@@ -64,7 +65,7 @@ describe('parseRichContent', () => {
   });
 
   /**
-   * EK D.2: an error message must not carry content. A malformed run is
+   * `spec/04-data-model.md` § 14.1: an error message must not carry content. A malformed run is
    * identified by position, because the alternative puts a user's CV text
    * into a log line (Bölüm 48.2).
    */
@@ -78,7 +79,7 @@ describe('parseRichContent', () => {
 });
 
 /**
- * The invariant the backend enforces with a 400 (D.9 · 1, D.9 · 18). Both
+ * The invariant the backend enforces with a 400 (`spec/04-data-model.md` § 14.1, `spec/08-api.md`). Both
  * directions: a link with nothing to follow, and a target that will never
  * render and would be silently dropped on the next write.
  */
@@ -152,7 +153,7 @@ describe('toContentPayload', () => {
     expect(payload.runs).toHaveLength(4);
   });
 
-  /** D.9 · 3: the server stamps the version; a client-sent one is refused. */
+  /** `spec/04-data-model.md` § 14.1: the server stamps the version; a client-sent one is refused. */
   it('drops the version', () => {
     const payload = toContentPayload(SAMPLE);
 
@@ -176,7 +177,7 @@ describe('plainText', () => {
   /**
    * Why this matters: `content_hash` is the hash of exactly this string, so
    * re-marking a sentence leaves the hash — and the measured render costs —
-   * untouched (EK D.2, D.9 · 5).
+   * untouched (`spec/04-data-model.md` § 16.2).
    */
   it('is unchanged by re-marking', () => {
     const remarked: RichContent = {

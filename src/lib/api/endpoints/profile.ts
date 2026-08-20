@@ -5,14 +5,13 @@
  * invalidation — those belong to the hooks in `src/hooks`, and keeping them
  * out means each function can be read against the endpoint it names.
  *
- * **Types come from `components['schemas']`, not from `operations`.** The
- * published schema declares no success response on ten operations — every
- * `PATCH` and every collection `GET` among them — so `operations` has nothing
- * to offer for exactly the calls the editor leans on. The item schemas are
- * complete and generated, so the request and response shapes below are still
- * derived rather than invented; only the response *wrapper* is stated here,
- * and it is verified against the running server. Raised in
- * `DOC-SYNC-REQUEST.md`; delete this paragraph when the schema declares them.
+ * **Types come from `components['schemas']`, not from `operations`.** That was
+ * forced when ten operations declared no success response; the schema
+ * declares them now (handoff B-029), so deriving from `operations` has become
+ * possible and would additionally catch a change to the response *wrapper*.
+ * Until that is done the item schemas are still generated, so the shapes below
+ * are derived rather than invented — only the wrapper is stated here, and it
+ * is verified against the running server. Tracked in `docs/notes/current.md`.
  */
 
 import { api, type Versioned } from '../client';
@@ -47,9 +46,9 @@ export type VariantPatch = Schemas['VariantPatch'];
 
 /**
  * `organization` and `endDate` are `["string", "null"]` in the schema, so the
- * generated type already expresses the clear that D.9 · 16 is about — sending
- * `null` to remove an end date and mean "this job is current". This used to be
- * widened by hand here (handoff B-029).
+ * generated type already expresses the clear that `spec/08-api.md` describes —
+ * sending `null` to remove an end date and mean "this job is current". This
+ * used to be widened by hand here (handoff B-029).
  */
 export type EntryPatch = Schemas['EntryPatch'];
 export type ProfileExport = Schemas['ProfileExport'];
@@ -72,7 +71,7 @@ function query(params: Record<string, string | undefined>): string {
  * ---------------------------------------------------------------------- */
 
 /**
- * Never answers 404 (D.9 · 13). A user who has never had a profile gets an
+ * Never answers 404 (`spec/08-api.md`). A user who has never had a profile gets an
  * empty one created on read, so there is no "not created yet" state.
  */
 export function getProfile(): Promise<Versioned<Profile>> {
@@ -80,14 +79,14 @@ export function getProfile(): Promise<Versioned<Profile>> {
 }
 
 /**
- * Replaces the head. A field left out is **cleared** (D.9 · 15), so the form
+ * Replaces the head. A field left out is **cleared** (`spec/08-api.md`), so the form
  * must send every field it owns, not only the ones that changed.
  */
 export function replaceProfile(body: ProfileUpdate, version: Version) {
   return api.putVersioned<Profile>('/profile', body, { version });
 }
 
-/** `PUT`, not `PATCH` — Bölüm 35.2's list is out of date, D.9 · 15 is right. */
+/** `PUT`, not `PATCH` — § 35.2's endpoint list is out of date; `spec/08-api.md` is right. */
 export function replacePreferences(body: PreferencesUpdate, version: Version) {
   return api.putVersioned<Profile>('/profile/preferences', body, { version });
 }
@@ -116,7 +115,7 @@ export function deleteSection(id: string, version: Version) {
 
 /**
  * Takes the **complete** list, not the moved items — a partial one is a 400,
- * and `displayOrder` cannot be patched directly (D.9 · 19). No `If-Match`:
+ * and `displayOrder` cannot be patched directly (`spec/08-api.md`). No `If-Match`:
  * ordering is a property of the collection, which has no version.
  */
 export function reorderSections(ids: string[]) {
@@ -163,7 +162,7 @@ export function createAtom(body: AtomCreate) {
 
 /**
  * Controls only — importance, active, pins, the matching lists. Text is
- * edited through the variant endpoints (D.9 · 17), so nothing here touches
+ * edited through the variant endpoints (`spec/08-api.md`), so nothing here touches
  * wording.
  */
 export function patchAtom(id: string, body: AtomPatch, version: Version) {
@@ -215,8 +214,9 @@ export function deleteVariant(atomId: string, variantId: string, version: Versio
 /**
  * Two endpoints wearing one path. `?format=json` answers with
  * `ProfileExport`; `?format=markdown` answers `text/markdown`, which is a
- * string and throws if read as JSON. The schema declares only the JSON half,
- * so the split is stated here — see `DOC-SYNC-REQUEST.md`.
+ * string and throws if read as JSON. The schema declares both media types
+ * (handoff B-031); the split into two functions is what keeps the response
+ * types honest, since one is parsed and the other is not.
  */
 export function exportProfileAsJson() {
   return api.get<ProfileExport>(`/profile/export${query({ format: 'json' })}`);

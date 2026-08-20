@@ -6,11 +6,11 @@ import { formatErrorParams, type IcuValue } from '@/lib/errors/errorParams';
 import type { ErrorCode, KnownResolutionAction } from '@/types/domain';
 
 /**
- * The `params` each code carries, with the types EK D.6.1 declares.
+ * The `params` each code carries, with the types `spec/08b-api-contract.md` declares.
  *
  * This is test data, not a mirror of a backend type: it is the input every
  * message has to survive. The server refuses to publish an undeclared key
- * (D.9 · 11), so formatting a message with exactly this set is the same
+ * (`spec/08b-api-contract.md`), so formatting a message with exactly this set is the same
  * information the message will ever get — and formatting throws when a
  * message reaches for anything else, which is the typo this file exists to
  * catch.
@@ -185,7 +185,7 @@ describe('the numbers inside those sentences', () => {
 });
 
 /**
- * D.9 · 21: the server already tried shrinking the content twice before
+ * `spec/06-pipeline-d-g.md` § 23: the server already tried shrinking the content twice before
  * returning this, so "try again" is guaranteed to fail again. The resolutions
  * are the server's to send, but the *message* is ours, and it should not
  * suggest the one thing that cannot work.

@@ -33,7 +33,7 @@ export function ProfileEditor() {
 
         {/*
           `GET /profile` never 404s — an account without one gets an empty
-          profile created on read (D.9 · 13). So there is no "you have no
+          profile created on read (`spec/08-api.md`). So there is no "you have no
           profile yet" state to build, only a completeness of 0.
         */}
         <CompletenessBar value={profile.completeness ?? 0} />

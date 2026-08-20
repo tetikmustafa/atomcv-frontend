@@ -39,7 +39,7 @@ afterEach(() => {
 
 describe('the atom cache', () => {
   /**
-   * EK D.6 removed `GET /profile/atoms/{id}`, so the collection response is
+   * `spec/08-api.md` removed `GET /profile/atoms/{id}`, so the collection response is
    * the only place a per-atom version ever appears. Seeding is what lets the
    * editor hold 200 atoms and still build an `If-Match` for any one of them.
    */

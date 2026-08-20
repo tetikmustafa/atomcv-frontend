@@ -15,18 +15,18 @@
 import type { components } from './api';
 
 /**
- * The 27 codes the server publishes (EK D.7). Derived, not transcribed.
+ * The 27 codes the server publishes (`spec/08b-api-contract.md`). Derived, not transcribed.
  *
  * `params` keys are fixed per code and the server refuses to publish an
  * undeclared one, so a missing value is a catalogue fix — never a field
- * hand-added to a body, because that value will never arrive (D.9 · 11).
+ * hand-added to a body, because that value will never arrive (`spec/08b-api-contract.md`).
  */
 export type ErrorCode = NonNullable<components['schemas']['ApiError']['code']>;
 
 /**
- * Actions the server may offer as a way out of an error (Bölüm 35.4).
+ * Actions the server may offer as a way out of an error (`spec/08-api.md` § 35.4).
  *
- * Nine values as of EK D.9 · 23, now confirmed against the published enum.
+ * Nine values, confirmed against the published enum (`spec/08b-api-contract.md`).
  */
 export type KnownResolutionAction = NonNullable<components['schemas']['Resolution']['action']>;
 
@@ -52,7 +52,7 @@ export type Resolution = {
  *
  * `status` and `code` are required here although the schema marks them
  * optional: every error carries a code, including `INTERNAL_ERROR` on a 500
- * (D.9 · 12), and `toApiError` supplies both for a body that arrives without
+ * (`spec/08b-api-contract.md`), and `toApiError` supplies both for a body that arrives without
  * them. Requiring them is what lets the error path have no undefined branch.
  *
  * `code` stays open for the same reason as `ResolutionAction`, plus one of

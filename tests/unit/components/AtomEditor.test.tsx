@@ -127,7 +127,7 @@ describe('the atom editor', () => {
   });
 
   /**
-   * The two halves version independently (D.9 · 17), so they save through
+   * The two halves version independently (`spec/08-api.md`), so they save through
    * different endpoints and must not be wired to one another.
    */
   it('saves wording through the variant, leaving the atom’s own version alone', async () => {

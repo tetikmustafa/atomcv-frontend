@@ -1,5 +1,5 @@
 /**
- * The run/mark content model (Bölüm 12.3, 14.1; invariants in EK D.2 and D.9).
+ * The run/mark content model (`spec/04-data-model.md` § 14.1).
  *
  * Atom text is a list of runs, not a string. Marks are semantic rather than
  * stylistic: a template decides what `technology` looks like, and the rewrite
@@ -40,7 +40,7 @@ type WireContent = components['schemas']['Content'];
  *
  * `m` is optional on the wire and required here: the schema permits a writer
  * to leave it out, and `parseRichContent` supplies `[]` when one does, so
- * everything downstream is spared an `undefined` check (D.9 · 4).
+ * everything downstream is spared an `undefined` check (`spec/04-data-model.md` § 14.1).
  */
 export type Run = Omit<WireRun, 'm'> & { m: Mark[] };
 
@@ -51,7 +51,7 @@ export type Run = Omit<WireRun, 'm'> & { m: Mark[] };
  */
 export type RichContent = Omit<WireContent, 'runs'> & { runs: Run[] };
 
-/** What a write sends: runs only, because `v` is the server's (D.9 · 3). */
+/** What a write sends: runs only, because `v` is the server's (`spec/04-data-model.md` § 14.1). */
 export type RichContentPayload = Omit<WireContent, 'v' | 'runs'> & { runs: Run[] };
 
 /**
@@ -59,7 +59,7 @@ export type RichContentPayload = Omit<WireContent, 'v' | 'runs'> & { runs: Run[]
  *
  * The message names the position and never the text. Content must not reach a
  * log through an error string any more than through a logger argument
- * (Bölüm 48.2, EK D.2).
+ * (`spec/10-security.md` § 48.2).
  */
 export class RichContentError extends Error {
   constructor(message: string) {
@@ -82,7 +82,7 @@ function assertHrefInvariant(run: { m: Mark[]; href?: string }, where: string) {
   // Both directions matter. A `link` without a target renders as nothing a
   // user can follow; an `href` on a non-link run is stored, never rendered,
   // and silently lost — which is worse than being refused, because nobody
-  // finds out. The backend rejects either with a 400 (D.9 · 18).
+  // finds out. The backend rejects either with a 400 (`spec/08-api.md`).
   if (isLink && !run.href) {
     throw new RichContentError(`${where} has the link mark but no href`);
   }
@@ -145,7 +145,7 @@ function parseRun(value: unknown, index: number): Run {
  * Throws rather than repairing. Dropping a field we do not understand and
  * saving the result would corrupt the row on the next write — P4, and the
  * same stance the backend takes when it meets a version stamp from the
- * future (EK D.2).
+ * future (`spec/04-data-model.md` § 14.1).
  */
 export function parseRichContent(value: unknown): RichContent {
   if (typeof value !== 'object' || value === null) {

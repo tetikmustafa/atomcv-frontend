@@ -14,7 +14,7 @@ import { routing } from '@/lib/i18n/routing';
  * is silent — the page still works, it is just rendered on demand.
  *
  * The editor itself fetches nothing on the server. `client.ts` throws on a
- * server-side call by design (EK D.6): the session cookie is HttpOnly and
+ * server-side call by design (`spec/08-api.md`): the session cookie is HttpOnly and
  * there is no decided way to forward it, so server rendering produces shell
  * and static text only.
  */

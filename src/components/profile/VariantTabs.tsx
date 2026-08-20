@@ -8,11 +8,12 @@
  * server-side, which is why `usePatchVariant` refetches on that write instead
  * of merging the response.
  *
- * **⚠️ `stale` is shown and cannot be acted on.** Bölüm 37.6 draws two
- * buttons next to a stale wording — regenerate, or keep mine — and Stage 1
- * publishes no endpoint for either. Rendering a "Regenerate" button that
- * cannot work would be worse than not having one, so the badge says what is
- * true and stops there. See `DOC-SYNC-REQUEST.md`.
+ * **⚠️ `stale` is shown and cannot be acted on.** `spec/09-frontend.md` § 37.6
+ * draws two buttons next to a stale wording — regenerate, or keep mine — and
+ * Stage 1 publishes no endpoint for either, nor any job that would set
+ * `stale` (handoff B-024, confirmed by the backend). Rendering a "Regenerate"
+ * button that cannot work would be worse than not having one, so the badge
+ * says what is true and stops there.
  */
 
 import { Tabs } from 'radix-ui';
@@ -24,7 +25,7 @@ export type VariantTabsProps = {
   variants: Variant[];
   selectedId: string;
   onSelect: (variantId: string) => void;
-  /** Resends the wording with `primary: true`. See the note in the editor. */
+  /** Sends `{ primary: true }` and nothing else. See the note in the editor. */
   onPromote: (variant: Variant) => void;
   children: (variant: Variant) => React.ReactNode;
 };

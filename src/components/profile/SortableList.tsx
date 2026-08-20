@@ -18,7 +18,7 @@
  *   switch device or voice control can reach at all.
  *
  * The server takes the **complete** list in its new order — a partial one is
- * a 400, and `displayOrder` cannot be patched directly (D.9 · 19). So
+ * a 400, and `displayOrder` cannot be patched directly (`spec/08-api.md`). So
  * `onReorder` always hands over every id.
  */
 

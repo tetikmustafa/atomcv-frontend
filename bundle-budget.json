@@ -2,7 +2,7 @@
   "$comment": [
     "Initial JS per route, gzipped. Checked by scripts/check-bundle-size.mjs.",
     "Ceilings come from Bolum 52.3; this file is the enforcing copy and must not",
-    "be raised above them without a decision (EK D.10 - 13, 14).",
+    "be raised above them without a decision (docs/notes/current.md D.10 - 13, 14).",
     "",
     "sharedKb  - chunks every route loads: the React and Next runtime plus",
     "            whatever the root layout pulls in. Only moves on a dependency",

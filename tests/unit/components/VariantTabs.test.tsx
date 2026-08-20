@@ -81,9 +81,9 @@ describe('an atom with several wordings', () => {
 
   /**
    * ⚠️ Stage 1 publishes no endpoint that regenerates a stale wording, and
-   * Bölüm 37.6 draws a button for it. A control that cannot work is worse
-   * than none on a screen already telling the user something is wrong, so the
-   * badge stops at saying what is true. Raised in DOC-SYNC-REQUEST.md.
+   * `spec/09-frontend.md` § 37.6 draws a button for it. A control that cannot
+   * work is worse than none on a screen already telling the user something is
+   * wrong, so the badge stops at saying what is true (handoff B-024).
    */
   it('offers no regenerate button, because nothing could answer it', async () => {
     const user = userEvent.setup();
