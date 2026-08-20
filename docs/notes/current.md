@@ -56,6 +56,7 @@ CLAUDE.md 927 satırdan 347'ye inerken buraya taşındı (handoff · B-033).
 | **Metin düzenleme düz metin, mark'ları düşürüyor** | Mark farkında editör kural 4'ün lazy-load edeceği bileşen ve henüz yok. Kabul edilebilir olmasının tek sebebi **söylenmesi**: atomun gerçekten mark'ı varsa kaydetmeden **önce** uyarı çıkıyor (P8). Uyarıyı, onu gereksiz kılan editörü yazmadan kaldırma. |
 | **Bayat sözcüklemeyi yeniden üretecek kontrol yok** | Aşama 1 ne uç ne de `stale`'i true yapacak iş yayınlıyor (B-024). Rozet ve açıklaması var, düğme yok — çalışamayacak düğme, zaten bir şeyin bozuk olduğunu söyleyen ekranda hiç yoktan kötü. |
 | **Mutation yüzeyi kısmi** | Okuma, yama, sıralama ve **üç create** var — her biri kendisini kullanan bileşenle birlikte geldi. **Delete'lerin hâlâ hook'u yok**: endpoint fonksiyonları duruyor, silme UI'ı gelince bağlanır. Aynı kural. |
+| **Profil başında dil eksenleri düzenlenemiyor** | `sourceLanguage` ve `enabledLanguages` **içerik dili** ekseni (Bölüm 38.1), arayüz dili değil — `routing.locales`'i burada kullanmak `lib/i18n/locales.ts`'in açıkça uyardığı hata olurdu. Hangi dillerin sunulabileceği sunucunun `capabilities`'ine bağlı ve Aşama 1 onu yayınlamıyor; sabit liste yazmak "anonim modu hardcoded varsayımdan değil `capabilities`'ten kapıla" kuralını çiğner. Form ikisini **olduğu gibi geçiriyor** (`enabledLanguages` zorunlu). Kontrol `capabilities` ile gelir; kaynak dilin yeri zaten onboarding sihirbazı. |
 | **`POST /generations/general`'a kalıcı ekran bağlı değil** | Senkron, Aşama 1'e özgü, hiçbir yere kaydetmiyor (B-022). Aşama 2'de 202 + iş akışıyla değişecek. |
 
 ### Dosyalar arasına yayılan değişmezler
@@ -92,8 +93,8 @@ CLAUDE.md 927 satırdan 347'ye inerken buraya taşındı (handoff · B-033).
 
 İlk app rotası ölçüldü: `/[locale]/profile` **238.3 KB toplam, 70.2 KB kendi
 payı** — dnd-kit, TanStack Query, next-intl client runtime ve Radix taşıyor.
-(Entry katmanı +0.5, madde ekleme +0.5, create formları +2.6 KB getirdi; ilk
-ölçüm 237.8 / 69.7 idi. Güncel: **241.5 / 73.3**.) Kendi payından
+(Entry katmanı +0.5, madde ekleme +0.5, create formları +2.6, profil başı
++0.7 KB getirdi; ilk ölçüm 237.8 / 69.7 idi. Güncel: **242.2 / 74.0**.) Kendi payından
 ~39 KB kalıyor ve **React Hook Form ile Zod henüz inmedi**; ilk gerçek formla
 gelecekler. Bu sayıyı boş alan değil, bütçenin erken uyarısı say.
 
@@ -281,3 +282,39 @@ Doğrulandı, gerçek backend'de: bölüm oluştu ve listede belirdi, boş böl�
 şekli de sundu, ters tarih **kullanıcının dilinde** reddedildi ve **sunucuya hiç
 gitmedi**, geçerli entry grup olarak render edildi, açık uçlu iş "günümüz" dedi.
 Her create için tam **bir** istek.
+
+### Profil başı — inşa sırasının adı konmuş teslimatı
+
+XI-B.9.2'nin 4. adımı "gen:api + **profil formu**" diyordu ve profil başının
+formu hiç yoktu: headline bir `<h1>` olarak basılıyordu, iletişim bilgileri ne
+görünüyor ne düzenlenebiliyordu.
+
+**`PUT` gönderilmeyeni siler ve bu ölçüldü.** Yalnız `headline` +
+`enabledLanguages` gönderen bir gövde `contact`'i `{}` yapıyor. Yani her
+kaydetme **bütün başı** taşımak zorunda; düzenlenen alandan kurulan bir gövde
+diğer sekizini siler. Bir ayrıntı: `sourceLanguage` omitted olduğunda
+**silinmedi**, yani "gönderilmeyen alan temizlenir" tekdüze değil — istemci
+davranışı değişmiyor (yine hepsini gönderiyoruz) ama prose'un tam doğru
+olmadığını bilmek gerekiyor.
+
+**Bu yüzden baş için tek autosave var, alan başına değil.** Alan başına olsaydı
+iki hızlı düzenleme yarışırdı: ikinci istek, birincinin yanıtı cache'e inmeden
+kurulur ve **eski headline'ı yenisinin üstüne geri yazardı**. `useAutosave` tek
+bir bekleyen değer tutuyor ve aynı anda iki isteği uçurmuyor. Bölüm 37.1 hâlâ
+geçerli — Kaydet düğmesi yok; değişen ayrıntı granülerlik.
+
+**Doğrulama sunucunun**, e-posta dâhil (`400` + `fields: ["contact.email"]`,
+ölçüldü). Ama `SaveStatus` yalnız "Couldn't save." diyor, **nedenini
+söylemiyor** — atomda doğru (hatalar orada çoğunlukla geçici), başta değil:
+kullanıcı asla başarılı olmayacak bir isteği tekrar dener. O yüzden başta
+`ErrorPanel` de basılıyor; `onRetry`'siz (`SaveStatus` o eylemin sahibi) ve
+`conflict` dışarıda (37.4'ün iki düğmesi rakip tavsiye almamalı).
+
+Doğrulandı: tek alan düzenlemesi kaydoluyor ve **diğer sekizi PUT'tan sağ
+çıkıyor**, `enabledLanguages` uydurulmadan taşınıyor, bozuk e-postada
+sunucunun adlandırdığı alan ekranda. Seed birebir geri yüklendi.
+
+**Kabuk kodlaması üçüncü kez ısırdı** — `curl -d` gövdesinde ve `python -c`
+karşılaştırma dizesinde. İkisinde de hata istemcide sanılabilirdi. Elle sonda
+yaparken **ASCII kullan**; non-ASCII yolu kendi kodlamasını yöneten bir Node
+betiğiyle sına.

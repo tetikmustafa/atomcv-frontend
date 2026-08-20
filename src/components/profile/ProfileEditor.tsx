@@ -11,6 +11,7 @@
 import { useTranslations } from 'next-intl';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { CompletenessBar } from '@/components/profile/CompletenessBar';
+import { ProfileHead } from '@/components/profile/ProfileHead';
 import { SectionList } from '@/components/profile/SectionList';
 import { useProfile } from '@/hooks/useProfile';
 
@@ -37,6 +38,8 @@ export function ProfileEditor() {
           profile yet" state to build, only a completeness of 0.
         */}
         <CompletenessBar value={profile.completeness ?? 0} />
+
+        <ProfileHead profile={profile} />
       </header>
 
       <SectionList />

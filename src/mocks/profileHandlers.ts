@@ -11,7 +11,13 @@
 
 import { http, HttpResponse } from 'msw';
 import type { ProblemDetail } from '@/types/domain';
-import { fixture, type MockAtom, type MockEntry, type MockSection } from './profileFixture';
+import {
+  fixture,
+  type MockAtom,
+  type MockEntry,
+  type MockProfile,
+  type MockSection,
+} from './profileFixture';
 
 /**
  * The kinds the server accepts, so the mock refuses exactly what the server
@@ -86,6 +92,61 @@ export const profileHandlers = [
       headers: { ETag: `"${fixture.profileVersion}"` },
     }),
   ),
+
+  /**
+   * Replacing the head. **`PUT`, and an omitted field is cleared** — verified
+   * against the running server, where sending only `headline` and
+   * `enabledLanguages` left `contact` as `{}`. The mock clears too, because a
+   * lenient one would let a client that sends a diff work here and wipe a real
+   * user's contact details in production.
+   *
+   * `enabledLanguages` is required and may not be empty: both are a `400`
+   * naming it, measured. `contact.email` is validated server-side as well, so
+   * that is reproduced rather than left to the client.
+   */
+  http.put('*/api/v1/profile', async ({ request }) => {
+    const instance = '/api/v1/profile';
+    const refused = precondition(request, instance, fixture.profileVersion);
+    if (refused) return refused;
+
+    const body = (await request.json()) as {
+      headline?: string;
+      contact?: NonNullable<MockProfile['contact']>;
+      selfDescription?: string;
+      sourceLanguage?: string;
+      enabledLanguages?: string[];
+    };
+
+    if (!body.enabledLanguages || body.enabledLanguages.length === 0) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['enabledLanguages'] }),
+        { status: 400 },
+      );
+    }
+
+    const email = body.contact?.email;
+    if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['contact.email'] }),
+        { status: 400 },
+      );
+    }
+
+    // Assigned, not merged: what is not sent is gone.
+    fixture.profile = {
+      ...fixture.profile,
+      headline: body.headline ?? undefined,
+      contact: body.contact ?? {},
+      selfDescription: body.selfDescription ?? undefined,
+      sourceLanguage: body.sourceLanguage ?? fixture.profile.sourceLanguage,
+      enabledLanguages: body.enabledLanguages,
+    };
+    fixture.profileVersion += 1;
+
+    return HttpResponse.json(fixture.profile, {
+      headers: { ETag: `"${fixture.profileVersion}"` },
+    });
+  }),
 
   http.get('*/api/v1/profile/sections', () => HttpResponse.json(fixture.sections)),
 

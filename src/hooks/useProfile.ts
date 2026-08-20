@@ -28,13 +28,17 @@ import {
   patchAtom,
   patchVariant,
   reorderAtoms,
+  replaceProfile,
   type Atom,
   type AtomCreate,
   type AtomPatch,
   type EntryCreate,
+  type Profile,
+  type ProfileUpdate,
   type SectionCreate,
   type VariantPatch,
 } from '@/lib/api/endpoints/profile';
+import type { Versioned } from '@/lib/api/client';
 
 export type AtomFilter = { sectionId?: string; entryId?: string };
 
@@ -125,6 +129,44 @@ export function useAtom(id: string) {
 }
 
 /* --------------------------------- writes ------------------------------ */
+
+/**
+ * Replacing the profile head.
+ *
+ * **`PUT`, and a field left out is cleared** — verified: sending only
+ * `headline` and `enabledLanguages` left `contact` as `{}`. So a caller must
+ * hand over the whole head every time, never a diff, and `ProfileHead` builds
+ * it from the cached copy for exactly that reason.
+ *
+ * The version is the `ETag`, because `Profile` carries no version field, and
+ * it is read from the cache here rather than taken from the caller — the same
+ * rule as `usePatchAtom`, and for the same reason: a version captured at some
+ * render is stale by the second save.
+ *
+ * Not optimistic. Every other write in this file is, because it is a keystroke
+ * on one field; this one replaces the whole resource, and rolling that back
+ * means restoring nine fields the user may have been editing meanwhile. The
+ * response is the truth and it arrives quickly.
+ */
+export function useReplaceProfile() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: ProfileUpdate) =>
+      // Cast rather than defaulted, exactly as `versionOf` does: a head that
+      // was never read has no ETag, and `toIfMatch` throwing with its own
+      // explanation beats a request going out with no `If-Match` and coming
+      // back 428.
+      replaceProfile(
+        body,
+        client.getQueryData<Versioned<Profile>>(profileKeys.head())?.version as Version,
+      ),
+
+    // Carries the new ETag as well as the new body, so the next save has its
+    // version without a read in between.
+    onSuccess: (result) => client.setQueryData(profileKeys.head(), result),
+  });
+}
 
 /**
  * Adding an atom, with its first wording — the endpoint takes both at once,

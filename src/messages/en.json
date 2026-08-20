@@ -206,6 +206,20 @@
       "endBeforeStart": "The end cannot come before the start.",
       "invalid": "That does not look right.",
       "invalidDate": "That is not a date."
+    },
+    "head": {
+      "title": "Your details",
+      "edit": "Edit your details",
+      "hide": "Done",
+      "headline": "Headline",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "location": "Location",
+      "linkedin": "LinkedIn",
+      "github": "GitHub",
+      "website": "Website",
+      "selfDescription": "About you"
     }
   },
   "Generation": {
