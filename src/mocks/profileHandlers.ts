@@ -105,6 +105,85 @@ export const profileHandlers = [
   }),
 
   /**
+   * Creating an atom, with its first wording in the same request.
+   *
+   * Measured against the running server: **201**, and the body is the whole
+   * `Atom` including the variant it just made — id, `contentHash`, `version: 0`
+   * — with `displayOrder` appended to the end of its group and `importance`
+   * defaulted. No `ETag` header; the version rides in the body like every
+   * other atom's.
+   *
+   * **No `If-Match` and no idempotency.** There is no version to quote for
+   * something that does not exist, and `Idempotency-Key` covers the Stage 2
+   * endpoints that start work rather than profile creates
+   * (`spec/08b-api-contract.md` § D.6.5). So two requests make two atoms — the mock does
+   * that too, deliberately. A mock that quietly de-duplicated would hide the
+   * exact failure the submit button's disabled state exists to prevent.
+   */
+  http.post('*/api/v1/profile/atoms', async ({ request }) => {
+    const instance = '/api/v1/profile/atoms';
+    const body = (await request.json()) as {
+      sectionId: string;
+      entryId?: string;
+      kind: NonNullable<MockAtom['kind']>;
+      content: { runs?: { t: string; m?: string[] }[] };
+      language?: string;
+      importance?: number;
+    };
+
+    const runs = body.content?.runs ?? [];
+    if (!body.sectionId || !body.kind || runs.length === 0) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['content'] }),
+        { status: 400 },
+      );
+    }
+
+    const group = fixture.atoms.filter(
+      (atom) =>
+        atom.sectionId === body.sectionId &&
+        (body.entryId === undefined ? atom.entryId === undefined : atom.entryId === body.entryId),
+    );
+
+    const plainText = runs.map((run) => run.t).join('');
+    const suffix = fixture.atoms.length + 1;
+
+    const created: MockAtom = {
+      id: `atom-new-${suffix}`,
+      sectionId: body.sectionId,
+      ...(body.entryId ? { entryId: body.entryId } : {}),
+      kind: body.kind,
+      displayOrder: group.length,
+      importance: body.importance ?? 0.5,
+      active: true,
+      alwaysInclude: false,
+      verbatim: false,
+      skills: [],
+      metrics: [],
+      properNouns: [],
+      source: 'manual',
+      verified: false,
+      version: 0,
+      variants: [
+        {
+          id: `variant-new-${suffix}`,
+          primary: true,
+          language: body.language ?? 'en',
+          content: { v: 1, runs: runs.map((run) => ({ t: run.t, m: run.m ?? [] })) },
+          plainText,
+          contentHash: 'created',
+          createdBy: 'user',
+          stale: false,
+          version: 0,
+        },
+      ],
+    };
+
+    fixture.atoms.push(created);
+    return HttpResponse.json(created, { status: 201 });
+  }),
+
+  /**
    * Reordering takes the **complete** list of the group being ordered; a
    * partial one is a 400 (`spec/08-api.md`). The mock enforces that, because a client
    * that sends only the moved items works perfectly against a lenient mock

@@ -18,6 +18,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tansta
 import { profileKeys } from '@/lib/api/queryKeys';
 import type { Version } from '@/lib/api/etag';
 import {
+  createAtom,
   getProfile,
   listAtoms,
   listEntries,
@@ -26,6 +27,7 @@ import {
   patchVariant,
   reorderAtoms,
   type Atom,
+  type AtomCreate,
   type AtomPatch,
   type VariantPatch,
 } from '@/lib/api/endpoints/profile';
@@ -119,6 +121,40 @@ export function useAtom(id: string) {
 }
 
 /* --------------------------------- writes ------------------------------ */
+
+/**
+ * Adding an atom, with its first wording — the endpoint takes both at once,
+ * so there is no moment where a bullet exists with nothing in it.
+ *
+ * **Not optimistic, unlike every edit above.** An atom's identity is the
+ * server's to assign, and the per-atom cache is keyed by that id. A temporary
+ * one would have to be renamed the moment the response arrived, and anything
+ * that had already mounted `AtomEditor` against it would be reading a key
+ * about to disappear — into `useAtom`'s diagnostic throw. An edit is a
+ * keystroke and cannot afford a round trip; adding is a deliberate, occasional
+ * act that can.
+ *
+ * No `If-Match`: there is no version to quote for something that does not
+ * exist yet. That also means **the server will not stop a double submit** —
+ * `Idempotency-Key` covers the Stage 2 endpoints that start work, not profile
+ * creates (`spec/08b-api-contract.md` § D.6.5), so two POSTs make two bullets. Keeping
+ * the control disabled while `isPending` is the only thing standing between a
+ * double-click and a duplicate, which is why it is the caller's obligation
+ * rather than a nicety.
+ */
+export function useCreateAtom() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: AtomCreate) => createAtom(body),
+
+    // The collection refetch is what seeds the new atom's per-atom entry, and
+    // that entry is what `AtomEditor` reads. Writing the response into the
+    // collection by hand instead would skip the seed and leave the new row
+    // unable to save.
+    onSuccess: () => client.invalidateQueries({ queryKey: ATOM_COLLECTIONS }),
+  });
+}
 
 /**
  * Puts a server-returned atom into both caches.

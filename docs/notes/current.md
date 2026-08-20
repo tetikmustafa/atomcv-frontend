@@ -1,6 +1,8 @@
 # İnşa Notları — Aktif (frontend)
 
-> Kural: bu dosya **200 satırı geçmez**. Aşama bitince `archive/`'a taşınır.
+> Kural: bu dosya **320 satırı geçmez**. Aşama bitince `archive/`'a taşınır.
+> (200'dü; Aşama 1 kapanmadan doldu ve bölmek yerine sınır büyütüldü — D.10
+> backend'e taşınan kaynak, ayrı dosyaya alınamaz.)
 > Bu dosya **backend'e senkronize edilmez** — repo-yerel.
 
 ---
@@ -53,7 +55,7 @@ CLAUDE.md 927 satırdan 347'ye inerken buraya taşındı (handoff · B-033).
 |---|---|
 | **Metin düzenleme düz metin, mark'ları düşürüyor** | Mark farkında editör kural 4'ün lazy-load edeceği bileşen ve henüz yok. Kabul edilebilir olmasının tek sebebi **söylenmesi**: atomun gerçekten mark'ı varsa kaydetmeden **önce** uyarı çıkıyor (P8). Uyarıyı, onu gereksiz kılan editörü yazmadan kaldırma. |
 | **Bayat sözcüklemeyi yeniden üretecek kontrol yok** | Aşama 1 ne uç ne de `stale`'i true yapacak iş yayınlıyor (B-024). Rozet ve açıklaması var, düğme yok — çalışamayacak düğme, zaten bir şeyin bozuk olduğunu söyleyen ekranda hiç yoktan kötü. |
-| **Mutation yüzeyi kısmi** | `usePatchAtom` ve `usePatchVariant` var çünkü autosave onları istiyor. Create/delete/reorder'ın endpoint fonksiyonu var, hook'u yok — her biri kendisini kullanan bileşenle birlikte gelir. |
+| **Mutation yüzeyi kısmi** | `usePatchAtom`, `usePatchVariant`, `useReorderAtoms` ve `useCreateAtom` var — her biri kendisini kullanan bileşenle birlikte geldi. Bölüm/entry create'i ile delete'lerin endpoint fonksiyonu var, hook'u yok; aynı kural. **Boş profil hâlâ çıkışsız:** bölüm eklemek yok, yani hiç bölümü olmayan bir kullanıcı hiçbir şey ekleyemiyor. |
 | **`POST /generations/general`'a kalıcı ekran bağlı değil** | Senkron, Aşama 1'e özgü, hiçbir yere kaydetmiyor (B-022). Aşama 2'de 202 + iş akışıyla değişecek. |
 
 ### Dosyalar arasına yayılan değişmezler
@@ -90,7 +92,8 @@ CLAUDE.md 927 satırdan 347'ye inerken buraya taşındı (handoff · B-033).
 
 İlk app rotası ölçüldü: `/[locale]/profile` **238.3 KB toplam, 70.2 KB kendi
 payı** — dnd-kit, TanStack Query, next-intl client runtime ve Radix taşıyor.
-(Entry katmanı +0.5 KB getirdi; ilk ölçüm 237.8 / 69.7 idi.) Kendi payından
+(Entry katmanı +0.5, madde ekleme +0.5 KB getirdi; ilk ölçüm 237.8 / 69.7 idi.
+Güncel: **238.8 / 70.7**.) Kendi payından
 ~39 KB kalıyor ve **React Hook Form ile Zod henüz inmedi**; ilk gerçek formla
 gelecekler. Bu sayıyı boş alan değil, bütçenin erken uyarısı say.
 
@@ -99,13 +102,10 @@ gelecekler. Bu sayıyı boş alan değil, bütçenin erken uyarısı say.
 1. ~~**B-032 doğrulaması**~~ — **yapıldı**, aşağıda.
 2. ~~**`endpoints/profile.ts` tipleri `components['schemas']`'tan**~~ —
    **yapıldı**, aşağıda. Bir sürüklenme yakaladı.
-3. **Anonim çift-gönderim koruması istemcide.** Backend'in idempotency indeksi
-   NULL `user_id` için tekilleştirmiyor; migration gelene kadar istek uçarken
-   kontrolü devre dışı bırakmak bizim işimiz. **Henüz uygulanabilir değil:**
-   devre dışı bırakılacak kontrol yok. Üç mutation hook'unun üçü de `If-Match`
-   ile sürümlü, yani çift gönderim zaten 412 ile duruyor. Risk `create*`
-   uçlarında ve Aşama 2'nin `POST /generations`'ında — **ilk "ekle" düğmesiyle
-   birlikte gelmeli**, ondan önce değil.
+3. ~~**Anonim çift-gönderim koruması istemcide.**~~ — ilk "ekle" düğmesiyle
+   birlikte geldi, aşağıda. Aşama 2'nin `POST /generations`'ı için **yeniden
+   bakılmalı**: orada `Idempotency-Key` var ve anonim indeks kusuru
+   (`spec/08b-api-contract.md` § D.6.5) hâlâ açık.
 4. **Kota UI'ı sıfırlanma saatini söyleyemez** — gün dönümü zaman dilimi
    kararlaşmadı (`STATUS.md` · açık kararlar).
 
@@ -198,3 +198,39 @@ göre sıralıyor — araya girme dev'de de görünsün diye.
 Doğrulandı: üç iş 5+3+2 = 10 madde ile doğru gruplandı, tarihler iki dilde de
 doğru, gevşek atomlar ek grup açmadan render edildi. H1 → H2 → H3 hiyerarşisi
 ayrıca sabitlendi; axe onu *yanlış* olduğunda söylemez.
+
+### Madde ekleme — ve çift-gönderimin gerçek şekli
+
+**Koruma `Idempotency-Key` değil.** O başlık Aşama 2'nin *iş başlatan*
+POST'larını kapsıyor (`spec/08b-api-contract.md` § D.6.5), profil create'lerini değil.
+Create'lerde `If-Match` de yok — var olmayan bir şeyin sürümü yok. Yani sunucu
+iki isteğe iki madde ile cevap veriyor ve ikisine de başarı diyor. **Tek savunma
+istemcide: istek uçarken kontrol kilitli.**
+
+**Test ettiğim şey `disabled`, ve bunu negatif kontrolle ayırdım.** `submit()`
+içindeki `isPending` guard'ını kaldırdım — testler geçti, yani o guard bugün
+hiçbir yoldan erişilmiyor. `disabled`'ı kaldırdım — test düştü. Yorumumdaki
+"Enter formu gönderir, devre dışı buton onu durdurmaz" iddiası **yanlıştı**:
+`<textarea>` içinde Enter satır atlar, göndermez. Guard yerinde kaldı (alan bir
+gün tek satırlık `input` olursa gerekecek) ama artık doğru gerekçeyle.
+
+**Create iyimser değil**, üstündeki her düzenlemenin aksine. Atomun kimliğini
+sunucu veriyor ve atom cache'i o id ile anahtarlı; geçici bir id yanıt gelince
+yeniden adlandırılmak zorunda kalırdı ve o anahtara bağlanmış bir `AtomEditor`
+`useAtom`'un teşhis fırlatmasına düşerdi. Düzenleme bir tuş vuruşu, ekleme
+kasıtlı ve seyrek — gidiş-dönüşü karşılayabilir.
+
+**Bölüm türünden atom türüne eşleme istemcide.** `AtomCreate.kind` zorunlu,
+sekiz bölüm türüne karşı beş atom türü var, yani biri seçmek zorunda. Düz map
+(kural 11), ve bir kural değil **varsayılan** — sözleşme bir skills bölümünün
+bullet tutmasını yasaklamıyor.
+
+**RHF + Zod hâlâ inmedi.** Tek zorunlu alanlı bir form için validasyon
+kütüphanesi getirmek bütçeye bedava değil; asıl form entry ekleme (başlık + iki
+tarih, sıra kontrolü gerektiren) ve onunla gelecekler.
+
+Doğrulandı, gerçek backend'e karşı: madde yazıldığı işin altına düştü, **tek**
+istek gitti, grubun sonuna eklendi, ve **Türkçe karakterler sağ çıktı** — bunu
+ayrıca sınadım çünkü aynı gövdeyi `curl` ile gönderirken kabuk bozmuştu ve
+sunucu 400 `VALIDATION_FAILED` dönmüştü. Hata istemcide değil kabuktaydı;
+tarayıcı yolunda böyle bir sorun yok.

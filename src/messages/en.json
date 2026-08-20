@@ -155,6 +155,13 @@
     "entry": {
       "range": "{start} – {end}",
       "rangeOngoing": "{start} – present"
+    },
+    "add": {
+      "label": "Add a bullet",
+      "placeholder": "One thing you did, in your own words.",
+      "submit": "Add",
+      "adding": "Adding…",
+      "added": "Added."
     }
   },
   "Generation": {

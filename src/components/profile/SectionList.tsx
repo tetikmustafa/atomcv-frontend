@@ -27,6 +27,7 @@
 
 import { useTranslations } from 'next-intl';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
+import { AddAtom } from '@/components/profile/AddAtom';
 import { AtomEditor } from '@/components/profile/AtomEditor';
 import { EntryHeading } from '@/components/profile/EntryHeading';
 import { SortableList } from '@/components/profile/SortableList';
@@ -59,8 +60,15 @@ function AtomGroup({ section, entry, atoms }: { section: Section; entry?: Entry;
   const t = useTranslations('Editor.section');
   const reorder = useReorderAtoms();
 
+  // An empty group still offers the way out of being empty. Saying "nothing
+  // here yet" and stopping is how a section becomes a dead end.
   if (atoms.length === 0) {
-    return <p className="text-muted-foreground text-sm">{t(entry ? 'entryEmpty' : 'empty')}</p>;
+    return (
+      <>
+        <p className="text-muted-foreground text-sm">{t(entry ? 'entryEmpty' : 'empty')}</p>
+        <AddAtom section={section} {...(entry ? { entry } : {})} />
+      </>
+    );
   }
 
   return (
@@ -83,6 +91,8 @@ function AtomGroup({ section, entry, atoms }: { section: Section; entry?: Entry;
       {/* A failed reorder rolls the list back, so the panel is the only thing
           that says why it moved and then did not stay. */}
       {reorder.error ? <ErrorPanel error={reorder.error} onRetry={() => reorder.reset()} /> : null}
+
+      <AddAtom section={section} {...(entry ? { entry } : {})} />
     </>
   );
 }
@@ -122,8 +132,10 @@ function SectionAtoms({ section }: { section: Section }) {
   */
   const loose = atoms.filter((atom) => !atom.entryId);
 
+  // Nothing at all: no entries to hang bullets on and no bullets of its own.
+  // `AtomGroup` handles an empty group, so render one rather than a dead end.
   if (atoms.length === 0 && entries.length === 0) {
-    return <p className="text-muted-foreground text-sm">{t('empty')}</p>;
+    return <AtomGroup section={section} atoms={[]} />;
   }
 
   return (
