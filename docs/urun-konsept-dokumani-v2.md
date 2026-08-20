@@ -5,9 +5,9 @@
 **Domain:** `atomcv.mustafatetik.com` *(geçici — değişebilir)*
 **Tarih:** Ağustos 2026
 **Durum:** Tasarım tamamlandı, geliştirmeye hazır
-**Teknik karşılık:** `teknik-mimari-dokumani.md`
+**Teknik karşılık:** `docs/spec/` (yol haritası: `docs/INDEX.md`)
 
-> **İsim notu:** "AtomCV" adı, ürünün temel kavramı olan **atom** (bağımsız seçilebilir en küçük bilgi birimi) üzerinden türetilmiştir. Hem isim hem domain geçicidir; ikisi de koda sabitlenmez (detay: teknik doküman EK C.5).
+> **İsim notu:** "AtomCV" adı, ürünün temel kavramı olan **atom** (bağımsız seçilebilir en küçük bilgi birimi) üzerinden türetilmiştir. Hem isim hem domain geçicidir; ikisi de koda sabitlenmez (detay: `spec/17-appendix-abc.md` § EK C.5).
 
 ---
 

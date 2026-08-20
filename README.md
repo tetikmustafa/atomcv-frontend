@@ -97,12 +97,14 @@ at a time.
 
 ## Documentation
 
-`docs/` holds the full product and architecture specification (Turkish). It is
-a read-only copy synced from the backend repository.
+`docs/` holds the full product and architecture specification (Turkish),
+split by access pattern: `docs/spec/` is the specification itself — a
+read-only copy synced from the backend repository — and `docs/INDEX.md`
+routes a task to the right file. **Never read a spec file end to end.**
 
-Its appendix EK D records decisions taken while building, and **EK D.9
-collects everything with a frontend consequence** — the content model
-invariants, the API contract verdicts, and what is still open.
+`docs/STATUS.md` says where both repositories are, `docs/handoff/` is the
+cross-repo channel, and `docs/notes/current.md` holds this repository's own
+build notes.
 
 `CLAUDE.md` is the working context: the decisions taken, the ones deliberately
 deferred, and what each later stage needs.
