@@ -1,6 +1,6 @@
 # İnşa Notları — Aktif (frontend)
 
-> Kural: bu dosya **320 satırı geçmez**. Aşama bitince `archive/`'a taşınır.
+> Kural: bu dosya **400 satırı geçmez**. Aşama bitince `archive/`'a taşınır.
 > (200'dü; Aşama 1 kapanmadan doldu ve bölmek yerine sınır büyütüldü — D.10
 > backend'e taşınan kaynak, ayrı dosyaya alınamaz.)
 > Bu dosya **backend'e senkronize edilmez** — repo-yerel.
