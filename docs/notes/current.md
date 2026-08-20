@@ -328,18 +328,67 @@ edilmemiş** olarak değişmiş — ikisi de bu maddelerin karşılığı. F-002
 `update versioned` + `isPrimary = true` filtresi kullanıyor — filtre önemli,
 onsuz dokunulmayan sözcüklemeler de sürüm artırırdı.
 
-**Çalışan sunucu bu derlemeyi taşımıyor** (ölçüldü: ters tarih hâlâ `201`,
-demote hâlâ artırmıyor), yani bugünkü istemci davranışı doğru.
-
-**Deploy sonrası bizde bakılacak tek yer:** promote'ta yerel demote
-(`usePatchVariant.onSuccess`) demote edilen satırın sürümünü koruyor. Sunucu
-artırmaya başlayınca o sürüm, invalidation refetch'i inene kadar bayat olur;
-o pencerede o sözcüklemeye yazmak 412 verir — yalnız çalışan kullanıcıya
-"başka sekmede değiştirdin" der. Pencere bir gidiş-dönüş ve kendini onarıyor,
-o yüzden **spekülatif değiştirilmedi.** Deploy sonrası promote'u gerçek uca
-karşı sür ve demote edilen satırın sürümünü oku.
+O gün çalışan sunucu bu derlemeyi taşımıyordu (ölçüldü: ters tarih hâlâ `201`,
+demote hâlâ artırmıyor), o yüzden istemci **spekülatif değiştirilmedi.**
+Sonrası bir alt başlıkta: sunucu yeniden başlatıldı, ikisi de canlı.
 
 **Kanal tuzağı:** `sync-handoff.sh pull` karşı taraftaki handoff dosyalarının
 üstüne yazıyor. Bu sefer kayıp olmadı (backend'in kopyası HEAD'de boş
 şablondu), ama karşı taraf bir maddeyi `ACK`'a taşıdıktan sonra `pull` çekmek
 o düzenlemeyi geri alır.
+
+### B-034 — demote artık sürümleniyor, yerel kopya da öyle
+
+Backend yeniden başlatıldı ve iki düzeltme de canlı. Gerçek uca karşı ölçüldü:
+
+| Ölçüm | Sonuç |
+|---|---|
+| F-002 · create, ters aralık | `400` + `params.fields: ["endDate"]` |
+| F-002 · create, eşit tarih | `201` — tek günlük iş geçerli, `>=` |
+| F-002 · patch, iki yönden de ters çevirme | `400`, **saklanan** diğer yarıya göre |
+| F-002 · patch, ileri aralık | `200` — kural fazla geniş değil |
+| F-001 · promote | demote edilen satır `v=4 → 5`, yalnız o satır |
+
+`usePatchVariant.onSuccess` demote edilen satırın sürümünü artık **+1** yapıyor —
+`B-034`'ün istediği bu. Yalnız o satır: promote'a karışmayan sözcüklemeler
+sunucuda sürümlenmiyor, hepsini artırmak hâlâ geçerli etag'leri harcar.
+`version` telde opsiyonel olduğu için artış koşullu — yoksa `undefined + 1`
+`If-Match: "NaN"` olarak giderdi.
+
+**Kanıt, ve neden ilk koşum kanıt değildi.** Tarayıcıda promote edip demote
+edilen sözcüklemeyi hemen düzenlemek düzeltme olmadan da geçti: `onSuccess`'in
+invalidation'ı koleksiyonu yeniden çekiyor ve sürümleri sunucudan yeniden
+seed'liyor, yani eksik artışı **onarıyor**. Pencere localhost'ta refetch'ten
+kısa. Ayırt edici koşum için `GET /profile/atoms` Playwright'ta tutuldu:
+
+```
+düzeltmesiz   PATCH …/variants/21f6… if-match="14" -> 412
+düzeltmeli    PATCH …/variants/21f6… if-match="17" -> 200   (önbellek 16, +1)
+```
+
+Birim testi aynı ayrımı gözlemci bırakmayarak yapıyor: koleksiyon
+`renderHook` ile çizilmiyor, önbelleğe elle seed'leniyor, o yüzden refetch hiç
+olmuyor. Fixture `structuredClone`'lanıyor — handler onu yerinde değiştiriyor,
+paylaşılan referans testi kendiliğinden geçirir.
+
+**Pencere her zaman kendini onarmıyor.** Refetch yalnız koleksiyonun **etkin
+bir gözlemcisi** varsa oluyor; `AtomEditor` listesiz de çizilebiliyor
+(`useProfile.ts` kendi yorumunda söylüyor). O hâlde bayat etag geçici değil,
+kalıcı — 412 her denemede gelir.
+
+**Mock'lar da güncellendi**, ikisi de artık sunucudan sapıyordu: entry create
+ters aralığı `400` + `endDate` ile reddediyor, promote demote edilen satırı
+sürümlüyor. Üçü de negatif kontrolden geçirildi — her biri geri alındığında bir
+test kırılıyor. Ters tarihi "sunucu bunu uygulamıyor" diye anlatan üç yorum
+(`profileSchemas.ts`, `EntryForm.tsx`, testin kendisi) yeniden yazıldı; istemci
+kontrolü **kalıyor**, artık tek savunma değil ama hâlâ daha hızlı olanı ve
+mesajı alanın yanına koyan tek olanı.
+
+**Sunucunun `params.fields`'ı hep `endDate` diyor**, `startDate` yamalanırken
+bile. Bugün bir şeyi bozmuyor — entry düzenleme formu yok, create formunda iki
+alan da ekranda. Tek alanlı bir entry PATCH yüzeyi yazılırsa `params.fields`'ı
+odaklanacak input'a çevirmek yanlış alanı işaretler.
+
+**`STATUS.md` düzeltildi:** backend bizim bloğumuza "devredilenler 4/4 kapandı"
+yazmıştı. 4. madde kota sıfırlanma saati ve aynı dosyanın açık kararlar
+tablosunda hâlâ duruyor; `F-001`'in beklediği karar ayrı bir konuydu. 3/4.

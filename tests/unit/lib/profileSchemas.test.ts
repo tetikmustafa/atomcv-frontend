@@ -17,12 +17,14 @@ const entry = (over: Partial<EntryFormValues> = {}): EntryFormValues => ({
 });
 
 /**
- * The rule the server does not enforce.
+ * The rule the server now enforces too — and this check still earns its place.
  *
- * `POST /profile/entries` with `startDate` 2022 and `endDate` 2019 answers
- * **201** — verified against the running API, and raised as `F-002`. The entry
- * heading then reads "Jan 2022 – Jan 2019" for as long as the entry exists.
- * Until the server refuses it, this schema is the only thing that does.
+ * `POST /profile/entries` with `startDate` 2022 and `endDate` 2019 used to
+ * answer **201**, which is what `F-002` was about. It answers **400** with
+ * `params.fields: ["endDate"]` since the backend closed it, re-verified
+ * against the running API. Left in deliberately: saying so before the round
+ * trip is better than after it, and the two agree on the same boundary —
+ * `>=`, so one-day entries pass, and silence when there is no end date.
  */
 describe('a date range that runs backwards', () => {
   it('is refused, and the message lands on the end date', () => {

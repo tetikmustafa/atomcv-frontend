@@ -12,11 +12,13 @@
  * duplicating a rule the server owns is how the two drift. Two things earn a
  * client-side check:
  *
- * - **What the server does not check at all.** A date range running backwards
- *   is accepted with a `201`, verified, and then rendered as "Jan 2022 –
- *   Jan 2019" in the entry heading. Raised as `F-002`; until it is fixed this
- *   is the only thing standing between a typo and a nonsense CV, and even
- *   after it is fixed, saying so before the round trip is kinder.
+ * - **What is worth saying before the round trip.** A date range running
+ *   backwards used to be accepted with a `201` and rendered as "Jan 2022 –
+ *   Jan 2019" in the entry heading, which is what `F-002` was about. The
+ *   server refuses it now — a `400` naming `endDate`, re-verified — so this is
+ *   no longer the only defence, but it is still the faster one and it puts the
+ *   message next to the field. The two agree on the boundary: `>=`, and
+ *   silence when there is no end date.
  * - **What a round trip would waste.** Refusing an empty title locally is the
  *   same answer the server gives, just sooner and next to the field.
  */

@@ -2,10 +2,11 @@ import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { useAtom, useAtoms, usePatchAtom } from '@/hooks/useProfile';
+import { useAtom, useAtoms, usePatchAtom, usePatchVariant } from '@/hooks/useProfile';
 import { profileKeys } from '@/lib/api/queryKeys';
 import { patchAtom, type Atom } from '@/lib/api/endpoints/profile';
 import { isApiError } from '@/lib/api/errors';
+import { fixture } from '@/mocks/profileFixture';
 import { server } from '@/mocks/node';
 
 function makeClient() {
@@ -165,5 +166,110 @@ describe('writing an atom', () => {
     const restored = client.getQueryData<Atom>(profileKeys.atom('atom-1'));
     expect(restored?.importance).toBe(0.6);
     expect(restored?.version).toBe(0);
+  });
+});
+
+describe('promoting a wording', () => {
+  /**
+   * Seeded straight into the cache rather than through `useAtoms`, and the
+   * difference matters: a rendered collection is an observer, so the
+   * invalidation at the end of `onSuccess` would refetch and re-seed the
+   * versions from the server. That refetch is the thing this test has to
+   * exclude — it repairs a missing bump, and would make the assertion pass
+   * whether or not the optimistic copy did its job.
+   *
+   * Cloned for the same reason: the handler mutates the fixture in place, and
+   * a cache holding the fixture's own object would be updated by the very
+   * write it is supposed to be checking.
+   */
+  function seed(client: QueryClient, id: string) {
+    const atom = fixture.atoms.find((candidate) => candidate.id === id)!;
+    client.setQueryData(profileKeys.atom(id), structuredClone(atom));
+  }
+
+  /**
+   * ⚠️ B-034. Promotion demotes the other wording, and since `F-001` closed
+   * the server versions that row too. The local demote has to move with it:
+   * a cache left one version behind holds an etag that is already spent, and
+   * the next edit to that wording — still on screen — comes back 412.
+   *
+   * The window is only as long as the invalidation takes, which is why this
+   * is worth pinning rather than leaving to a passing screen.
+   */
+  it('bumps the version of the wording it demotes', async () => {
+    const client = makeClient();
+    seed(client, 'atom-2');
+
+    const { result } = renderHook(() => usePatchVariant(), { wrapper: wrapperFor(client) });
+
+    result.current.mutate({
+      atomId: 'atom-2',
+      variantId: 'variant-2-tr',
+      body: { primary: true },
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const cached = client.getQueryData<Atom>(profileKeys.atom('atom-2'));
+    const byId = (id: string) => cached?.variants?.find((variant) => variant.id === id);
+
+    expect(byId('variant-2')?.primary).toBe(false);
+    expect(byId('variant-2')?.version).toBe(1);
+
+    // The promoted row takes the server's own version, not a guess.
+    expect(byId('variant-2-tr')?.primary).toBe(true);
+    expect(byId('variant-2-tr')?.version).toBe(1);
+  });
+
+  /**
+   * The other half of B-034, and the reason "bump them all" is not the fix:
+   * wordings that took no part in the promotion are not versioned server-side,
+   * so raising them here would spend etags that are still good and turn the
+   * next legitimate edit into a conflict.
+   */
+  it('leaves the versions of uninvolved wordings alone', async () => {
+    const client = makeClient();
+    seed(client, 'atom-1');
+
+    const before = client.getQueryData<Atom>(profileKeys.atom('atom-1'));
+    expect(before?.variants).toHaveLength(1);
+
+    const { result } = renderHook(() => usePatchVariant(), { wrapper: wrapperFor(client) });
+
+    // Promoting the one that is already primary: there is nothing to demote,
+    // so nothing else may move.
+    result.current.mutate({ atomId: 'atom-1', variantId: 'variant-1', body: { primary: true } });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const cached = client.getQueryData<Atom>(profileKeys.atom('atom-1'));
+    expect(cached?.variants?.[0]?.version).toBe(1);
+    expect(cached?.variants?.[0]?.primary).toBe(true);
+  });
+
+  /**
+   * What the stale etag actually costs, measured rather than reasoned about:
+   * the write that follows a promote must be accepted. Before the bump it
+   * quoted `"0"` for a row the server had already moved to `1`.
+   */
+  it('lets the demoted wording be edited straight afterwards', async () => {
+    const client = makeClient();
+    seed(client, 'atom-2');
+
+    const { result } = renderHook(() => usePatchVariant(), { wrapper: wrapperFor(client) });
+
+    result.current.mutate({
+      atomId: 'atom-2',
+      variantId: 'variant-2-tr',
+      body: { primary: true },
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    result.current.mutate({
+      atomId: 'atom-2',
+      variantId: 'variant-2',
+      body: { content: { v: 1, runs: [{ t: 'Edited right after the demote', m: [] }] } },
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.isError).toBe(false);
   });
 });

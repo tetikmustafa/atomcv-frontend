@@ -3,7 +3,7 @@
 > İki repo da bu dosyayı okur ve kendi satırlarını günceller. **Kural: 60 satırı geçmez.**
 > Ayrıntılı inşa kayıtları repo-yerel `notes/current.md`'dedir, buraya taşınmaz.
 
-**Son güncelleme:** 2026-08 · Aşama 1 kapanışı
+**Son güncelleme:** 2026-08-20 · `F-001`/`F-002` kapandı, `B-034` frontend'de uygulandı
 
 ---
 
@@ -26,8 +26,8 @@
 **Aşama 2 planı:** `spec/14-build-guide.md` § XI-A.5, Adım 2.1-2.7.
 **Aşama 1'in devrettikleri:** `notes/current.md` — kapanmadan Aşama 2'ye girilmez.
 
-**Aşama 1 kontrol listesi:** 9/9 ✅ (kanıtlar: `notes/current.md`)
-**Test:** 312 birim · 132 entegrasyon · 44 latex
+**Aşama 1 kontrol listesi:** 9/9 ✅ · **`F-001`, `F-002` kapandı** → `spec/08-api.md` § 35.2, § 35.6
+**Test:** 312 birim · 137 entegrasyon · 44 latex
 
 ## Frontend — `atomcv-frontend`
 
@@ -37,8 +37,8 @@
 | Aşama 1 — Profil editörü | 🔨 Sürüyor |
 | Aşama 2 — Üretim akışı + SSE | ⬜ |
 
-**Açık `B-nnn` yok.** Backend'e açık: `F-001`, `F-002`. **Test:** 270 birim · 13 e2e.
-**Aşama 1'in devrettikleri:** 4 maddeden 3'ü kapandı; 4. backend kararını bekliyor.
+**Açık `B-nnn` yok** — `B-034` uygulandı, gerçek uca karşı doğrulandı. **Test:** 273 birim · 13 e2e.
+**Aşama 1'in devrettikleri:** 3/4 — kalan madde kota sıfırlanma saati, gün dönümü aşağıda açık.
 
 ---
 

@@ -194,11 +194,13 @@ export const profileHandlers = [
    * Creating an entry. **201** with the whole entry, `importance` 0.5 and
    * `minAtoms` 2 defaulted, `displayOrder` appended within its section.
    *
-   * **A backwards date range is accepted**, deliberately, because the running
-   * server accepts it — verified: `startDate` 2022 with `endDate` 2019 answers
-   * `201`. Raised as `F-002`. A mock that refused it would make the client's
-   * own check look redundant and invite someone to delete it, which is exactly
-   * how the nonsense range would reach a CV.
+   * **A backwards date range is a 400** naming `endDate`, which is what the
+   * server answers since `F-002` closed — re-verified against it. Until then
+   * this handler accepted the range on purpose, to match a server that did.
+   *
+   * `>=`, not `>`: a one-day certificate or hackathon is a real entry, so
+   * equal dates pass. A missing `endDate` passes too — "ongoing" has no second
+   * date to compare against.
    */
   http.post('*/api/v1/profile/entries', async ({ request }) => {
     const instance = '/api/v1/profile/entries';
@@ -216,6 +218,15 @@ export const profileHandlers = [
         problem(400, 'VALIDATION_FAILED', instance, [], {
           fields: body.title?.trim() ? ['sectionId'] : ['title'],
         }),
+        { status: 400 },
+      );
+    }
+
+    // Compared as strings, which is safe for `YYYY-MM-DD` and avoids the
+    // timezone question `Date` would drag in for a value that has no time.
+    if (body.startDate && body.endDate && body.endDate < body.startDate) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['endDate'] }),
         { status: 400 },
       );
     }
@@ -466,6 +477,15 @@ export const profileHandlers = [
     // `usePatchVariant` refetches on this write instead of merging.
     if (body.primary) {
       const atom = findAtom(id)!;
+
+      // B-034: the demote is a write, so the row it demotes is versioned too —
+      // and only that row. The atom's other wordings take no part in the
+      // promotion and keep their etags. Reproduced here because a client that
+      // bumped all of them, or none, would pass against a mock that did the
+      // same and then 412 against the server for reasons no test showed.
+      const demoted = atom.variants?.find((other) => other.primary && other.id !== variantId);
+      if (demoted) demoted.version = (demoted.version ?? 0) + 1;
+
       for (const other of atom.variants ?? []) other.primary = other.id === variantId;
       atom.variants?.sort((a, b) => Number(b.primary) - Number(a.primary));
     }

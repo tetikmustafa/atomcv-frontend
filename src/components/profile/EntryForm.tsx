@@ -7,9 +7,10 @@
  *
  * This is the form the validation stack was brought in for. One required
  * field, two optional dates, and a rule spanning them: an end before a start.
- * The server accepts that with a `201` — verified — and the entry heading then
- * reads "May 2023 - May 2020" for good. Raised as `F-002`; until the server
- * refuses it, this does.
+ * The server used to accept that with a `201`, leaving the heading reading
+ * "May 2023 - May 2020" for good; `F-002` closed and it is a `400` naming
+ * `endDate` now. The check stays here anyway — it answers without a round trip
+ * and it answers next to the field, which a `400` cannot.
  *
  * `type="date"` rather than a picker component: keyboard-accessible and
  * localised by the platform for free, and it hands back exactly the

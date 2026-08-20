@@ -389,10 +389,31 @@ export function usePatchVariant() {
         updateAtomThrough(client, atomId, (atom) => ({
           ...atom,
           variants: atom.variants
-            ?.map((cached) => ({
-              ...(cached.id === variant.id ? variant : cached),
-              primary: cached.id === variant.id,
-            }))
+            ?.map((cached) => {
+              if (cached.id === variant.id) return { ...variant, primary: true };
+
+              // B-034. The demoted row is a write like any other and the
+              // server versions it, so the cached copy has to move with it.
+              // Leaving it behind holds an etag that is one save stale, and
+              // the next edit to that wording — still on screen, still in the
+              // other tab — comes back 412 with nothing to explain it. The
+              // window closes when the invalidation lands, which is exactly
+              // the kind of bug that survives review by being intermittent.
+              //
+              // Only this row. The atom's other wordings take no part in the
+              // promotion and are not versioned; bumping them would invalidate
+              // etags that are still good and break the next legitimate edit.
+              const demoted = cached.primary === true;
+
+              return {
+                ...cached,
+                primary: false,
+                // `version` is optional on the wire. Absent means we never
+                // had an etag for this row, and inventing `NaN` would send
+                // `If-Match: "NaN"` instead of letting `toIfMatch` say so.
+                ...(demoted && cached.version !== undefined ? { version: cached.version + 1 } : {}),
+              };
+            })
             .sort((a, b) => Number(b.primary) - Number(a.primary)),
         }));
 
