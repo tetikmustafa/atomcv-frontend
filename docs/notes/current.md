@@ -318,3 +318,28 @@ sunucunun adlandırdığı alan ekranda. Seed birebir geri yüklendi.
 karşılaştırma dizesinde. İkisinde de hata istemcide sanılabilirdi. Elle sonda
 yaparken **ASCII kullan**; non-ASCII yolu kendi kodlamasını yöneten bir Node
 betiğiyle sına.
+
+### F-001 / F-002 iletildi — backend ikisini de yazmış, henüz deploy değil
+
+Maddeler `sync-handoff.sh pull` ile taşındı. Sonrasında backend reposunda
+`EntryService`, `AtomVariantJpaRepository` ve iki entegrasyon testi **commit
+edilmemiş** olarak değişmiş — ikisi de bu maddelerin karşılığı. F-002 patch'i
+*entry'nin son hâline* göre denetliyor (istediğimiz buydu); F-001
+`update versioned` + `isPrimary = true` filtresi kullanıyor — filtre önemli,
+onsuz dokunulmayan sözcüklemeler de sürüm artırırdı.
+
+**Çalışan sunucu bu derlemeyi taşımıyor** (ölçüldü: ters tarih hâlâ `201`,
+demote hâlâ artırmıyor), yani bugünkü istemci davranışı doğru.
+
+**Deploy sonrası bizde bakılacak tek yer:** promote'ta yerel demote
+(`usePatchVariant.onSuccess`) demote edilen satırın sürümünü koruyor. Sunucu
+artırmaya başlayınca o sürüm, invalidation refetch'i inene kadar bayat olur;
+o pencerede o sözcüklemeye yazmak 412 verir — yalnız çalışan kullanıcıya
+"başka sekmede değiştirdin" der. Pencere bir gidiş-dönüş ve kendini onarıyor,
+o yüzden **spekülatif değiştirilmedi.** Deploy sonrası promote'u gerçek uca
+karşı sür ve demote edilen satırın sürümünü oku.
+
+**Kanal tuzağı:** `sync-handoff.sh pull` karşı taraftaki handoff dosyalarının
+üstüne yazıyor. Bu sefer kayıp olmadı (backend'in kopyası HEAD'de boş
+şablondu), ama karşı taraf bir maddeyi `ACK`'a taşıdıktan sonra `pull` çekmek
+o düzenlemeyi geri alır.
