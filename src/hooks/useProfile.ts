@@ -21,6 +21,9 @@ import {
   createAtom,
   createEntry,
   createSection,
+  deleteAtom,
+  deleteEntry,
+  deleteSection,
   getProfile,
   listAtoms,
   listEntries,
@@ -494,5 +497,108 @@ export function useReorderAtoms() {
     onSettled: () => {
       void client.invalidateQueries({ queryKey: ATOM_COLLECTIONS });
     },
+  });
+}
+
+/* -------------------------------- deletes ------------------------------- */
+
+/**
+ * The version a delete must quote, for a resource that is only ever cached as
+ * part of a list.
+ *
+ * Sections and entries have no per-item cache — nothing needed one until now,
+ * because every other write to them goes through a form that has the item in
+ * hand. Left `undefined` when the list was never read, on the same principle
+ * as `versionOf`: `toIfMatch` explains itself, a missing header comes back
+ * `428` and explains nothing.
+ */
+function versionInList(client: QueryClient, key: readonly unknown[], id: string): Version {
+  const list = client.getQueriesData<{ id?: string; version?: number }[]>({ queryKey: key });
+
+  for (const [, items] of list) {
+    const found = items?.find((item) => item.id === id);
+    if (found?.version !== undefined) return found.version as Version;
+  }
+
+  return undefined as unknown as Version;
+}
+
+/**
+ * What every delete invalidates.
+ *
+ * **The head is in here although nothing was measured moving it.** Adding a
+ * section with an atom left `completeness` at 80, so the obvious conclusion is
+ * that this refetch is dead weight. It is not a safe conclusion: the only
+ * thing measured was *adding a little*, and what a cascade removes is a whole
+ * section's worth of content — which could not be tested without destroying
+ * the seed. `completeness` is computed server-side and drives a bar on this
+ * very screen, so one small `GET /profile` is the cheap side of the bet.
+ *
+ * **Never `profileKeys.all`,** although `queryKeys.ts` calls that the right
+ * move after a destructive change. It is a prefix of the per-atom keys too,
+ * and those have no endpoint behind them: invalidating one with a mounted
+ * editor refetches it straight into `useAtom`'s diagnostic throw. The
+ * collections below re-seed every atom that survived, which is what that
+ * advice was actually after.
+ *
+ * The per-atom entries of atoms that did *not* survive are left alone rather
+ * than removed. `removeQueries` on a key with an active observer triggers a
+ * refetch — the same throw — and the editor for a deleted atom is still
+ * mounted until the collection refetch drops it from the list. With no
+ * observer left, they are garbage collected on their own.
+ */
+function invalidateAfterDelete(client: QueryClient) {
+  void client.invalidateQueries({ queryKey: profileKeys.sections() });
+  void client.invalidateQueries({ queryKey: profileKeys.entries() });
+  void client.invalidateQueries({ queryKey: ATOM_COLLECTIONS });
+  void client.invalidateQueries({ queryKey: profileKeys.head() });
+}
+
+/**
+ * Deleting a section, and everything under it.
+ *
+ * **The cascade is the server's, and it is total** — measured: the entries go,
+ * the atoms under those entries go, and the atoms hanging straight off the
+ * section go with them. Nothing is re-parented. That is why the confirmation
+ * has to carry counts: the control says "delete this section" and the server
+ * hears "delete these nineteen things".
+ *
+ * Not optimistic. Every optimistic write in this file can be rolled back from
+ * a captured copy; this one cannot — the rollback would have to restore a
+ * tree of entries, atoms and wordings with the ids the server chose, and no
+ * endpoint recreates them. A deletion that flickered back into existence
+ * after a 412 would also be the single most alarming thing the editor could
+ * do. So it waits, and the confirmation is what covers the delay.
+ */
+export function useDeleteSection() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      deleteSection(id, versionInList(client, profileKeys.sections(), id)),
+    onSuccess: () => invalidateAfterDelete(client),
+  });
+}
+
+/** Deleting an entry. Its atoms go with it — measured, and not re-parented. */
+export function useDeleteEntry() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => deleteEntry(id, versionInList(client, profileKeys.entries(), id)),
+    onSuccess: () => invalidateAfterDelete(client),
+  });
+}
+
+/**
+ * Deleting one atom. The version comes from the per-atom cache, as every atom
+ * write does.
+ */
+export function useDeleteAtom() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => deleteAtom(id, versionOf(client, id)),
+    onSuccess: () => invalidateAfterDelete(client),
   });
 }

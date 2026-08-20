@@ -220,6 +220,25 @@
       "github": "GitHub",
       "website": "Website",
       "selfDescription": "About you"
+    },
+    "delete": {
+      "trigger": "Delete",
+      "cancel": "Keep it",
+      "deleting": "Deleting…",
+      "permanent": "This cannot be undone.",
+      "sectionTrigger": "Delete the section {title}",
+      "sectionTitle": "Delete {title}?",
+      "sectionConfirm": "Delete the section",
+      "sectionCascade": "{shape, select, both {It holds {entries, plural, one {1 entry} other {# entries}} and {atoms, plural, one {1 bullet} other {# bullets}}, and they go with it. } entries {{entries, plural, one {It holds 1 entry, and it goes with it. } other {It holds # entries, and they go with it. }}} atoms {{atoms, plural, one {It holds 1 bullet, and it goes with it. } other {It holds # bullets, and they go with it. }}} other {}}This cannot be undone.",
+      "entryTrigger": "Delete the entry {title}",
+      "entryTitle": "Delete {title}?",
+      "entryConfirm": "Delete the entry",
+      "entryCascade": "{atoms, plural, =0 {} one {Its 1 bullet goes with it. } other {Its # bullets go with it. }}This cannot be undone.",
+      "atomTrigger": "Delete the bullet {text}",
+      "atomTitle": "Delete this bullet?",
+      "atomConfirm": "Delete the bullet",
+      "atomCascade": "{wordings, plural, =1 {} other {Its # wordings go with it. }}This cannot be undone.",
+      "opening": "Opening…"
     }
   },
   "Generation": {

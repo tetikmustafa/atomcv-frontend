@@ -492,4 +492,99 @@ export const profileHandlers = [
 
     return HttpResponse.json(variant, { headers: { ETag: `"${variant.version}"` } });
   }),
+
+  /**
+   * Deleting a section — **and everything under it.**
+   *
+   * The cascade is the server's and it is total, measured on a tree built for
+   * the purpose: the entries go, the atoms under those entries go, and the
+   * atoms hanging straight off the section go too. Nothing is re-parented.
+   * Reproduced here rather than left as a one-row delete, because a mock that
+   * removed only the section would leave orphans in the fixture and let a
+   * confirmation that under-counts pass its tests.
+   */
+  http.delete('*/api/v1/profile/sections/:id', ({ request, params }) => {
+    const id = String(params.id);
+    const instance = `/api/v1/profile/sections/${id}`;
+    const section = fixture.sections.find((candidate) => candidate.id === id);
+
+    if (!section) {
+      return HttpResponse.json(problem(404, 'RESOURCE_NOT_FOUND', instance), { status: 404 });
+    }
+
+    const refused = precondition(request, instance, section.version ?? 0);
+    if (refused) return refused;
+
+    fixture.sections = fixture.sections.filter((candidate) => candidate.id !== id);
+    fixture.entries = fixture.entries.filter((entry) => entry.sectionId !== id);
+    fixture.atoms = fixture.atoms.filter((atom) => atom.sectionId !== id);
+
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  /** Deleting an entry. Its atoms go with it, and are not handed back to the section. */
+  http.delete('*/api/v1/profile/entries/:id', ({ request, params }) => {
+    const id = String(params.id);
+    const instance = `/api/v1/profile/entries/${id}`;
+    const entry = fixture.entries.find((candidate) => candidate.id === id);
+
+    if (!entry) {
+      return HttpResponse.json(problem(404, 'RESOURCE_NOT_FOUND', instance), { status: 404 });
+    }
+
+    const refused = precondition(request, instance, entry.version ?? 0);
+    if (refused) return refused;
+
+    fixture.entries = fixture.entries.filter((candidate) => candidate.id !== id);
+    fixture.atoms = fixture.atoms.filter((atom) => atom.entryId !== id);
+
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.delete('*/api/v1/profile/atoms/:id', ({ request, params }) => {
+    const id = String(params.id);
+    const instance = `/api/v1/profile/atoms/${id}`;
+    const atom = findAtom(id);
+
+    if (!atom) {
+      return HttpResponse.json(problem(404, 'RESOURCE_NOT_FOUND', instance), { status: 404 });
+    }
+
+    const refused = precondition(request, instance, atom.version ?? 0);
+    if (refused) return refused;
+
+    fixture.atoms = fixture.atoms.filter((candidate) => candidate.id !== id);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  /**
+   * Deleting a wording. **The primary one cannot be**, measured — not when it
+   * is the only one, and not when a second exists either, which makes it one
+   * rule rather than two. Nothing in the editor offers this yet; the handler
+   * exists so the refusal is on record where the control would be written.
+   */
+  http.delete('*/api/v1/profile/atoms/:id/variants/:variantId', ({ request, params }) => {
+    const id = String(params.id);
+    const variantId = String(params.variantId);
+    const instance = `/api/v1/profile/atoms/${id}/variants/${variantId}`;
+    const atom = findAtom(id);
+    const variant = atom?.variants?.find((candidate) => candidate.id === variantId);
+
+    if (!variant) {
+      return HttpResponse.json(problem(404, 'RESOURCE_NOT_FOUND', instance), { status: 404 });
+    }
+
+    const refused = precondition(request, instance, variant.version ?? 0);
+    if (refused) return refused;
+
+    if (variant.primary) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['variantId'] }),
+        { status: 400 },
+      );
+    }
+
+    atom!.variants = atom!.variants?.filter((candidate) => candidate.id !== variantId);
+    return new HttpResponse(null, { status: 204 });
+  }),
 ];

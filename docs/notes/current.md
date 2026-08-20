@@ -1,6 +1,6 @@
 # İnşa Notları — Aktif (frontend)
 
-> Kural: bu dosya **440 satırı geçmez**. Aşama bitince `archive/`'a taşınır.
+> Kural: bu dosya **480 satırı geçmez**. Aşama bitince `archive/`'a taşınır.
 > (200'dü; Aşama 1 kapanmadan doldu ve bölmek yerine sınır büyütüldü — D.10
 > backend'e taşınan kaynak, ayrı dosyaya alınamaz.)
 > Bu dosya **backend'e senkronize edilmez** — repo-yerel.
@@ -55,7 +55,7 @@ CLAUDE.md 927 satırdan 347'ye inerken buraya taşındı (handoff · B-033).
 |---|---|
 | **Metin düzenleme düz metin, mark'ları düşürüyor** | Mark farkında editör kural 4'ün lazy-load edeceği bileşen ve henüz yok. Kabul edilebilir olmasının tek sebebi **söylenmesi**: atomun gerçekten mark'ı varsa kaydetmeden **önce** uyarı çıkıyor (P8). Uyarıyı, onu gereksiz kılan editörü yazmadan kaldırma. |
 | **Bayat sözcüklemeyi yeniden üretecek kontrol yok** | Aşama 1 ne uç ne de `stale`'i true yapacak iş yayınlıyor (B-024). Rozet ve açıklaması var, düğme yok — çalışamayacak düğme, zaten bir şeyin bozuk olduğunu söyleyen ekranda hiç yoktan kötü. |
-| **Mutation yüzeyi kısmi** | Okuma, yama, sıralama ve **üç create** var — her biri kendisini kullanan bileşenle birlikte geldi. **Delete'lerin hâlâ hook'u yok**: endpoint fonksiyonları duruyor, silme UI'ı gelince bağlanır. Aynı kural. |
+| **Sözcükleme tek başına silinemiyor** | Sunucu birincil sözcüklemeyi silmeyi reddediyor (ölçüldü) ve bir atomda tek sözcükleme zaten birinciler. İkincil olanı kaldıran bir kontrol yazılabilirdi; yazılmadı, çünkü tek başına anlamlı bir jest değil — silmek istenen şey madde. Uç fonksiyonu ve mock'u duruyor. |
 | **Profil başında dil eksenleri düzenlenemiyor** | `sourceLanguage` ve `enabledLanguages` **içerik dili** ekseni (Bölüm 38.1), arayüz dili değil — `routing.locales`'i burada kullanmak `lib/i18n/locales.ts`'in açıkça uyardığı hata olurdu. Hangi dillerin sunulabileceği sunucunun `capabilities`'ine bağlı ve Aşama 1 onu yayınlamıyor; sabit liste yazmak "anonim modu hardcoded varsayımdan değil `capabilities`'ten kapıla" kuralını çiğner. Form ikisini **olduğu gibi geçiriyor** (`enabledLanguages` zorunlu). Kontrol `capabilities` ile gelir; kaynak dilin yeri zaten onboarding sihirbazı. |
 | **`POST /generations/general`'a kalıcı ekran bağlı değil** | Senkron, Aşama 1'e özgü, hiçbir yere kaydetmiyor (B-022). Aşama 2'de 202 + iş akışıyla değişecek. |
 
@@ -93,10 +93,9 @@ CLAUDE.md 927 satırdan 347'ye inerken buraya taşındı (handoff · B-033).
 
 İlk app rotası ölçüldü: `/[locale]/profile` **238.3 KB toplam, 70.2 KB kendi
 payı** — dnd-kit, TanStack Query, next-intl client runtime ve Radix taşıyor.
-(Entry katmanı +0.5, madde ekleme +0.5, create formları +2.6, profil başı
-+0.7 KB getirdi; ilk ölçüm 237.8 / 69.7 idi. Güncel: **242.2 / 74.0**.) Kendi payından
-~39 KB kalıyor ve **React Hook Form ile Zod henüz inmedi**; ilk gerçek formla
-gelecekler. Bu sayıyı boş alan değil, bütçenin erken uyarısı say.
+(Entry katmanı +0.5, madde ekleme +0.5, create formları +2.6, profil başı +0.7,
+silme yüzeyi +1.0 KB getirdi; ilk ölçüm 237.8 / 69.7 idi. Güncel: **243.2 / 75.0**.)
+Kendi payından ~30 KB kalıyor. Bu sayıyı boş alan değil, bütçenin erken uyarısı say.
 
 ### Kapanmadan Aşama 2'ye girilmez
 
@@ -393,29 +392,69 @@ odaklanacak input'a çevirmek yanlış alanı işaretler.
 yazmıştı. 4. madde kota sıfırlanma saati ve aynı dosyanın açık kararlar
 tablosunda hâlâ duruyor; `F-001`'in beklediği karar ayrı bir konuydu. 3/4.
 
-### Silme uçlarının gerçek davranışı — ölçüldü, UI henüz yok
+### Silme — ölçüm önce, ekran sonra
 
-Silme, mutation yüzeyinin kalan boşluğu (yukarıdaki tabloda). Uç fonksiyonları
-duruyor, hook yok. Ekran yazılmadan önce sunucunun **ne yaptığı** ölçüldü;
-tamamı bu iş için yaratılıp yıkılan bir ağaç üzerinde, seed'e dokunulmadan
-(sonrası: 4 bölüm · 6 entry · 18 atom, başlangıçtaki gibi).
+Mutation yüzeyinin kalan boşluğuydu. Ekran yazılmadan önce sunucunun **ne
+yaptığı** ölçüldü; tamamı bu iş için yaratılıp yıkılan bir ağaç üzerinde, seed'e
+dokunulmadan (öncesi ve sonrası: 4 bölüm · 6 entry · 18 atom).
 
 | Ölçüm | Sonuç |
 |---|---|
-| `DELETE` `If-Match`'siz | `428 PRECONDITION_REQUIRED` |
-| `DELETE` yanlış `If-Match` | `412 VERSION_CONFLICT` |
-| Bölüm silme | `204` — **entry'leri, entry altındaki atomları ve bölüme doğrudan asılı atomları da siliyor** |
+| `DELETE` `If-Match`'siz / yanlış | `428` / `412` — yama ile aynı |
+| Bölüm silme | `204` — **entry'leri, onların atomlarını ve bölüme doğrudan asılı atomları da siliyor** |
 | Entry silme | `204` — atomları da gidiyor, bölüme **devredilmiyor** |
-| Tek sözcüklemeyi silme | `400 VALIDATION_FAILED` + `params.fields: ["variantId"]` |
+| Tek sözcüklemeyi silme | `400` + `params.fields: ["variantId"]` |
 | İkincisi varken **birincil** sözcüklemeyi silme | `400` — yine reddediyor |
 
-Son iki satır tek bir kural gibi davranıyor: **birincil sözcükleme silinemez.**
-Tek sözcüklemeli bir atomda o zaten birincildir. Sonucu UI'da doğrudan: birincil
-sekmede silme kontrolü ya hiç olmamalı ya da "önce başka birini varsayılan yap"
-demeli — çalışmayacak bir düğme, B-024'te bayat rozeti için verilen kararla aynı
-sebepten kötü.
+Son iki satır tek kural: **birincil sözcükleme silinemez.** Tek sözcüklemeli bir
+atomda o zaten birincildir.
 
-Cascade'in ölçülmüş olması onay metninin **sayı verebilmesi** demek: bir bölümü
-silmek altındaki her şeyi götürüyor ve kullanıcı bunu silmeden önce görmeli (P8
-kullanıcının emeğini korumakla ilgili; kendi kararıyla silmesi başka, ne
-sildiğini bilmeden silmesi değil).
+**Cascade onay metninin sayı vermesini zorunlu kılıyor.** "Bu bölümü sil"
+diyen bir kontrol, sunucunun duyduğundan çok daha küçük bir işi tarif eder.
+Onay iki sayıyı da söylüyor ve sayılar zaten yüklü olan sorgulardan geliyor —
+kendi isteği yok, grup zaten o koleksiyonun istemci tarafı filtresi.
+
+**Hiçbiri iyimser değil.** Buradaki her yazma yakalanmış bir kopyadan geri
+alınabilir; bu alınamaz — cascade'li bir bölümü geri getirmek sunucunun seçtiği
+id'lerle bir ağacı yeniden yaratmak demek ve bunu yapan uç yok. Onay, beklemenin
+bedelini ödeyen şey. Geri alma (undo) da bu yüzden seçilmedi.
+
+**Dialog sunucu cevaplayana kadar açık kalıyor.** Radix `Action`'ı tıklamada
+kapatıyor; `preventDefault` onu durduruyor (`composeEventHandlers` default
+engellenmişse kendi işleyicisini atlıyor). Kapatıp mutation'ı arkadan
+çalıştırmak `412`'yi açıklayacak paneli kapanmış bir dialog'un içinde bırakır —
+kullanıcı hiçbir şey olmamış bir satıra bakar. Negatif kontrol: `preventDefault`
+kaldırılınca iki test kırılıyor.
+
+**`AlertDialog`, `Dialog` değil** — `role="alertdialog"`, dışarı tıklamayla
+kapanmıyor, ve odağı yıkıcı eyleme değil **çıkışa** veriyor. Üçü de silme için
+gerekli; farkları zaten bu bileşeni seçmenin tek sebebi.
+
+**Sürüm bölüm/entry için koleksiyondan okunuyor** (`versionInList`). İkisinin de
+öğe başına önbelleği yok ve gerekmemişti — onlara yapılan her yazma öğeyi elinde
+tutan bir formdan geçiyordu. Atomlarda kural değişmedi.
+
+**`profileKeys.all` invalidate edilmiyor**, `queryKeys.ts` "yıkıcı değişiklikten
+sonra doğrusu bu" dese de: o önek atom anahtarlarını da kapsıyor ve arkalarında
+uç yok — açık bir editörü olan birini invalidate etmek `useAtom`'un teşhis
+fırlatmasına refetch demektir. Silinen atomların önbellek kayıtları da
+**kaldırılmıyor**: gözlemcisi olan bir anahtarda `removeQueries` yine refetch
+tetikler, ve silinen atomun editörü koleksiyon inene kadar hâlâ takılı. Gözlemci
+kalmayınca kendiliğinden toplanıyorlar.
+
+**Profil başı da invalidate ediliyor, ölçüm bunu göstermediği hâlde.** Bir bölüm
+ve bir atom eklemek `completeness`'i 80'de bıraktı. Ama ölçülen şey *az bir şey
+eklemek*'ti; cascade'in kaldırdığı şey koca bir bölüm dolusu içerik ve onu
+seed'i yok etmeden ölçmek mümkün değildi. `completeness` sunucuda hesaplanıyor
+ve aynı ekranda bir çubuğu besliyor — tek küçük `GET /profile` bahsin ucuz tarafı.
+
+**Bundle:** `AlertDialog` 9.7 KB getirdi, `next/dynamic` ile ayrılınca 8.8'i geri
+geldi. Silme yüzeyinin ilk yüklemeye net maliyeti **0.9 KB**. Tetikleyici düğme
+bu yüzden `DeleteControl`'de, dialog `DeleteDialog`'da: lazy chunk'ın içindeki
+bir tetikleyici basılacak yerde olmazdı.
+
+**Doğrulama.** 10 birim + 1 e2e (modal odak tuzağı ve portal tarayıcıda gerçek),
+ve gerçek backend'e karşı MSW kapalı 9 kontrol: onay sunucunun tuttuğu sayıları
+söylüyor, vazgeçmek hiçbir istek göndermiyor, silme tırnaklı `If-Match` ile
+`204` alıyor, cascade tam olarak o ağacı götürüyor ve ekran reload'suz
+güncelleniyor. Seed öncesi/sonrası birebir aynı.

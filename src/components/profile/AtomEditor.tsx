@@ -25,6 +25,7 @@ import { memo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { SaveStatus } from '@/components/editor/SaveStatus';
+import { DeleteControl } from '@/components/profile/DeleteControl';
 import { ImportanceSlider } from '@/components/profile/ImportanceSlider';
 import { LockToggles, type LockToggle } from '@/components/profile/LockToggles';
 import { RichText } from '@/components/profile/RichText';
@@ -33,7 +34,7 @@ import { VariantTabs } from '@/components/profile/VariantTabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useAutosave } from '@/hooks/useAutosave';
-import { useAtom, usePatchAtom, usePatchVariant } from '@/hooks/useProfile';
+import { useAtom, useDeleteAtom, usePatchAtom, usePatchVariant } from '@/hooks/useProfile';
 import { plainText } from '@/lib/content/plainText';
 import { parseRichContent, type Run } from '@/lib/content/richContent';
 import type { AtomPatch } from '@/lib/api/endpoints/profile';
@@ -52,6 +53,14 @@ const TAG_FIELDS = [
   { field: 'properNouns', maxLength: 120 },
 ] as const satisfies ReadonlyArray<{ field: keyof AtomPatch & string; maxLength: number }>;
 
+/**
+ * Short enough to be spoken as a button name, long enough to tell two bullets
+ * apart. The same rule `describeAtom` applies to the move buttons.
+ */
+function truncate(text: string): string {
+  return text.length > 60 ? `${text.slice(0, 60)}…` : text;
+}
+
 /** Whether anything would be lost by replacing this content with plain text. */
 function hasMarks(runs: Run[]): boolean {
   return runs.some((run) => run.m.length > 0);
@@ -59,10 +68,12 @@ function hasMarks(runs: Run[]): boolean {
 
 function AtomEditorImpl({ atomId }: AtomEditorProps) {
   const t = useTranslations('Editor.atom');
+  const tDelete = useTranslations('Editor.delete');
   const { data: atom, isPending, error: readError } = useAtom(atomId);
 
   const patchAtom = usePatchAtom();
   const patchVariant = usePatchVariant();
+  const remove = useDeleteAtom();
 
   const variants = atom?.variants ?? [];
   // Variants come back primary-first, so the first one is the wording used
@@ -78,6 +89,11 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
   // server's copy back mid-sentence and the caret jumps.
   const [draft, setDraft] = useState<string | null>(null);
   const text = draft ?? plainText(runs);
+
+  // Names the delete control. The server's copy, not the draft: the button
+  // should say what deleting would actually remove, and a half-typed
+  // replacement is not that yet.
+  const label = truncate(plainText(runs));
 
   const controls = useAutosave<AtomPatch>({
     trigger: 'toggle',
@@ -234,6 +250,29 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
         the code, and the resolutions the server attached to it.
       */}
       {failed ? <ErrorPanel error={failed} /> : null}
+
+      {/*
+        Last, and behind a confirmation.
+
+        The name has to be the bullet's own text — `describeAtom` does the same
+        job for the move buttons, and for the same reason: a list of two
+        hundred buttons all called "Delete" cannot be navigated by keyboard.
+        Its wordings go with it, so the count is said when there is more than
+        one; a wording cannot be deleted on its own here anyway (the server
+        refuses to remove a primary one, measured), so the atom is the unit.
+      */}
+      <div className="border-t pt-3">
+        <DeleteControl
+          triggerLabel={tDelete('atomTrigger', { text: label })}
+          title={tDelete('atomTitle')}
+          description={tDelete('atomCascade', { wordings: variants.length })}
+          confirmLabel={tDelete('atomConfirm')}
+          onConfirm={() => remove.mutateAsync(atomId)}
+          isPending={remove.isPending}
+          error={remove.error}
+          onReset={remove.reset}
+        />
+      </div>
     </article>
   );
 }

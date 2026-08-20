@@ -220,6 +220,25 @@
       "github": "GitHub",
       "website": "Web sitesi",
       "selfDescription": "Kendin hakkında"
+    },
+    "delete": {
+      "trigger": "Sil",
+      "cancel": "Vazgeç",
+      "deleting": "Siliniyor…",
+      "permanent": "Bu geri alınamaz.",
+      "sectionTrigger": "{title} bölümünü sil",
+      "sectionTitle": "{title} silinsin mi?",
+      "sectionConfirm": "Bölümü sil",
+      "sectionCascade": "{shape, select, both {İçinde {entries, plural, other {# kayıt}} ve {atoms, plural, other {# madde}} var; onlar da silinecek. } entries {{entries, plural, =1 {İçinde 1 kayıt var; o da silinecek. } other {İçinde # kayıt var; onlar da silinecek. }}} atoms {{atoms, plural, =1 {İçinde 1 madde var; o da silinecek. } other {İçinde # madde var; onlar da silinecek. }}} other {}}Bu geri alınamaz.",
+      "entryTrigger": "{title} kaydını sil",
+      "entryTitle": "{title} silinsin mi?",
+      "entryConfirm": "Kaydı sil",
+      "entryCascade": "{atoms, plural, =0 {} other {Altındaki # madde de gidecek. }}Bu geri alınamaz.",
+      "atomTrigger": "{text} maddesini sil",
+      "atomTitle": "Bu madde silinsin mi?",
+      "atomConfirm": "Maddeyi sil",
+      "atomCascade": "{wordings, plural, =1 {} other {Bu maddenin # sözcüklemesi de silinecek. }}Bu geri alınamaz.",
+      "opening": "Açılıyor…"
     }
   },
   "Generation": {

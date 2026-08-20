@@ -75,4 +75,40 @@ test.describe('the profile editor', () => {
       .poll(async () => (await articles.first().textContent())?.slice(0, 20))
       .not.toBe(before?.slice(0, 20));
   });
+
+  /**
+   * Deleting, in the browser.
+   *
+   * The dialog is lazily loaded and portalled, and its focus trap is Radix's —
+   * jsdom stubs enough of the DOM that a trap can appear to work there while
+   * failing in a real layout. What this adds over the unit tests is the whole
+   * path: a chunk that has to arrive, a portal outside the React tree, and a
+   * keyboard that never touches the page behind it.
+   */
+  test('confirms before deleting a bullet, and Escape backs out', async ({ page }) => {
+    await page.goto('/en/profile');
+    await page.getByRole('button', { name: 'Experience' }).click();
+
+    const bullets = page.getByRole('article');
+    await expect(bullets).toHaveCount(3);
+
+    await page.getByRole('button', { name: /Delete the bullet Engineered ETL/ }).click();
+
+    // The chunk arrives here; the dialog does not exist before the press.
+    const dialog = page.getByRole('alertdialog');
+    await expect(dialog).toBeVisible();
+
+    // Focus opens on the way out, not on the destructive action — the reason
+    // this is `AlertDialog` and not `Dialog`.
+    await expect(dialog.getByRole('button', { name: 'Keep it' })).toBeFocused();
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(bullets).toHaveCount(3);
+
+    await page.getByRole('button', { name: /Delete the bullet Engineered ETL/ }).click();
+    await page.getByRole('button', { name: 'Delete the bullet' }).click();
+
+    await expect(bullets).toHaveCount(2);
+  });
 });

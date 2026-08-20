@@ -31,10 +31,18 @@ import { AddAtom } from '@/components/profile/AddAtom';
 import { AddEntry } from '@/components/profile/AddEntry';
 import { AddSection } from '@/components/profile/AddSection';
 import { AtomEditor } from '@/components/profile/AtomEditor';
+import { DeleteControl } from '@/components/profile/DeleteControl';
 import { EntryHeading } from '@/components/profile/EntryHeading';
 import { SortableList } from '@/components/profile/SortableList';
 import { Button } from '@/components/ui/button';
-import { useAtoms, useEntries, useReorderAtoms, useSections } from '@/hooks/useProfile';
+import {
+  useAtoms,
+  useDeleteEntry,
+  useDeleteSection,
+  useEntries,
+  useReorderAtoms,
+  useSections,
+} from '@/hooks/useProfile';
 import { useEditorUiStore } from '@/stores/editorUiStore';
 import { plainText } from '@/lib/content/plainText';
 import { parseRichContent } from '@/lib/content/richContent';
@@ -96,6 +104,76 @@ function AtomGroup({ section, entry, atoms }: { section: Section; entry?: Entry;
 
       <AddAtom section={section} {...(entry ? { entry } : {})} />
     </>
+  );
+}
+
+/**
+ * Deleting an entry, with the count of what goes with it.
+ *
+ * The number comes from the atoms already loaded for the section, not from a
+ * request of its own — the group is a client-side filter of that one
+ * collection, which is the same reason `SectionAtoms` fetches once.
+ */
+function DeleteEntryControl({ entry, atoms }: { entry: Entry; atoms: number }) {
+  const t = useTranslations('Editor.delete');
+  const remove = useDeleteEntry();
+
+  return (
+    <DeleteControl
+      triggerLabel={t('entryTrigger', { title: entry.title ?? '' })}
+      title={t('entryTitle', { title: entry.title ?? '' })}
+      description={t('entryCascade', { atoms })}
+      confirmLabel={t('entryConfirm')}
+      onConfirm={() => remove.mutateAsync(entry.id!)}
+      isPending={remove.isPending}
+      error={remove.error}
+      onReset={remove.reset}
+    />
+  );
+}
+
+/**
+ * Deleting a section, with both counts.
+ *
+ * ⚠️ **The cascade is total and it is the server's** — measured: the entries
+ * go, their atoms go, and the atoms hanging straight off the section go too.
+ * Nothing is re-parented. So the confirmation names both numbers; a control
+ * that said only "delete this section" would be describing a much smaller act
+ * than the one it performs.
+ *
+ * Rendered inside the open panel rather than beside the section's heading
+ * button, and that is deliberate: the heading is the collapse toggle, and a
+ * delete sitting next to it is one mis-click away from the thing it is there
+ * to make deliberate. Opening the section first also means the counts on
+ * screen are the ones being confirmed.
+ */
+function DeleteSectionControl({
+  section,
+  entries,
+  atoms,
+}: {
+  section: Section;
+  entries: number;
+  atoms: number;
+}) {
+  const t = useTranslations('Editor.delete');
+  const remove = useDeleteSection();
+
+  // One branch per real case, so every sentence is whole in both languages.
+  const shape =
+    entries > 0 && atoms > 0 ? 'both' : entries > 0 ? 'entries' : atoms > 0 ? 'atoms' : 'none';
+
+  return (
+    <DeleteControl
+      triggerLabel={t('sectionTrigger', { title: section.title ?? '' })}
+      title={t('sectionTitle', { title: section.title ?? '' })}
+      description={t('sectionCascade', { shape, entries, atoms })}
+      confirmLabel={t('sectionConfirm')}
+      onConfirm={() => remove.mutateAsync(section.id!)}
+      isPending={remove.isPending}
+      error={remove.error}
+      onReset={remove.reset}
+    />
   );
 }
 
@@ -172,7 +250,13 @@ function SectionAtoms({ section }: { section: Section }) {
             aria-labelledby={headingId}
             className="flex flex-col gap-2"
           >
-            <EntryHeading entry={entry} id={headingId} />
+            <div className="flex items-start justify-between gap-2">
+              <EntryHeading entry={entry} id={headingId} />
+              <DeleteEntryControl
+                entry={entry}
+                atoms={atoms.filter((atom) => atom.entryId === entry.id).length}
+              />
+            </div>
 
             <AtomGroup
               section={section}
@@ -184,6 +268,11 @@ function SectionAtoms({ section }: { section: Section }) {
       })}
 
       {showAddEntry && <AddEntry section={section} />}
+
+      {/* Last in the panel, away from the controls that add things. */}
+      <div className="border-t pt-3">
+        <DeleteSectionControl section={section} entries={entries.length} atoms={atoms.length} />
+      </div>
     </div>
   );
 }
