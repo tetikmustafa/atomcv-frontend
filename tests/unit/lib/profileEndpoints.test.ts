@@ -51,11 +51,17 @@ describe('the patch media type', () => {
 });
 
 /**
- * The reorder endpoints answer 200 with nothing to say, and `Content-Length`
- * is not always there to prove it — a worker-served or chunked response can
- * carry neither. `response.json()` then throws a bare SyntaxError from
+ * A body-less success that does not announce itself as 204, with no
+ * `Content-Length` to prove it either — a worker-served or chunked response
+ * can carry neither. `response.json()` then throws a bare SyntaxError from
  * outside the fetch try/catch, which surfaced in the browser as an uncaught
  * error rather than as a failed request.
+ *
+ * This used to name the reorder endpoints as the case in point, on the
+ * strength of a mock. They are not: the server answers those with the
+ * reordered collection, pinned below. The guard is kept because the hazard is
+ * about the shape of the response, not about which endpoint sends it — hence
+ * the handler here is stated outright rather than borrowed.
  */
 describe('a response with no body', () => {
   it('is read as nothing rather than as broken JSON', async () => {
@@ -72,6 +78,28 @@ describe('a response with no body', () => {
     );
 
     await expect(listAtoms()).rejects.toThrow();
+  });
+});
+
+/**
+ * What reorder actually answers with, measured against the running backend and
+ * encoded here so the mock cannot drift back.
+ *
+ * The client was typed `void` for this call until the endpoint functions were
+ * bound to the generated `operations`, which is the whole argument for that
+ * binding: nothing failed, because a response nobody reads cannot disagree
+ * with a type nobody checks.
+ *
+ * The scope matters as much as the shape — the answer covers the group that
+ * was reordered, not the section around it, so `useReorderAtoms` still has to
+ * invalidate rather than write this through.
+ */
+describe('reordering', () => {
+  it('answers with the reordered group, renumbered', async () => {
+    const reordered = await reorderAtoms('sec-experience', ['atom-2', 'atom-1']);
+
+    expect(reordered.map((atom) => atom.id)).toEqual(['atom-2', 'atom-1']);
+    expect(reordered.map((atom) => atom.displayOrder)).toEqual([0, 1]);
   });
 });
 

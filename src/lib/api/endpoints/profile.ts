@@ -5,35 +5,73 @@
  * invalidation — those belong to the hooks in `src/hooks`, and keeping them
  * out means each function can be read against the endpoint it names.
  *
- * **Types come from `components['schemas']`, not from `operations`.** That was
- * forced when ten operations declared no success response; the schema
- * declares them now (handoff B-029), so deriving from `operations` has become
- * possible and would additionally catch a change to the response *wrapper*.
- * Until that is done the item schemas are still generated, so the shapes below
- * are derived rather than invented — only the wrapper is stated here, and it
- * is verified against the running server. Tracked in `docs/notes/current.md`.
+ * **Every shape is bound to the operation it belongs to**, through `Returns`
+ * and `Accepts` below, rather than picked out of `components['schemas']` by
+ * hand. Naming the item type was all the generator allowed while ten
+ * operations declared no success response (handoff B-029); now that they do,
+ * the binding is what makes a change to the response *wrapper* a typecheck
+ * failure instead of a runtime surprise. It caught one the day it was
+ * written — see `reorder*`.
  */
 
 import { api, type Versioned } from '../client';
 import type { Version } from '../etag';
-import type { components } from '@/types/api';
+import type { components, operations } from '@/types/api';
 
 type Schemas = components['schemas'];
 
+type Responses<Op extends keyof operations> = operations[Op]['responses'];
+
+/** The one success response an operation declares. */
+type Success<Op extends keyof operations> = Responses<Op>[Extract<
+  keyof Responses<Op>,
+  200 | 201 | 204
+>];
+
+/**
+ * What a call resolves to: the success body in the media type asked for, or
+ * `void` where the response declares no content at all. A 204 lands on the
+ * second branch, which is why `delete*` needs no special case.
+ */
+type Returns<Op extends keyof operations, Media extends string = 'application/json'> =
+  Success<Op> extends { content: infer Body }
+    ? Media extends keyof Body
+      ? Body[Media]
+      : never
+    : void;
+
+/** What a call sends. */
+type Accepts<Op extends keyof operations> = operations[Op] extends {
+  requestBody: { content: { 'application/json': infer Body } };
+}
+  ? Body
+  : never;
+
+/* -------------------------------------------------------------------------
+ * The item types
+ *
+ * These name what the API is *about*, so they stay on the schema: `domain.ts`
+ * narrows them, components hold them, and routing them through an operation
+ * would say which endpoint happened to mention one first. The operations bind
+ * the calls below; the schema binds the nouns.
+ * ---------------------------------------------------------------------- */
+
 export type Profile = Schemas['Profile'];
-export type ProfileUpdate = Schemas['ProfileUpdate'];
-export type PreferencesUpdate = Schemas['PreferencesUpdate'];
 export type Section = Schemas['Section'];
-export type SectionCreate = Schemas['SectionCreate'];
-export type SectionPatch = Schemas['SectionPatch'];
 export type Entry = Schemas['Entry'];
-export type EntryCreate = Schemas['EntryCreate'];
 export type Atom = Schemas['Atom'];
-export type AtomCreate = Schemas['AtomCreate'];
-export type AtomPatch = Schemas['AtomPatch'];
 export type Variant = Schemas['Variant'];
+export type ProfileExport = Returns<'export'>;
+
+export type ProfileUpdate = Accepts<'replace'>;
+export type PreferencesUpdate = Accepts<'replacePreferences'>;
+export type SectionCreate = Accepts<'createSection'>;
+export type SectionPatch = Accepts<'patchSection'>;
+export type EntryCreate = Accepts<'createEntry'>;
+export type AtomCreate = Accepts<'createAtom'>;
+export type AtomPatch = Accepts<'patchAtom'>;
 /** Creating a wording: the content is the point, so it is required. */
-export type VariantWrite = Schemas['VariantWrite'];
+export type VariantWrite = Accepts<'addVariant'>;
 
 /**
  * Changing one. Nothing is required — a promote is `{ primary: true }` and
@@ -42,7 +80,7 @@ export type VariantWrite = Schemas['VariantWrite'];
  * `tone` is three-state: omit it to keep what is there, send `null` to return
  * to the neutral register.
  */
-export type VariantPatch = Schemas['VariantPatch'];
+export type VariantPatch = Accepts<'patchVariant'>;
 
 /**
  * `organization` and `endDate` are `["string", "null"]` in the schema, so the
@@ -50,8 +88,7 @@ export type VariantPatch = Schemas['VariantPatch'];
  * sending `null` to remove an end date and mean "this job is current". This
  * used to be widened by hand here (handoff B-029).
  */
-export type EntryPatch = Schemas['EntryPatch'];
-export type ProfileExport = Schemas['ProfileExport'];
+export type EntryPatch = Accepts<'patchEntry'>;
 
 function query(params: Record<string, string | undefined>): string {
   const search = new URLSearchParams();
@@ -74,8 +111,8 @@ function query(params: Record<string, string | undefined>): string {
  * Never answers 404 (`spec/08-api.md`). A user who has never had a profile gets an
  * empty one created on read, so there is no "not created yet" state.
  */
-export function getProfile(): Promise<Versioned<Profile>> {
-  return api.getVersioned<Profile>('/profile');
+export function getProfile(): Promise<Versioned<Returns<'own'>>> {
+  return api.getVersioned<Returns<'own'>>('/profile');
 }
 
 /**
@@ -83,65 +120,76 @@ export function getProfile(): Promise<Versioned<Profile>> {
  * must send every field it owns, not only the ones that changed.
  */
 export function replaceProfile(body: ProfileUpdate, version: Version) {
-  return api.putVersioned<Profile>('/profile', body, { version });
+  return api.putVersioned<Returns<'replace'>>('/profile', body, { version });
 }
 
 /** `PUT`, not `PATCH` — § 35.2's endpoint list is out of date; `spec/08-api.md` is right. */
 export function replacePreferences(body: PreferencesUpdate, version: Version) {
-  return api.putVersioned<Profile>('/profile/preferences', body, { version });
+  return api.putVersioned<Returns<'replacePreferences'>>('/profile/preferences', body, { version });
 }
 
 export function deleteProfile(version: Version) {
-  return api.delete<void>('/profile', { version });
+  return api.delete<Returns<'delete'>>('/profile', { version });
 }
 
 /* ------------------------------- sections ------------------------------ */
 
 export function listSections() {
-  return api.get<Section[]>('/profile/sections');
+  return api.get<Returns<'listSections'>>('/profile/sections');
 }
 
 export function createSection(body: SectionCreate) {
-  return api.post<Section>('/profile/sections', body);
+  return api.post<Returns<'createSection'>>('/profile/sections', body);
 }
 
 export function patchSection(id: string, body: SectionPatch, version: Version) {
-  return api.patch<Section>(`/profile/sections/${id}`, body, { version });
+  return api.patch<Returns<'patchSection'>>(`/profile/sections/${id}`, body, { version });
 }
 
 export function deleteSection(id: string, version: Version) {
-  return api.delete<void>(`/profile/sections/${id}`, { version });
+  return api.delete<Returns<'deleteSection'>>(`/profile/sections/${id}`, { version });
 }
 
 /**
  * Takes the **complete** list, not the moved items — a partial one is a 400,
  * and `displayOrder` cannot be patched directly (`spec/08-api.md`). No `If-Match`:
  * ordering is a property of the collection, which has no version.
+ *
+ * **Answers with the reordered collection**, renumbered. This was typed
+ * `void` until the operations were bound here, on the strength of a mock that
+ * answered `200` with nothing — the running server has always sent the list.
+ * A caller may write it straight through instead of refetching.
  */
 export function reorderSections(ids: string[]) {
-  return api.post<void>('/profile/sections/reorder', { ids });
+  return api.post<Returns<'reorderSections'>>('/profile/sections/reorder', {
+    ids,
+  } satisfies Accepts<'reorderSections'>);
 }
 
 /* -------------------------------- entries ------------------------------ */
 
 export function listEntries(sectionId?: string) {
-  return api.get<Entry[]>(`/profile/entries${query({ sectionId })}`);
+  return api.get<Returns<'listEntries'>>(`/profile/entries${query({ sectionId })}`);
 }
 
 export function createEntry(body: EntryCreate) {
-  return api.post<Entry>('/profile/entries', body);
+  return api.post<Returns<'createEntry'>>('/profile/entries', body);
 }
 
 export function patchEntry(id: string, body: EntryPatch, version: Version) {
-  return api.patch<Entry>(`/profile/entries/${id}`, body, { version });
+  return api.patch<Returns<'patchEntry'>>(`/profile/entries/${id}`, body, { version });
 }
 
 export function deleteEntry(id: string, version: Version) {
-  return api.delete<void>(`/profile/entries/${id}`, { version });
+  return api.delete<Returns<'deleteEntry'>>(`/profile/entries/${id}`, { version });
 }
 
+/** As `reorderSections`, and it answers the same way. */
 export function reorderEntries(sectionId: string, ids: string[]) {
-  return api.post<void>('/profile/entries/reorder', { sectionId, ids });
+  return api.post<Returns<'reorderEntries'>>('/profile/entries/reorder', {
+    sectionId,
+    ids,
+  } satisfies Accepts<'reorderEntries'>);
 }
 
 /* --------------------------------- atoms ------------------------------- */
@@ -152,12 +200,12 @@ export function reorderEntries(sectionId: string, ids: string[]) {
  * hooks seed the per-atom cache from it.
  */
 export function listAtoms(filter: { sectionId?: string; entryId?: string } = {}) {
-  return api.get<Atom[]>(`/profile/atoms${query(filter)}`);
+  return api.get<Returns<'listAtoms'>>(`/profile/atoms${query(filter)}`);
 }
 
 /** Atoms are created **with** their first wording; the content is required. */
 export function createAtom(body: AtomCreate) {
-  return api.post<Atom>('/profile/atoms', body);
+  return api.post<Returns<'createAtom'>>('/profile/atoms', body);
 }
 
 /**
@@ -166,20 +214,20 @@ export function createAtom(body: AtomCreate) {
  * wording.
  */
 export function patchAtom(id: string, body: AtomPatch, version: Version) {
-  return api.patch<Atom>(`/profile/atoms/${id}`, body, { version });
+  return api.patch<Returns<'patchAtom'>>(`/profile/atoms/${id}`, body, { version });
 }
 
 export function deleteAtom(id: string, version: Version) {
-  return api.delete<void>(`/profile/atoms/${id}`, { version });
+  return api.delete<Returns<'deleteAtom'>>(`/profile/atoms/${id}`, { version });
 }
 
 /** `entryId` omitted orders the atoms hanging straight off the section. */
 export function reorderAtoms(sectionId: string, ids: string[], entryId?: string) {
-  return api.post<void>('/profile/atoms/reorder', {
+  return api.post<Returns<'reorderAtoms'>>('/profile/atoms/reorder', {
     sectionId,
     ids,
     ...(entryId ? { entryId } : {}),
-  });
+  } satisfies Accepts<'reorderAtoms'>);
 }
 
 /* ------------------------------- variants ------------------------------ */
@@ -193,7 +241,7 @@ export function reorderAtoms(sectionId: string, ids: string[], entryId?: string)
  * independently of the atom that owns them.
  */
 export function addVariant(atomId: string, body: VariantWrite) {
-  return api.post<Variant>(`/profile/atoms/${atomId}/variants`, body);
+  return api.post<Returns<'addVariant'>>(`/profile/atoms/${atomId}/variants`, body);
 }
 
 export function patchVariant(
@@ -202,24 +250,29 @@ export function patchVariant(
   body: VariantPatch,
   version: Version,
 ) {
-  return api.patch<Variant>(`/profile/atoms/${atomId}/variants/${variantId}`, body, { version });
+  return api.patch<Returns<'patchVariant'>>(
+    `/profile/atoms/${atomId}/variants/${variantId}`,
+    body,
+    { version },
+  );
 }
 
 export function deleteVariant(atomId: string, variantId: string, version: Version) {
-  return api.delete<void>(`/profile/atoms/${atomId}/variants/${variantId}`, { version });
+  return api.delete<Returns<'deleteVariant'>>(`/profile/atoms/${atomId}/variants/${variantId}`, {
+    version,
+  });
 }
 
 /* -------------------------------- export ------------------------------- */
 
 /**
- * Two endpoints wearing one path. `?format=json` answers with
- * `ProfileExport`; `?format=markdown` answers `text/markdown`, which is a
- * string and throws if read as JSON. The schema declares both media types
- * (handoff B-031); the split into two functions is what keeps the response
- * types honest, since one is parsed and the other is not.
+ * Two endpoints wearing one path, and one operation: the `200` declares both
+ * `application/json` and `text/markdown`, so the media type is what picks the
+ * body (handoff B-031). Splitting into two functions is what keeps the
+ * response types honest, since one is parsed and the other is not.
  */
 export function exportProfileAsJson() {
-  return api.get<ProfileExport>(`/profile/export${query({ format: 'json' })}`);
+  return api.get<Returns<'export'>>(`/profile/export${query({ format: 'json' })}`);
 }
 
 export function exportProfileAsMarkdown() {

@@ -306,6 +306,13 @@ export function usePatchVariant() {
  * inconsistency that only surfaces once something does read it. A drop is a
  * deliberate, occasional gesture, so it can afford the refetch that a
  * keystroke cannot.
+ *
+ * The response does carry the renumbered atoms, so the refetch looks
+ * skippable — it is not. It covers **only the group that was reordered**: a
+ * five-atom entry answers with five while the section's cached list holds
+ * ten, and those same atoms are cached under both keys. Writing it through
+ * would reconcile one and leave the other stale. Measured against the running
+ * backend, not assumed.
  */
 export function useReorderAtoms() {
   const client = useQueryClient();

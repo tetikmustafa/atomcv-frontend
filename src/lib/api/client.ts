@@ -107,8 +107,12 @@ async function readBody<T>(response: Response): Promise<T> {
   // Read as text first. `Content-Length` is not a reliable emptiness check —
   // a chunked or worker-served response can carry no body and no length
   // header at all, and `response.json()` then throws a bare SyntaxError from
-  // outside the fetch try/catch. The reorder endpoints answer exactly that
-  // way: 200, nothing to say.
+  // outside the fetch try/catch.
+  //
+  // This used to cite the reorder endpoints as the case in point. They are
+  // not: the server answers those with the reordered collection, and only a
+  // mock ever sent the empty `200`. The guard stays because the hazard is
+  // real for any body-less success the status code does not announce as 204.
   const body = await response.text();
   if (body === '') return undefined as T;
 

@@ -79,10 +79,12 @@ CLAUDE.md 927 satırdan 347'ye inerken buraya taşındı (handoff · B-033).
 - **`If-Match` tırnaklı olmalı ve onu yalnız `toIfMatch` kurar.** `If-Match: 2`
   → 412, ki bu gerçek çakışmanın da yanıtı: hata, tek başına çalışan
   kullanıcıya "başkası düzenledi" diyaloğu olarak görünür.
-- **Boş gövdeli 200 eskiden fırlatıyordu.** Reorder uçları tam olarak onu
-  döndürüyor; `readBody` artık önce metin okuyor. e2e yakaladı, hiçbir unit
-  test değil — MSW'nin Node interceptor'ı `Content-Length` koyuyor, service
-  worker'ı koymuyor.
+- **Boş gövdeli 200 eskiden fırlatıyordu.** `readBody` artık önce metin
+  okuyor. e2e yakaladı, hiçbir unit test değil — MSW'nin Node interceptor'ı
+  `Content-Length` koyuyor, service worker'ı koymuyor. **Bu maddenin örneği
+  yanlıştı:** reorder uçları boş 200 döndürmüyor, koleksiyonu döndürüyor —
+  öyle davranan yalnız mock'tu. Koruma yine de duruyor, tehlike 204 ilan
+  etmeyen her gövdesiz başarı için gerçek.
 
 ### Ölçüm
 
@@ -94,10 +96,8 @@ gerçek formla gelecekler. Bu sayıyı boş alan değil, bütçenin erken uyarı
 ### Kapanmadan Aşama 2'ye girilmez
 
 1. ~~**B-032 doğrulaması**~~ — **yapıldı**, aşağıda.
-2. **`endpoints/profile.ts` hâlâ yanıt tiplerini `components['schemas']`'tan
-   yazıyor.** On operasyon `2xx` beyan etmediği için zorunluydu; B-029 ile o
-   sebep ortadan kalktı, yani artık `operations`'tan türetmek mümkün ve yanıt
-   *sarmalayıcısındaki* değişikliği de yakalar. B-030 isimleri okunaklı yaptı.
+2. ~~**`endpoints/profile.ts` tipleri `components['schemas']`'tan**~~ —
+   **yapıldı**, aşağıda. Bir sürüklenme yakaladı.
 3. **Anonim çift-gönderim koruması istemcide.** Backend'in idempotency indeksi
    NULL `user_id` için tekilleştirmiyor; migration gelene kadar istek uçarken
    kontrolü devre dışı bırakmak bizim işimiz.
@@ -145,3 +145,34 @@ bağlı; CI'da koşamaz, koşarsa da yanlış sebeple kırmızı yanar. Tekrarla
 gerekirse: MSW kapalı `next dev`, Playwright, `p:not([role="status"])` ile
 önizleme paragrafı — birim testi `VariantTabs.test.tsx`'te aynı davranışı
 mock'lara karşı sabitliyor.
+
+### Uçlar `operations`'a bağlandı — ve bir sürüklenme çıkardı
+
+`endpoints/profile.ts` artık her şekli ait olduğu operasyona bağlıyor:
+`Returns<Op, Media>` başarı gövdesini (204'te `void`), `Accepts<Op>` istek
+gövdesini veriyor. Öğe tipleri (`Profile`, `Section`, `Atom` …) şemada kaldı —
+API'nin *neden bahsettiğini* adlandırıyorlar ve `domain.ts` onları daraltıyor;
+operasyondan geçirmek "hangi uç önce andıysa o" demek olurdu. **Operasyonlar
+çağrıları bağlar, şema isimleri bağlar.**
+
+**Yakaladığı şey: üç `reorder` ucu `void` yazılıydı, oysa koleksiyonu
+döndürüyorlar.** Gerçek sunucuya ölçüldü — yeniden numaralandırılmış grup
+geliyor. Boş `200` döndüren yalnız **mock**'tu, ve istemci ona göre
+tiplenmişti. Hiçbir şey kırılmıyordu, çünkü kimsenin okumadığı bir yanıt
+kimsenin denetlemediği bir tiple çelişemez. Bağlamanın tüm argümanı bu.
+
+Sürüklenmenin bedeli üç yerdeydi ve üçü de düzeltildi: mock artık grubu
+döndürüyor, `client.ts`'in "reorder boş 200 döner" gerekçesi yanlıştı
+(koruma duruyor, örneği değişti), ve bu dosyanın kendi maddesi de öyle
+diyordu.
+
+**Yanıtı yine de yazamıyoruz.** Kapsamı ölçüldü: on atomluk bir bölümün
+içindeki beş atomluk entry, **beş** atomla yanıtlanıyor. Aynı atomlar hem
+bölüm hem entry anahtarında cache'li, yani yanıtı geçirmek birini uyumlar
+diğerini bayat bırakır. `useReorderAtoms` invalidate etmeye devam ediyor —
+artık gerekçesi tahmin değil ölçüm.
+
+**Ders.** Bir alanı ya da yanıtı "kullanmıyoruz" diye `void`/`unknown`
+yazmak, sözleşmeyi denetimden çıkarır. Türetilen tipin `never`e çökmediğini
+de kanıtla: geçici bir tip-iddiası dosyası ve bir **negatif kontrol** (kasten
+yanlış iddia derlemeyi kırmalı) — ikisi de yapıldı, ikisi de commit edilmedi.

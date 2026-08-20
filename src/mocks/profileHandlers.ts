@@ -114,7 +114,17 @@ export const profileHandlers = [
     });
     fixture.atoms.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
 
-    return new HttpResponse(null, { status: 200 });
+    // The reordered group, renumbered — not the whole section. Measured
+    // against the running backend: a five-atom entry inside a ten-atom
+    // section answers with five, which is why a caller cannot write this
+    // response through and skip refetching the section's collection.
+    //
+    // This used to answer `200` with an empty body, and the client was typed
+    // `void` to match it. The server has never behaved that way; binding the
+    // client to `operations` is what exposed the drift.
+    return HttpResponse.json(
+      group.slice().sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)),
+    );
   }),
 
   /** Controls only. Text goes through the variant endpoint. */
