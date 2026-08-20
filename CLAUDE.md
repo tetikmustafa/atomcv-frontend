@@ -48,7 +48,7 @@ Need a spec change? Write an item in `docs/handoff/to-backend.md` instead.
 
 ## Recording Deviations
 
-Same format as backend, in `docs/notes/current.md`. Under 400 lines, archive per stage.
+Same format as backend, in `docs/notes/current.md`. Under 440 lines, archive per stage.
 
 Permanent deviations do **not** go into `spec/` from here — request the change via
 `docs/handoff/to-backend.md`.

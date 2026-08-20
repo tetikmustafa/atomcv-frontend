@@ -1,6 +1,6 @@
 # İnşa Notları — Aktif (frontend)
 
-> Kural: bu dosya **400 satırı geçmez**. Aşama bitince `archive/`'a taşınır.
+> Kural: bu dosya **440 satırı geçmez**. Aşama bitince `archive/`'a taşınır.
 > (200'dü; Aşama 1 kapanmadan doldu ve bölmek yerine sınır büyütüldü — D.10
 > backend'e taşınan kaynak, ayrı dosyaya alınamaz.)
 > Bu dosya **backend'e senkronize edilmez** — repo-yerel.
@@ -392,3 +392,30 @@ odaklanacak input'a çevirmek yanlış alanı işaretler.
 **`STATUS.md` düzeltildi:** backend bizim bloğumuza "devredilenler 4/4 kapandı"
 yazmıştı. 4. madde kota sıfırlanma saati ve aynı dosyanın açık kararlar
 tablosunda hâlâ duruyor; `F-001`'in beklediği karar ayrı bir konuydu. 3/4.
+
+### Silme uçlarının gerçek davranışı — ölçüldü, UI henüz yok
+
+Silme, mutation yüzeyinin kalan boşluğu (yukarıdaki tabloda). Uç fonksiyonları
+duruyor, hook yok. Ekran yazılmadan önce sunucunun **ne yaptığı** ölçüldü;
+tamamı bu iş için yaratılıp yıkılan bir ağaç üzerinde, seed'e dokunulmadan
+(sonrası: 4 bölüm · 6 entry · 18 atom, başlangıçtaki gibi).
+
+| Ölçüm | Sonuç |
+|---|---|
+| `DELETE` `If-Match`'siz | `428 PRECONDITION_REQUIRED` |
+| `DELETE` yanlış `If-Match` | `412 VERSION_CONFLICT` |
+| Bölüm silme | `204` — **entry'leri, entry altındaki atomları ve bölüme doğrudan asılı atomları da siliyor** |
+| Entry silme | `204` — atomları da gidiyor, bölüme **devredilmiyor** |
+| Tek sözcüklemeyi silme | `400 VALIDATION_FAILED` + `params.fields: ["variantId"]` |
+| İkincisi varken **birincil** sözcüklemeyi silme | `400` — yine reddediyor |
+
+Son iki satır tek bir kural gibi davranıyor: **birincil sözcükleme silinemez.**
+Tek sözcüklemeli bir atomda o zaten birincildir. Sonucu UI'da doğrudan: birincil
+sekmede silme kontrolü ya hiç olmamalı ya da "önce başka birini varsayılan yap"
+demeli — çalışmayacak bir düğme, B-024'te bayat rozeti için verilen kararla aynı
+sebepten kötü.
+
+Cascade'in ölçülmüş olması onay metninin **sayı verebilmesi** demek: bir bölümü
+silmek altındaki her şeyi götürüyor ve kullanıcı bunu silmeden önce görmeli (P8
+kullanıcının emeğini korumakla ilgili; kendi kararıyla silmesi başka, ne
+sildiğini bilmeden silmesi değil).
