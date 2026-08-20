@@ -96,7 +96,10 @@ describe('a response with no body', () => {
  */
 describe('reordering', () => {
   it('answers with the reordered group, renumbered', async () => {
-    const reordered = await reorderAtoms('sec-experience', ['atom-2', 'atom-1']);
+    // Scoped to the entry: `atom-1` and `atom-2` are that job's bullets, and
+    // sending them as if they were the section's whole list is the 400 the
+    // mock refuses for the same reason the server does.
+    const reordered = await reorderAtoms('sec-experience', ['atom-2', 'atom-1'], 'entry-trendyol');
 
     expect(reordered.map((atom) => atom.id)).toEqual(['atom-2', 'atom-1']);
     expect(reordered.map((atom) => atom.displayOrder)).toEqual([0, 1]);
@@ -120,12 +123,25 @@ describe('atoms', () => {
   it('carry a version per item, so nothing needs a second read', async () => {
     const atoms = await listAtoms();
 
-    expect(atoms).toHaveLength(2);
+    expect(atoms).toHaveLength(4);
     expect(atoms.every((atom) => typeof atom.version === 'number')).toBe(true);
   });
 
   it('can be filtered without losing that', async () => {
     const atoms = await listAtoms({ sectionId: 'sec-experience' });
+
+    // Interleaved, and that is the contract rather than an accident of the
+    // fixture. `displayOrder` restarts inside each entry, so the section's
+    // list is ordered 0, 0, 1 — the second job's only bullet sits between the
+    // first job's two. Measured on the running server before being mocked.
+    // Grouping comes from `entryId`; reading it off the order is the bug this
+    // pins down.
+    expect(atoms.map((atom) => atom.id)).toEqual(['atom-1', 'atom-3', 'atom-2']);
+    expect(atoms.map((atom) => atom.displayOrder)).toEqual([0, 0, 1]);
+  });
+
+  it('can be filtered down to one entry, which is where order is meaningful', async () => {
+    const atoms = await listAtoms({ entryId: 'entry-trendyol' });
 
     expect(atoms.map((atom) => atom.id)).toEqual(['atom-1', 'atom-2']);
   });

@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { axe } from 'jest-axe';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { SectionList } from '@/components/profile/SectionList';
 import { listAtoms } from '@/lib/api/endpoints/profile';
@@ -40,7 +41,7 @@ describe('the section list', () => {
     await user.click(toggle);
 
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(3));
   });
 
   it('names each atom by its own words in the move controls', async () => {
@@ -48,7 +49,7 @@ describe('the section list', () => {
     renderSections();
 
     await user.click(await screen.findByRole('button', { name: 'Experience' }));
-    await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(3));
 
     expect(
       screen.getByRole('button', { name: /Move Engineered ETL pipelines up/ }),
@@ -66,12 +67,15 @@ describe('the section list', () => {
     renderSections();
 
     await user.click(await screen.findByRole('button', { name: 'Experience' }));
-    await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(3));
 
     await user.click(screen.getByRole('button', { name: /Move Engineered ETL pipelines up/ }));
 
+    // Asserted on the entry rather than the section: the section's list is
+    // ordered by `displayOrder` across every entry, so the other job's bullet
+    // sits in the middle of it and says nothing about whether this move landed.
     await waitFor(async () => {
-      const stored = await listAtoms({ sectionId: 'sec-experience' });
+      const stored = await listAtoms({ entryId: 'entry-trendyol' });
       expect(stored.map((atom) => atom.id)).toEqual(['atom-2', 'atom-1']);
     });
   });
@@ -89,7 +93,7 @@ describe('the section list', () => {
 
     const toggle = await screen.findByRole('button', { name: 'Experience' });
     await user.click(toggle);
-    await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(3));
 
     const first = screen.getAllByRole('article')[0]!;
     const field = within(first).getByLabelText('Text');
@@ -109,5 +113,134 @@ describe('the section list', () => {
       const edited = stored.find((atom) => atom.id === 'atom-1');
       expect(edited?.variants?.[0]?.plainText).toBe('Half a thought');
     });
+  });
+});
+
+/**
+ * The three-level shape: section → entry → atoms.
+ *
+ * This is the half the editor was missing. `displayOrder` on an atom restarts
+ * inside each entry, so the section's own list interleaves them — the mock
+ * reproduces that, because the running server does. Rendering it flat put one
+ * job's bullets between another's with no employer named anywhere, and the old
+ * fixture (two atoms, no entries) could not show it.
+ */
+describe('entries inside a section', () => {
+  it('groups each job’s bullets under its own heading, in order', async () => {
+    const user = userEvent.setup();
+    renderSections();
+
+    await user.click(await screen.findByRole('button', { name: 'Experience' }));
+
+    const trendyol = await screen.findByRole('group', { name: /Senior Backend Engineer/ });
+    const getir = screen.getByRole('group', { name: /^Backend Engineer/ });
+
+    // Grouped, not interleaved: the flat response is atom-1, atom-3, atom-2.
+    // Read off the fields rather than the text, which also appears in each
+    // atom's rich-text preview — and asserted as a list, because the order
+    // inside a group is the half that was broken.
+    const wording = (group: HTMLElement) =>
+      within(group)
+        .getAllByLabelText('Text')
+        .map((field) => (field as HTMLTextAreaElement).value);
+
+    expect(wording(trendyol)).toEqual([
+      'Built a query monitor that reached 900 stars',
+      'Engineered ETL pipelines',
+    ]);
+    expect(wording(getir)).toEqual(['Rewrote the courier assignment']);
+  });
+
+  it('says where and when, through Intl rather than by slicing the string', async () => {
+    const user = userEvent.setup();
+    renderSections();
+
+    await user.click(await screen.findByRole('button', { name: 'Experience' }));
+
+    const getir = await screen.findByRole('group', { name: /^Backend Engineer/ });
+    // `2019-08-01` is the first of the month: formatted in any zone behind UTC
+    // it would slip back to July, which is the whole reason the formatter
+    // works in UTC.
+    expect(within(getir).getByText(/Getir · Istanbul · Aug 2019 – Mar 2022/)).toBeInTheDocument();
+  });
+
+  /**
+   * A missing `endDate` means the job is current (`spec/08-api.md`). Rule 6: it
+   * is said in words, because "Apr 2022 –" trailing into nothing reads as a
+   * truncated string rather than as "still there".
+   */
+  it('says a job with no end date is the current one, in words', async () => {
+    const user = userEvent.setup();
+    renderSections();
+
+    await user.click(await screen.findByRole('button', { name: 'Experience' }));
+
+    const trendyol = await screen.findByRole('group', { name: /Senior Backend Engineer/ });
+    expect(within(trendyol).getByText(/Apr 2022 – present/)).toBeInTheDocument();
+  });
+
+  /**
+   * The other shape. A skills section has no entries at all and its atoms hang
+   * straight off it, so there is nothing to head them with — and inventing a
+   * heading would be worse than none.
+   */
+  it('renders a section’s own atoms with no entry heading at all', async () => {
+    const user = userEvent.setup();
+    renderSections();
+
+    await user.click(await screen.findByRole('button', { name: 'Skills' }));
+
+    await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(1));
+    // A section is a region; an entry is a group. There are no entries here.
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+  });
+
+  /**
+   * Reordering addresses a group, not a section: the endpoint takes the
+   * complete list of one `entryId`, and a partial one is a 400. Sending the
+   * section's whole list for a move inside one job is exactly that mistake, so
+   * this asserts the server accepted it rather than that a request went out.
+   */
+  it('reorders within one entry and leaves the other alone', async () => {
+    const user = userEvent.setup();
+    renderSections();
+
+    await user.click(await screen.findByRole('button', { name: 'Experience' }));
+    await screen.findByRole('group', { name: /Senior Backend Engineer/ });
+
+    await user.click(screen.getByRole('button', { name: /Move Engineered ETL pipelines up/ }));
+
+    await waitFor(async () => {
+      expect((await listAtoms({ entryId: 'entry-trendyol' })).map((atom) => atom.id)).toEqual([
+        'atom-2',
+        'atom-1',
+      ]);
+    });
+
+    expect((await listAtoms({ entryId: 'entry-getir' })).map((atom) => atom.id)).toEqual([
+      'atom-3',
+    ]);
+  });
+
+  /**
+   * Axe cannot tell you the outline is *wrong*, only that it is well-formed —
+   * so the heading levels are asserted outright. The section's title is the
+   * `h2` and an entry's is the `h3` under it; flattening them would still pass
+   * every automated check while leaving a screen reader with no way to tell
+   * which job a bullet belongs to.
+   */
+  it('nests the entry headings under the section’s, and has no violations', async () => {
+    const user = userEvent.setup();
+    const { container } = renderSections();
+
+    await user.click(await screen.findByRole('button', { name: 'Experience' }));
+    await screen.findByRole('group', { name: /Senior Backend Engineer/ });
+
+    expect(screen.getByRole('heading', { level: 2, name: 'Experience' })).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent),
+    ).toEqual(['Senior Backend Engineer', 'Backend Engineer']);
+
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

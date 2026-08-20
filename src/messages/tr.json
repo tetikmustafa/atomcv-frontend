@@ -130,7 +130,8 @@
     },
     "section": {
       "loading": "Yükleniyor…",
-      "empty": "Bu bölümde henüz bir şey yok."
+      "empty": "Bu bölümde henüz bir şey yok.",
+      "entryEmpty": "Bunun altında henüz bir şey yok."
     },
     "profile": {
       "title": "Profilin",
@@ -150,6 +151,10 @@
       "staleExplained": "Bunun dayandığı ifade o zamandan beri değişti. Yeniden üretmek henüz yazılmadı; güncellemenin yolu buradan düzenlemek.",
       "makePrimary": "Varsayılan olarak bunu kullan",
       "unknownLanguage": "Bilinmeyen dil"
+    },
+    "entry": {
+      "range": "{start} – {end}",
+      "rangeOngoing": "{start} – günümüz"
     }
   },
   "Generation": {

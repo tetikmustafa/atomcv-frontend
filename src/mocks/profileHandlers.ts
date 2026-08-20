@@ -68,17 +68,39 @@ export const profileHandlers = [
 
   http.get('*/api/v1/profile/sections', () => HttpResponse.json(fixture.sections)),
 
-  /** Unpaginated, and the only source of per-atom versions. */
+  http.get('*/api/v1/profile/entries', ({ request }) => {
+    const sectionId = new URL(request.url).searchParams.get('sectionId');
+
+    return HttpResponse.json(
+      fixture.entries.filter((entry) => !sectionId || entry.sectionId === sectionId),
+    );
+  }),
+
+  /**
+   * Unpaginated, and the only source of per-atom versions.
+   *
+   * **Sorted by `displayOrder` alone, which interleaves the entries.** That
+   * number restarts inside each entry, so every entry's first bullet is a 0
+   * and the flat list alternates between jobs — measured on the running
+   * server, where a ten-atom section came back as 0,0,0,1,1,1,2,2,3,4.
+   *
+   * Answering in a conveniently grouped order instead would let a flat render
+   * look correct in development and be wrong in production, which is the drift
+   * this mock exists to prevent. Grouping is the client's job, and it comes
+   * from `entryId`, never from the order.
+   */
   http.get('*/api/v1/profile/atoms', ({ request }) => {
     const filter = new URL(request.url).searchParams;
     const sectionId = filter.get('sectionId');
     const entryId = filter.get('entryId');
 
     return HttpResponse.json(
-      fixture.atoms.filter(
-        (atom) =>
-          (!sectionId || atom.sectionId === sectionId) && (!entryId || atom.entryId === entryId),
-      ),
+      fixture.atoms
+        .filter(
+          (atom) =>
+            (!sectionId || atom.sectionId === sectionId) && (!entryId || atom.entryId === entryId),
+        )
+        .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)),
     );
   }),
 

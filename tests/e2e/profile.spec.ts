@@ -56,7 +56,12 @@ test.describe('the profile editor', () => {
     await page.goto('/en/profile');
     await page.getByRole('button', { name: 'Experience' }).click();
 
-    const articles = page.getByRole('article');
+    // Scoped to one job. Reordering addresses a group — the endpoint takes one
+    // `entryId` and that group's complete list — and the section's own list is
+    // ordered across every entry, so watching it would be watching the wrong
+    // thing.
+    const job = page.getByRole('group', { name: /Senior Backend Engineer/ });
+    const articles = job.getByRole('article');
     await expect(articles).toHaveCount(2);
 
     const before = await articles.first().textContent();

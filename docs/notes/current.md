@@ -88,10 +88,11 @@ CLAUDE.md 927 satırdan 347'ye inerken buraya taşındı (handoff · B-033).
 
 ### Ölçüm
 
-İlk app rotası ölçüldü: `/[locale]/profile` **237.8 KB toplam, 69.7 KB kendi
+İlk app rotası ölçüldü: `/[locale]/profile` **238.3 KB toplam, 70.2 KB kendi
 payı** — dnd-kit, TanStack Query, next-intl client runtime ve Radix taşıyor.
-Kendi payından ~39 KB kalıyor ve **React Hook Form ile Zod henüz inmedi**; ilk
-gerçek formla gelecekler. Bu sayıyı boş alan değil, bütçenin erken uyarısı say.
+(Entry katmanı +0.5 KB getirdi; ilk ölçüm 237.8 / 69.7 idi.) Kendi payından
+~39 KB kalıyor ve **React Hook Form ile Zod henüz inmedi**; ilk gerçek formla
+gelecekler. Bu sayıyı boş alan değil, bütçenin erken uyarısı say.
 
 ### Kapanmadan Aşama 2'ye girilmez
 
@@ -100,7 +101,11 @@ gerçek formla gelecekler. Bu sayıyı boş alan değil, bütçenin erken uyarı
    **yapıldı**, aşağıda. Bir sürüklenme yakaladı.
 3. **Anonim çift-gönderim koruması istemcide.** Backend'in idempotency indeksi
    NULL `user_id` için tekilleştirmiyor; migration gelene kadar istek uçarken
-   kontrolü devre dışı bırakmak bizim işimiz.
+   kontrolü devre dışı bırakmak bizim işimiz. **Henüz uygulanabilir değil:**
+   devre dışı bırakılacak kontrol yok. Üç mutation hook'unun üçü de `If-Match`
+   ile sürümlü, yani çift gönderim zaten 412 ile duruyor. Risk `create*`
+   uçlarında ve Aşama 2'nin `POST /generations`'ında — **ilk "ekle" düğmesiyle
+   birlikte gelmeli**, ondan önce değil.
 4. **Kota UI'ı sıfırlanma saatini söyleyemez** — gün dönümü zaman dilimi
    kararlaşmadı (`STATUS.md` · açık kararlar).
 
@@ -176,3 +181,20 @@ artık gerekçesi tahmin değil ölçüm.
 yazmak, sözleşmeyi denetimden çıkarır. Türetilen tipin `never`e çökmediğini
 de kanıtla: geçici bir tip-iddiası dosyası ve bir **negatif kontrol** (kasten
 yanlış iddia derlemeyi kırmalı) — ikisi de yapıldı, ikisi de commit edilmedi.
+
+### Entry katmanı — editör iki seviyeydi, veri üç
+
+Gerekçelerin çoğu çağrı yerinde: gruplamanın neden **filtreleme olduğu ve
+sıralama olmadığı** `SectionList.tsx`'te, UTC tuzağı `lib/i18n/dates.ts`'te,
+`role="group"` seçimi ikisinin arasında. Burada yalnız dosyalara yayılan kısım.
+
+**Hata mock'ta görünemezdi.** `displayOrder` entry içinde sayılıyor, yani düz
+liste üç işi iç içe geçiriyor (`0,0,0,1,1,1,2,2,3,4`). Fixture'da iki atom ve
+sıfır entry vardı, `GET /profile/entries` handler'ı ise hiç yoktu. **Ders
+B-032'ninkiyle aynı:** mock yalnız yazıldığı kadarını gösterir, eksik bıraktığı
+şekil sessizce yanlış bir UI'a dönüşür. Mock artık atomları `displayOrder`'a
+göre sıralıyor — araya girme dev'de de görünsün diye.
+
+Doğrulandı: üç iş 5+3+2 = 10 madde ile doğru gruplandı, tarihler iki dilde de
+doğru, gevşek atomlar ek grup açmadan render edildi. H1 → H2 → H3 hiyerarşisi
+ayrıca sabitlendi; axe onu *yanlış* olduğunda söylemez.

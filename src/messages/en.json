@@ -130,7 +130,8 @@
     },
     "section": {
       "loading": "Loading…",
-      "empty": "Nothing in this section yet."
+      "empty": "Nothing in this section yet.",
+      "entryEmpty": "Nothing under this one yet."
     },
     "profile": {
       "title": "Your profile",
@@ -150,6 +151,10 @@
       "staleExplained": "The wording this was based on has changed since. Regenerating it is not built yet — editing it here is the way to bring it up to date.",
       "makePrimary": "Use this one by default",
       "unknownLanguage": "Unknown language"
+    },
+    "entry": {
+      "range": "{start} – {end}",
+      "rangeOngoing": "{start} – present"
     }
   },
   "Generation": {

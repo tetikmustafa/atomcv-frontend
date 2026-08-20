@@ -37,7 +37,7 @@
 | Aşama 1 — Profil editörü | 🔨 Sürüyor |
 | Aşama 2 — Üretim akışı + SSE | ⬜ |
 
-**Açık `B-nnn` yok** — B-032 gerçek backend'e karşı doğrulandı. **Test:** 224 birim.
+**Açık `B-nnn` yok** — B-032 gerçek backend'e karşı doğrulandı. **Test:** 235 birim · 13 e2e.
 **Aşama 1'in devrettikleri:** 4 maddeden 1'i kapandı — `notes/current.md`.
 
 ---

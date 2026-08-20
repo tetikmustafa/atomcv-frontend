@@ -17,12 +17,14 @@ type Schemas = components['schemas'];
 export type MockAtom = Schemas['Atom'];
 export type MockProfile = Schemas['Profile'];
 export type MockSection = Schemas['Section'];
+export type MockEntry = Schemas['Entry'];
 
 export type ProfileFixture = {
   profile: MockProfile;
   /** The profile head's own version, which travels only as an `ETag`. */
   profileVersion: number;
   sections: MockSection[];
+  entries: MockEntry[];
   atoms: MockAtom[];
 };
 
@@ -48,11 +50,69 @@ function initial(): ProfileFixture {
         verbatim: false,
         version: 0,
       },
+      /*
+        The other shape a section comes in: atoms hanging straight off it,
+        with no entries. Both are here because the editor has to render both,
+        and a fixture with only one of them let the missing half go unnoticed.
+      */
+      {
+        id: 'sec-skills',
+        kind: 'skills',
+        title: 'Skills',
+        layout: 'inline_list',
+        displayOrder: 1,
+        active: true,
+        alwaysInclude: false,
+        verbatim: false,
+        version: 0,
+      },
+    ],
+
+    /*
+      Two jobs in one section. `displayOrder` on an atom is numbered **within
+      its entry**, so both of these start at 0 — which is exactly why a flat
+      render of the section interleaves them.
+    */
+    entries: [
+      {
+        id: 'entry-trendyol',
+        sectionId: 'sec-experience',
+        title: 'Senior Backend Engineer',
+        organization: 'Trendyol',
+        location: 'Istanbul',
+        startDate: '2022-04-01',
+        displayOrder: 0,
+        importance: 0.9,
+        active: true,
+        alwaysInclude: false,
+        verbatim: false,
+        minAtoms: 2,
+        version: 0,
+      },
+      {
+        // No `endDate` on the one above: that is what "still there" looks
+        // like on the wire, and the heading has to say so in words.
+        id: 'entry-getir',
+        sectionId: 'sec-experience',
+        title: 'Backend Engineer',
+        organization: 'Getir',
+        location: 'Istanbul',
+        startDate: '2019-08-01',
+        endDate: '2022-03-01',
+        displayOrder: 1,
+        importance: 0.7,
+        active: true,
+        alwaysInclude: false,
+        verbatim: false,
+        minAtoms: 2,
+        version: 0,
+      },
     ],
     atoms: [
       {
         id: 'atom-1',
         sectionId: 'sec-experience',
+        entryId: 'entry-trendyol',
         kind: 'bullet',
         displayOrder: 0,
         importance: 0.6,
@@ -88,6 +148,7 @@ function initial(): ProfileFixture {
       {
         id: 'atom-2',
         sectionId: 'sec-experience',
+        entryId: 'entry-trendyol',
         kind: 'bullet',
         displayOrder: 1,
         importance: 0.4,
@@ -125,6 +186,70 @@ function initial(): ProfileFixture {
             contentHash: 'seeded',
             createdBy: 'llm_translate',
             stale: true,
+            version: 0,
+          },
+        ],
+      },
+      {
+        // The second job's first bullet. `displayOrder: 0` again — the number
+        // restarts inside each entry, so listing the section flat puts this
+        // between the two above rather than after them.
+        id: 'atom-3',
+        sectionId: 'sec-experience',
+        entryId: 'entry-getir',
+        kind: 'bullet',
+        displayOrder: 0,
+        importance: 0.5,
+        active: true,
+        alwaysInclude: false,
+        verbatim: false,
+        skills: ['Kafka'],
+        metrics: [],
+        properNouns: [],
+        source: 'manual',
+        verified: false,
+        version: 0,
+        variants: [
+          {
+            id: 'variant-3',
+            primary: true,
+            language: 'en',
+            content: { v: 1, runs: [{ t: 'Rewrote the courier assignment', m: [] }] },
+            plainText: 'Rewrote the courier assignment',
+            contentHash: 'seeded',
+            createdBy: 'user',
+            stale: false,
+            version: 0,
+          },
+        ],
+      },
+      {
+        // No `entryId`: hangs straight off its section, which is the normal
+        // shape for skills.
+        id: 'atom-4',
+        sectionId: 'sec-skills',
+        kind: 'skill',
+        displayOrder: 0,
+        importance: 0.8,
+        active: true,
+        alwaysInclude: false,
+        verbatim: false,
+        skills: ['Go'],
+        metrics: [],
+        properNouns: [],
+        source: 'manual',
+        verified: false,
+        version: 0,
+        variants: [
+          {
+            id: 'variant-4',
+            primary: true,
+            language: 'en',
+            content: { v: 1, runs: [{ t: 'Go', m: ['technology'] }] },
+            plainText: 'Go',
+            contentHash: 'seeded',
+            createdBy: 'user',
+            stale: false,
             version: 0,
           },
         ],
