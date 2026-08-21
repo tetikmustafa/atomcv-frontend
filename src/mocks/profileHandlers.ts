@@ -126,9 +126,19 @@ export const profileHandlers = [
       enabledLanguages?: string[];
     };
 
-    if (!body.enabledLanguages || body.enabledLanguages.length === 0) {
+    // `B-035`: both language fields are required in the body, and an empty
+    // `enabledLanguages` counts as missing. `sourceLanguage` joined them when
+    // `F-004` closed — it used to be the one field an omitting `PUT` left
+    // alone, and it could not start clearing instead because the column is
+    // `NOT NULL` and its default would have turned a Turkish profile English.
+    const missing = [
+      ...(body.sourceLanguage ? [] : ['sourceLanguage']),
+      ...(body.enabledLanguages?.length ? [] : ['enabledLanguages']),
+    ];
+
+    if (missing.length > 0) {
       return HttpResponse.json(
-        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['enabledLanguages'] }),
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: missing }),
         { status: 400 },
       );
     }
@@ -141,16 +151,14 @@ export const profileHandlers = [
       );
     }
 
-    // ⚠️ The answer carries the completeness from **before** the write — the
-    // server does this and it is reproduced rather than corrected. Measured:
-    // adding `selfDescription` to a profile at 80 answers 80 and reads back
-    // 90; removing it answers 90 and reads back 80. When the value does not
-    // change the two agree, which is what makes it so easy to miss.
+    // `F-003` closed: a response that carries `completeness` carries the value
+    // from **after** the write. It used to answer with the previous one, which
+    // hid behind the fact that two writes changing nothing agree.
     //
-    // Raised as `F-003`. Until it closes, `useReplaceProfile` refetches the
-    // head — and a mock that answered with the fresh number would make that
-    // refetch look pointless and invite its removal.
-    const stale = fixture.profile.completeness;
+    // The rule is about *responses that carry it*, not about the column: the
+    // section, entry and atom endpoints do not return the head at all and
+    // still leave the number to the next read. That is why the delete hooks
+    // invalidate the head and this one no longer has to.
 
     // Assigned, not merged: what is not sent is gone.
     fixture.profile = {
@@ -158,19 +166,17 @@ export const profileHandlers = [
       headline: body.headline ?? undefined,
       contact: body.contact ?? {},
       selfDescription: body.selfDescription ?? undefined,
-      // ⚠️ …with one exception the server makes and the docs do not:
-      // `sourceLanguage` **survives** being omitted, while `contact` becomes
-      // `{}` and `selfDescription` becomes `null`. Measured. Also `F-003`.
-      sourceLanguage: body.sourceLanguage ?? fixture.profile.sourceLanguage,
+      // No exceptions left: `PUT` replaces the whole head (`F-004`). The
+      // field cannot be absent here — it is refused above.
+      sourceLanguage: body.sourceLanguage,
       enabledLanguages: body.enabledLanguages,
       completeness: completenessOf(body.selfDescription),
     };
     fixture.profileVersion += 1;
 
-    return HttpResponse.json(
-      { ...fixture.profile, completeness: stale },
-      { headers: { ETag: `"${fixture.profileVersion}"` } },
-    );
+    return HttpResponse.json(fixture.profile, {
+      headers: { ETag: `"${fixture.profileVersion}"` },
+    });
   }),
 
   http.get('*/api/v1/profile/sections', () => HttpResponse.json(fixture.sections)),
@@ -250,8 +256,12 @@ export const profileHandlers = [
     // Compared as strings, which is safe for `YYYY-MM-DD` and avoids the
     // timezone question `Date` would drag in for a value that has no time.
     if (body.startDate && body.endDate && body.endDate < body.startDate) {
+      // `B-036`: `params.fields` names the ends the request actually sent, and
+      // a create sends both. A `PATCH` naming one end gets that one back.
       return HttpResponse.json(
-        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['endDate'] }),
+        problem(400, 'VALIDATION_FAILED', instance, [], {
+          fields: ['startDate', 'endDate'],
+        }),
         { status: 400 },
       );
     }
@@ -400,6 +410,109 @@ export const profileHandlers = [
    * that sends only the moved items works perfectly against a lenient mock
    * and fails against the real API.
    */
+  /**
+   * Editing a section. Only the fields the editor offers are modelled — the
+   * title, and the kind that decides what an atom under it is called.
+   */
+  http.patch('*/api/v1/profile/sections/:id', async ({ request, params }) => {
+    const id = String(params.id);
+    const instance = `/api/v1/profile/sections/${id}`;
+    const section = fixture.sections.find((candidate) => candidate.id === id);
+
+    if (!section) {
+      return HttpResponse.json(problem(404, 'RESOURCE_NOT_FOUND', instance), { status: 404 });
+    }
+
+    const refused = precondition(request, instance, section.version ?? 0);
+    if (refused) return refused;
+
+    const body = (await request.json()) as { title?: string; kind?: MockSection['kind'] };
+
+    const fields = [
+      ...('title' in body && !body.title?.trim() ? ['title'] : []),
+      ...('kind' in body && !(body.kind && SECTION_KINDS.includes(body.kind)) ? ['kind'] : []),
+    ];
+
+    if (fields.length > 0) {
+      return HttpResponse.json(problem(400, 'VALIDATION_FAILED', instance, [], { fields }), {
+        status: 400,
+      });
+    }
+
+    if (body.title !== undefined) section.title = body.title.trim();
+    if (body.kind !== undefined) section.kind = body.kind;
+    section.version = (section.version ?? 0) + 1;
+
+    return HttpResponse.json(section, { headers: { ETag: `"${section.version}"` } });
+  }),
+
+  /**
+   * Editing an entry.
+   *
+   * ⚠️ **The date rule is checked against the result of the patch, not against
+   * the body** (`F-002`): patching one end compares it with the other end as
+   * stored, or the range could be inverted one field at a time.
+   *
+   * `params.fields` names the ends the request actually sent (`B-036`) — the
+   * client can only correct what it put on screen. And a patch that touches
+   * **no** date is not checked at all, deliberately: a row written backwards
+   * before `F-002` closed would otherwise refuse an unrelated title edit,
+   * naming a field the form is not even showing.
+   */
+  http.patch('*/api/v1/profile/entries/:id', async ({ request, params }) => {
+    const id = String(params.id);
+    const instance = `/api/v1/profile/entries/${id}`;
+    const entry = fixture.entries.find((candidate) => candidate.id === id);
+
+    if (!entry) {
+      return HttpResponse.json(problem(404, 'RESOURCE_NOT_FOUND', instance), { status: 404 });
+    }
+
+    const refused = precondition(request, instance, entry.version ?? 0);
+    if (refused) return refused;
+
+    const body = (await request.json()) as {
+      title?: string;
+      organization?: string | null;
+      location?: string | null;
+      startDate?: string | null;
+      endDate?: string | null;
+    };
+
+    if ('title' in body && !body.title?.trim()) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['title'] }),
+        { status: 400 },
+      );
+    }
+
+    const touched = (['startDate', 'endDate'] as const).filter((field) => field in body);
+
+    if (touched.length > 0) {
+      // The result of the patch, not the body.
+      const start = 'startDate' in body ? body.startDate : entry.startDate;
+      const end = 'endDate' in body ? body.endDate : entry.endDate;
+
+      if (start && end && end < start) {
+        return HttpResponse.json(
+          problem(400, 'VALIDATION_FAILED', instance, [], { fields: touched }),
+          { status: 400 },
+        );
+      }
+    }
+
+    for (const field of ['title', 'organization', 'location', 'startDate', 'endDate'] as const) {
+      if (!(field in body)) continue;
+      const value = body[field];
+      // `null` clears; the schema says so for every one of these but `title`.
+      if (value === null || value === '') delete entry[field];
+      else entry[field] = typeof value === 'string' ? value.trim() : value;
+    }
+
+    entry.version = (entry.version ?? 0) + 1;
+    return HttpResponse.json(entry, { headers: { ETag: `"${entry.version}"` } });
+  }),
+
   /**
    * Reordering the sections.
    *
@@ -668,10 +781,18 @@ export const profileHandlers = [
   }),
 
   /**
-   * Deleting a wording. **The primary one cannot be**, measured — not when it
-   * is the only one, and not when a second exists either, which makes it one
-   * rule rather than two. Nothing in the editor offers this yet; the handler
-   * exists so the refusal is on record where the control would be written.
+   * Deleting a wording. **Two rules, not one** — our first measurement read
+   * them as one because it only logged the status, and `B-036` corrected it.
+   * The distinction is the whole point: the two refusals want two different
+   * offers from the screen.
+   *
+   * | Case | `params.fields` | What the client can do |
+   * |---|---|---|
+   * | the atom's last wording | `["variantId"]` | delete the atom instead |
+   * | primary, others exist | `["primary"]` | promote another one first |
+   *
+   * Nothing in the editor offers this yet; the handler exists so both
+   * refusals are on record where that control will be written.
    */
   http.delete('*/api/v1/profile/atoms/:id/variants/:variantId', ({ request, params }) => {
     const id = String(params.id);
@@ -687,9 +808,13 @@ export const profileHandlers = [
     const refused = precondition(request, instance, variant.version ?? 0);
     if (refused) return refused;
 
-    if (variant.primary) {
+    const isLast = (atom!.variants ?? []).length === 1;
+
+    if (isLast || variant.primary) {
       return HttpResponse.json(
-        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['variantId'] }),
+        problem(400, 'VALIDATION_FAILED', instance, [], {
+          fields: [isLast ? 'variantId' : 'primary'],
+        }),
         { status: 400 },
       );
     }

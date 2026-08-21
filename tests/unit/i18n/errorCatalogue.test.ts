@@ -185,6 +185,50 @@ describe('the numbers inside those sentences', () => {
 });
 
 /**
+ * The quota day turns at **UTC** midnight (`F-007`) — 03:00 in Turkey — so the
+ * server sends an absolute instant and the client is the only side that can
+ * put it in the reader's own zone. Rule 9, on the one param type ICU cannot
+ * take as a string.
+ */
+describe('when a quota renews', () => {
+  const RESETS_AT = new Date(PARAMS.QUOTA_EXCEEDED.resetsAt);
+
+  /** Computed here rather than written down: the assertion must not depend on
+   *  which zone the test runner happens to be in, only on it being formatted. */
+  const localTime = (locale: string) =>
+    new Intl.DateTimeFormat(locale, { timeStyle: 'short' }).format(RESETS_AT);
+
+  it.each(CATALOGUES)('says the time in %s, in the reader’s own zone', (locale, messages) => {
+    const t = createTranslator({ locale, messages, namespace: 'errors' });
+
+    for (const code of ['QUOTA_EXCEEDED', 'PROFILE_QUOTA_EXCEEDED'] as const) {
+      const rendered = t(code, formatErrorParams(PARAMS[code], locale));
+
+      expect(rendered).toContain(localTime(locale));
+      expect(rendered).not.toContain('2026-08-16T00:00:00Z');
+    }
+  });
+
+  /**
+   * Why `formatErrorParams` has to convert it, and the failure is worse than
+   * an ugly date: ICU's `time` argument needs a `Date`, and handed the ISO
+   * string the server actually sends, next-intl does not print it and does not
+   * throw — it gives back the bare key, exactly as it does for an array.
+   *
+   * So the cost of skipping the conversion is a user reading
+   * `errors.QUOTA_EXCEEDED` on the screen meant to explain the quota, with
+   * nothing logged and nothing red in a test that only checked the call
+   * returned a string.
+   */
+  it('degrades to the bare key when the instant is passed unformatted', () => {
+    const t = createTranslator({ locale: 'en', messages: en, namespace: 'errors' });
+    const raw = PARAMS.QUOTA_EXCEEDED as unknown as Record<string, IcuValue>;
+
+    expect(t('QUOTA_EXCEEDED', raw)).toBe('errors.QUOTA_EXCEEDED');
+  });
+});
+
+/**
  * `spec/06-pipeline-d-g.md` § 23: the server already tried shrinking the content twice before
  * returning this, so "try again" is guaranteed to fail again. The resolutions
  * are the server's to send, but the *message* is ours, and it should not

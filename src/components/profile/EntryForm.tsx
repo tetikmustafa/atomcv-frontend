@@ -8,9 +8,15 @@
  * This is the form the validation stack was brought in for. One required
  * field, two optional dates, and a rule spanning them: an end before a start.
  * The server used to accept that with a `201`, leaving the heading reading
- * "May 2023 - May 2020" for good; `F-002` closed and it is a `400` naming
- * `endDate` now. The check stays here anyway — it answers without a round trip
- * and it answers next to the field, which a `400` cannot.
+ * "May 2023 - May 2020" for good; `F-002` closed and it is a `400` now. The
+ * check stays here anyway — it answers without a round trip and it answers
+ * next to the field, which a `400` cannot.
+ *
+ * The same form edits an existing entry. Fields, schema, error wiring and
+ * labels are identical, so a second component would be this one with its own
+ * bugs; only the mutation, the defaults and three strings differ. Editing
+ * sends every field it shows — see `toEntryPatch` for why that is not
+ * optional.
  *
  * `type="date"` rather than a picker component: keyboard-accessible and
  * localised by the platform for free, and it hands back exactly the
@@ -25,17 +31,19 @@ import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useCreateEntry } from '@/hooks/useProfile';
+import { useCreateEntry, usePatchEntry } from '@/hooks/useProfile';
 import {
   entryForm,
   toEntryCreate,
+  toEntryPatch,
   validationKey,
   type EntryFormValues,
 } from '@/lib/forms/profileSchemas';
 import { announce } from '@/stores/announcerStore';
-import type { Section } from '@/lib/api/endpoints/profile';
+import type { Entry, Section } from '@/lib/api/endpoints/profile';
 
-export type EntryFormProps = { section: Section; onDone: () => void };
+/** `entry` present means editing that one; absent means adding to `section`. */
+export type EntryFormProps = { section: Section; entry?: Entry; onDone: () => void };
 
 const EMPTY: EntryFormValues = {
   title: '',
@@ -45,10 +53,16 @@ const EMPTY: EntryFormValues = {
   endDate: '',
 };
 
-export function EntryForm({ section, onDone }: EntryFormProps) {
+export function EntryForm({ section, entry, onDone }: EntryFormProps) {
   const t = useTranslations('Editor.addEntry');
+  const te = useTranslations('Editor.editEntry');
   const tv = useTranslations('Editor.validation');
   const create = useCreateEntry();
+  const patch = usePatchEntry();
+
+  const editing = entry !== undefined;
+  const pending = editing ? patch.isPending : create.isPending;
+  const error = editing ? patch.error : create.error;
 
   const {
     register,
@@ -57,17 +71,41 @@ export function EntryForm({ section, onDone }: EntryFormProps) {
     formState: { errors },
   } = useForm<EntryFormValues>({
     resolver: zodResolver(entryForm),
-    defaultValues: EMPTY,
+    // The inputs are never `undefined`: an uncontrolled field that starts
+    // undefined and later receives a value logs React's controlled/uncontrolled
+    // warning and loses the first keystroke.
+    defaultValues: entry
+      ? {
+          title: entry.title ?? '',
+          organization: entry.organization ?? '',
+          location: entry.location ?? '',
+          startDate: entry.startDate ?? '',
+          endDate: entry.endDate ?? '',
+        }
+      : EMPTY,
   });
 
   const submit = handleSubmit((values) => {
-    if (create.isPending) return;
+    if (pending) return;
+
+    if (editing) {
+      patch.mutate(
+        { id: entry.id!, patch: toEntryPatch(values) },
+        {
+          onSuccess: (updated) => {
+            onDone();
+            announce(te('saved', { title: updated.title ?? values.title }));
+          },
+        },
+      );
+      return;
+    }
 
     create.mutate(toEntryCreate(section.id!, values), {
-      onSuccess: (entry) => {
+      onSuccess: (created) => {
         reset(EMPTY);
         onDone();
-        announce(t('added', { title: entry.title ?? values.title }));
+        announce(t('added', { title: created.title ?? values.title }));
       },
     });
   });
@@ -119,17 +157,18 @@ export function EntryForm({ section, onDone }: EntryFormProps) {
       <p className="text-muted-foreground text-xs">{t('endDateHint')}</p>
 
       <div className="flex gap-2">
-        <Button type="submit" size="sm" disabled={create.isPending}>
-          {create.isPending ? t('adding') : t('submit')}
+        <Button type="submit" size="sm" disabled={pending}>
+          {pending ? (editing ? te('saving') : t('adding')) : editing ? te('submit') : t('submit')}
         </Button>
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          disabled={create.isPending}
+          disabled={pending}
           onClick={() => {
             reset(EMPTY);
             create.reset();
+            patch.reset();
             onDone();
           }}
         >
@@ -137,7 +176,15 @@ export function EntryForm({ section, onDone }: EntryFormProps) {
         </Button>
       </div>
 
-      {create.error ? <ErrorPanel error={create.error} onRetry={() => create.reset()} /> : null}
+      {error ? (
+        <ErrorPanel
+          error={error}
+          onRetry={() => {
+            create.reset();
+            patch.reset();
+          }}
+        />
+      ) : null}
     </form>
   );
 }

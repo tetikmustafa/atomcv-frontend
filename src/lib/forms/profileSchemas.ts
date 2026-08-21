@@ -1,5 +1,6 @@
 /**
- * Validation for the profile's create forms.
+ * Validation for the profile's section and entry forms — the same schemas
+ * serve adding and editing.
  *
  * **Checked against the generated request types, never restated.** The
  * `Extends<…>` aliases below are what make that true: rename a field on the
@@ -15,16 +16,21 @@
  * - **What is worth saying before the round trip.** A date range running
  *   backwards used to be accepted with a `201` and rendered as "Jan 2022 –
  *   Jan 2019" in the entry heading, which is what `F-002` was about. The
- *   server refuses it now — a `400` naming `endDate`, re-verified — so this is
- *   no longer the only defence, but it is still the faster one and it puts the
- *   message next to the field. The two agree on the boundary: `>=`, and
- *   silence when there is no end date.
+ *   server refuses it now — so this is no longer the only defence, but it is
+ *   still the faster one and it puts the message next to the field. The two
+ *   agree on the boundary: `>=`, and silence when there is no end date.
+ *
+ *   Where they differ is which field is *named*. A create is a `400` naming
+ *   **both** ends (`B-036`), because the request sent both; this refine puts
+ *   its one message under `endDate`. That is deliberate — both boxes are on
+ *   screen and saying it twice is noise. `params.fields` is for a client
+ *   deciding which input to point at, not a shape this has to mirror.
  * - **What a round trip would waste.** Refusing an empty title locally is the
  *   same answer the server gives, just sooner and next to the field.
  */
 
 import { z } from 'zod';
-import type { EntryCreate, SectionCreate } from '@/lib/api/endpoints/profile';
+import type { EntryCreate, EntryPatch, SectionCreate } from '@/lib/api/endpoints/profile';
 
 /** Compile-time only: fails to resolve unless `T` is assignable to `U`. */
 type Extends<T extends U, U> = T;
@@ -150,5 +156,33 @@ export function toEntryCreate(sectionId: string, values: EntryFormValues): Entry
     ...(values.location.trim() ? { location: values.location.trim() } : {}),
     ...(values.startDate ? { startDate: values.startDate } : {}),
     ...(values.endDate ? { endDate: values.endDate } : {}),
+  };
+}
+
+/**
+ * What the entry form sends when it is editing rather than adding.
+ *
+ * ⚠️ **Every field the form shows travels, blanks included — as `null`, not
+ * omitted.** `PATCH` treats an absent field as "leave it alone", so clearing an
+ * organisation by emptying the box would silently do nothing; `null` is how
+ * the schema spells "clear this" for all four optional fields.
+ *
+ * It matters most for the dates. The server checks the range against the
+ * **result** of the patch — one end against the other as stored — and
+ * `params.fields` then names the ends the request actually sent (`B-036`).
+ * Sending both ends every time is what keeps that error pointing at a field
+ * the user can see: an error naming `endDate` on a request that only carried
+ * `startDate` is not one they can act on.
+ *
+ * `title` is the exception. It is required, so it has no cleared state and
+ * `null` is not a value the schema accepts for it.
+ */
+export function toEntryPatch(values: EntryFormValues): EntryPatch {
+  return {
+    title: values.title.trim(),
+    organization: values.organization.trim() || null,
+    location: values.location.trim() || null,
+    startDate: values.startDate || null,
+    endDate: values.endDate || null,
   };
 }

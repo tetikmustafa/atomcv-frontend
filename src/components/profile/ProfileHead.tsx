@@ -23,7 +23,9 @@
  * the anonymous-mode rule forbids. So the form carries the current values
  * forward — `enabledLanguages` is required on this endpoint, and dropping it
  * is a `400` naming it, verified — and the control that edits them arrives
- * with `capabilities`.
+ * with `capabilities`. What changed with `B-035` is only that
+ * `sourceLanguage` must now be *present* in the body, not that the editor may
+ * choose it.
  *
  * Email is not validated here. The server does it and says which field
  * (`400`, `params.fields: ["contact.email"]`, verified), which the save status
@@ -68,9 +70,13 @@ function toUpdate(profile: Profile): ProfileUpdate {
     headline: profile.headline ?? '',
     contact: { ...(profile.contact ?? {}) },
     selfDescription: profile.selfDescription ?? '',
-    ...(profile.sourceLanguage ? { sourceLanguage: profile.sourceLanguage } : {}),
-    // Required by the endpoint. An empty array is a 400 naming it, so the
-    // server's own value is carried forward rather than defaulted.
+    // Both are required in the body now (`B-035`), and both are carried
+    // forward rather than defaulted. `sourceLanguage` used to be the one field
+    // an omitting `PUT` left alone — that exception is gone, and it could not
+    // simply start clearing: the column is `NOT NULL` and falling back to its
+    // default would have turned a Turkish profile English on any head edit. So
+    // it is required instead, and omitting either is a 400 naming it.
+    sourceLanguage: profile.sourceLanguage,
     enabledLanguages: profile.enabledLanguages ?? [],
   };
 }

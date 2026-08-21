@@ -7,7 +7,6 @@ import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { describe, expect, it } from 'vitest';
 import { ProfileHead } from '@/components/profile/ProfileHead';
-import { useProfile } from '@/hooks/useProfile';
 import { getProfile, type Profile } from '@/lib/api/endpoints/profile';
 import type { Versioned } from '@/lib/api/client';
 import { profileKeys } from '@/lib/api/queryKeys';
@@ -18,19 +17,13 @@ import { server } from '@/mocks/node';
  * Rendered from a seeded cache, the way the editor does it: the head's version
  * is the `ETag`, and it only reaches the client through the read.
  */
-async function renderHead({ observeHead = false }: { observeHead?: boolean } = {}) {
+async function renderHead() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
 
   const head = await getProfile();
   client.setQueryData(profileKeys.head(), head);
-
-  /** Stands in for `ProfileEditor`, which is what reads the head in the app. */
-  function ObserveHead() {
-    useProfile();
-    return null;
-  }
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
@@ -41,13 +34,7 @@ async function renderHead({ observeHead = false }: { observeHead?: boolean } = {
   }
 
   const user = userEvent.setup();
-  const rendered = render(
-    <>
-      {observeHead && <ObserveHead />}
-      <ProfileHead profile={head.data} />
-    </>,
-    { wrapper: Wrapper },
-  );
+  const rendered = render(<ProfileHead profile={head.data} />, { wrapper: Wrapper });
 
   return { user, client, ...rendered };
 }
@@ -216,21 +203,17 @@ describe('the profile head', () => {
   });
 
   /**
-   * ⚠️ `F-003`. `PUT /profile` answers with the `completeness` computed
-   * **before** the write — measured: adding a `selfDescription` to a profile
-   * at 80 answers 80 and reads back 90.
+   * `F-003`, now closed server-side: a response carrying `completeness` carries
+   * the value from **after** the write. It used to answer with the previous
+   * one, so `CompletenessBar` — which renders this number straight from the
+   * cache — showed the old percentage after every head edit, and the two agree
+   * whenever the value has not moved, which is what hid it.
    *
-   * `CompletenessBar` renders that number straight from this cache entry, so
-   * without the refetch the bar keeps showing the old percentage after every
-   * head edit, and nothing else would ever put it right. The two agree
-   * whenever the value has not changed, which is what makes it easy to miss.
+   * The refetch that worked around it is gone; the response alone is enough
+   * now. The assertion is unchanged, which is the point of keeping it.
    */
-  it('corrects the completeness the write answered with', async () => {
-    // Rendered with a real observer on the head, because the correction is an
-    // invalidation and an invalidation needs a `queryFn` to call — a key that
-    // was only ever seeded with `setQueryData` has none, and the refetch is
-    // silently a no-op. `ProfileEditor` holds exactly this observer open.
-    const { user, client } = await renderHead({ observeHead: true });
+  it('takes the completeness the write answered with', async () => {
+    const { user, client } = await renderHead();
 
     expect(client.getQueryData<Versioned<Profile>>(profileKeys.head())?.data.completeness).toBe(80);
 

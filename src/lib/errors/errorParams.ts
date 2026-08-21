@@ -5,6 +5,15 @@
  * the whole reason the catalogue publishes types (`{pinnedPages, number}`
  * formats, `{pinnedPages}` merely substitutes).
  *
+ * Timestamps do not either. Two codes carry one — `QUOTA_EXCEEDED` and
+ * `PROFILE_QUOTA_EXCEEDED` both send `resetsAt` — and it arrives as an ISO
+ * string, which ICU's `date`/`time` arguments cannot format: they need a
+ * `Date`. Left as a string it would be substituted raw, so the sentence would
+ * read "renews at 2026-08-22T00:00:00Z". Rule 9 again, and the reason the
+ * server sends an absolute instant rather than an hour: the quota day turns at
+ * **UTC** midnight (`F-007`), which is 03:00 in Turkey, and only the client
+ * can put that in the reader's own zone.
+ *
  * Lists do not. Five codes carry a `string[]` — `missing`, `tried`, `issues`,
  * `detectedCandidates`, `fields` — and ICU has no list argument, so an array
  * dropped into a message stringifies as `a,b,c`: no spaces, no conjunction,
@@ -26,8 +35,26 @@ function formatList(values: readonly unknown[], locale: string): string {
 /** What ICU can interpolate. Numbers and dates stay typed so it can format them. */
 export type IcuValue = string | number | Date;
 
-function toIcuValue(value: unknown, locale: string): IcuValue {
+/**
+ * The params the catalogue types as `timestamp`.
+ *
+ * By name, because `params` is untyped on the wire and a string that merely
+ * looks like a date is not one — an id, a filename, a headline could all parse.
+ * The catalogue is the authority on which keys carry an instant, so the list
+ * moves when it does.
+ */
+const TIMESTAMP_PARAMS = new Set(['resetsAt']);
+
+function toIcuValue(key: string, value: unknown, locale: string): IcuValue {
   if (Array.isArray(value)) return formatList(value, locale);
+
+  if (TIMESTAMP_PARAMS.has(key) && typeof value === 'string') {
+    const parsed = new Date(value);
+    // A value the server should not have sent. Falling through to the string
+    // keeps the sentence readable rather than printing "Invalid Date".
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+
   if (typeof value === 'number' || typeof value === 'string') return value;
   if (value instanceof Date) return value;
 
@@ -45,6 +72,6 @@ export function formatErrorParams(
   if (!params) return {};
 
   return Object.fromEntries(
-    Object.entries(params).map(([key, value]) => [key, toIcuValue(value, locale)]),
+    Object.entries(params).map(([key, value]) => [key, toIcuValue(key, value, locale)]),
   );
 }

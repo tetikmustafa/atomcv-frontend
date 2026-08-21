@@ -21,19 +21,33 @@ import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useCreateSection } from '@/hooks/useProfile';
+import { useCreateSection, usePatchSection } from '@/hooks/useProfile';
 import { sectionForm, validationKey, type SectionFormValues } from '@/lib/forms/profileSchemas';
 import { announce } from '@/stores/announcerStore';
+import type { Section } from '@/lib/api/endpoints/profile';
 
 const KINDS = sectionForm.shape.kind.options;
 
-export type SectionFormProps = { onDone: () => void };
+/**
+ * `section` present means editing that one; absent means adding.
+ *
+ * One form for both, because the fields, the schema, the error wiring and the
+ * labels are identical — a second copy would be the same form with its own
+ * bugs. Only the mutation and four strings differ.
+ */
+export type SectionFormProps = { section?: Section; onDone: () => void };
 
-export function SectionForm({ onDone }: SectionFormProps) {
+export function SectionForm({ section, onDone }: SectionFormProps) {
   const t = useTranslations('Editor.addSection');
+  const te = useTranslations('Editor.editSection');
   const tk = useTranslations('Editor.sectionKind');
   const tv = useTranslations('Editor.validation');
   const create = useCreateSection();
+  const patch = usePatchSection();
+
+  const editing = section !== undefined;
+  const pending = editing ? patch.isPending : create.isPending;
+  const error = editing ? patch.error : create.error;
 
   const {
     register,
@@ -42,17 +56,33 @@ export function SectionForm({ onDone }: SectionFormProps) {
     formState: { errors },
   } = useForm<SectionFormValues>({
     resolver: zodResolver(sectionForm),
-    defaultValues: { kind: 'custom', title: '' },
+    defaultValues: {
+      kind: section?.kind ?? 'custom',
+      title: section?.title ?? '',
+    },
   });
 
   const submit = handleSubmit((values) => {
-    if (create.isPending) return;
+    if (pending) return;
+
+    if (editing) {
+      patch.mutate(
+        { id: section.id!, patch: values },
+        {
+          onSuccess: (updated) => {
+            onDone();
+            announce(te('saved', { title: updated.title ?? values.title }));
+          },
+        },
+      );
+      return;
+    }
 
     create.mutate(values, {
-      onSuccess: (section) => {
+      onSuccess: (created) => {
         reset();
         onDone();
-        announce(t('added', { title: section.title ?? values.title }));
+        announce(t('added', { title: created.title ?? values.title }));
       },
     });
   });
@@ -101,17 +131,18 @@ export function SectionForm({ onDone }: SectionFormProps) {
       </div>
 
       <div className="flex gap-2">
-        <Button type="submit" size="sm" disabled={create.isPending}>
-          {create.isPending ? t('adding') : t('submit')}
+        <Button type="submit" size="sm" disabled={pending}>
+          {pending ? (editing ? te('saving') : t('adding')) : editing ? te('submit') : t('submit')}
         </Button>
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          disabled={create.isPending}
+          disabled={pending}
           onClick={() => {
             reset();
             create.reset();
+            patch.reset();
             onDone();
           }}
         >
@@ -119,7 +150,15 @@ export function SectionForm({ onDone }: SectionFormProps) {
         </Button>
       </div>
 
-      {create.error ? <ErrorPanel error={create.error} onRetry={() => create.reset()} /> : null}
+      {error ? (
+        <ErrorPanel
+          error={error}
+          onRetry={() => {
+            create.reset();
+            patch.reset();
+          }}
+        />
+      ) : null}
     </form>
   );
 }

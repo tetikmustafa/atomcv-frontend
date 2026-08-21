@@ -17,40 +17,70 @@
 
 ## ACK — frontend tamamladı, backend arşivleyebilir
 
-### B-034 · Demote artık sürüm artırıyor — iyimser güncellemeniz de artırmalı
-**Since:** Adım 1 · F-001 kapanışı · **Spec:** `spec/08-api.md` § 35.6
-`PATCH /profile/atoms/{id}/variants/{vid}` ile bir sözcükleme birincil yapıldığında
-**demote edilen satırın `version`'ı da artıyor** artık. F-001'de istediğiniz buydu;
-diğer seçenek sözleşmeye "iyimser kilit bu satırda çalışmıyor" istisnası yazmaktı.
-**Aksiyon:** `usePatchVariant` demote'u önbelleğe kendisi uyguluyor ve `version`'a
-dokunmuyordu — tesadüfen hizalıydı, artık değil. Yerel demote `version`'ı **+1**
-yapmalı, yoksa invalidation gelene kadar elinizde bayat bir etag var ve o pencerede
-yapılan bir yazma 412 alır.
-**Değişmeyen:** Atomun promote'a karışmayan sözcüklemeleri sürümlenmiyor; onların
-etag'leri geçerli kalıyor. Yani "hepsini bir artır" da doğru değil, yalnız demote edilen.
-**Frontend:** Uygulandı ve doğrulandı. `usePatchVariant.onSuccess` demote edilen
-satırın sürümünü **+1** yapıyor — yalnız o satırın; promote'a karışmayanlara
-dokunmuyor. `version` telde opsiyonel olduğundan artış koşullu, yoksa
-`If-Match: "NaN"` giderdi.
+### B-035 · `PUT /profile` gövdesinde `sourceLanguage` artık **zorunlu**
+**Since:** commit `38993f5` · F-004 kapanışı · **Spec:** `spec/08-api.md` § 35.6
+F-004'te sorduğunuz iki seçenekten "temizlensin" tarafını seçtik, ama kolon
+`NOT NULL` olduğu için temizlenecek bir değer yok — `DEFAULT`'una düşürmek
+Türkçe yazılmış bir profili herhangi bir baş düzenlemesinde sessizce
+İngilizceye çevirirdi. Bu yüzden alan **gövdede zorunlu** oldu: eksikse
+**400 `VALIDATION_FAILED`** + `params.fields: ["sourceLanguage"]`.
+Artık başın **hiçbir** alanı merge edilmiyor, istisna kalmadı.
+**Aksiyon:** Sizde kırılan bir ekran olmamalı — baş formu dokuz alanı da
+gönderiyor. Ama şema değişti: `sourceLanguage` OpenAPI'de `required`, yani
+`gen:api`'den sonra üretilen tipte opsiyonelliği kalkıyor. Alanı göndermeyen
+**mock'lar ve testler** 400 almaya başlar; `POST`/`PATCH` uçları etkilenmiyor.
 
-Gerçek uca karşı, MSW kapalı, iki yönde de ölçüldü — ve ilk koşum **kanıt
-değildi**: `onSuccess`'in invalidation'ı koleksiyonu yeniden çekip sürümleri
-seed'lediği için eksik artışı onarıyor, düzeltmesiz de geçiyordu. Ayırt etmek
-için `GET /profile/atoms` tutuldu:
+### B-036 · Hata `params.fields` artık isteğin gönderdiği alanı adlandırıyor
+**Since:** commit `2be3bc0`, `5c5a67f` · F-005 + F-006 · **Spec:** `spec/08-api.md` § 35.2
+Entry tarih kuralı (F-005) ve sözcükleme silme (F-006) için `params.fields`'ın
+ne döndüğü sözleşmeye tabloyla yazıldı. Sözcükleme tarafında ölçümünüz eksikti:
+ret **tek kural değil, iki** ve ikisi farklı alan döndürüyor.
 
 ```
-düzeltmesiz   PATCH …/variants/21f6… if-match="14" -> 412
-düzeltmeli    PATCH …/variants/21f6… if-match="17" -> 200   (önbellek 16, +1)
+PATCH  entries/{id} {"startDate": …}     400 fields: ["startDate"]   ← değişti
+PATCH  entries/{id} {"endDate":   …}     400 fields: ["endDate"]
+PATCH  entries/{id} iki uç birden        400 fields: ["startDate","endDate"]
+POST   entries      ters aralık          400 fields: ["startDate","endDate"]  ← değişti
+DELETE …/variants/{vid}  son sözcükleme  400 fields: ["variantId"]
+DELETE …/variants/{vid}  birincil, başkası var
+                                         400 fields: ["primary"]  ← siz variantId ölçmüştünüz
 ```
 
-Not: pencere her zaman kendini onarmıyor. Refetch yalnız koleksiyonun etkin bir
-gözlemcisi varsa oluyor ve editör listesiz de çizilebiliyor — o hâlde bayat etag
-kalıcı. Üç birim testi sabitliyor, MSW handler'ı da artık demote edileni
-sürümlüyor.
+**Aksiyon:** İki yerde. (1) `params.fields`'ı input'a çeviren eşlemede
+`startDate` artık gerçek bir değer ve create iki alan birden döndürüyor.
+(2) Mock handler'larınız her iki silme reddi için de `variantId` döndürüyor
+olmalı — `primary` durumu ayrı, ve sözcükleme silme kontrolünü çizerken
+ayırmanız gereken şey tam olarak bu: `variantId` "atomu sil", `primary`
+"önce başkasını varsayılan yap" demek.
 
-F-002 de doğrulandı: create `400` + `endDate`, eşit tarih `201`, patch iki
-yönden de saklanan yarıya göre reddediyor, ileri aralık `200`. İstemci kontrolü
-kaldı — daha hızlı ve mesajı alanın yanına koyabilen taraf o.
+**Değişmeyen:** hiçbir tarihe dokunmayan bir `PATCH` artık **hiç
+denetlenmiyor**. F-002'den önce ters kaydedilmiş bir satırın başlığı bu
+sayede düzenlenebiliyor; o satırların tarihini düzeltmek yine ayrı bir yama.
+**Frontend (B-035):** Baş formu `sourceLanguage`'ı koşullu gönderiyordu
+(`profile.sourceLanguage ? {…} : {}`) — yani alanı olmayan bir profilde onu
+düşürürdü ve artık 400 alırdı. Koşul kaldırıldı, dokuz alan da her seferinde
+gidiyor. Mock `PUT` de ikisini birden zorunlu tutuyor ve eksik olan(lar)ı
+`params.fields`'ta adlandırıyor; `sourceLanguage` merge'ü kaldırıldı.
+**`gen:api` henüz çalıştırılamadı** — sunucu ayakta değil. Şema `required`
+olduğunda üretilen tipte `ProfileUpdate['sourceLanguage']` zorunlu olacak ve
+bizim `toUpdate`'imiz `string | undefined` verdiği için typecheck kırılacak;
+o kırılma doğru yerde ve orada karşılanacak.
+
+**Frontend (B-036):** İki yer de yapıldı. Entry create mock'u artık
+`["startDate","endDate"]`, sözcükleme silme iki ayrı ret üretiyor
+(`variantId` / `primary`). Entry `PATCH` mock'u da yazıldı ve kuralı
+**yamanın sonucuna** uyguluyor; hiçbir tarihe dokunmayan bir yama
+denetlenmiyor. Üçü de testli, üçü de negatif kontrolden geçti.
+
+Ölçüm hatası bizde: gerçek uca vurduk ama o vakada yalnız `status`'ü
+logladık, `params`'ı hiç basmadık — `variantId`'yi *son sözcükleme*
+vakasından ölçüp ikisine genelledik. Mock'tan ölçülmedi; tek ölçülmüş
+vakadan iki vakaya genelleme yapıldı. Sonda artık iki reddi de ayrı basıyor.
+
+Bunun somut karşılığı: entry düzenleme formu `toEntryPatch` ile **gördüğü
+her alanı** gönderiyor, boşları `null` olarak. Yalnız değişeni göndermek
+`params.fields`'ın kullanıcının ekranda görmediği bir alanı adlandırmasına
+yol açardı.
 
 
 ---

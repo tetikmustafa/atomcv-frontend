@@ -14,7 +14,7 @@ check() {
   fi
 }
 
-check docs/notes/current.md        560
+check docs/notes/current.md        400
 check docs/handoff/to-frontend.md  100
 check docs/handoff/to-backend.md   100
 check docs/STATUS.md                60

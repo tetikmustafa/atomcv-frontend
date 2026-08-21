@@ -32,6 +32,8 @@ import { AddEntry } from '@/components/profile/AddEntry';
 import { AddSection } from '@/components/profile/AddSection';
 import { AtomEditor } from '@/components/profile/AtomEditor';
 import { DeleteControl } from '@/components/profile/DeleteControl';
+import { EditEntry } from '@/components/profile/EditEntry';
+import { EditSection } from '@/components/profile/EditSection';
 import { EntryHeading } from '@/components/profile/EntryHeading';
 import { SortableList } from '@/components/profile/SortableList';
 import { Button } from '@/components/ui/button';
@@ -265,10 +267,13 @@ function SectionAtoms({ section }: { section: Section }) {
                 <div role="group" aria-labelledby={headingId} className="flex flex-col gap-2">
                   <div className="flex items-start justify-between gap-2">
                     <EntryHeading entry={entry} id={headingId} />
-                    <DeleteEntryControl
-                      entry={entry}
-                      atoms={atoms.filter((atom) => atom.entryId === entry.id).length}
-                    />
+                    <div className="flex shrink-0 items-center">
+                      <EditEntry section={section} entry={entry} />
+                      <DeleteEntryControl
+                        entry={entry}
+                        atoms={atoms.filter((atom) => atom.entryId === entry.id).length}
+                      />
+                    </div>
                   </div>
 
                   <AtomGroup
@@ -289,8 +294,12 @@ function SectionAtoms({ section }: { section: Section }) {
 
       {showAddEntry && <AddEntry section={section} />}
 
-      {/* Last in the panel, away from the controls that add things. */}
-      <div className="border-t pt-3">
+      {/* Last in the panel, away from the controls that add things. Editing
+          sits beside deleting rather than next to the heading: the heading is
+          the collapse toggle, and hanging controls off it makes the one thing
+          on screen you press most often into a cluster. */}
+      <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+        <EditSection section={section} />
         <DeleteSectionControl section={section} entries={entries.length} atoms={atoms.length} />
       </div>
     </div>

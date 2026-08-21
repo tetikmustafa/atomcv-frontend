@@ -7,7 +7,7 @@
     "UNPARSEABLE_JOB_DESCRIPTION": "Bu ilanı çözümleyemedik. İçinden {skillsFound, plural, =0 {hiç yetkinlik} =1 {tek bir yetkinlik} other {# yetkinlik}} çıktı, bu da bir uyarlama yapmaya yetmiyor.",
     "CONFLICTING_PREFERENCES": "Sabitlediğin içerik yaklaşık {pinnedPages, number} sayfa tutuyor, sınır ise {maxPages, plural, =1 {bir sayfa} other {# sayfa}}.",
     "FEATURE_REQUIRES_ACCOUNT": "{feature} için hesap gerekiyor.",
-    "QUOTA_EXCEEDED": "Bugünkü {metric} hakkını kullandın.",
+    "QUOTA_EXCEEDED": "Bugünkü {metric} hakkını kullandın. {resetsAt, time, short}'te yenilenecek.",
     "ALL_PROVIDERS_UNAVAILABLE": "Yapay zekâ sağlayıcılarının hiçbiri yanıt vermedi. Hiçbir şey kaybolmadı, profiline dokunulmadı.",
     "COMPILATION_FAILED": "Belge oluşturulamadı. {detail}",
     "PAGE_LIMIT_EXCEEDED": "İçeriğin {actual, plural, =1 {bir sayfa} other {# sayfa}} tuttu, sınır ise {limit, plural, =1 {bir} other {#}}. İçerik gidebildiği kadar kısaltıldı.",
@@ -18,7 +18,7 @@
     "EXTRACTION_EMPTY": "Bu dosyadan okunabilir hiçbir şey çıkmadı.",
     "EXTRACTION_TIMEOUT": "Bu dosyayı okumak çok uzun sürdü ve durduruldu.",
     "LANGUAGE_UNDETECTED": "Bunun hangi dilde yazıldığını anlayamadık. En yakın tahminler: {detectedCandidates}.",
-    "PROFILE_QUOTA_EXCEEDED": "Bugünkü {limit, plural, =1 {bir profil} other {# profil}} sınırına ulaştın.",
+    "PROFILE_QUOTA_EXCEEDED": "Bugünkü {limit, plural, =1 {bir profil} other {# profil}} sınırına ulaştın. {resetsAt, time, short}'te yenilenecek.",
     "ANONYMOUS_SESSION_EXPIRED": "Bu oturum, buradaki son işleminden iki saat sonra sona erdi.",
     "ATOM_LIMIT_EXCEEDED": "Sınır {limit, plural, =1 {bir madde} other {# madde}}; şu anda {current, number} tane var.",
     "NO_ANONYMOUS_PROFILE": "Sahiplenilecek kaydedilmemiş bir profil yok.",
@@ -239,6 +239,22 @@
       "atomConfirm": "Maddeyi sil",
       "atomCascade": "{wordings, plural, =1 {} other {Bu maddenin # sözcüklemesi de silinecek. }}Bu geri alınamaz.",
       "opening": "Açılıyor…"
+    },
+    "editSection": {
+      "open": "Adını ya da türünü değiştir",
+      "trigger": "{title} bölümünü düzenle",
+      "submit": "Bölümü kaydet",
+      "saving": "Kaydediliyor…",
+      "saved": "{title} kaydedildi.",
+      "loadingForm": "Form açılıyor…"
+    },
+    "editEntry": {
+      "open": "Düzenle",
+      "trigger": "{title} kaydını düzenle",
+      "submit": "Kaydı kaydet",
+      "saving": "Kaydediliyor…",
+      "saved": "{title} kaydedildi.",
+      "loadingForm": "Form açılıyor…"
     }
   },
   "Generation": {

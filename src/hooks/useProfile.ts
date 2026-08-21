@@ -29,6 +29,8 @@ import {
   listEntries,
   listSections,
   patchAtom,
+  patchEntry,
+  patchSection,
   patchVariant,
   reorderAtoms,
   reorderEntries,
@@ -39,10 +41,12 @@ import {
   type AtomPatch,
   type Entry,
   type EntryCreate,
+  type EntryPatch,
   type Profile,
   type Section,
   type ProfileUpdate,
   type SectionCreate,
+  type SectionPatch,
   type VariantPatch,
 } from '@/lib/api/endpoints/profile';
 import type { Versioned } from '@/lib/api/client';
@@ -169,28 +173,16 @@ export function useReplaceProfile() {
         client.getQueryData<Versioned<Profile>>(profileKeys.head())?.version as Version,
       ),
 
-    onSuccess: (result) => {
-      // Carries the new ETag as well as the new body, so the next save has its
-      // version without a read in between.
-      client.setQueryData(profileKeys.head(), result);
-
-      // ⚠️ …except for `completeness`, which the response computes **before**
-      // the write. Measured: adding `selfDescription` to a profile at 80
-      // answers 80 and reads back 90; removing it answers 90 and reads back
-      // 80. When the value does not change the two agree, which is why this
-      // hides so well. `CompletenessBar` renders exactly this number, so
-      // without the refetch the bar shows the previous percentage after every
-      // head edit and nothing else would ever correct it.
-      //
-      // One small `GET /profile` per save, and it goes when `F-003` closes.
-      //
-      // This does rely on something observing the head — an invalidation
-      // cannot refetch a key that was only ever `setQueryData`'d, because no
-      // `queryFn` was ever attached to it. `ProfileEditor` observes it through
-      // `useProfile`, which is where `ProfileHead`'s `profile` prop comes
-      // from, so anything rendering the bar is already holding it open.
-      void client.invalidateQueries({ queryKey: profileKeys.head() });
-    },
+    // Carries the new ETag as well as the new body, so the next save has its
+    // version without a read in between — and, since `F-003` closed, a
+    // `completeness` computed after the write rather than before it. The
+    // refetch that stood here until then is gone.
+    //
+    // The rule the backend wrote is about *responses that carry the number*,
+    // not about the column: the section, entry and atom endpoints do not
+    // return the head at all and still leave it to the next read. That is why
+    // the delete hooks keep invalidating it and this one does not.
+    onSuccess: (result) => client.setQueryData(profileKeys.head(), result),
   });
 }
 
@@ -630,6 +622,64 @@ export function useReorderEntries() {
 
     onSettled: () => {
       void client.invalidateQueries({ queryKey: profileKeys.entries() });
+    },
+  });
+}
+
+/**
+ * Editing a section's own fields — its title, and the kind that decides what a
+ * bullet under it is called.
+ *
+ * **Not optimistic, unlike the atom edits.** Those are keystrokes on a field
+ * that is already on screen; this is a small form the user submits and closes,
+ * so a round trip costs nothing and the response carries the version the next
+ * write needs. Writing it through is also what keeps `useDeleteSection`
+ * correct — it builds its `If-Match` from this same cached row, and a reorder
+ * has already taught us what a stale one costs.
+ */
+export function usePatchSection() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: SectionPatch }) =>
+      patchSection(id, patch, versionInList(client, profileKeys.sections(), id)),
+
+    onSuccess: (section) => {
+      client.setQueryData<Section[]>(profileKeys.sections(), (list) =>
+        list?.map((cached) => (cached.id === section.id ? section : cached)),
+      );
+
+      // The head, because `completeness` counts filled-in areas and the
+      // section endpoints do not return it — the number is left to the next
+      // read (`spec/08-api.md` § 35.6).
+      void client.invalidateQueries({ queryKey: profileKeys.head() });
+    },
+  });
+}
+
+/**
+ * Editing an entry: its title, where it was, and the dates.
+ *
+ * ⚠️ **The server checks the date rule against the result of the patch**, not
+ * against the body — patching one end is compared with the other end as
+ * stored, or the range could be inverted one field at a time. `params.fields`
+ * then names the ends the request actually sent (`B-036`), which is why the
+ * form submits every date field it shows rather than a diff: an error naming
+ * a field the user cannot see is not an error they can act on.
+ */
+export function usePatchEntry() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: EntryPatch }) =>
+      patchEntry(id, patch, versionInList(client, profileKeys.entries(), id)),
+
+    onSuccess: (entry) => {
+      client.setQueriesData<Entry[]>({ queryKey: profileKeys.entries() }, (list) =>
+        list?.map((cached) => (cached.id === entry.id ? entry : cached)),
+      );
+
+      void client.invalidateQueries({ queryKey: profileKeys.head() });
     },
   });
 }
