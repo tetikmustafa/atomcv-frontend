@@ -375,6 +375,91 @@ export const profileHandlers = [
    * that sends only the moved items works perfectly against a lenient mock
    * and fails against the real API.
    */
+  /**
+   * Reordering the sections.
+   *
+   * ⚠️ **A reorder versions the rows it moves, and only those** — measured:
+   * four sections at 0, swap the first two, and they come back `[1, 1, 0, 0]`.
+   * Reproduced here because a mock that left the versions alone would let a
+   * client which never refreshed them pass, and then 412 in production on the
+   * next delete. That failure was already made once, at the variant endpoint
+   * (handoff `B-034`).
+   *
+   * Answers with the **whole** collection, renumbered — unlike the atom and
+   * entry reorders, which answer with one group.
+   */
+  http.post('*/api/v1/profile/sections/reorder', async ({ request }) => {
+    const instance = '/api/v1/profile/sections/reorder';
+    const body = (await request.json()) as { ids: string[] };
+
+    const named = new Set(body.ids);
+    const complete =
+      fixture.sections.length === body.ids.length &&
+      fixture.sections.every((section) => named.has(section.id!));
+
+    // A partial list is a 400 naming `ids`, and so is an id that is not there.
+    if (!complete) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['ids'] }),
+        {
+          status: 400,
+        },
+      );
+    }
+
+    const byId = new Map(fixture.sections.map((section) => [section.id, section]));
+
+    fixture.sections = body.ids.map((id, index) => {
+      const section = byId.get(id)!;
+      // Only a row that actually moved is written, so only it is versioned.
+      if (section.displayOrder === index) return section;
+      return { ...section, displayOrder: index, version: (section.version ?? 0) + 1 };
+    });
+
+    return HttpResponse.json(fixture.sections);
+  }),
+
+  /**
+   * Reordering the entries inside one section.
+   *
+   * Answers with **that section's group only** — measured: two rows where the
+   * profile has six, the same scope the atom reorder answers with. Versions
+   * move for the rows that moved; their atoms are untouched, which was also
+   * measured rather than assumed.
+   */
+  http.post('*/api/v1/profile/entries/reorder', async ({ request }) => {
+    const instance = '/api/v1/profile/entries/reorder';
+    const body = (await request.json()) as { sectionId: string; ids: string[] };
+
+    const group = fixture.entries.filter((entry) => entry.sectionId === body.sectionId);
+    const named = new Set(body.ids);
+    const complete =
+      group.length === body.ids.length && group.every((entry) => named.has(entry.id!));
+
+    // The real server refuses a `sectionId` that disagrees with the ids the
+    // same way it refuses a partial list — both are a 400 naming `ids`.
+    if (!complete) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['ids'] }),
+        {
+          status: 400,
+        },
+      );
+    }
+
+    const reordered = body.ids.map((id, index) => {
+      const entry = group.find((candidate) => candidate.id === id)!;
+      if (entry.displayOrder === index) return entry;
+      return { ...entry, displayOrder: index, version: (entry.version ?? 0) + 1 };
+    });
+
+    const updated = new Map(reordered.map((entry) => [entry.id, entry]));
+    fixture.entries = fixture.entries.map((entry) => updated.get(entry.id) ?? entry);
+    fixture.entries.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+
+    return HttpResponse.json(reordered);
+  }),
+
   http.post('*/api/v1/profile/atoms/reorder', async ({ request }) => {
     const instance = '/api/v1/profile/atoms/reorder';
     const body = (await request.json()) as { sectionId: string; entryId?: string; ids: string[] };

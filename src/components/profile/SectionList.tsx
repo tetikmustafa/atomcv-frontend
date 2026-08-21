@@ -41,6 +41,8 @@ import {
   useDeleteSection,
   useEntries,
   useReorderAtoms,
+  useReorderEntries,
+  useReorderSections,
   useSections,
 } from '@/hooks/useProfile';
 import { useEditorUiStore } from '@/stores/editorUiStore';
@@ -181,6 +183,7 @@ function SectionAtoms({ section }: { section: Section }) {
   const t = useTranslations('Editor.section');
   const atomsQuery = useAtoms({ sectionId: section.id! });
   const entriesQuery = useEntries(section.id!);
+  const reorderEntries = useReorderEntries();
 
   // Narrowed one query at a time: a combined `isPending || isPending` tells
   // TypeScript nothing about either result, and TanStack's status union is
@@ -232,40 +235,57 @@ function SectionAtoms({ section }: { section: Section }) {
           it; for an experience section it is usually empty. */}
       {showLoose && <AtomGroup section={section} atoms={loose} />}
 
-      {entries.map((entry) => {
-        const headingId = `entry-${entry.id}-heading`;
-
-        return (
-          /*
-            `group`, not a `section`. A bare `<section aria-labelledby>` is a
-            region, and `SectionRow` already spends one of those per section —
-            nesting more would bury the section landmarks under an entry for
-            every job. `group` is the role for a set of related controls that
-            does not belong in a page summary, which is what an entry's
-            bullets are.
-          */
-          <div
-            key={entry.id}
-            role="group"
-            aria-labelledby={headingId}
-            className="flex flex-col gap-2"
+      {entries.length > 0 && (
+        <>
+          {/*
+            The entries reorder as a group of their own, nested inside the
+            section. Each entry's bullets are a sortable list too, so this is
+            one `DndContext` inside another — the handles belong to their own
+            context, which is what keeps a bullet's drag from moving the job it
+            sits under.
+          */}
+          <SortableList
+            items={entries}
+            getId={(entry) => entry.id!}
+            getLabel={(entry) => entry.title ?? entry.id!}
+            onReorder={(ids) => reorderEntries.mutate({ sectionId: section.id!, ids })}
           >
-            <div className="flex items-start justify-between gap-2">
-              <EntryHeading entry={entry} id={headingId} />
-              <DeleteEntryControl
-                entry={entry}
-                atoms={atoms.filter((atom) => atom.entryId === entry.id).length}
-              />
-            </div>
+            {(entry) => {
+              const headingId = `entry-${entry.id}-heading`;
 
-            <AtomGroup
-              section={section}
-              entry={entry}
-              atoms={atoms.filter((atom) => atom.entryId === entry.id)}
-            />
-          </div>
-        );
-      })}
+              return (
+                /*
+                  `group`, not a `section`. A bare `<section aria-labelledby>`
+                  is a region, and `SectionRow` already spends one of those per
+                  section — nesting more would bury the section landmarks under
+                  an entry for every job. `group` is the role for a set of
+                  related controls that does not belong in a page summary,
+                  which is what an entry's bullets are.
+                */
+                <div role="group" aria-labelledby={headingId} className="flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <EntryHeading entry={entry} id={headingId} />
+                    <DeleteEntryControl
+                      entry={entry}
+                      atoms={atoms.filter((atom) => atom.entryId === entry.id).length}
+                    />
+                  </div>
+
+                  <AtomGroup
+                    section={section}
+                    entry={entry}
+                    atoms={atoms.filter((atom) => atom.entryId === entry.id)}
+                  />
+                </div>
+              );
+            }}
+          </SortableList>
+
+          {reorderEntries.error ? (
+            <ErrorPanel error={reorderEntries.error} onRetry={() => reorderEntries.reset()} />
+          ) : null}
+        </>
+      )}
 
       {showAddEntry && <AddEntry section={section} />}
 
@@ -319,6 +339,7 @@ function SectionRow({ section }: { section: Section }) {
 export function SectionList() {
   const t = useTranslations('Editor.section');
   const { data: sections, isPending, error } = useSections();
+  const reorder = useReorderSections();
 
   if (isPending) return <p className="text-muted-foreground text-sm">{t('loading')}</p>;
   if (error) return <ErrorPanel error={error} />;
@@ -333,9 +354,23 @@ export function SectionList() {
       */}
       {sections.length === 0 && <p className="text-muted-foreground text-sm">{t('none')}</p>}
 
-      {sections.map((section) => (
-        <SectionRow key={section.id} section={section} />
-      ))}
+      {/*
+        Section order is the order they appear in the CV, so it is the one
+        reorder a user has a concrete reason to reach for — putting Experience
+        above Education is a real editorial decision, not tidying.
+      */}
+      {sections.length > 0 && (
+        <SortableList
+          items={sections}
+          getId={(section) => section.id!}
+          getLabel={(section) => section.title ?? section.id!}
+          onReorder={(ids) => reorder.mutate(ids)}
+        >
+          {(section) => <SectionRow section={section} />}
+        </SortableList>
+      )}
+
+      {reorder.error ? <ErrorPanel error={reorder.error} onRetry={() => reorder.reset()} /> : null}
 
       <AddSection />
     </div>

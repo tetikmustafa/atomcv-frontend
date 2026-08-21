@@ -1,6 +1,6 @@
 # İnşa Notları — Aktif (frontend)
 
-> Kural: bu dosya **480 satırı geçmez**. Aşama bitince `archive/`'a taşınır.
+> Kural: bu dosya **560 satırı geçmez**. Aşama bitince `archive/`'a taşınır.
 > (200'dü; Aşama 1 kapanmadan doldu ve bölmek yerine sınır büyütüldü — D.10
 > backend'e taşınan kaynak, ayrı dosyaya alınamaz.)
 > Bu dosya **backend'e senkronize edilmez** — repo-yerel.
@@ -94,7 +94,8 @@ CLAUDE.md 927 satırdan 347'ye inerken buraya taşındı (handoff · B-033).
 İlk app rotası ölçüldü: `/[locale]/profile` **238.3 KB toplam, 70.2 KB kendi
 payı** — dnd-kit, TanStack Query, next-intl client runtime ve Radix taşıyor.
 (Entry katmanı +0.5, madde ekleme +0.5, create formları +2.6, profil başı +0.7,
-silme yüzeyi +1.0 KB getirdi; ilk ölçüm 237.8 / 69.7 idi. Güncel: **243.2 / 75.0**.)
+silme yüzeyi +1.0, sıralama +0.2 KB getirdi; ilk ölçüm 237.8 / 69.7 idi.
+Güncel: **243.4 / 75.2**.)
 Kendi payından ~30 KB kalıyor. Bu sayıyı boş alan değil, bütçenin erken uyarısı say.
 
 ### Kapanmadan Aşama 2'ye girilmez
@@ -458,3 +459,59 @@ ve gerçek backend'e karşı MSW kapalı 9 kontrol: onay sunucunun tuttuğu say�
 söylüyor, vazgeçmek hiçbir istek göndermiyor, silme tırnaklı `If-Match` ile
 `204` alıyor, cascade tam olarak o ağacı götürüyor ve ekran reload'suz
 güncelleniyor. Seed öncesi/sonrası birebir aynı.
+
+### Sıralama — üç koleksiyonun üçü de
+
+`SortableList` baştan üçü için yazılmıştı; eksik olan hook'lar ve bağlantıydı.
+Adım 1.2'nin frontend listesindeki son kutu buydu.
+
+**Ölçüm önce, yine.** İki uç da ölçüldü:
+
+| Ölçüm | Sonuç |
+|---|---|
+| `POST /profile/sections/reorder` | `200`, **bütün** koleksiyon, 0'dan itibaren yeniden numaralı |
+| `POST /profile/entries/reorder` | `200`, **yalnız o bölümün grubu** (6 entry'nin 2'si) |
+| Eksik liste / bilinmeyen id | `400` + `params.fields: ["ids"]` |
+| `sectionId` id'lerle uyuşmuyorsa | `400` + `["ids"]` |
+| Yeri değişen satırların `version`'ı | **artıyor** — `[0,0,0,0]` → `[1,1,0,0]`, yalnız kımıldayanlar |
+| Entry sıralamasının atomlara etkisi | yok, sürümleri sabit |
+
+**En önemlisi beşinci satır ve bu bir tuzak.** Sıralama bir yazma; sunucu
+kımıldattığı her satırı sürümlüyor. `useDeleteSection` `If-Match`'ini tam da o
+önbellek sayısından kuruyor. Doğrudan gösterildi: sırala, sonra sıralamadan
+önceki sürümle `PATCH` at → **412**.
+
+Bu yüzden yanıt önbelleğe **yazılıyor**, yalnız invalidate edilmiyor.
+Bölümlerde yanıt bütün koleksiyon, dolayısıyla yazma eksiksiz. Entry'lerde
+yanıt yalnız grup — atom sıralamasının aynı kapsamı — o yüzden id'ye göre
+merge ediliyor; grubu listenin üstüne yazmak diğer bölümlerin entry'lerini
+düşürürdü.
+
+**Gerçek uca karşı iki yönde de kanıtlandı** (MSW kapalı, kendi yarattığım
+bölüm üzerinde, seed sırası geri yüklendi):
+
+```
+yazma yokken   DELETE …/sections/15ae… if-match="0" -> 412
+yazmayla       DELETE …/sections/2619… if-match="1" -> 204
+```
+
+Birim testlerinde entry tarafı önce **ayırt etmiyordu**: `onSettled`'ın
+refetch'i eksik merge'ü onarıyor ve test düzeltmesiz de geçiyordu — B-034'te
+yaşananın aynısı. `GET /profile/entries` `delay('infinite')` ile tutulunca
+ayrım çıktı. Bölüm tarafında böyle bir sorun yok, çünkü orada invalidation hiç
+yok: yanıt zaten tam.
+
+**İç içe iki `DndContext`.** Entry'ler sıralanabilir bir liste, her entry'nin
+maddeleri de öyle. Tutamaçlar kendi bağlamlarına ait olduğu için karışmıyorlar;
+bir madde sürüklemek altında durduğu işi kımıldatmıyor. Bir birim testi ve bir
+e2e bunu sabitliyor.
+
+**Playwright ile Testing Library aynı şeyi sormuyor** ve bu dört e2e testini
+birden kırdı. Playwright erişilebilir adı **büyük/küçük harf duyarsız alt
+dizge** olarak eşliyor, Testing Library **tam dize**. Bölümler sıralanabilir
+olunca yanlarına "Move Experience up/down" ve "Reorder Experience" geldi;
+birim testleri yeşil kalırken `getByRole('button', { name: 'Experience' })`
+Playwright'ta dört öğeye çözüldü. Çözüm `exact: true` ve spec'in başında
+neden orada olduğu yazıyor — bileşen hatası sanılıp aranmasın diye.
+
+**Bundle:** 75.0 → **75.2 KB**. `SortableList` ve dnd-kit zaten yüklüydü.

@@ -31,12 +31,16 @@ import {
   patchAtom,
   patchVariant,
   reorderAtoms,
+  reorderEntries,
+  reorderSections,
   replaceProfile,
   type Atom,
   type AtomCreate,
   type AtomPatch,
+  type Entry,
   type EntryCreate,
   type Profile,
+  type Section,
   type ProfileUpdate,
   type SectionCreate,
   type VariantPatch,
@@ -496,6 +500,117 @@ export function useReorderAtoms() {
 
     onSettled: () => {
       void client.invalidateQueries({ queryKey: ATOM_COLLECTIONS });
+    },
+  });
+}
+
+/**
+ * Reordering the sections themselves.
+ *
+ * ⚠️ **A reorder is a write, and the server versions every row it moves** —
+ * measured: four sections at `version` 0, swap the first two, and they come
+ * back `[1, 1, 0, 0]`. The two that did not move are untouched. Proven to
+ * matter, not reasoned about: patching an entry with its pre-reorder version
+ * answers **412**.
+ *
+ * So the response is written straight into the cache rather than only
+ * invalidated. It is the complete collection, renumbered and re-versioned, so
+ * the write-through is total and there is nothing left to refetch — and,
+ * unlike an invalidation, it closes the window in which a delete built from
+ * the cached version would quote a number the server has already passed.
+ * `useDeleteSection` reads exactly that number.
+ *
+ * Optimistic for the same reason as the atoms: a list that snaps back for the
+ * length of a round trip reads as a failed drop.
+ */
+export function useReorderSections() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: (ids: string[]) => reorderSections(ids),
+
+    onMutate: async (ids) => {
+      await client.cancelQueries({ queryKey: profileKeys.sections() });
+      const previous = client.getQueryData<Section[]>(profileKeys.sections());
+
+      client.setQueryData<Section[]>(profileKeys.sections(), (list) => {
+        if (!list) return list;
+        const byId = new Map(list.map((section) => [section.id, section]));
+        return ids
+          .map((id) => byId.get(id))
+          .filter((section): section is Section => Boolean(section));
+      });
+
+      return { previous };
+    },
+
+    onError: (_error, _variables, context) => {
+      if (context?.previous) client.setQueryData(profileKeys.sections(), context.previous);
+    },
+
+    // The whole collection, with the versions the next write has to quote.
+    onSuccess: (sections) => client.setQueryData(profileKeys.sections(), sections),
+  });
+}
+
+/**
+ * Reordering the entries inside one section.
+ *
+ * Versions move here too, and this one is where it was demonstrated: reorder
+ * two entries, then `PATCH` one of them with the version read before — 412.
+ *
+ * **The response covers only that section's group** — two rows where the
+ * profile has six — which is the same scope the atom reorder answers with,
+ * and the same trap: writing the group over an unfiltered cached list would
+ * drop the other four. So it is merged by id into every cached entries list,
+ * and the invalidation still follows for anything the merge could not reach.
+ *
+ * Their atoms are not versioned by this. Measured, because "reordering the
+ * parent touches the children" would have been a reasonable guess and would
+ * have meant invalidating the atom collections too.
+ */
+export function useReorderEntries() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ sectionId, ids }: { sectionId: string; ids: string[] }) =>
+      reorderEntries(sectionId, ids),
+
+    onMutate: async ({ ids }) => {
+      await client.cancelQueries({ queryKey: profileKeys.entries() });
+      const previous = client.getQueriesData<Entry[]>({ queryKey: profileKeys.entries() });
+
+      client.setQueriesData<Entry[]>({ queryKey: profileKeys.entries() }, (list) => {
+        if (!list) return list;
+        const byId = new Map(list.map((entry) => [entry.id, entry]));
+        const moved = ids
+          .map((id) => byId.get(id))
+          .filter((entry): entry is Entry => Boolean(entry));
+        // Everything the call did not name keeps its place: an unfiltered list
+        // holds the other sections' entries as well.
+        const untouched = list.filter((entry) => !ids.includes(entry.id!));
+        return [...moved, ...untouched];
+      });
+
+      return { previous };
+    },
+
+    onError: (_error, _variables, context) => {
+      for (const [key, list] of context?.previous ?? []) client.setQueryData(key, list);
+    },
+
+    onSuccess: (group) => {
+      // Fresh versions now, not after a refetch — that gap is a 412 for
+      // anything that writes to a moved entry in the meantime.
+      const byId = new Map(group.map((entry) => [entry.id, entry]));
+
+      client.setQueriesData<Entry[]>({ queryKey: profileKeys.entries() }, (list) =>
+        list?.map((entry) => byId.get(entry.id) ?? entry),
+      );
+    },
+
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: profileKeys.entries() });
     },
   });
 }

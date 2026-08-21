@@ -10,6 +10,16 @@ import { expect, test } from '@playwright/test';
  * Node interceptor.
  */
 test.describe('the profile editor', () => {
+  /*
+    `exact: true` on every section toggle, and it is load-bearing.
+
+    Playwright matches an accessible name as a case-insensitive substring;
+    Testing Library matches the whole string. Making the sections sortable
+    added "Move Experience up", "Move Experience down" and "Reorder Experience"
+    beside the toggle, so the unit tests stayed green while all four of these
+    broke on strict mode at once. The difference is worth knowing before it is
+    diagnosed as a component fault.
+  */
   test('shows how complete the profile is, in words as well as a bar', async ({ page }) => {
     await page.goto('/en/profile');
 
@@ -21,7 +31,7 @@ test.describe('the profile editor', () => {
   test('opens a section and saves a toggle without a save button', async ({ page }) => {
     await page.goto('/en/profile');
 
-    await page.getByRole('button', { name: 'Experience' }).click();
+    await page.getByRole('button', { name: 'Experience', exact: true }).click();
 
     const first = page.getByRole('article').first();
     await expect(first).toBeVisible();
@@ -40,7 +50,7 @@ test.describe('the profile editor', () => {
    */
   test('moves the importance slider with the keyboard', async ({ page }) => {
     await page.goto('/en/profile');
-    await page.getByRole('button', { name: 'Experience' }).click();
+    await page.getByRole('button', { name: 'Experience', exact: true }).click();
 
     const slider = page.getByRole('slider', { name: 'Importance' }).first();
     await expect(slider).toHaveAttribute('aria-valuenow', '0.6');
@@ -54,7 +64,7 @@ test.describe('the profile editor', () => {
 
   test('reorders atoms from the keyboard alone', async ({ page }) => {
     await page.goto('/en/profile');
-    await page.getByRole('button', { name: 'Experience' }).click();
+    await page.getByRole('button', { name: 'Experience', exact: true }).click();
 
     // Scoped to one job. Reordering addresses a group — the endpoint takes one
     // `entryId` and that group's complete list — and the section's own list is
@@ -87,7 +97,7 @@ test.describe('the profile editor', () => {
    */
   test('confirms before deleting a bullet, and Escape backs out', async ({ page }) => {
     await page.goto('/en/profile');
-    await page.getByRole('button', { name: 'Experience' }).click();
+    await page.getByRole('button', { name: 'Experience', exact: true }).click();
 
     const bullets = page.getByRole('article');
     await expect(bullets).toHaveCount(3);
@@ -110,5 +120,22 @@ test.describe('the profile editor', () => {
     await page.getByRole('button', { name: 'Delete the bullet' }).click();
 
     await expect(bullets).toHaveCount(2);
+  });
+
+  /**
+   * Section order is the order the CV prints in, so this is the reorder with
+   * a real editorial reason behind it. In the browser because the sections
+   * are now a drag context with the entries' own nested inside them, and
+   * jsdom cannot tell whether those two interfere.
+   */
+  test('reorders sections from the keyboard alone', async ({ page }) => {
+    await page.goto('/en/profile');
+
+    const toggles = page.getByRole('button', { name: /^(Experience|Skills)$/ });
+    await expect(toggles).toHaveText(['Experience', 'Skills']);
+
+    await page.getByRole('button', { name: 'Move Skills up' }).click();
+
+    await expect(toggles).toHaveText(['Skills', 'Experience']);
   });
 });
