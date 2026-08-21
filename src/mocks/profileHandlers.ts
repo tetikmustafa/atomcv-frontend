@@ -131,14 +131,16 @@ export const profileHandlers = [
     // `F-004` closed — it used to be the one field an omitting `PUT` left
     // alone, and it could not start clearing instead because the column is
     // `NOT NULL` and its default would have turned a Turkish profile English.
-    const missing = [
-      ...(body.sourceLanguage ? [] : ['sourceLanguage']),
-      ...(body.enabledLanguages?.length ? [] : ['enabledLanguages']),
-    ];
+    const { sourceLanguage, enabledLanguages } = body;
 
-    if (missing.length > 0) {
+    if (!sourceLanguage || !enabledLanguages?.length) {
       return HttpResponse.json(
-        problem(400, 'VALIDATION_FAILED', instance, [], { fields: missing }),
+        problem(400, 'VALIDATION_FAILED', instance, [], {
+          fields: [
+            ...(sourceLanguage ? [] : ['sourceLanguage']),
+            ...(enabledLanguages?.length ? [] : ['enabledLanguages']),
+          ],
+        }),
         { status: 400 },
       );
     }
@@ -166,10 +168,11 @@ export const profileHandlers = [
       headline: body.headline ?? undefined,
       contact: body.contact ?? {},
       selfDescription: body.selfDescription ?? undefined,
-      // No exceptions left: `PUT` replaces the whole head (`F-004`). The
-      // field cannot be absent here — it is refused above.
-      sourceLanguage: body.sourceLanguage,
-      enabledLanguages: body.enabledLanguages,
+      // No exceptions left: `PUT` replaces the whole head (`F-004`). Both are
+      // narrowed by the guard above rather than asserted here — the fixture
+      // requires them, so a `!` would only move the lie somewhere quieter.
+      sourceLanguage,
+      enabledLanguages,
       completeness: completenessOf(body.selfDescription),
     };
     fixture.profileVersion += 1;

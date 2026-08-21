@@ -320,9 +320,10 @@ request escaping to the network in a test is a bug in the test.
 
 ## Current Stage — and How to Resume
 
-**Stage 1 — the profile editor.** Stage 0 is closed and merged (PR #1).
+**Stage 2 — the generation flow and SSE.** Stages 0 and 1 are closed;
+Stage 1's full build record is `docs/notes/archive/stage-1.md`.
 
-A session that opens with "continue with Stage 1" starts here, in this order.
+A session that opens with "continue with Stage 2" starts here, in this order.
 Nothing below is summarised in this file: a second copy of the state drifts
 from the one that is real.
 
@@ -330,12 +331,12 @@ from the one that is real.
    decisions, and the next sync point.
 2. **`docs/handoff/to-frontend.md`** — open `B-nnn` items from the backend.
    **Handle these before starting new work.**
-3. **`docs/notes/current.md`** — this repo's own decisions and what Stage 1
-   still owes: the deliberate gaps that must not be "fixed" without asking,
-   and the verification still outstanding.
+3. **`docs/notes/current.md`** — the invariants that span files, the
+   deliberate gaps that must not be "fixed" without asking, and what Stage 1
+   handed forward. Short by design; the archive holds the rest.
 4. **The step's plan** — `docs/INDEX.md` routes it. The frontend build order
-   is `spec/15-repos-and-claude.md` § XI-B.9.2; Stage 1 is
-   `spec/14-build-guide.md` § XI-A.3. Search the file, read the range.
+   is `spec/15-repos-and-claude.md` § XI-B.9.2; Stage 2 is
+   `spec/14-build-guide.md` § XI-A.5. Search the file, read the range.
 
 Close the step the way _Recording Deviations_ and _Cross-Repo Communication_
 describe: a record in `docs/notes/current.md`, an `F-nnn` item if the backend

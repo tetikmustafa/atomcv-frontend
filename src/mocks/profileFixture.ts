@@ -15,7 +15,17 @@ import type { components } from '@/types/api';
 
 type Schemas = components['schemas'];
 export type MockAtom = Schemas['Atom'];
-export type MockProfile = Schemas['Profile'];
+/**
+ * The head, with `sourceLanguage` required — the same narrowing
+ * `endpoints/profile.ts` applies, and for the same reason: the column is
+ * `NOT NULL` and `PUT` refuses a body without it (`B-035`).
+ *
+ * Repeated here rather than imported so the mocks stay a description of the
+ * wire, but repeating the *narrowing* is the point: a fixture that dropped
+ * the field would hand the client a shape it has been told is impossible, and
+ * every test would go on passing.
+ */
+export type MockProfile = Omit<Schemas['Profile'], 'sourceLanguage'> & { sourceLanguage: string };
 export type MockSection = Schemas['Section'];
 export type MockEntry = Schemas['Entry'];
 

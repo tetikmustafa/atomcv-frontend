@@ -34,12 +34,12 @@
 | Aşama / Adım | Durum |
 |---|---|
 | Aşama 0 — İskelet | ✅ |
-| Aşama 1 — Profil editörü | 🔨 Sürüyor |
+| Aşama 1 — Profil editörü | ✅ |
 | Aşama 2 — Üretim akışı + SSE | ⬜ |
 
-**Açık `B-nnn` yok** — `B-035`, `B-036` uygulandı. **Test:** 305 birim · 15 e2e.
-**Aşama 1:** § XI-A.3 · 1.2'nin frontend kutuları ✅, devredilenler 4/4, notlar arşivde.
-**Kapanmak için kalan:** `gen:api` + gerçek uca karşı bir doğrulama turu (backend ayakta olmalı).
+**Açık `B-nnn` yok.** **Test:** 305 birim · 15 e2e · **bundle** 244.0 / 75.8 KB.
+**Aşama 1 kapandı:** 1.2'nin frontend kutuları ✅, devredilenler 4/4, `gen:api` güncel,
+gerçek uca karşı 34 kontrol geçti. Notlar `notes/archive/stage-1.md`.
 
 ---
 

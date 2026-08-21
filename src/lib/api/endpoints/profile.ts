@@ -56,7 +56,21 @@ type Accepts<Op extends keyof operations> = operations[Op] extends {
  * the calls below; the schema binds the nouns.
  * ---------------------------------------------------------------------- */
 
-export type Profile = Schemas['Profile'];
+/**
+ * The head as it actually arrives.
+ *
+ * `sourceLanguage` is narrowed to required, derived rather than restated. The
+ * column is `NOT NULL` server-side and `PUT /profile` refuses a body without
+ * it (`B-035`), so a head reaching the client without one is not a state to
+ * branch on — it is a contract violation, and springdoc marks the response
+ * field optional only because it marks almost everything optional.
+ *
+ * Narrowing it here rather than at the call site is what keeps the write path
+ * honest: `ProfileUpdate` requires the field, and the alternative to this line
+ * is a `?? 'en'` somewhere — which is precisely the silent
+ * Turkish-profile-becomes-English the backend refused to ship.
+ */
+export type Profile = Omit<Schemas['Profile'], 'sourceLanguage'> & { sourceLanguage: string };
 export type Section = Schemas['Section'];
 export type Entry = Schemas['Entry'];
 export type Atom = Schemas['Atom'];
@@ -111,8 +125,8 @@ function query(params: Record<string, string | undefined>): string {
  * Never answers 404 (`spec/08-api.md`). A user who has never had a profile gets an
  * empty one created on read, so there is no "not created yet" state.
  */
-export function getProfile(): Promise<Versioned<Returns<'own'>>> {
-  return api.getVersioned<Returns<'own'>>('/profile');
+export function getProfile(): Promise<Versioned<Profile>> {
+  return api.getVersioned<Profile>('/profile');
 }
 
 /**
@@ -120,7 +134,9 @@ export function getProfile(): Promise<Versioned<Returns<'own'>>> {
  * must send every field it owns, not only the ones that changed.
  */
 export function replaceProfile(body: ProfileUpdate, version: Version) {
-  return api.putVersioned<Returns<'replace'>>('/profile', body, { version });
+  // The same narrowed shape the read returns: this response *is* the head, and
+  // it is what `useReplaceProfile` writes straight into the cache.
+  return api.putVersioned<Profile>('/profile', body, { version });
 }
 
 /** `PUT`, not `PATCH` — § 35.2's endpoint list is out of date; `spec/08-api.md` is right. */

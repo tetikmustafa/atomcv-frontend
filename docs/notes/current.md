@@ -14,7 +14,22 @@
 Plan: `spec/14-build-guide.md` § XI-A.5 · frontend sırası
 `spec/15-repos-and-claude.md` § XI-B.9.2, satır 6.
 
-**Henüz başlanmadı.** Aşama 1'in kapanış kaydı `archive/stage-1.md` sonunda.
+**Henüz başlanmadı.** Aşama 1'in tam kaydı `archive/stage-1.md`'de.
+
+Kapanış turu: `gen:api` şemadan tek bir fark getirdi — `ProfileUpdate`'te
+`sourceLanguage` artık `required` — ve typecheck'i tam öngörülen yerde kırdı.
+Düzeltme uydurulmuş bir varsayılan değil, sözleşmenin garanti ettiğini tipte
+söylemek oldu: `Profile` `endpoints/profile.ts`'te `sourceLanguage`'ı zorunlu
+olacak şekilde **daraltılıyor** (kolon `NOT NULL`, `PUT` onu şart koşuyor).
+Alternatifi bir `?? 'en'`'di, yani backend'in tam olarak kaçındığı sessiz
+"Türkçe profil İngilizceye döner" hatası. Aynı daraltma mock fixture'ında da
+var — yoksa fixture alanı düşürebilir ve testler istemcinin imkânsız dediği
+bir şekli sınamaya devam ederdi.
+
+Doğrulama iki turda yapıldı, ikisi de gerçek uca karşı ve seed birebir geri
+yüklenerek: API seviyesinde 20 kontrol (B-035, B-036'nın altı vakası, F-003,
+bölüm `PATCH`), tarayıcıda MSW kapalı 14 kontrol (baş kaydetme, bölüm
+yeniden adlandırma, entry düzenleme ve bir alanı `null` ile boşaltma).
 
 ### Aşama 1'den devralınan, Aşama 2'de yeniden bakılacaklar
 

@@ -356,7 +356,7 @@ export interface components {
              * @description The language the profile is authored in
              * @example en
              */
-            sourceLanguage?: string;
+            sourceLanguage: string;
             /** @description At least one; the first is the working language */
             enabledLanguages: string[];
         };
