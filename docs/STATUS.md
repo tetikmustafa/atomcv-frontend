@@ -37,7 +37,7 @@
 | Aşama 1 — Profil editörü | 🔨 Sürüyor |
 | Aşama 2 — Üretim akışı + SSE | ⬜ |
 
-**Açık `B-nnn` yok** — `B-034` uygulandı, gerçek uca karşı doğrulandı. **Test:** 290 birim · 15 e2e.
+**Açık `B-nnn` yok.** Backend'e beş madde açıldı: `F-003`…`F-007`. **Test:** 291 birim · 15 e2e.
 **Aşama 1'in devrettikleri:** 3/4 — kalan madde kota sıfırlanma saati, gün dönümü aşağıda açık.
 
 ---

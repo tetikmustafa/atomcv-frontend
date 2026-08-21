@@ -169,9 +169,28 @@ export function useReplaceProfile() {
         client.getQueryData<Versioned<Profile>>(profileKeys.head())?.version as Version,
       ),
 
-    // Carries the new ETag as well as the new body, so the next save has its
-    // version without a read in between.
-    onSuccess: (result) => client.setQueryData(profileKeys.head(), result),
+    onSuccess: (result) => {
+      // Carries the new ETag as well as the new body, so the next save has its
+      // version without a read in between.
+      client.setQueryData(profileKeys.head(), result);
+
+      // ⚠️ …except for `completeness`, which the response computes **before**
+      // the write. Measured: adding `selfDescription` to a profile at 80
+      // answers 80 and reads back 90; removing it answers 90 and reads back
+      // 80. When the value does not change the two agree, which is why this
+      // hides so well. `CompletenessBar` renders exactly this number, so
+      // without the refetch the bar shows the previous percentage after every
+      // head edit and nothing else would ever correct it.
+      //
+      // One small `GET /profile` per save, and it goes when `F-003` closes.
+      //
+      // This does rely on something observing the head — an invalidation
+      // cannot refetch a key that was only ever `setQueryData`'d, because no
+      // `queryFn` was ever attached to it. `ProfileEditor` observes it through
+      // `useProfile`, which is where `ProfileHead`'s `profile` prop comes
+      // from, so anything rendering the bar is already holding it open.
+      void client.invalidateQueries({ queryKey: profileKeys.head() });
+    },
   });
 }
 

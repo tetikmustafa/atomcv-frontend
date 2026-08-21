@@ -515,3 +515,40 @@ Playwright'ta dört öğeye çözüldü. Çözüm `exact: true` ve spec'in baş�
 neden orada olduğu yazıyor — bileşen hatası sanılıp aranmasın diye.
 
 **Bundle:** 75.0 → **75.2 KB**. `SortableList` ve dnd-kit zaten yüklüydü.
+
+### `completeness` yazmadan öncesini söylüyordu — ve çubuğu yalan söyletiyordu
+
+Aşama 1 kapanmadan önce backend'e gidecek maddeleri toplarken çıktı, tahminle
+değil ölçümle: `PUT /profile` yanıtındaki `completeness` **yazma öncesindeki**
+değer.
+
+```
+                         GET öncesi   PUT dedi   GET sonrası
+selfDescription eklendi      80          80          90
+silindi                      90          90          80
+değişim olmayan turlar       =           =           =
+```
+
+Son satır hatayı neden kimsenin fark etmediğini açıklıyor: değer değişmediğinde
+ikisi uyuşuyor.
+
+`useReplaceProfile` yanıtı önbelleğe yazıyor, `CompletenessBar` da tam o sayıyı
+çiziyor — yani her baş düzenlemesinden sonra çubuk bir önceki yüzdeyi
+gösteriyordu ve **başka hiçbir şey onu düzeltmiyordu**. `F-003` olarak iletildi;
+o kapanana kadar baş `PUT` sonrası yeniden okunuyor.
+
+**Bir sonda hatası kendi kendini gösterdi:** ETag başlığı zaten tırnaklı geliyor,
+ben bir kez daha tırnakladım (`""10""`) ve bütün ölçümler `412` döndü. Hiçbir şey
+yazılmadı, yani zararsızdı — ama "hepsi 412" çıktısını "sunucu reddetti" diye
+okumak kolaydı. `toIfMatch`'in var olma sebebi tam olarak bu.
+
+**Refetch'in sessizce hiçbir şey yapmadığı üçüncü yer.** Testte önbellek
+`setQueryData` ile seed'lenmişti, dolayısıyla o anahtarın **`queryFn`'i yoktu**
+ve invalidation çağıracak bir şey bulamadı. Önce `refetchType: 'all'` ile
+çözdüğümü sandım — çözmüyor, çünkü sorun etkinlik değil fonksiyonun yokluğu.
+Doğrusu testin gerçek bir gözlemci render etmesiydi; uygulamada `ProfileEditor`
+zaten o gözlemci.
+
+**`PUT` her omitted alanı temizlemiyor:** `contact` `{}`, `selfDescription`
+`null` oluyor ama `sourceLanguage` **kalıyor**. Bizi kırmıyor (form dokuz alanı
+da gönderiyor), `F-004` olarak iletildi.

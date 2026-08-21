@@ -81,6 +81,15 @@ function precondition(request: Request, instance: string, version: number) {
   return undefined;
 }
 
+/**
+ * What the seed profile's completeness responds to, as measured: 80 without a
+ * `selfDescription`, 90 with one. Narrow on purpose — this models the one
+ * input the head editor can actually change, not the server's whole formula.
+ */
+function completenessOf(selfDescription: string | undefined): number {
+  return selfDescription?.trim() ? 90 : 80;
+}
+
 function findAtom(id: string): MockAtom | undefined {
   return fixture.atoms.find((atom) => atom.id === id);
 }
@@ -132,20 +141,36 @@ export const profileHandlers = [
       );
     }
 
+    // ⚠️ The answer carries the completeness from **before** the write — the
+    // server does this and it is reproduced rather than corrected. Measured:
+    // adding `selfDescription` to a profile at 80 answers 80 and reads back
+    // 90; removing it answers 90 and reads back 80. When the value does not
+    // change the two agree, which is what makes it so easy to miss.
+    //
+    // Raised as `F-003`. Until it closes, `useReplaceProfile` refetches the
+    // head — and a mock that answered with the fresh number would make that
+    // refetch look pointless and invite its removal.
+    const stale = fixture.profile.completeness;
+
     // Assigned, not merged: what is not sent is gone.
     fixture.profile = {
       ...fixture.profile,
       headline: body.headline ?? undefined,
       contact: body.contact ?? {},
       selfDescription: body.selfDescription ?? undefined,
+      // ⚠️ …with one exception the server makes and the docs do not:
+      // `sourceLanguage` **survives** being omitted, while `contact` becomes
+      // `{}` and `selfDescription` becomes `null`. Measured. Also `F-003`.
       sourceLanguage: body.sourceLanguage ?? fixture.profile.sourceLanguage,
       enabledLanguages: body.enabledLanguages,
+      completeness: completenessOf(body.selfDescription),
     };
     fixture.profileVersion += 1;
 
-    return HttpResponse.json(fixture.profile, {
-      headers: { ETag: `"${fixture.profileVersion}"` },
-    });
+    return HttpResponse.json(
+      { ...fixture.profile, completeness: stale },
+      { headers: { ETag: `"${fixture.profileVersion}"` } },
+    );
   }),
 
   http.get('*/api/v1/profile/sections', () => HttpResponse.json(fixture.sections)),
