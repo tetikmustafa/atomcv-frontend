@@ -54,6 +54,7 @@
   "Landing": {
     "tagline": "Profilini bir kez oluştur, her iş ilanına özel CV üret.",
     "intro": "Profesyonel geçmişin bir doküman değil, yapılandırılmış bir veri kümesi. AtomCV onu öyle tutar ve her ilan için o veriden bir CV üretir — umut edilen değil, hesaplanan bir sayfa sınırı içinde.",
+    "cta": "Profilini oluşturmaya başla",
     "featuresHeading": "Farkı ne",
     "features": {
       "pageLimit": {

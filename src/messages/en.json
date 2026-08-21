@@ -54,6 +54,7 @@
   "Landing": {
     "tagline": "Build your profile once, generate a tailored resume for every job posting.",
     "intro": "Your professional history is structured data, not a document. AtomCV keeps it that way, then produces a resume for each posting from that data — inside a page limit that is calculated rather than hoped for.",
+    "cta": "Start building your profile",
     "featuresHeading": "What makes it different",
     "features": {
       "pageLimit": {

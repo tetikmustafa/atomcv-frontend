@@ -59,3 +59,33 @@ test.describe('legal documents', () => {
     await expect(page.getByRole('note')).toContainText('draft');
   });
 });
+
+/**
+ * ⚠️ The check every other test skipped past.
+ *
+ * All fifteen of them navigate by URL — `page.goto('/en/profile')` — so the
+ * editor was exercised thoroughly while the question "can a person actually
+ * get there?" was never asked. It could not: the landing page shipped with no
+ * link into the product at all, and nothing failed, because nothing looked.
+ *
+ * A route that only a bookmark can reach is not reachable.
+ */
+test.describe('getting into the product', () => {
+  test('the front page leads to the editor, in the reader’s language', async ({ page }) => {
+    await page.goto('/tr');
+
+    await page.getByRole('link', { name: 'Profilini oluşturmaya başla' }).click();
+
+    await expect(page).toHaveURL('/tr/profile');
+    // Not just the URL: the editor has to have rendered something.
+    await expect(page.getByRole('progressbar', { name: 'Profil tamamlanma oranı' })).toBeVisible();
+  });
+
+  test('and keeps English readers in English', async ({ page }) => {
+    await page.goto('/en');
+
+    await page.getByRole('link', { name: 'Start building your profile' }).click();
+
+    await expect(page).toHaveURL('/en/profile');
+  });
+});

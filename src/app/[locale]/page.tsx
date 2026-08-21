@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { routing } from '@/lib/i18n/routing';
+import { buttonVariants } from '@/components/ui/button';
 
 const FEATURE_KEYS = [
   'pageLimit',
@@ -18,8 +19,19 @@ const FEATURE_KEYS = [
  * is first contact with the product and the thinnest point of the anonymous
  * funnel (Bölüm 12), so it carries nothing the app shell needs.
  *
- * The call to action arrives with the anonymous entry route in Stage 1. A
- * button that leads to a 404 would be worse than no button.
+ * The call to action leads straight to the profile editor, which is the only
+ * destination that exists — the onboarding wizard `spec/09-frontend.md` § 36.1
+ * lists is not built yet. It was deliberately absent until Stage 1 finished
+ * the editor, on the grounds that a button leading to a 404 is worse than no
+ * button; the flip side, learned the hard way, is that a product with no way
+ * in from its own front page looks broken to anyone who has not memorised the
+ * route.
+ *
+ * A plain `<a>` with an explicit locale prefix, not next-intl's `Link`: that
+ * one only works under `(app)`, where `NextIntlClientProvider` lives. And no
+ * `Button`, only its classes — this page still ships no client JavaScript of
+ * its own, which is the point of it being the thinnest part of the anonymous
+ * funnel.
  */
 export default async function LandingPage({ params }: PageProps<'/[locale]'>) {
   const { locale } = await params;
@@ -36,6 +48,10 @@ export default async function LandingPage({ params }: PageProps<'/[locale]'>) {
           <h1 className="text-4xl font-semibold tracking-tight">AtomCV</h1>
           <p className="text-xl">{t('tagline')}</p>
           <p className="text-muted-foreground max-w-prose">{t('intro')}</p>
+
+          <a href={`/${locale}/profile`} className={`${buttonVariants({ size: 'lg' })} self-start`}>
+            {t('cta')}
+          </a>
         </header>
 
         <section aria-labelledby="features-heading" className="flex flex-col gap-6">

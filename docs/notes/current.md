@@ -116,6 +116,13 @@ taşıyor; burada yalnız **nerede olduğu** var.
   ölçülen şeyi onarıyordu. Yeni bir değişmez sabitlerken **negatif kontrol
   yap**: düzeltmeyi geri al, testin kırıldığını gör. Gerekirse ilgili `GET`'i
   `delay('infinite')` ile tut.
+- **Hiçbir test ön kapıdan girmiyordu.** On beş e2e testinin tamamı
+  `page.goto('/en/profile')` ile doğrudan URL'e gidiyordu, yani editör
+  enine boyuna sınanırken "bir insan oraya nasıl varıyor?" sorusu hiç
+  sorulmadı. Cevap: varamıyordu — iniş sayfasında ürüne giden **tek bir link
+  yoktu** ve hiçbir şey kırmadı, çünkü hiçbir şey bakmıyordu. Yalnız bookmark
+  ile ulaşılan bir rota ulaşılabilir değildir. Artık iki test ön kapıdan
+  yürüyor.
 - **Sonda yazarken her dalın `params`'ını bas.** Yalnız `status` loglayıp tek
   ölçülmüş vakadan genelleme yapmak bir handoff maddesini yanlış yazdırdı
   (B-036).
