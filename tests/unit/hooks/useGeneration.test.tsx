@@ -130,9 +130,11 @@ describe('following a job', () => {
 
     expect(result.current.status).toBe('completed');
     expect(result.current.generationId).toBeTruthy();
-    // `pageCount` only ever rides the stream, so a job reconciled this way
-    // has a result and no page count (`F-008`). The screen must survive it.
-    expect(result.current.pageCount).toBeNull();
+    // `pageCount` used to ride the stream alone, so a job reconciled this way
+    // arrived without one. `B-041` put it on `GET /jobs/{id}` as well, and
+    // the two transports now agree about the whole result rather than about
+    // most of it.
+    expect(result.current.pageCount).toBe(1);
   });
 });
 

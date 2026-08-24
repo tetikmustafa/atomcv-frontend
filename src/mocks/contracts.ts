@@ -57,22 +57,24 @@ export type SessionResponse = {
  * `unknown`, so there is nothing generated to bind to and deleting these
  * would replace typed mocks with untyped ones rather than remove a mirror.
  *
- * All three were read off the wire on 2026-08-24, not transcribed from the
- * document — and two of them differ from it. See `F-008` (no `matchLevel`)
- * and `F-010` (empty strings where § 30.6 shows omitted fields).
+ * All three were read off the wire, not transcribed from the document, and
+ * re-measured on 2026-08-25 after `B-040` and `B-041` answered `F-008` and
+ * `F-010`.
  */
 export type PhaseEvent = {
-  /** Empty while the job is still queued — see `F-010`. */
-  phase: string;
-  /** A translation key (`generation.phase.*`), or empty. Never a sentence. */
-  label: string;
+  /** Absent while the job is queued: there is no phase to name yet. */
+  phase?: string;
+  /** A translation key (`generation.phase.*`), never a sentence. */
+  label?: string;
   pct: number;
-  detail: string;
+  detail?: string;
 };
 
 export type CompletedEvent = {
   generationId: string;
   pageCount: number;
+  /** Over the counts, not a percentage — § 23.3 forbids one by name. */
+  matchLevel: NonNullable<import('@/types/api').components['schemas']['FitReport']['level']>;
 };
 
 /**

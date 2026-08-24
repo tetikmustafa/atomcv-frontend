@@ -23,6 +23,7 @@ import type { CompletedEvent, FailedEvent, PhaseEvent } from './contracts';
 import { problem } from './problem';
 import { fixture } from './profileFixture';
 import {
+  FIT_REPORT,
   generations,
   jobSnapshot,
   phasesAfter,
@@ -155,6 +156,12 @@ export const generationHandlers = [
     if (generations.usage.generation >= QUOTA.generation) {
       const at = resetsAt();
 
+      // The refusal takes a unit too, and that is the point: without it a
+      // user past their limit could hammer the endpoint for free (`B-040`).
+      // Measured — a preflight refusal (422) does **not** take one, so this
+      // increment belongs to the quota gate rather than to the request.
+      generations.usage.generation += 1;
+
       return HttpResponse.json(
         // No resolutions, deliberately: the closed vocabulary has no "come
         // back tomorrow", and `retry` would say the opposite of the truth
@@ -205,6 +212,9 @@ export const generationHandlers = [
     const job: MockJob = {
       jobId: `job-${generations.jobs.length + 1}`,
       generationId: `gen-${generations.jobs.length + 1}`,
+      // No posting, no report: § 23.3's counts are counts *against a posting*
+      // (`B-041`).
+      ...(jobDescription === '' ? {} : { fitReport: FIT_REPORT }),
       startedAt: Date.now(),
       outcome: generations.nextOutcome,
       ...(key ? { idempotencyKey: key } : {}),
@@ -233,6 +243,7 @@ export const generationHandlers = [
         status: 'completed',
         pct: 100,
         generationId: job.generationId,
+        pageCount: 1,
       });
     }
 
@@ -245,13 +256,13 @@ export const generationHandlers = [
       });
     }
 
+    // Spread rather than listed: `phase` and `label` are absent while the
+    // job is queued, and naming them here would put `undefined` back into a
+    // body the server sends without them (`B-040`).
     return HttpResponse.json<Schemas['JobStatusResponse']>({
       jobId: job.jobId,
       status: snapshot.status,
-      phase: snapshot.phase,
-      label: snapshot.label,
-      pct: snapshot.pct,
-      detail: snapshot.detail,
+      ...frame(snapshot),
     });
   }),
 
@@ -303,7 +314,11 @@ export const generationHandlers = [
             encoder.encode(
               sseFrame(
                 'completed',
-                { generationId: job.generationId, pageCount: 1 } satisfies CompletedEvent,
+                {
+                  generationId: job.generationId,
+                  pageCount: 1,
+                  matchLevel: job.fitReport?.level ?? 'STRONG',
+                } satisfies CompletedEvent,
                 id,
               ),
             ),
@@ -324,6 +339,28 @@ export const generationHandlers = [
         'Cache-Control': 'no-cache',
         Connection: 'keep-alive',
       },
+    });
+  }),
+
+  /**
+   * One generation, and how well it fits the posting.
+   *
+   * The endpoint the result screen could not be written without (`B-041`).
+   * `fitReport` is absent in general mode rather than zeroed — there was no
+   * posting to be relevant to, and a row of zeroes reads as a bad match.
+   */
+  http.get('*/api/v1/generations/:generationId', ({ params }) => {
+    const id = String(params.generationId);
+    const job = generations.jobs.find((candidate) => candidate.generationId === id);
+
+    if (!job) return notFound(`/api/v1/generations/${id}`);
+
+    return HttpResponse.json<Schemas['GenerationResponse']>({
+      generationId: job.generationId,
+      status: job.outcome === 'completed' ? 'completed' : 'failed',
+      pageCount: 1,
+      createdAt: new Date(job.startedAt).toISOString(),
+      ...(job.fitReport ? { fitReport: job.fitReport } : {}),
     });
   }),
 
@@ -365,21 +402,25 @@ export const generationHandlers = [
    */
   http.get('*/api/v1/account/usage', () =>
     HttpResponse.json<Schemas['Usage'][]>([
-      {
-        metric: 'generation',
-        used: generations.usage.generation,
-        limit: QUOTA.generation,
-        resetsAt: resetsAt(),
-      },
-      {
-        metric: 'profile_extract',
-        used: generations.usage.profile_extract,
-        limit: QUOTA.profile_extract,
-        resetsAt: resetsAt(),
-      },
+      metric('generation', generations.usage.generation, QUOTA.generation),
+      metric('profile_extract', generations.usage.profile_extract, QUOTA.profile_extract),
     ]),
   ),
 ];
+
+/**
+ * One metric's allowance.
+ *
+ * The counter records **attempts**, because a refused request takes a unit
+ * too — otherwise a user past their limit could hammer the endpoint for free.
+ * `used` is that number capped at the limit, so `used`/`limit` is a pair that
+ * prints as it is, and `attempted` keeps the truth beside it (`B-040`).
+ */
+function metric(name: string, attempted: number, limit: number): Schemas['Usage'] {
+  const used = Math.min(attempted, limit);
+
+  return { metric: name, used, attempted, limit, remaining: limit - used, resetsAt: resetsAt() };
+}
 
 function accepted(job: MockJob) {
   return HttpResponse.json<Schemas['AcceptedJobResponse']>(
@@ -396,9 +437,18 @@ function notFound(instance: string) {
   return HttpResponse.json(problem(404, 'RESOURCE_NOT_FOUND', instance), { status: 404 });
 }
 
-/** The SSE `phase` payload: four fields, and none of the job's identity. */
+/**
+ * The SSE `phase` payload: the progress fields, and none of the job's
+ * identity. Empty ones are dropped rather than sent as `""` (`B-040`), which
+ * is what makes `label` safe to treat as a translation key.
+ */
 function frame(step: PhaseEvent): PhaseEvent {
-  return { phase: step.phase, label: step.label, pct: step.pct, detail: step.detail };
+  return {
+    ...(step.phase ? { phase: step.phase } : {}),
+    ...(step.label ? { label: step.label } : {}),
+    pct: step.pct,
+    ...(step.detail ? { detail: step.detail } : {}),
+  };
 }
 
 /**

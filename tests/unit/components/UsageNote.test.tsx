@@ -50,12 +50,11 @@ describe('the usage note', () => {
   });
 
   /**
-   * Measured against the running backend: `used` climbs past `limit`, because
-   * a request refused with a 429 counts too. "24 of 20" reads as a broken
-   * screen, and clamping the number would misreport what the server said —
-   * so the sentence changes rather than the number (`F-012`).
+   * `remaining`, not a comparison of our own: the server owns the arithmetic
+   * since `B-040` split spend from attempts. "20 of 20" would be accurate,
+   * but "None left today" is what the reader needs to know.
    */
-  it('stops counting upward once there is nothing left', async () => {
+  it('says there is nothing left rather than printing a full count', async () => {
     generations.usage.generation = QUOTA.generation + 4;
 
     render(<UsageNote />, { wrapper: wrapperFor('en') });

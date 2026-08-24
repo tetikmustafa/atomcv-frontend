@@ -27,7 +27,14 @@ export function UsageNote() {
 
   const generation = data?.find((entry) => entry.metric === 'generation');
 
-  if (!generation || generation.limit === undefined || generation.used === undefined) return null;
+  if (
+    !generation ||
+    generation.limit === undefined ||
+    generation.used === undefined ||
+    generation.remaining === undefined
+  ) {
+    return null;
+  }
 
   return (
     <p data-testid="usage-note" className="text-muted-foreground text-sm">
@@ -35,13 +42,15 @@ export function UsageNote() {
       {' · '}
       <span data-testid="usage-count">
         {/*
-          Measured against the running backend: `used` climbs past `limit`,
-          because a refused request counts too. "24 of 20" reads as a broken
-          screen, and clamping the number would be a lie about what the
-          server said — so past the limit the sentence changes instead of the
-          number (`F-012`).
+          `remaining` rather than a comparison of our own. `used` used to
+          climb past `limit` because refusals were counted in it; `B-040`
+          split the two, so the pair prints as it is and the server owns the
+          arithmetic (`F-012`, closed).
+
+          Nothing left still gets its own sentence: "20 of 20" is accurate and
+          "None left today" is what the reader actually needs to know.
         */}
-        {generation.used >= generation.limit
+        {generation.remaining === 0
           ? t('none')
           : t('count', { used: generation.used, limit: generation.limit })}
       </span>

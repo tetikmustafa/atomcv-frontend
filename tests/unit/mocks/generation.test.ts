@@ -14,6 +14,16 @@ import type { components } from '@/types/api';
 type AcceptedJob = components['schemas']['AcceptedJobResponse'];
 type JobStatus = components['schemas']['JobStatusResponse'];
 type Usage = components['schemas']['Usage'];
+type GenerationResponse = components['schemas']['GenerationResponse'];
+
+/** Reads as a posting: two distinct signal words and more than forty of them. */
+const POSTING = [
+  'We are seeking a senior backend engineer to join a small platform team.',
+  'Responsibilities: designing services, operating them in production, and',
+  'mentoring the engineers around you. Requirements: several years of Java,',
+  'PostgreSQL, container orchestration and a habit of writing things down.',
+  'Preferred qualifications include message queues and infrastructure as code.',
+].join(' ');
 
 /**
  * The mock generation surface, against the behaviours measured on the running
@@ -64,11 +74,13 @@ describe('the progress stream', () => {
     const job = await start();
     const frames = await readStream(job.streamUrl!);
 
-    // The snapshot, sent on connect. Its `label` is empty rather than absent
-    // (`F-010`) and an empty label is not a translation key — a client that
-    // resolved it would put `generation.phase.` in front of the user.
+    // The snapshot, sent on connect. It carries `pct` and nothing else:
+    // `phase` and `label` are **omitted** while there is no phase to name
+    // (`B-040`), rather than sent as empty strings — an empty translation key
+    // is not a key, and the shape says so now instead of leaving the client
+    // to know it.
     expect(frames[0]!.event).toBe('phase');
-    expect(frames[0]!.data).toEqual({ phase: '', label: '', pct: 0, detail: '' });
+    expect(frames[0]!.data).toEqual({ pct: 0 });
 
     const terminal = frames.filter((frame) => frame.event !== 'phase');
     expect(terminal).toHaveLength(1);
@@ -339,6 +351,28 @@ describe('download and usage', () => {
     expect(usage[0]!.resetsAt).toMatch(/T00:00:00\.000Z$/);
   });
 
+  /**
+   * The counter records attempts, because a refused request takes a unit too
+   * — otherwise a user past their limit could hammer the endpoint for free.
+   * `used` is that number capped, so the pair a screen prints is always a
+   * sensible one and `attempted` keeps the truth beside it (`B-040`).
+   */
+  it('separates what was spent from what was attempted', async () => {
+    for (let n = 0; n < QUOTA.generation; n += 1) await start();
+    await rejection(api.post('/generations', { acknowledgePreflight: false }));
+    await rejection(api.post('/generations', { acknowledgePreflight: false }));
+
+    const usage = await api.get<Usage[]>('/account/usage');
+
+    expect(usage[0]).toMatchObject({
+      used: QUOTA.generation,
+      attempted: QUOTA.generation + 2,
+      remaining: 0,
+    });
+    // Never above the limit, so "24 of 20" cannot be printed.
+    expect(usage[0]!.used).toBeLessThanOrEqual(usage[0]!.limit!);
+  });
+
   it('agrees with the capability set about the same quota', async () => {
     await start();
 
@@ -347,5 +381,47 @@ describe('download and usage', () => {
 
     expect(session.capabilities.dailyGenerationQuota).toBe(usage[0]!.limit);
     expect(session.capabilities.generationsUsedToday).toBe(usage[0]!.used);
+  });
+});
+
+describe('the generation resource', () => {
+  it('carries the fit report as counts, and never a percentage', async () => {
+    const job = await start({ jobDescription: POSTING, acknowledgePreflight: false });
+    await readStream(job.streamUrl!);
+    const status = await api.get<JobStatus>(`/jobs/${job.jobId}`);
+
+    const generation = await api.get<GenerationResponse>(`/generations/${status.generationId}`);
+
+    expect(generation.fitReport).toMatchObject({
+      requiredCovered: 3,
+      requiredTotal: 4,
+      level: 'MODERATE',
+    });
+    // § 23.3 forbids a percentage by name: the measurement compares skill
+    // names, and a figure to the decimal place reads as a hiring probability.
+    expect(JSON.stringify(generation.fitReport)).not.toMatch(/%|percent/i);
+  });
+
+  it('omits the report entirely in general mode', async () => {
+    const job = await start();
+    await readStream(job.streamUrl!);
+    const status = await api.get<JobStatus>(`/jobs/${job.jobId}`);
+
+    const generation = await api.get<GenerationResponse>(`/generations/${status.generationId}`);
+
+    // Not a row of zeroes: there was no posting to be relevant to, and zero
+    // out of zero reads as a bad match rather than as a different question.
+    expect(generation.fitReport).toBeUndefined();
+    expect(generation.pageCount).toBe(1);
+  });
+
+  it('reports the match level on the terminal event too', async () => {
+    const job = await start({ jobDescription: POSTING, acknowledgePreflight: false });
+
+    const frames = await readStream(job.streamUrl!);
+    const completed = frames[frames.length - 1]!;
+
+    expect(completed.event).toBe('completed');
+    expect(completed.data).toMatchObject({ matchLevel: 'MODERATE', pageCount: 1 });
   });
 });

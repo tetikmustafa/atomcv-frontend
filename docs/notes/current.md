@@ -9,19 +9,35 @@
 
 ---
 
-## Aşama 3 — hesap ve MVP
+## Aşama 2 — kalan işler (`B-040`, `B-041`)
 
-Plan: `spec/14-build-guide.md` § XI-A.6 · frontend sırası
-`spec/15-repos-and-claude.md` § XI-B.9.2.
+Aşama 2 bir teslimatı eksik kapanmıştı: uygunluk raporunun telde karşılığı
+yoktu (`F-008`). Backend beş `F-nnn`'i de yanıtladı ve **veriyi yayımladı**,
+yani eksik parça artık yazılabilir. Aşama 3'e o bitince geçilir; bu bölüm
+kapanışta `archive/stage-2.md`'ye eklenir.
 
-**Henüz başlanmadı.**
+### F2.8 — `gen:api` ve `B-040`'ın üç düzeltmesi
 
-### Aşama 2'den devralınan, Aşama 3'te yeniden bakılacaklar
+- **`generalMode` şemadan düştü.** Hiç yazılmamış; bir record'un
+  `isGeneralMode()` getter'ı springdoc'a sızmış. İstemci onu hiç göndermiyordu,
+  yani kod değişmedi — `F-009` sorusunu sormak yeterliydi.
+- **İlerleme alanları boşken gönderilmiyor artık.** Ölçüldü: anlık durum
+  `{"pct":0}`, başka hiçbir şey yok. `F-010` kaynağında kapandı; `toProgress`
+  içindeki savunma **duruyor** ama artık son savunma hattı, tek savunma değil.
+  Mock'un `SCHEDULE`'ı da alanları düşürüyor — sunucu ne gönderiyorsa o.
+- **Kota iki sayıya ayrıldı.** `used` harcanan (asla `limit`'ten büyük değil),
+  `attempted` birim alan her istek. Sayı yanlış değildi, **adı** yanlıştı.
+  `UsageNote`'taki yara bandı kalktı: karşılaştırma bizim değil, `remaining`
+  sunucunun. "Hakkın kalmadı" cümlesi kaldı — "20 of 20" doğru ama okuyucunun
+  bilmek istediği şey değil.
 
-- **Uygunluk raporu yazılamadı** (`F-008`). `GET /generations/{id}` yayımlanmadı
-  ve `completed` `matchLevel` taşımıyor. Sonuç ekranı sayfa sayısı +
-  indirmeyle sınırlı; **yerine bir yüzde koymak § 23.3'ün adıyla yasakladığı
-  şey**. Uç yayımlanınca ekranın genişleyeceği yer `GenerationResult`.
+**Bir ölçüm mock'u düzeltti:** kotanın reddettiği istek (429) birim alıyor,
+**ön kontrolün reddettiği (422) almıyor**. Mock ikisini de saymıyordu; artışı
+kota kapısına taşıdım, isteğin kendisine değil. Sonda olmadan "reddedilenler
+dahil" cümlesi iki farklı şekilde uygulanabilirdi.
+
+### Aşama 3'te yeniden bakılacaklar
+
 - **`capabilities` hâlâ yayımlanmadı.** `/auth/session` Aşama 3; `contracts.ts`
   onu hâlâ tarif ediyor ve tarif etmeye devam etmeli. Yayımlandığı gün üç yer
   açılır: profil başındaki dil eksenleri, anonim/kimlikli ayrımı, şablon

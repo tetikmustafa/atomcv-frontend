@@ -381,6 +381,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/generations/{generationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One generation and how well it fits the posting
+         * @description Carries Faz F's coverage report: how many of the posting's                     required and preferred skills the finished page actually                     says, which ones are missing, and a level over the counts.
+         *
+         *     **Counts, never a percentage.** Bolum 23.3 forbids one by                     name — the measurement compares skill names, and a figure                     to the decimal place invites the reader to treat it as a                     hiring probability.
+         *
+         *     The report is measured on the atoms that reached the page,                     not on everything that was ranked, so it never credits a                     skill the document does not claim. A general-mode                     generation has no report at all: there was no posting to                     be relevant to.
+         */
+        get: operations["read"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/generations/{generationId}/download": {
         parameters: {
             query?: never;
@@ -858,7 +882,6 @@ export interface components {
              * @example en
              */
             language?: string;
-            generalMode?: boolean;
         };
         /** @description A generation that was accepted and queued */
         AcceptedJobResponse: {
@@ -969,17 +992,68 @@ export interface components {
             detail?: string;
             /** Format: uuid */
             generationId?: string;
+            /** Format: int32 */
+            pageCount?: number;
             error?: {
                 [key: string]: unknown;
             };
         };
+        /** @description How much of the posting's vocabulary the CV actually says. Counts, never a percentage — Bolum 23.3. */
+        FitReport: {
+            /** Format: int32 */
+            requiredCovered?: number;
+            /** Format: int32 */
+            requiredTotal?: number;
+            /** Format: int32 */
+            preferredCovered?: number;
+            /** Format: int32 */
+            preferredTotal?: number;
+            /** @description Posting skills the page says, in the posting's own words */
+            coveredSkills?: string[];
+            missingRequired?: string[];
+            missingPreferred?: string[];
+            /** @enum {string} */
+            level?: "WEAK" | "MODERATE" | "GOOD" | "STRONG";
+        };
+        /** @description A generation that was made */
+        GenerationResponse: {
+            /** Format: uuid */
+            generationId?: string;
+            /** @enum {string} */
+            status?: "completed" | "failed" | "superseded";
+            /**
+             * Format: int32
+             * @description How many pages the compiled document came to
+             */
+            pageCount?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            fitReport?: components["schemas"]["FitReport"];
+        };
+        /** @description One metric's allowance for today */
         Usage: {
             metric?: string;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description What was actually spent. Never above `limit`, so `used`/`limit` is a pair that can be printed as it is.
+             */
             used?: number;
+            /**
+             * Format: int32
+             * @description Every request that took a unit, refusals included. Equal to `used` until the limit is reached, above it afterwards.
+             */
+            attempted?: number;
             /** Format: int32 */
             limit?: number;
-            /** Format: date-time */
+            /**
+             * Format: int32
+             * @description `limit - used`, never negative
+             */
+            remaining?: number;
+            /**
+             * Format: date-time
+             * @description When the counters roll over, as an absolute instant. The boundary is UTC midnight.
+             */
             resetsAt?: string;
         };
     };
@@ -2200,6 +2274,37 @@ export interface operations {
                 };
             };
             /** @description No such job, or it belongs to someone else */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    read: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                generationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The generation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenerationResponse"];
+                };
+            };
+            /** @description No such generation, or it belongs to someone else */
             404: {
                 headers: {
                     [name: string]: unknown;

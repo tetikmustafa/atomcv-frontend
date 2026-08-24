@@ -23,9 +23,21 @@ type Schemas = components['schemas'];
 /** Which way a job ends. Set by a test through `failNextJob`. */
 export type MockOutcome = 'completed' | 'failed';
 
+/**
+ * Faz F's coverage report (§ 23.3). **Counts, never a percentage** — the
+ * measurement compares skill names, and a figure to the decimal place invites
+ * the reader to treat it as a hiring probability.
+ *
+ * Absent on a general-mode generation: there was no posting to be relevant
+ * to, so every number would be zero and zero would read as a bad match.
+ */
+export type MockFitReport = NonNullable<Schemas['GenerationResponse']['fitReport']>;
+
 export type MockJob = {
   jobId: string;
   generationId: string;
+  /** Absent in general mode, exactly as the server omits it. */
+  fitReport?: MockFitReport;
   /** Wall-clock ms, the origin of this job's schedule. */
   startedAt: number;
   outcome: MockOutcome;
@@ -40,6 +52,11 @@ export type GenerationFixture = {
   paused: boolean;
   /** The outcome the next accepted job gets. Reset after it is claimed. */
   nextOutcome: MockOutcome;
+  /**
+   * Attempts, not spend. A refused request takes a unit too — otherwise a
+   * user past their limit could hammer the endpoint for free (`B-040`) — so
+   * this is what `attempted` reports, and `used` is it capped at the limit.
+   */
   usage: { generation: number; profile_extract: number };
 };
 
@@ -51,25 +68,25 @@ export type GenerationFixture = {
 export const QUOTA = { generation: 5, profile_extract: 3 } as const;
 
 /**
- * The phase progression, measured against the running backend on 2026-08-24.
+ * The phase progression, re-measured against the running backend on
+ * 2026-08-25, after `B-040`.
  *
- * Two details are reproduced deliberately because the client has to survive
- * them (`F-010`): the **first frame is a snapshot** sent the moment a client
- * subscribes, and it carries empty strings rather than dropping the fields.
- * `label` is a translation key (`B-038`), so an empty one is not a key — the
- * client must read it as "no phase yet" instead of translating
- * `generation.phase.`.
+ * The **first frame is a snapshot**, sent the moment a client subscribes, and
+ * it now carries `{"pct":0}` and nothing else: `phase`, `label` and `detail`
+ * are **omitted while empty** rather than sent as `""` (`F-010`, closed). A
+ * translation key that is an empty string is not a key, and the shape says so
+ * now instead of leaving the client to know it.
  *
  * The four real phases and their `pct` values are the server's, not invented:
  * `ANALYSING` 10, `MEASURING` 30, `SCORING` 50, `RENDERING` 70.
  */
 export const SCHEDULE = [
-  { at: 0, phase: '', label: '', pct: 0, detail: '' },
-  { at: 400, phase: 'A', label: 'generation.phase.ANALYSING', pct: 10, detail: '' },
-  { at: 800, phase: 'B', label: 'generation.phase.MEASURING', pct: 30, detail: '' },
-  { at: 1200, phase: 'B', label: 'generation.phase.SCORING', pct: 50, detail: '' },
-  { at: 1600, phase: 'C', label: 'generation.phase.RENDERING', pct: 70, detail: '' },
-] as const;
+  { at: 0, pct: 0 },
+  { at: 400, phase: 'A', label: 'generation.phase.ANALYSING', pct: 10 },
+  { at: 800, phase: 'B', label: 'generation.phase.MEASURING', pct: 30 },
+  { at: 1200, phase: 'B', label: 'generation.phase.SCORING', pct: 50 },
+  { at: 1600, phase: 'C', label: 'generation.phase.RENDERING', pct: 70 },
+] as const satisfies readonly { at: number; phase?: string; label?: string; pct: number }[];
 
 /** When the terminal event lands. Nothing is emitted between it and the last phase. */
 export const TERMINAL_AT = 2000;
@@ -94,6 +111,27 @@ export let generations: GenerationFixture = initial();
 export function resetGenerationFixture() {
   generations = initial();
 }
+
+/**
+ * What a posting-driven generation reports back.
+ *
+ * Modelled on the shape rather than on one example: two required skills
+ * covered out of three is the interesting case, because it is the one where
+ * `missingRequired` has something to say and `level` is neither of the
+ * extremes.
+ */
+export const FIT_REPORT: MockFitReport = {
+  requiredCovered: 3,
+  requiredTotal: 4,
+  preferredCovered: 2,
+  preferredTotal: 3,
+  coveredSkills: ['Java', 'PostgreSQL', 'Kubernetes', 'gRPC', 'CI/CD'],
+  // The posting's own words, not our canonical spelling: the reader is
+  // looking for the term they read in the advert.
+  missingRequired: ['mikroservis'],
+  missingPreferred: ['Terraform'],
+  level: 'MODERATE',
+};
 
 /** § 44.3's brake, for the test that asserts the paused screen. */
 export function pauseGeneration(paused = true) {
@@ -120,10 +158,10 @@ export function expireGeneration(generationId: string) {
 
 export type JobSnapshot = {
   status: NonNullable<Schemas['JobStatusResponse']['status']>;
-  phase: string;
-  label: string;
+  /** Absent while there is no phase to name, exactly as the server sends it. */
+  phase?: string;
+  label?: string;
   pct: number;
-  detail: string;
   terminal: boolean;
 };
 
@@ -144,14 +182,14 @@ export function jobSnapshot(job: MockJob, now = Date.now()): JobSnapshot {
     const last = SCHEDULE[SCHEDULE.length - 1]!;
 
     return job.outcome === 'completed'
-      ? { status: 'completed', phase: '', label: '', pct: 100, detail: '', terminal: true }
+      ? { status: 'completed', pct: 100, terminal: true }
       : { ...last, status: 'failed', terminal: true };
   }
 
   const reached = SCHEDULE.filter((step) => elapsed >= step.at);
   const current = reached[reached.length - 1] ?? SCHEDULE[0];
 
-  return { ...current, status: current.phase === '' ? 'queued' : 'running', terminal: false };
+  return { ...current, status: 'phase' in current ? 'running' : 'queued', terminal: false };
 }
 
 /** The frames a subscriber that connects `at` has not seen yet. */

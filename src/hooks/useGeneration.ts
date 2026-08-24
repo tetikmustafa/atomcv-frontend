@@ -11,13 +11,11 @@
  * Two things here exist only because the wire behaves the way it was measured
  * to, and both would be invisible in a document:
  *
- * - **An empty `label` is not a translation key.** The snapshot frame carries
- *   empty strings rather than dropping the fields (`F-010`), so resolving it
- *   blindly would put `generation.phase.` in front of the user, on the line
- *   they look at most.
- * - **`pageCount` only ever arrives on the stream.** `GET /jobs/{id}` does not
- *   carry it, so a job reconciled by the fallback has a result and no page
- *   count. The screen has to survive that rather than assume it.
+ * - **A missing `label` is not a phase.** The snapshot frame carries no
+ *   `label` at all while a job is queued (`B-040` dropped the empty strings
+ *   `F-010` reported), and the guard stays because a falsy key must never
+ *   reach the translator: it would put `generation.phase.` in front of the
+ *   user, on the line they look at most.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -134,14 +132,16 @@ export function useJobStream(jobId: string, streamUrl?: string): JobProgress {
     const parse = <T>(event: Event) => JSON.parse((event as MessageEvent<string>).data) as T;
 
     source.addEventListener('phase', (event) => {
-      const payload = parse<{ phase: string; label: string; pct: number; detail: string }>(event);
+      const payload = parse<{ phase?: string; label?: string; pct: number; detail?: string }>(
+        event,
+      );
 
       write((current) => ({
         ...current,
         jobId,
-        // The server does not put `status` on a phase frame; an empty phase
-        // is the snapshot of a job that has not started moving.
-        status: payload.phase === '' ? 'queued' : 'running',
+        // The server puts no `status` on a phase frame, and no `phase` on
+        // the snapshot of a job that has not started moving.
+        status: payload.phase ? 'running' : 'queued',
         phase: payload.phase,
         label: payload.label,
         pct: payload.pct,
