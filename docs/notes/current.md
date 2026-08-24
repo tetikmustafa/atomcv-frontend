@@ -154,6 +154,58 @@ de `null` — yani test **boş cache'e karşı** geçiyordu. Artık önce kareni
 cache'e düştüğü bekleniyor; savunma kaldırılınca düşüyor. Geri düşüş testi ilk
 denemede doğru davrandı.
 
+### F2.4 — üretim akışı, ilerleme ve sonuç ekranı
+
+`/[locale]/generate` ve `/[locale]/generations/[id]`. F2.5 ayrı bir adım
+olarak planlanmıştı; **birleştirildi**, çünkü ilerleme ekranı bitince sonuç
+rotasına gidiyor ve o rota olmadan commit'te ölü bir link kalırdı.
+
+- **Form tek alan.** "Manuel kontrol isteğe bağlıdır" bir ürün kuralı:
+  varsayılan çıktı kullanıcı hiçbir şeye dokunmadan kullanılabilir olmak
+  zorunda. Sayfa bütçesi ve sözcükleme dili profilde kalıyor; `maxPages`
+  isteğe **yalnız sunucu `increase_page_limit` teklif ettiğinde** giriyor.
+  İlan da zorunlu değil — yokluğu genel mod, ve boş alan düğmeyi kilitlemiyor.
+- **`ErrorPanel` ikinci bir eleme kazandı: `canResolve`.** Düşürmek uydurmak
+  değil; alternatifi, kullanıcının zaten sıkıştığı ekranda ileri giden yol gibi
+  görünüp basılınca hiçbir şey yapmayan bir düğme. `sign_up`'ın Aşama 3'e
+  kadar rotası yok, `keep_top_pinned` şemanın yayımlamadığı bir istek alanı
+  istiyor. Varsayılan "hepsi", yani sözlüğün tamamını karşılayan çağıran
+  hiçbir şey geçirmiyor.
+- **Tek çözücü, iki taşıyıcı.** Senkron 4xx ile SSE `failed` aynı
+  `resolve()`'a düşüyor. İki `switch (code)` bloğu, aynı hatanın ne zaman
+  olduğuna göre farklı davranmaya başlamasının yoludur.
+- **`generation.phase.*` küçük harfli ad alanında.** Katalogda küçük harf =
+  **sunucunun gönderdiği anahtarlar** (`errors`, `resolutions`), büyük harf =
+  arayüz metni (`ErrorPanel`, `Editor`). `Generation` ile `generation` yan
+  yana duruyor ve bu bir kaza değil: biri bizim, diğeri telin.
+- **İlerleme render'da değil, değişimde sesleniyor.** Takılan bir iş aynı
+  yüzdeyi iki kez geçiyor; kendini tekrarlayan bir canlı bölge insanların
+  kapattığı bir canlı bölgedir. Ayrıca `aria-valuetext` faz adını taşıyor ama
+  ikinci bir duyuru yapmıyor — ikisi birden okunsa her faz iki kez söylenirdi.
+- **Bitişte `replace`, `push` değil.** Bitmiş bir işin ilerleme ekranında
+  gösterilecek bir şey kalmıyor; geri tuşu %100'de donmuş bir çubuğa değil,
+  gelinen forma gitmeli.
+- **İndirme bağlantı değil `fetch` + blob.** Bağlantı gezinir, ve gezinme
+  `410 GENERATION_ARTIFACT_EXPIRED`'ı çıkış yolu olan bir hata yerine bir
+  sayfa dolusu JSON'a çevirir (kural 7).
+- **`/[locale]/generations/[id]` doğası gereği dinamik.** Sınırsız bir
+  parametrenin `generateStaticParams`'ı olamaz. CLAUDE.md'nin uyardığı sessiz
+  dinamikleşme **bu değil** — `setRequestLocale` çağrılıyor; "düzeltmeye"
+  çalışılacak bir şey yok.
+
+**Sonuç ekranının ince olması bir eksik uç, bir tercih değil.** Sayfa sayısı
+akıştan geliyor ve iş cache'inde duruyor; soğuk yüklemede ya da geri düşüşle
+uzlaşılmış bir işte **yok**, o yüzden cümle basılmıyor — uydurulmuyor. Aynı
+sebeple **"bir sayfadan kısa CV" notu yazılmadı**: `pageCount` tam sayı, ve
+sunucu "bir sayfayı doldurmadı" diye bir sinyal göndermiyor. Not, sinyali
+olmadan yazılırsa her CV'de çıkar.
+
+**Gezinme indi ve bedeli ölçüldü.** Aşama 1'in dersi ("yalnız bookmark ile
+ulaşılan rota ulaşılabilir değildir") iki rotayla birlikte gerçek bir sorun
+oldu; `AppShell` artık `MainNav` taşıyor, `aria-current` ile. Profil rotası
+**244.0 → 250.6 KB toplam, 75.8 → 82.2 KB kendi payı** — tavanın (280 / 105)
+altında, ve gezilebilir olmanın fiyatı.
+
 ### Aşama 1'den devralınan, Aşama 2'de yeniden bakılacaklar
 
 - **`POST /generations/general` kaldırıldı** (B-022 kapandı, B-038). Genel

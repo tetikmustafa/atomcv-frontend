@@ -17,6 +17,12 @@
  * - **A resolution we cannot name is dropped, not guessed at.** The action
  *   vocabulary is open; an unlabelled button on an error screen could do
  *   anything, and the user has no way to find out which.
+ * - **A resolution the screen cannot carry out is dropped too**, through
+ *   `canResolve`. Dropping is not inventing: the alternative is a button that
+ *   looks like the way forward and does nothing when pressed, on the screen
+ *   where the user is already stuck. `sign_up` reaches a product with no
+ *   sign-up route yet, and `keep_top_pinned` asks for a request field the
+ *   schema does not publish.
  */
 
 import { useTranslations } from 'next-intl';
@@ -31,6 +37,12 @@ export type ErrorPanelProps = {
   /** Runs the action the user picked. The panel never interprets it. */
   onResolve?: (resolution: Resolution) => void;
   /**
+   * Whether this screen can actually carry out an action. Defaults to "yes"
+   * for everything it can name, so a caller that handles the whole
+   * vocabulary passes nothing.
+   */
+  canResolve?: (action: Resolution['action']) => boolean;
+  /**
    * The panel's own retry, rendered apart from the resolutions. Pass it only
    * where repeating the request could genuinely differ — `isRetriable` is the
    * test, and a 4xx is not it.
@@ -39,7 +51,7 @@ export type ErrorPanelProps = {
   onDismiss?: () => void;
 };
 
-export function ErrorPanel({ error, onResolve, onRetry, onDismiss }: ErrorPanelProps) {
+export function ErrorPanel({ error, onResolve, canResolve, onRetry, onDismiss }: ErrorPanelProps) {
   const t = useTranslations('ErrorPanel');
   const describe = useErrorMessage();
   const label = useResolutionLabel();
@@ -47,6 +59,7 @@ export function ErrorPanel({ error, onResolve, onRetry, onDismiss }: ErrorPanelP
   const { code, params, resolutions } = toErrorLike(error);
 
   const offered = resolutions
+    .filter((resolution) => canResolve?.(resolution.action) ?? true)
     .map((resolution) => ({ resolution, text: label(resolution) }))
     .filter((entry): entry is { resolution: Resolution; text: string } => entry.text !== null);
 

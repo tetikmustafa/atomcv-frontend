@@ -233,3 +233,26 @@ export function useDownloadGeneration() {
 export function useUsage() {
   return useQuery<Usage[]>({ queryKey: accountKeys.usage(), queryFn: getUsage });
 }
+
+/**
+ * How many pages a finished generation came to, when this session watched it
+ * happen.
+ *
+ * Reads the job cache rather than asking, because there is nothing to ask:
+ * `pageCount` rides the `completed` event and no endpoint carries it
+ * (`F-008`). A result reached by reload, or reconciled through the polling
+ * fallback, has no page count — hence `null` rather than a guess, and a
+ * screen that leaves the sentence out rather than filling it in.
+ *
+ * A plain cache read, not a subscription: the job is terminal by the time
+ * this renders, so there is no later value to re-render for.
+ */
+export function useJobPageCount(generationId: string): number | null {
+  const queryClient = useQueryClient();
+
+  const watched = queryClient
+    .getQueriesData<CachedJob>({ queryKey: jobKeys.all })
+    .find(([, job]) => job?.generationId === generationId);
+
+  return watched?.[1]?.pageCount ?? null;
+}

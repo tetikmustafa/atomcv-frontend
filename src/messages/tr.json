@@ -49,6 +49,19 @@
     "retry": "Tekrar dene",
     "complete_profile": "Profil düzenleyiciyi aç"
   },
+  "generation": {
+    "phase": {
+      "ANALYSING": "İlan okunuyor",
+      "MEASURING": "İçeriğin ölçülüyor",
+      "SCORING": "Eşleşme puanlanıyor",
+      "RENDERING": "Belge hazırlanıyor"
+    }
+  },
+  "Nav": {
+    "label": "Bölümler",
+    "profile": "Profil",
+    "generate": "CV oluştur"
+  },
   "ErrorPanel": {
     "dismiss": "Kapat",
     "retry": "Tekrar dene"
@@ -261,7 +274,28 @@
     }
   },
   "Generation": {
-    "pageCount": "{count, plural, =1 {# sayfa} other {# sayfa}}"
+    "pageCount": "{count, plural, =1 {# sayfa} other {# sayfa}}",
+    "title": "CV oluştur",
+    "intro": "Başvurduğun ilanı yapıştır. Zorunlu değil — ilan olmadan genel bir CV alırsın; hedefi daha dar olur, kalitesi değil.",
+    "postingLabel": "İş ilanı",
+    "postingPlaceholder": "İlanı buraya yapıştır…",
+    "submit": "Oluştur",
+    "submitting": "Başlatılıyor…",
+    "progressLabel": "Üretim ilerlemesi",
+    "queued": "Başlaması bekleniyor",
+    "announceProgress": "{phase}, yüzde {pct}",
+    "announceDone": "CV’n hazır",
+    "announceFailed": "Üretim başarısız oldu",
+    "startOver": "Yeniden başla"
+  },
+  "Result": {
+    "title": "CV’n",
+    "ready": "Hazır.",
+    "pages": "{count, plural, =1 {Tek sayfa.} other {# sayfa.}}",
+    "download": "PDF'i indir",
+    "downloading": "Dosya hazırlanıyor…",
+    "again": "Bir tane daha oluştur",
+    "announceDownloaded": "İndirme başladı"
   },
   "Footer": {
     "privacy": "Gizlilik",

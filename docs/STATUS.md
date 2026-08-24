@@ -35,9 +35,9 @@ güncellendi — **`sync-spec.sh` Aşama 2 kapanışında** çalıştırılacak 
 |---|---|
 | Aşama 0 — İskelet | ✅ |
 | Aşama 1 — Profil editörü | ✅ |
-| Aşama 2 — Üretim akışı + SSE | 🔄 API katmanı hazır |
+| Aşama 2 — Üretim akışı + SSE | 🔄 akış + sonuç ekranı |
 
-**Açık: `B-037`…`B-039`.** **Test:** 335 birim · 17 e2e · **bundle** 244.0 / 75.8 KB.
+**Açık: `B-037`…`B-039`.** **Test:** 343 birim · 22 e2e · **bundle** 250.6 / 82.2 KB.
 **`gen:api` çalıştı** — `/generations` 202'ye döndü, `/jobs/*`, `/download` ve
 `/account/usage` indi; ICU mesajları ve mock'lar ölçülen davranışa hizalandı.
 **`F-008`…`F-010` açık:** uygunluk raporu hiçbir uçta yok. Aşama 1: `archive/stage-1.md`.

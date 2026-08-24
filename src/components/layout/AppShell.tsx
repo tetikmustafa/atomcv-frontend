@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Announcer } from './Announcer';
+import { MainNav } from './MainNav';
 
 /**
  * Landmark structure for the authenticated app (Bölüm 39.2).
@@ -13,7 +14,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Announcer />
       <div className="flex min-h-full flex-col">
         <header className="border-border border-b">
-          {/* Navigation lands with the routes it navigates to. */}
+          <MainNav />
         </header>
         <main id="main" tabIndex={-1} className="flex-1 outline-none">
           {children}

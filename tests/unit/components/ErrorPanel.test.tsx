@@ -79,6 +79,27 @@ describe('the error panel', () => {
   });
 
   /**
+   * The second reason a button is dropped, and it is not the same as the
+   * first. `sign_up` has a label and a meaning; what it does not have, until
+   * Stage 3, is a route. Drawing it would put the way forward in front of
+   * someone who is stuck and have nothing happen when they take it.
+   */
+  it('drops an action this screen cannot carry out', () => {
+    const error = new ApiError({
+      status: 401,
+      code: 'ANONYMOUS_SESSION_EXPIRED',
+      resolutions: [{ action: 'sign_up' }, { action: 'retry' }],
+    });
+
+    render(<ErrorPanel error={error} canResolve={(action) => action !== 'sign_up'} />, {
+      wrapper,
+    });
+
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+  });
+
+  /**
    * A code this build has never seen must still produce a panel with a
    * sentence in it. Throwing here would remove the explanation and every way
    * out at the same time.

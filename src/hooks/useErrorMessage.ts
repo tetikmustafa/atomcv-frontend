@@ -66,3 +66,31 @@ export function useResolutionLabel() {
     [t, locale],
   );
 }
+
+/**
+ * Turns the server's progress `label` into a phase name.
+ *
+ * Rule 8 again, and for the same reason: `B-038` changed the stream to send
+ * `generation.phase.*` rather than an English sentence, because the progress
+ * line is the most-read text in the product and a sentence would have to be
+ * re-sent in every language the product ever gains.
+ *
+ * Two absences are handled here rather than at the call site:
+ *
+ * - **An empty label is not a key.** The snapshot frame carries `label: ''`
+ *   (`F-010`), and resolving that would render `generation.phase.`.
+ * - **An unknown phase gets no name at all.** The pipeline can grow one, and
+ *   the bar is still true without a caption — inventing a name from the key
+ *   would put `RENDERING_COVER_LETTER` in front of the user.
+ */
+export function usePhaseLabel() {
+  const t = useTranslations() as unknown as LooseTranslator;
+
+  return useCallback(
+    (key: string | null): string | null => {
+      if (!key || !t.has(key)) return null;
+      return t(key);
+    },
+    [t],
+  );
+}

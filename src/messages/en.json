@@ -49,6 +49,19 @@
     "retry": "Try again",
     "complete_profile": "Open the profile editor"
   },
+  "generation": {
+    "phase": {
+      "ANALYSING": "Reading the posting",
+      "MEASURING": "Measuring your content",
+      "SCORING": "Scoring the match",
+      "RENDERING": "Building the document"
+    }
+  },
+  "Nav": {
+    "label": "Sections",
+    "profile": "Profile",
+    "generate": "Generate"
+  },
   "ErrorPanel": {
     "dismiss": "Dismiss",
     "retry": "Try again"
@@ -261,7 +274,28 @@
     }
   },
   "Generation": {
-    "pageCount": "{count, plural, =1 {# page} other {# pages}}"
+    "pageCount": "{count, plural, =1 {# page} other {# pages}}",
+    "title": "Generate a resume",
+    "intro": "Paste the posting you are applying to. It is optional — without one you get a general resume, which is narrower in aim, not lower in quality.",
+    "postingLabel": "Job posting",
+    "postingPlaceholder": "Paste the posting here…",
+    "submit": "Generate",
+    "submitting": "Starting…",
+    "progressLabel": "Generation progress",
+    "queued": "Waiting to start",
+    "announceProgress": "{phase}, {pct} percent",
+    "announceDone": "Your resume is ready",
+    "announceFailed": "The generation failed",
+    "startOver": "Start again"
+  },
+  "Result": {
+    "title": "Your resume",
+    "ready": "It is ready.",
+    "pages": "{count, plural, =1 {One page.} other {# pages.}}",
+    "download": "Download PDF",
+    "downloading": "Preparing the file…",
+    "again": "Generate another",
+    "announceDownloaded": "Download started"
   },
   "Footer": {
     "privacy": "Privacy",
