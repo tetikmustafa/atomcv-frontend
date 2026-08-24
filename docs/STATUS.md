@@ -3,7 +3,7 @@
 > İki repo da bu dosyayı okur ve kendi satırlarını günceller. **Kural: 60 satırı geçmez.**
 > Ayrıntılı inşa kayıtları repo-yerel `notes/current.md`'dedir, buraya taşınmaz.
 
-**Son güncelleme:** 2026-08-25 · **`F-008`…`F-012` kapandı**; **`B-040`, `B-041` açık**
+**Son güncelleme:** 2026-08-25 · **Aşama 2 iki repoda da tam kapandı**; açık madde yok
 
 ---
 
@@ -33,12 +33,14 @@ oldu, `usage` `attempted` kazandı. `B-037`…`B-039` arşivlendi.
 |---|---|
 | Aşama 0 — İskelet | ✅ |
 | Aşama 1 — Profil editörü | ✅ |
-| Aşama 2 — Üretim akışı + SSE | ✅ (uygunluk raporu ekranı `B-041` ile yazılabilir) |
+| Aşama 2 — Üretim akışı + SSE | ✅ |
 
-**`B-040`, `B-041` açık** (`gen:api` + sonuç ekranı). **Test:** 352 birim · 23 e2e ·
+**Açık `B-nnn` yok** — `B-040` ve `B-041` ACK'te. **Test:** 362 birim · 25 e2e ·
 **bundle** profil 250.6 / üretim 214.8 KB.
-**Aşama 2 kapandı:** üretim akışı, SSE, sonuç ekranı ve kota bağlı; MSW kapalı
-**10 kontrol** geçti, ikisi gerçek hata buldu. Notlar `notes/archive/stage-2.md`.
+**Aşama 2 tam kapandı:** üretim akışı, SSE, kota **ve uygunluk raporu**. Gerçek
+uca karşı MSW kapalı iki tur (10 + 9 kontrol) geçti; üç gerçek hata buldular —
+`Accept` → 406, dev proxy'nin SSE'yi gzip'lemesi, yeniden yüklemede sonucun
+kaybolması. Notlar `notes/archive/stage-2.md`.
 
 ---
 
@@ -54,6 +56,5 @@ oldu, `usage` `attempted` kazandı. `B-037`…`B-039` arşivlendi.
 
 ## Sonraki senkronizasyon noktası
 
-**`B-040` + `B-041` → `gen:api`, sonra sonuç ekranı.** Beş `F-nnn`'in beşi de
-kapandı; frontend'in Aşama 2'de yazılamayan tek parçası uygunluk raporuydu ve
-verisi artık telde.
+**Yok.** Aşama 2 iki tarafta da kapandı; sıradaki temas Aşama 3'ün ilk ucu
+(`/auth/session` ve `capabilities`).

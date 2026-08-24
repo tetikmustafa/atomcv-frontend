@@ -323,11 +323,9 @@ request escaping to the network in a test is a bug in the test.
 **Stage 3 — accounts and MVP.** Stages 0, 1 and 2 are closed; their full build
 records are `docs/notes/archive/stage-1.md` and `stage-2.md`.
 
-**Stage 2 closed with one deliverable unbuilt.** The fit report (§ 23.3) has no
-transport: `GET /generations/{id}` is not published and the `completed` event
-carries no `matchLevel` (`F-008`). The result screen shows a page count and a
-download, and **a percentage in its place is the one thing § 23.3 forbids by
-name.** Do not "fix" it before the data exists.
+**The fit report shows counts and never a percentage** (§ 23.3 forbids one by
+name). Completeness is the opposite — a percentage by design. They live on
+different screens for a reason; do not unify them.
 
 A session that opens with "continue with Stage 3" starts here, in this order.
 Nothing below is summarised in this file: a second copy of the state drifts

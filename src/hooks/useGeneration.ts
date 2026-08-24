@@ -22,19 +22,23 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   downloadGeneration,
+  getGeneration,
   startGeneration,
+  type Generation,
   type GenerationRequest,
 } from '@/lib/api/endpoints/generations';
 import { getJob, isTerminal, jobStreamUrl, type JobStatus } from '@/lib/api/endpoints/jobs';
 import { getUsage, type Usage } from '@/lib/api/endpoints/account';
-import { accountKeys, jobKeys } from '@/lib/api/queryKeys';
+import { accountKeys, generationKeys, jobKeys } from '@/lib/api/queryKeys';
 
 /**
- * `JobStatus` plus the one field the stream knows and the status endpoint
- * does not. Widened here rather than in `endpoints/jobs.ts`: it is not part
- * of that response, and pretending otherwise would hide `F-008`.
+ * What the cache holds for a job.
+ *
+ * It used to widen `JobStatus` with `pageCount`, which only the stream knew.
+ * `B-041` put that field on the status endpoint too, so the two transports
+ * describe the same thing and there is nothing left to widen.
  */
-type CachedJob = JobStatus & { pageCount?: number };
+type CachedJob = JobStatus;
 
 type Transport = 'stream' | 'poll' | 'done';
 
@@ -243,24 +247,16 @@ export function useUsage() {
 }
 
 /**
- * How many pages a finished generation came to, when this session watched it
- * happen.
+ * One finished generation, with its fit report.
  *
- * Reads the job cache rather than asking, because there is nothing to ask:
- * `pageCount` rides the `completed` event and no endpoint carries it
- * (`F-008`). A result reached by reload, or reconciled through the polling
- * fallback, has no page count — hence `null` rather than a guess, and a
- * screen that leaves the sentence out rather than filling it in.
- *
- * A plain cache read, not a subscription: the job is terminal by the time
- * this renders, so there is no later value to re-render for.
+ * Fetched rather than read out of the job cache. The screen is reachable by
+ * URL — the progress screen replaces itself with it, and a reload has to land
+ * somewhere real — so what it shows cannot depend on this session having
+ * watched the job happen.
  */
-export function useJobPageCount(generationId: string): number | null {
-  const queryClient = useQueryClient();
-
-  const watched = queryClient
-    .getQueriesData<CachedJob>({ queryKey: jobKeys.all })
-    .find(([, job]) => job?.generationId === generationId);
-
-  return watched?.[1]?.pageCount ?? null;
+export function useGenerationResult(generationId: string) {
+  return useQuery<Generation>({
+    queryKey: generationKeys.detail(generationId),
+    queryFn: () => getGeneration(generationId),
+  });
 }

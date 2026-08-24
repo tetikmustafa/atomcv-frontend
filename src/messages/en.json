@@ -295,7 +295,20 @@
     "download": "Download PDF",
     "downloading": "Preparing the file…",
     "again": "Generate another",
-    "announceDownloaded": "Download started"
+    "announceDownloaded": "Download started",
+    "loading": "Fetching your resume…",
+    "generalNote": "No posting was given, so there is nothing to measure this against."
+  },
+  "Fit": {
+    "heading": "How this matches the posting",
+    "level": "{level, select, WEAK {Weak match} MODERATE {Moderate match} GOOD {Good match} STRONG {Strong match} other {Match}}",
+    "required": "Required skills",
+    "preferred": "Preferred skills",
+    "count": "{covered, number}/{total, number}",
+    "covered": "Found in your resume",
+    "missingRequired": "Missing required skills",
+    "missingPreferred": "Missing preferred skills",
+    "suggestion": "If you have {skill} experience, adding it to your profile would strengthen this match."
   },
   "Usage": {
     "label": "Today's usage",

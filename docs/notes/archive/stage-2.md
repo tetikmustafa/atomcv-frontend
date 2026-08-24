@@ -353,3 +353,104 @@ taşıyor; burada yalnız **nerede olduğu** var.
 - **Türkçe metni shell argümanından geçirme.** Sonda `curl -d` ile gönderilen
   Türkçe gövde bozuk varıyor ve sahte bir `400` üretiyor; sondaları dosyaya
   yazıp `node` ile çalıştır.
+
+---
+
+## Sonradan eklenenler — `B-040` ve `B-041`
+
+> Aşama 2 bir teslimatı eksik kapanmıştı; backend beş `F-nnn`'i yanıtlayıp
+> veriyi yayımlayınca kalan parça yazıldı ve aşama gerçekten kapandı.
+
+## Aşama 2 — kalan işler (`B-040`, `B-041`)
+
+Aşama 2 bir teslimatı eksik kapanmıştı: uygunluk raporunun telde karşılığı
+yoktu (`F-008`). Backend beş `F-nnn`'i de yanıtladı ve **veriyi yayımladı**,
+yani eksik parça artık yazılabilir. Aşama 3'e o bitince geçilir; bu bölüm
+kapanışta `archive/stage-2.md`'ye eklenir.
+
+### F2.8 — `gen:api` ve `B-040`'ın üç düzeltmesi
+
+- **`generalMode` şemadan düştü.** Hiç yazılmamış; bir record'un
+  `isGeneralMode()` getter'ı springdoc'a sızmış. İstemci onu hiç göndermiyordu,
+  yani kod değişmedi — `F-009` sorusunu sormak yeterliydi.
+- **İlerleme alanları boşken gönderilmiyor artık.** Ölçüldü: anlık durum
+  `{"pct":0}`, başka hiçbir şey yok. `F-010` kaynağında kapandı; `toProgress`
+  içindeki savunma **duruyor** ama artık son savunma hattı, tek savunma değil.
+  Mock'un `SCHEDULE`'ı da alanları düşürüyor — sunucu ne gönderiyorsa o.
+- **Kota iki sayıya ayrıldı.** `used` harcanan (asla `limit`'ten büyük değil),
+  `attempted` birim alan her istek. Sayı yanlış değildi, **adı** yanlıştı.
+  `UsageNote`'taki yara bandı kalktı: karşılaştırma bizim değil, `remaining`
+  sunucunun. "Hakkın kalmadı" cümlesi kaldı — "20 of 20" doğru ama okuyucunun
+  bilmek istediği şey değil.
+
+**Bir ölçüm mock'u düzeltti:** kotanın reddettiği istek (429) birim alıyor,
+**ön kontrolün reddettiği (422) almıyor**. Mock ikisini de saymıyordu; artışı
+kota kapısına taşıdım, isteğin kendisine değil. Sonda olmadan "reddedilenler
+dahil" cümlesi iki farklı şekilde uygulanabilirdi.
+
+### Aşama 3'te yeniden bakılacaklar
+
+- **`capabilities` hâlâ yayımlanmadı.** `/auth/session` Aşama 3; `contracts.ts`
+  onu hâlâ tarif ediyor ve tarif etmeye devam etmeli. Yayımlandığı gün üç yer
+  açılır: profil başındaki dil eksenleri, anonim/kimlikli ayrımı, şablon
+  seçimi.
+- **`sign_up` bir düğme olarak çizilmiyor** (`canResolve`), çünkü gideceği
+  rota yok. Auth indiği gün `GenerateScreen`'in `HANDLED` listesine eklenir —
+  ve o gün `ANONYMOUS_SESSION_EXPIRED` gerçekten görünür hâle gelir.
+- **`Retry-After` okunmuyor** (`B-039` ACK'i). Otomatik yeniden deneme geldiği
+  gün doğru olan tek değer o; `RequestOptions`'a eklenecek yer hazır.
+- **`used` `limit`'i geçebiliyor** (`F-012`). `UsageNote` sınır aşılınca
+  cümleyi değiştiriyor; backend karar verince yara bandı kalkar.
+- **`profile_extract` sayacı çizilmiyor.** Çıkarım Aşama 3; uç zaten iki
+  metriği de döndürüyor, ekran birini seçiyor.
+
+
+### F2.9 — uygunluk raporu ve sonuç ekranı (`B-041`)
+
+Aşama 2'nin yazılamayan tek parçası. Veri indi, ekran yazıldı.
+
+- **Ekran işi değil üretimi okuyor.** `GET /generations/{id}` geldiği için
+  `useJobPageCount` (iş cache'ini tarayan geçici çözüm) tamamen silindi.
+  Sonuç URL ile ulaşılabilir olmak zorunda; gösterdiği hiçbir şey "bu sekme
+  işi izledi mi" sorusuna bağlı olamaz. **Gerçek uca karşı yeniden yükleme ile
+  doğrulandı** — MSW'nin kanıtlayamayacağı tek şey buydu, çünkü mock'un durumu
+  sayfayla birlikte ölüyor.
+- **Sayılar, asla yüzde.** `FitReport` hiçbir yerde bir sayıyı diğerine
+  bölmüyor; çift, çift olarak gösteriliyor. Testler bunu iki yönden sabitliyor:
+  metinde `%` yok **ve** ondalık sayı yok. Tamamlanmışlık bunun tersi — tasarım
+  gereği yüzde — ve ikisi birleştirilmemeli.
+- **Eksik beceriler iki liste.** Sayılar hangi tarafta kaç eksik olduğunu zaten
+  söylüyor; adları tek listede birleştirmek okuyucunun **hangi boşluğun
+  mülakata mal olduğunu** göremediği bir ekran olurdu.
+- **Eksikler ilanın kendi sözcükleriyle** ("mikroservis"), bizim kanonik
+  yazımımızla değil: okuyucu ilanda gördüğü terimi arıyor. § 23.3'ün öneri
+  cümlesi de bu listeden yazılıyor, önce zorunlu olandan.
+- **Genel modda rapor hiç yok.** Sıfırlardan oluşan bir satır "kötü eşleşme"
+  diye okunur; ekran bunun yerine karşılaştırılacak bir şey olmadığını söylüyor.
+- **`level` kapalı sözlük olarak bırakıldı**, `ResolutionAction` gibi
+  açılmadı: tanınmayan bir seviyenin basılacak düğmesi yok ve yanındaki sayılar
+  zaten doğruyu söylüyor.
+
+**Bir tip hatası ucuz yakalandı:** `Returns<'read', '*/*'>` — bu uç
+diğerlerinin aksine `produces` bildiriyor, yani medya tipi `application/json`.
+Yanlış tip `never` üretti ve her alan erişimi patladı. Sessizce `unknown`
+olsaydı ekran çalışır görünüp boş çizerdi.
+
+### E2E paralelliği: flake değil kuyruk
+
+Sekiz worker'la üretim testlerinin altı-sekizi düşüyordu, tek başına hepsi
+geçiyordu. Sebep testlerde değildi: istemci tarafı gezinme `next dev`'den RSC
+yükü çekiyor ve sekiz worker aynı anda sorunca beş saniyelik doğrulama
+aşılıyor. İki düzeltme:
+
+- **`globalSetup` her rotayı önceden derliyor** (`tests/e2e/warmup.ts`).
+  Derlenemeyen bir rota artık rastgele bir testin açıklanamayan zaman aşımı
+  değil, açık bir kurulum hatası.
+- **Yerelde worker sayısı dörde sabitlendi.** Ölçüldü: sekizde koşu başına
+  altı-sekiz düşüş, dörtte üç temiz koşu. Soruyu soranı kısmak, yavaş bir
+  uygulamayı gizlemek değil — üretim bir build servis ediyor ve buradaki
+  bekleme test edilen kodun değil.
+
+Bunun sonucunda `openGenerate`'teki 30 saniyelik yara bandı da kalktı; sebebi
+yanlış teşhis etmiştim (derleme sanmıştım, kuyrukmuş).
+

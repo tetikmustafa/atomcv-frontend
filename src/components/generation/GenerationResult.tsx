@@ -1,30 +1,29 @@
 'use client';
 
 /**
- * A finished generation: what it is, and how to get it.
+ * A finished generation: what it is, how well it fits, and how to get it.
  *
- * Deliberately thin, and the reason is a missing endpoint rather than a
- * design choice. There is no `GET /generations/{id}` and the `completed`
- * event carries no `matchLevel`, so the fit report § 23.3 specifies — covered
- * skills counted, never a percentage — has no transport (`F-008`). Putting a
- * number here that the server did not compute is the one thing that section
- * forbids by name.
+ * It reads the generation rather than the job that made it. The screen is
+ * reachable by URL — the progress screen replaces itself with it, and a
+ * reload has to land somewhere real — so nothing it shows may depend on this
+ * session having watched the job happen.
  *
- * The page count is shown when it is known and left out when it is not:
- * it rides the stream and nothing else, so a result reached by reload or by
- * the polling fallback simply does not have it.
+ * The fit report is absent in general mode, and that is a different state
+ * from "no skills matched": there was no posting to be relevant to. It is
+ * said in words rather than drawn as a row of zeroes.
  */
 
 import { useTranslations } from 'next-intl';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
+import { FitReport } from '@/components/generation/FitReport';
 import { Button } from '@/components/ui/button';
 import { Link } from '@/lib/i18n/navigation';
-import { useDownloadGeneration, useJobPageCount } from '@/hooks/useGeneration';
+import { useDownloadGeneration, useGenerationResult } from '@/hooks/useGeneration';
 import { announce } from '@/stores/announcerStore';
 
 export function GenerationResult({ generationId }: { generationId: string }) {
   const t = useTranslations('Result');
-  const pageCount = useJobPageCount(generationId);
+  const { data, isPending, error, refetch } = useGenerationResult(generationId);
   const download = useDownloadGeneration();
 
   function save() {
@@ -46,11 +45,17 @@ export function GenerationResult({ generationId }: { generationId: string }) {
     });
   }
 
+  if (isPending) return <p className="text-muted-foreground text-sm">{t('loading')}</p>;
+
+  // A failed read here is a 404 or a 5xx, and only the second is worth
+  // repeating — `isRetriable` is what decides, inside the panel's own retry.
+  if (error) return <ErrorPanel error={error} onRetry={() => void refetch()} />;
+
   return (
     <div className="flex flex-col gap-4">
       <p>
         {t('ready')}
-        {pageCount !== null ? ` ${t('pages', { count: pageCount })}` : ''}
+        {data.pageCount !== undefined ? ` ${t('pages', { count: data.pageCount })}` : ''}
       </p>
 
       {download.error && <ErrorPanel error={download.error} />}
@@ -64,6 +69,12 @@ export function GenerationResult({ generationId }: { generationId: string }) {
           {t('again')}
         </Link>
       </div>
+
+      {data.fitReport ? (
+        <FitReport report={data.fitReport} />
+      ) : (
+        <p className="text-muted-foreground text-sm">{t('generalNote')}</p>
+      )}
     </div>
   );
 }

@@ -1,10 +1,11 @@
 /**
  * The Stage 2 generation API.
  *
- * Two calls and nothing else: starting one, and downloading what it made.
- * There is no `GET /generations/{id}` to read a finished generation with —
- * the resource map names one (§ 35.2) but the schema does not publish it, so
- * everything the result screen knows arrives on the stream (`F-008`).
+ * Starting one, reading it back, and downloading what it made.
+ *
+ * `GET /generations/{id}` is what the result screen was waiting for (`B-041`):
+ * before it, everything the screen knew arrived on the stream, so a reload
+ * left it with a page and no facts on it.
  */
 
 import { api } from '../client';
@@ -36,6 +37,37 @@ export type AcceptedJob = Returns<'generate', '*/*'>;
  */
 export function startGeneration(body: GenerationRequest, idempotencyKey: string) {
   return api.post<AcceptedJob>('/generations', body, { idempotencyKey });
+}
+
+/**
+ * JSON, unlike its siblings on this endpoint: this operation declares what it
+ * produces, so the default media type is the right one. Getting it wrong is
+ * not subtle — `Returns` resolves to `never` and every field access fails.
+ */
+export type Generation = Returns<'read'>;
+
+/**
+ * Faz F's coverage report (§ 23.3).
+ *
+ * **Counts, never a percentage.** The measurement compares skill names, and a
+ * figure to the decimal place invites the reader to treat it as a hiring
+ * probability — which is why the section forbids one by name, and why nothing
+ * in the client derives a ratio from these numbers.
+ *
+ * `level` is a closed vocabulary the server computes over the counts. It is
+ * left as the generated enum rather than re-opened: unlike `ResolutionAction`,
+ * a level this build has never seen has no button to render and no way to be
+ * acted on, and the counts beside it still say everything true.
+ */
+export type FitReport = NonNullable<Generation['fitReport']>;
+
+/**
+ * One finished generation. Absent `fitReport` means general mode — there was
+ * no posting to be relevant to, and a row of zeroes would read as a bad match
+ * rather than as a different question.
+ */
+export function getGeneration(generationId: string) {
+  return api.get<Generation>(`/generations/${generationId}`);
 }
 
 /**

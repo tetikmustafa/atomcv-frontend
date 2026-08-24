@@ -3,6 +3,9 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = 3100;
 const BASE_URL = `http://localhost:${PORT}`;
 
+// Read by the warm-up, which runs outside the fixtures that know `baseURL`.
+process.env.PLAYWRIGHT_BASE_URL = BASE_URL;
+
 /**
  * Runs against `next dev`, not a production build.
  *
@@ -16,10 +19,27 @@ const BASE_URL = `http://localhost:${PORT}`;
  */
 export default defineConfig({
   testDir: './tests/e2e',
+  // Compiles every route once before the workers start. Without it the first
+  // request to each route pays for a `next dev` compile inside whichever test
+  // drew it, and eight workers meeting eight cold routes lose eight tests to
+  // work none of them was measuring.
+  globalSetup: './tests/e2e/warmup.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  /**
+   * Four locally, not "half the cores".
+   *
+   * The server under test is `next dev`, and what these tests wait on is
+   * mostly it: a client-side navigation fetches an RSC payload, and eight
+   * workers asking at once push that past a five-second assertion. The
+   * failures looked like flaky tests and were a queue — measured at eight
+   * (six to eight failures a run) and at four (three clean runs).
+   *
+   * Capping the askers is not the same as hiding a slow app: production
+   * serves a build, and nothing here is waiting on the code under test.
+   */
+  workers: process.env.CI ? 1 : 4,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
 
   use: {

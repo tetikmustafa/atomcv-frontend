@@ -19,17 +19,16 @@ const REAL_POSTING = [
 ].join(' ');
 
 /**
- * In through the front door, with room for a cold compile.
+ * In through the front door.
  *
- * `next dev` builds a route the first time it is asked for, and this suite
- * runs against it because MSW is disabled in production builds by design. The
- * generous timeout covers that first crossing only — it was a real flake
- * before it was there, and a flaky front-door test is one people stop reading.
+ * The generous timeout this used to carry is gone: the cold-compile flake it
+ * worked around is fixed at the source, in `globalSetup`, which compiles every
+ * route before the workers start.
  */
 async function openGenerate(page: Page) {
   await page.goto('/en/profile');
   await page.getByRole('link', { name: 'Generate', exact: true }).click();
-  await expect(page).toHaveURL(/\/en\/generate$/, { timeout: 30_000 });
+  await expect(page).toHaveURL(/\/en\/generate$/);
   await expect(page.getByRole('button', { name: 'Generate', exact: true })).toBeVisible();
 }
 
@@ -63,6 +62,36 @@ test.describe('generating a resume', () => {
     // The page count rides the stream, so a result watched from the start
     // has it.
     await expect(page.getByText('One page.')).toBeVisible();
+  });
+
+  test('ends on countable facts, never a percentage', async ({ page }) => {
+    await openGenerate(page);
+
+    await page.getByLabel('Job posting').fill(REAL_POSTING);
+    await page.getByRole('button', { name: 'Generate', exact: true }).click();
+    await expect(page).toHaveURL(/\/en\/generations\/gen-1$/, { timeout: 15_000 });
+
+    const report = page.getByRole('region', { name: /matches the posting/i });
+    await expect(report.getByTestId('fit-required')).toHaveText('3/4');
+    await expect(report.getByTestId('fit-preferred')).toHaveText('2/3');
+
+    // Bolum 23.3 forbids one by name. Completeness is the opposite — a
+    // percentage by design — and the two must not be unified.
+    await expect(report).not.toContainText('%');
+
+    // The reload path is not asserted here: MSW's state lives in the page, so
+    // a reload throws away the generation the mock made and answers 404. It
+    // is verified against the real backend in the closing round, where the
+    // resource genuinely persists.
+  });
+
+  test('says there was nothing to compare against in general mode', async ({ page }) => {
+    await openGenerate(page);
+    await page.getByRole('button', { name: 'Generate', exact: true }).click();
+    await expect(page).toHaveURL(/\/en\/generations\/gen-1$/, { timeout: 15_000 });
+
+    await expect(page.getByText('nothing to measure this against')).toBeVisible();
+    await expect(page.getByTestId('fit-required')).toHaveCount(0);
   });
 
   test('counts the allowance down as it is spent', async ({ page }) => {

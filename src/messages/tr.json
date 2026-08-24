@@ -295,7 +295,20 @@
     "download": "PDF'i indir",
     "downloading": "Dosya hazırlanıyor…",
     "again": "Bir tane daha oluştur",
-    "announceDownloaded": "İndirme başladı"
+    "announceDownloaded": "İndirme başladı",
+    "loading": "CV’n getiriliyor…",
+    "generalNote": "İlan verilmedi, yani karşılaştırılacak bir şey yok."
+  },
+  "Fit": {
+    "heading": "İlanla ne kadar örtüşüyor",
+    "level": "{level, select, WEAK {Zayıf eşleşme} MODERATE {Orta eşleşme} GOOD {İyi eşleşme} STRONG {Güçlü eşleşme} other {Eşleşme}}",
+    "required": "Zorunlu beceriler",
+    "preferred": "Tercih edilen",
+    "count": "{covered, number}/{total, number}",
+    "covered": "CV’nde geçenler",
+    "missingRequired": "Eksik zorunlu beceriler",
+    "missingPreferred": "Eksik tercih edilen beceriler",
+    "suggestion": "{skill} deneyimin varsa profiline eklemen bu ilanla eşleşmeni güçlendirir."
   },
   "Usage": {
     "label": "Bugünkü kullanım",

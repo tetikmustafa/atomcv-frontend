@@ -47,6 +47,16 @@ export const jobKeys = {
   status: (jobId: string) => [...jobKeys.all, jobId] as const,
 };
 
+/**
+ * A finished generation, keyed by its own id rather than by the job that made
+ * it: the result screen is reachable by URL, and a reload knows the
+ * generation and nothing about the job.
+ */
+export const generationKeys = {
+  all: ['generations'] as const,
+  detail: (generationId: string) => [...generationKeys.all, generationId] as const,
+};
+
 export const accountKeys = {
   all: ['account'] as const,
   usage: () => [...accountKeys.all, 'usage'] as const,

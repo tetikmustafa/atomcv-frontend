@@ -1,0 +1,140 @@
+import type { ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { NextIntlClientProvider } from 'next-intl';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import { axe } from 'jest-axe';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { GenerationResult } from '@/components/generation/GenerationResult';
+import { api } from '@/lib/api/client';
+import { FIT_REPORT, generations } from '@/mocks/generationFixture';
+import en from '@/messages/en.json';
+import tr from '@/messages/tr.json';
+import type { components } from '@/types/api';
+
+type AcceptedJob = components['schemas']['AcceptedJobResponse'];
+
+vi.mock('@/lib/i18n/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  Link: ({ children }: { children: ReactNode }) => children,
+  usePathname: () => '/generations/gen-1',
+}));
+
+let client: QueryClient;
+
+function wrapperFor(locale: 'en' | 'tr') {
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return (
+      <NextIntlClientProvider locale={locale} messages={locale === 'en' ? en : tr}>
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      </NextIntlClientProvider>
+    );
+  };
+}
+
+beforeEach(() => {
+  client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+});
+
+/** A posting long enough and signalled enough to pass § 18.1's preflight. */
+const POSTING = [
+  'We are seeking a senior backend engineer to join a small platform team.',
+  'Responsibilities: designing services, operating them in production, and',
+  'mentoring the engineers around you. Requirements: several years of Java,',
+  'PostgreSQL, container orchestration and a habit of writing things down.',
+  'Preferred qualifications include message queues and infrastructure as code.',
+].join(' ');
+
+/** Makes a generation the way the product does, and returns its id. */
+async function generate(body: Record<string, unknown> = { acknowledgePreflight: false }) {
+  const job = await api.post<AcceptedJob>('/generations', body);
+  return generations.jobs.find((candidate) => candidate.jobId === job.jobId)!.generationId;
+}
+
+describe('a finished generation', () => {
+  it('reads the generation rather than the job that made it', async () => {
+    const generationId = await generate({ jobDescription: POSTING, acknowledgePreflight: false });
+
+    // No job was watched in this render — the cache holds nothing about it,
+    // which is the state a reload lands in.
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    await waitFor(() => expect(screen.getByText(/One page/)).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Download PDF' })).toBeInTheDocument();
+  });
+
+  it('shows countable facts and never a percentage', async () => {
+    const generationId = await generate({ jobDescription: POSTING, acknowledgePreflight: false });
+
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    const report = await screen.findByRole('region', { name: /matches the posting/i });
+
+    expect(within(report).getByTestId('fit-required')).toHaveTextContent(
+      `${FIT_REPORT.requiredCovered}/${FIT_REPORT.requiredTotal}`,
+    );
+    expect(within(report).getByTestId('fit-preferred')).toHaveTextContent(
+      `${FIT_REPORT.preferredCovered}/${FIT_REPORT.preferredTotal}`,
+    );
+
+    // § 23.3 forbids one by name. Completeness is the opposite — a percentage
+    // by design — and the two must not be unified.
+    expect(report.textContent).not.toMatch(/%/);
+    // Nor a ratio spelled out: nothing here divides one count by another.
+    expect(report.textContent).not.toMatch(/\b\d+\.\d+\b/);
+  });
+
+  it('names the missing skills in the posting’s own words, split by weight', async () => {
+    const generationId = await generate({ jobDescription: POSTING, acknowledgePreflight: false });
+
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    const report = await screen.findByRole('region', { name: /matches the posting/i });
+
+    // Two lists, not one: the counts say how many are missing on each side,
+    // and merging the names would hide which gap costs the interview.
+    const required = within(report).getByRole('heading', { name: 'Missing required skills' });
+    const preferred = within(report).getByRole('heading', { name: 'Missing preferred skills' });
+
+    expect(required).toBeInTheDocument();
+    expect(preferred).toBeInTheDocument();
+    // The advert said "mikroservis"; that is the word the reader is looking
+    // for, not our canonical spelling of it.
+    expect(within(report).getByText('mikroservis')).toBeInTheDocument();
+    expect(within(report).getByText(/mikroservis experience/)).toBeInTheDocument();
+  });
+
+  it('says there was nothing to compare against in general mode', async () => {
+    const generationId = await generate();
+
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    await waitFor(() => expect(screen.getByText(en.Result.generalNote)).toBeInTheDocument());
+    // Not a row of zeroes: "0/0" reads as a bad match rather than as a
+    // different question.
+    expect(screen.queryByTestId('fit-required')).not.toBeInTheDocument();
+  });
+
+  it('translates the level rather than printing the wire value', async () => {
+    const generationId = await generate({ jobDescription: POSTING, acknowledgePreflight: false });
+
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('tr') });
+
+    const level = await screen.findByTestId('fit-level');
+
+    expect(level).toHaveTextContent('Orta eşleşme');
+    expect(level).not.toHaveTextContent('MODERATE');
+  });
+
+  it('has no violations', async () => {
+    const generationId = await generate({ jobDescription: POSTING, acknowledgePreflight: false });
+
+    const { container } = render(<GenerationResult generationId={generationId} />, {
+      wrapper: wrapperFor('en'),
+    });
+
+    await screen.findByRole('region', { name: /matches the posting/i });
+    expect(await axe(container)).toHaveNoViolations();
+  });
+});
