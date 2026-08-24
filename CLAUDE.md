@@ -320,10 +320,16 @@ request escaping to the network in a test is a bug in the test.
 
 ## Current Stage — and How to Resume
 
-**Stage 2 — the generation flow and SSE.** Stages 0 and 1 are closed;
-Stage 1's full build record is `docs/notes/archive/stage-1.md`.
+**Stage 3 — accounts and MVP.** Stages 0, 1 and 2 are closed; their full build
+records are `docs/notes/archive/stage-1.md` and `stage-2.md`.
 
-A session that opens with "continue with Stage 2" starts here, in this order.
+**Stage 2 closed with one deliverable unbuilt.** The fit report (§ 23.3) has no
+transport: `GET /generations/{id}` is not published and the `completed` event
+carries no `matchLevel` (`F-008`). The result screen shows a page count and a
+download, and **a percentage in its place is the one thing § 23.3 forbids by
+name.** Do not "fix" it before the data exists.
+
+A session that opens with "continue with Stage 3" starts here, in this order.
 Nothing below is summarised in this file: a second copy of the state drifts
 from the one that is real.
 
@@ -335,8 +341,8 @@ from the one that is real.
    deliberate gaps that must not be "fixed" without asking, and what Stage 1
    handed forward. Short by design; the archive holds the rest.
 4. **The step's plan** — `docs/INDEX.md` routes it. The frontend build order
-   is `spec/15-repos-and-claude.md` § XI-B.9.2; Stage 2 is
-   `spec/14-build-guide.md` § XI-A.5. Search the file, read the range.
+   is `spec/15-repos-and-claude.md` § XI-B.9.2; Stage 3 is
+   `spec/14-build-guide.md` § XI-A.6. Search the file, read the range.
 
 Close the step the way _Recording Deviations_ and _Cross-Repo Communication_
 describe: a record in `docs/notes/current.md`, an `F-nnn` item if the backend

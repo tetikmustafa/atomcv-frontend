@@ -49,6 +49,23 @@ describe('the usage note', () => {
     expect(screen.getByTestId('usage-note')).not.toHaveTextContent('Profile imports');
   });
 
+  /**
+   * Measured against the running backend: `used` climbs past `limit`, because
+   * a request refused with a 429 counts too. "24 of 20" reads as a broken
+   * screen, and clamping the number would misreport what the server said —
+   * so the sentence changes rather than the number (`F-012`).
+   */
+  it('stops counting upward once there is nothing left', async () => {
+    generations.usage.generation = QUOTA.generation + 4;
+
+    render(<UsageNote />, { wrapper: wrapperFor('en') });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('usage-count')).toHaveTextContent('None left today'),
+    );
+    expect(screen.getByTestId('usage-note')).not.toHaveTextContent(`of ${QUOTA.generation}`);
+  });
+
   it('says nothing at all until it knows', () => {
     const { container } = render(<UsageNote />, { wrapper: wrapperFor('en') });
 

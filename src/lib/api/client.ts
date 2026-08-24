@@ -41,6 +41,17 @@ export type RequestOptions = {
   version?: Version;
   /** Sent as `Idempotency-Key`, so a double click cannot start two jobs. */
   idempotencyKey?: string;
+  /**
+   * What the caller can read back. Defaults to JSON, which is what almost
+   * every endpoint answers with.
+   *
+   * It is not decoration: Spring negotiates on this header and **refuses**
+   * what it cannot satisfy. `GET /generations/{id}/download` produces
+   * `application/pdf`, so asking it for JSON is a `406` — measured against
+   * the running backend, and invisible to the mocks, which serve whatever the
+   * handler returns regardless of what was asked for.
+   */
+  accept?: string;
   signal?: AbortSignal;
 };
 
@@ -74,7 +85,7 @@ async function send(
 ): Promise<Response> {
   assertBrowser(path);
 
-  const headers = new Headers({ Accept: 'application/json' });
+  const headers = new Headers({ Accept: options.accept ?? 'application/json' });
   if (body !== undefined) {
     headers.set('Content-Type', options.contentType ?? 'application/json');
   }
@@ -204,7 +215,10 @@ export const api = {
    * cost is that the caller owns the object URL and has to revoke it.
    */
   getFile: async (path: string, options?: RequestOptions) => {
-    const response = await send('GET', path, undefined, options ?? {});
+    // The server decides the format — the download endpoint alone is
+    // specified for PDF, DOCX and source (§ 35.2) — so the client asks for
+    // whatever it produces rather than naming one and being refused the rest.
+    const response = await send('GET', path, undefined, { accept: '*/*', ...options });
 
     return {
       blob: await response.blob(),

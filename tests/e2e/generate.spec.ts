@@ -88,7 +88,12 @@ test.describe('generating a resume', () => {
 
     // § 18.1's three ways out, in its order. Insisting comes first because it
     // is the only one that does not throw the user's text away.
-    const panel = page.getByRole('alert');
+    //
+    // Scoped to `main`: the announcer's assertive region is a `role="alert"`
+    // too, and it is always in the document. An unscoped query matches it
+    // first and finds a panel with no buttons in it — which is how a check
+    // written this way passed while proving nothing.
+    const panel = page.getByRole('main').getByRole('alert');
     await expect(panel.getByRole('button')).toHaveText([
       'Continue anyway',
       'Paste the full posting',

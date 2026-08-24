@@ -301,7 +301,8 @@
     "label": "Today's usage",
     "metric": "{metric, select, generation {Resumes} profile_extract {Profile imports} other {Allowance}}",
     "count": "{used} of {limit}",
-    "renews": "Renews {resetsAt, date, short} at {resetsAt, time, short}"
+    "renews": "Renews {resetsAt, date, short} at {resetsAt, time, short}",
+    "none": "None left today"
   },
   "Footer": {
     "privacy": "Privacy",

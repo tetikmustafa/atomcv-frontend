@@ -291,13 +291,33 @@ describe('download and usage', () => {
     expect(await response.text()).toMatch(/^%PDF-/);
   });
 
+  /**
+   * Measured against the running backend: the client's default
+   * `Accept: application/json` is refused by an endpoint that produces PDF,
+   * and nothing in the mocks noticed until the endpoint was tried for real.
+   * The handler negotiates now, so the next client that forgets finds out
+   * here rather than in production.
+   */
+  it('refuses a request that asks it for JSON', async () => {
+    const job = await start();
+    await readStream(job.streamUrl!);
+    const status = await api.get<JobStatus>(`/jobs/${job.jobId}`);
+
+    const error = await rejection(api.get(`/generations/${status.generationId}/download`));
+
+    expect(error.status).toBe(406);
+  });
+
   it('answers 410 once the stored content is gone', async () => {
     const job = await start();
     await readStream(job.streamUrl!);
     const status = await api.get<JobStatus>(`/jobs/${job.jobId}`);
     expireGeneration(status.generationId!);
 
-    const error = await rejection(api.get(`/generations/${status.generationId}/download`));
+    // Through `getFile`, which is what the screen uses: content negotiation
+    // happens before the handler, so asking for JSON would be refused with a
+    // 406 and this would never reach the state it is testing.
+    const error = await rejection(api.getFile(`/generations/${status.generationId}/download`));
 
     // Not a 404: the generation existed, and the difference is the whole
     // reason the code has its own name.

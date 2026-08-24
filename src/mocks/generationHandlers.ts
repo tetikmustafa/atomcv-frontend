@@ -327,9 +327,19 @@ export const generationHandlers = [
     });
   }),
 
-  http.get('*/api/v1/generations/:generationId/download', ({ params }) => {
+  http.get('*/api/v1/generations/:generationId/download', ({ params, request }) => {
     const id = String(params.generationId);
     const instance = `/api/v1/generations/${id}/download`;
+
+    // Content negotiation, because the real server does it and refusing here
+    // is the only way a client learns before production. Asking this endpoint
+    // for JSON — which the API client did, by default — is a **406**, and it
+    // was measured against the running backend rather than guessed at.
+    const accept = request.headers.get('Accept') ?? '*/*';
+
+    if (!accept.includes('application/pdf') && !accept.includes('*/*')) {
+      return HttpResponse.json(problem(406, 'NOT_ACCEPTABLE', instance), { status: 406 });
+    }
 
     if (generations.expired.includes(id)) {
       return HttpResponse.json(problem(410, 'GENERATION_ARTIFACT_EXPIRED', instance), {

@@ -301,7 +301,8 @@
     "label": "Bugünkü kullanım",
     "metric": "{metric, select, generation {CV} profile_extract {Profil içe aktarma} other {Hak}}",
     "count": "{limit} hakkın {used} tanesi",
-    "renews": "{resetsAt, date, short} {resetsAt, time, short}’te yenilenir"
+    "renews": "{resetsAt, date, short} {resetsAt, time, short}’te yenilenir",
+    "none": "Bugünlük hakkın kalmadı"
   },
   "Footer": {
     "privacy": "Gizlilik",

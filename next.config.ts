@@ -13,6 +13,22 @@ const nextConfig: NextConfig = {
   output: 'standalone',
 
   /**
+   * Off in development, and this is not a performance decision.
+   *
+   * The dev server gzips what the rewrite below proxies, and gzip buffers:
+   * measured against the running backend, the four progress frames of one
+   * generation arrived 1 ms, 256 ms, 272 ms and 905 ms apart when read
+   * straight from Spring, and **all together at 867 ms** through the rewrite.
+   * A progress bar that only moves once, at the end, is not a progress bar —
+   * and every local check against the real backend would say the client is
+   * broken (§ 30.6, the same hazard nginx's `proxy_buffering off` covers).
+   *
+   * Production is untouched: the rewrite does not exist there, nginx serves
+   * both origins and compresses, and Next is not in the path of a stream.
+   */
+  compress: process.env.NODE_ENV === 'production',
+
+  /**
    * Development-only proxy to the Spring backend.
    *
    * In production nginx serves both under one origin, so `/api/*` reaches

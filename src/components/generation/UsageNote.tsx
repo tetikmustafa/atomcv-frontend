@@ -34,7 +34,16 @@ export function UsageNote() {
       <span>{t('metric', { metric: generation.metric ?? 'generation' })}</span>
       {' · '}
       <span data-testid="usage-count">
-        {t('count', { used: generation.used, limit: generation.limit })}
+        {/*
+          Measured against the running backend: `used` climbs past `limit`,
+          because a refused request counts too. "24 of 20" reads as a broken
+          screen, and clamping the number would be a lie about what the
+          server said — so past the limit the sentence changes instead of the
+          number (`F-012`).
+        */}
+        {generation.used >= generation.limit
+          ? t('none')
+          : t('count', { used: generation.used, limit: generation.limit })}
       </span>
       {generation.resetsAt && (
         <>
