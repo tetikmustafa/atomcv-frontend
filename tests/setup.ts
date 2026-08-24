@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { toHaveNoViolations } from 'jest-axe';
 import { server } from '@/mocks/node';
+import { resetGenerationFixture } from '@/mocks/generationFixture';
 import { resetProfileFixture } from '@/mocks/profileFixture';
 
 expect.extend(toHaveNoViolations);
@@ -40,6 +41,9 @@ afterEach(() => {
   // mocked without it. Left alone, one test's writes would set the next
   // test's starting versions.
   resetProfileFixture();
+  // Same reason, different counter: a quota the previous test used up would
+  // fail the next one on a limit it never asked for.
+  resetGenerationFixture();
   cleanup();
 });
 

@@ -69,6 +69,50 @@ Sahte sağlayıcıyla bir üretim koşturuldu (`used` 6 → 8) ve akış dinlend
 /generations/{id}` yayımlanmadan gösterilecek şey sayfa sayısı ve indirme.
 Yerine bir yüzde koymak § 23.3'ün adıyla yasakladığı şeydir.
 
+### F2.2 — mock'lar ölçülen davranışa hizalandı
+
+Eski handler'lar sunucunun artık göndermediği şeyi öğretiyordu: iç içe
+`directives`/`options` gövdesi, `matchLevel` taşıyan bir `completed`, cümle
+hâlinde `label`'lar, bağlanışta hiçbir şey. Üzerine ekran kurmak yanlış bir
+sözleşmeyi sabitlerdi.
+
+Üretim yüzeyi `generationHandlers.ts` + `generationFixture.ts` olarak ayrıldı
+(profil yüzeyiyle aynı sebep: durum tutuyor). `handlers.ts` yalnız
+`/auth/session`'ı tutan bir birleştirici kaldı, `problem()` ortak dosyaya
+çıktı — iki kopya iki farklı zarf demek.
+
+- **`contracts.ts` bir tip boşaldı.** `JobAccepted` gitti; `POST /generations`
+  yayımlandı ve `AcceptedJobResponse` onun üretilmiş şekli. `Capabilities` ve
+  üç SSE yükü kaldı: `/auth/session` Aşama 3, akışın **ucu** yayımlandı ama
+  **yükleri** `unknown` — bağlanacak üretilmiş bir şey yok.
+- **İş duvar saatiyle ilerliyor, aboneyle değil.** Gerçek worker kimse
+  bakmasa da koşuyor, ve fark taşıyıcı: "202 ile abonelik arasında biten iş"
+  vakası ancak iş gözlenmeden bitebiliyorsa vardır.
+- **Durum saklanmıyor, geçen süreden türetiliyor.** Temizlenecek zamanlayıcı
+  yok, ve iki okuyan — akış ile `GET /jobs/{id}` — çelişemiyor; geri düşüşün
+  var olma sebebi tam olarak o uzlaşma.
+- **Ön kontrol sihirli dizeyle değil § 18.1'in kuralıyla modellendi** (uzunluk,
+  40 kelime, entropi, iki *ayrı* sinyal kelimesi). `'bad posting'`i reddeden
+  bir mock, istemciye "diğer her metin geçer" dedirtir ve ilk gerçek yapıştırma
+  bunu yalanlar.
+- **Kota tek yerden okunuyor.** `capabilities` ile `/account/usage` aynı
+  sayacı yayımlıyor; bir test ikisinin aynı sayıyı söylediğini sabitliyor.
+- **Kuyruğa girmeden önceki sıra ölçüldüğü gibi:** fren (§ 44.3) → kota → ilan
+  ön kontrolü → profil ön kontrolü. Duraklatılmış dağıtım kimsenin hakkını
+  harcamıyor, ve reddedilen istek kuyruğa hiç girmiyor.
+- **`failed` için tetikleyici istek değil, anahtar.** Derleyicinin düşmesi ya
+  da sağlayıcı zincirinin susması sunucunun durumu, isteğin şekli değil; birini
+  özel bir `jobDescription` yapmak ürün koduna sunucunun görmezden geldiği bir
+  dizeyi öğretirdi. Testler `failNextJob()` çağırıyor.
+
+**Ve yine: geçen bir test bir şey kanıtlamadı.** "Anlık durumla açılıyor"
+testi, anlık durum tamamen kaldırıldığında da geçti — çünkü geri kalan yol
+zaten `SCHEDULE[0]`'ı ilk kare olarak gönderiyordu, yani ölçülen şey aynı
+kalıyordu. Düzeltme mock'ta: gönderilmiş kabul edilen an artık `openedAt`,
+yani geç abone olan hiçbir fazı tekrar almıyor. Sonra iki test daha yazıldı ve
+negatif kontrol tekrarlandı: anlık durum kaldırıldığında **ikisi birden**
+düşüyor.
+
 ### Aşama 1'den devralınan, Aşama 2'de yeniden bakılacaklar
 
 - **`POST /generations/general` kaldırıldı** (B-022 kapandı, B-038). Genel

@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { api } from '@/lib/api/client';
 import { ApiError, isApiError, isRetriable } from '@/lib/api/errors';
 import type { SessionResponse } from '@/mocks/contracts';
+import type { components } from '@/types/api';
 
 /**
  * Exercises the client against the same MSW handlers the browser uses, so
  * these assertions describe real behaviour rather than a test-only fake.
  */
+type AcceptedJob = components['schemas']['AcceptedJobResponse'];
+
 describe('api client', () => {
   it('reads the anonymous capability set', async () => {
     const session = await api.get<SessionResponse>('/auth/session');
@@ -20,27 +23,26 @@ describe('api client', () => {
   });
 
   it('accepts a valid generation request with 202 and a job', async () => {
-    const job = await api.post<{ jobId: string; status: string }>('/generations', {
-      jobDescription: 'Senior Backend Engineer',
-      options: { maxPages: 1 },
-    });
+    // No `jobDescription`: its absence is general mode (§ 35.3), and the
+    // preflight has nothing to refuse.
+    const job = await api.post<AcceptedJob>('/generations', { acknowledgePreflight: false });
 
     expect(job.status).toBe('queued');
     expect(job.jobId).toBeTruthy();
+    expect(job.streamUrl).toBe(`/api/v1/jobs/${job.jobId}/stream`);
   });
 });
 
 describe('preflight failures', () => {
   /**
-   * Bölüm 11.4 and 35.3: an impossible request is refused before a job is
-   * queued, and the refusal carries the ways out. Rule 7 turns those into
+   * § 18.1 and § 35.3: a request that cannot work is refused before a job
+   * is queued, and the refusal carries the ways out. Rule 7 turns those into
    * buttons, so what matters is that they survive the round trip intact.
    */
-  it('surfaces code, params and resolutions from a 409', async () => {
+  it('surfaces code, params and resolutions from a 422', async () => {
     const failing = api.post('/generations', {
-      jobDescription: 'Senior Backend Engineer',
-      directives: { includeAtoms: ['a', 'b', 'c', 'd', 'e'] },
-      options: { maxPages: 1 },
+      jobDescription: 'hire someone good',
+      acknowledgePreflight: false,
     });
 
     await expect(failing).rejects.toBeInstanceOf(ApiError);
@@ -49,14 +51,17 @@ describe('preflight failures', () => {
 
     if (!isApiError(error)) throw new Error('expected an ApiError');
 
-    expect(error.status).toBe(409);
-    expect(error.code).toBe('CONFLICTING_PREFERENCES');
-    expect(error.translationKey).toBe('errors.CONFLICTING_PREFERENCES');
-    expect(error.params).toMatchObject({ maxPages: 1 });
+    expect(error.status).toBe(422);
+    expect(error.code).toBe('UNPARSEABLE_JOB_DESCRIPTION');
+    expect(error.translationKey).toBe('errors.UNPARSEABLE_JOB_DESCRIPTION');
+    // Both zero: the preflight measured the text, it did not analyse it.
+    expect(error.params).toMatchObject({ confidence: 0, skillsFound: 0 });
+    // § 18.1's three ways out, in its order — insisting comes first because
+    // it is the only one that does not throw the user's text away.
     expect(error.resolutions.map((resolution) => resolution.action)).toEqual([
-      'increase_page_limit',
-      'review_pins',
-      'keep_top_pinned',
+      'continue_anyway',
+      'paste_full_posting',
+      'continue_as_general_cv',
     ]);
   });
 

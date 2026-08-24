@@ -10,7 +10,7 @@
  */
 
 import { http, HttpResponse } from 'msw';
-import type { ProblemDetail } from '@/types/domain';
+import { problem } from './problem';
 import {
   fixture,
   type MockAtom,
@@ -39,25 +39,6 @@ const SECTION_KINDS = [
   'languages',
   'custom',
 ] as const satisfies readonly NonNullable<MockSection['kind']>[];
-
-function problem(
-  status: number,
-  code: string,
-  instance: string,
-  resolutions: ProblemDetail['resolutions'] = [],
-  params?: Record<string, unknown>,
-): ProblemDetail {
-  return {
-    type: `/errors/${code.toLowerCase().replaceAll('_', '-')}`,
-    title: code,
-    status,
-    instance,
-    code,
-    // Absent rather than `{}` when a code declares none, as the real API does.
-    ...(params ? { params } : {}),
-    ...(resolutions.length ? { resolutions } : {}),
-  };
-}
 
 /**
  * The check every write shares.

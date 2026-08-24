@@ -3,9 +3,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
-import type { JobAccepted, SessionResponse } from '@/mocks/contracts';
+import type { SessionResponse } from '@/mocks/contracts';
+import type { components } from '@/types/api';
 import { announce } from '@/stores/announcerStore';
 
+type AcceptedJob = components['schemas']['AcceptedJobResponse'];
+
+/**
+ * The wire payload, rendered raw. `label` is a translation key rather than a
+ * sentence (`B-038`) and the first frame is a snapshot carrying empty
+ * strings (`F-010`) — this page exists to show what actually arrives, so it
+ * resolves neither.
+ */
 type Phase = { phase: string; label: string; pct: number };
 
 /**
@@ -20,6 +29,7 @@ type Phase = { phase: string; label: string; pct: number };
 export function MockHarness() {
   const [phases, setPhases] = useState<Phase[]>([]);
   const [completed, setCompleted] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const sourceRef = useRef<EventSource | null>(null);
 
@@ -37,13 +47,22 @@ export function MockHarness() {
     source.addEventListener('phase', (event) => {
       const phase = JSON.parse((event as MessageEvent<string>).data) as Phase;
       setPhases((current) => [...current, phase]);
-      announce(`${phase.label}, ${phase.pct} percent`);
+      announce(`${phase.label || 'queued'}, ${phase.pct} percent`);
     });
 
     source.addEventListener('completed', (event) => {
       const payload = JSON.parse((event as MessageEvent<string>).data) as { generationId: string };
       setCompleted(payload.generationId);
       announce('Generation complete');
+      source.close();
+    });
+
+    // A job can end either way, and a stream that only listens for success
+    // leaves a failed one spinning forever.
+    source.addEventListener('failed', (event) => {
+      const payload = JSON.parse((event as MessageEvent<string>).data) as { code: string };
+      setFailed(payload.code);
+      announce('Generation failed', 'assertive');
       source.close();
     });
 
@@ -58,11 +77,12 @@ export function MockHarness() {
   async function startJob() {
     setPhases([]);
     setCompleted(null);
-    const job = await api.post<JobAccepted>('/generations', {
-      jobDescription: 'Senior Backend Engineer',
-      options: { maxPages: 1 },
-    });
-    setStreamUrl(job.streamUrl);
+    setFailed(null);
+    // No `jobDescription`: its absence is general mode (§ 35.3), which is the
+    // shortest accepted request and keeps this page about the plumbing rather
+    // than about the preflight.
+    const job = await api.post<AcceptedJob>('/generations', { acknowledgePreflight: false });
+    setStreamUrl(job.streamUrl ?? null);
   }
 
   return (
@@ -99,13 +119,16 @@ export function MockHarness() {
           Start a job
         </button>
         <ol data-testid="phases" className="flex flex-col gap-1 text-sm">
-          {phases.map((phase) => (
-            <li key={phase.phase} data-testid="phase">
-              {phase.phase} — {phase.label} ({phase.pct}%)
+          {phases.map((phase, index) => (
+            // Indexed because `phase` is not a key: the snapshot carries an
+            // empty one and `B` arrives twice, once measuring and once scoring.
+            <li key={index} data-testid="phase">
+              {phase.phase || '—'} {phase.label || '(queued)'} ({phase.pct}%)
             </li>
           ))}
         </ol>
         {completed && <p data-testid="completed">completed: {completed}</p>}
+        {failed && <p data-testid="failed">failed: {failed}</p>}
       </section>
     </div>
   );

@@ -42,11 +42,16 @@ test.describe('mock plumbing', () => {
     // the terminal event would land in one tick, so no phase could be visible
     // while `completed` is still absent.
     await expect(page.getByTestId('phase').first()).toBeVisible();
-    await expect(page.getByTestId('phase').first()).toContainText('Analysing the posting');
+    // The snapshot, first and empty. The harness prints the wire as it
+    // arrives, so what shows here is what a client has to survive (`F-010`).
+    await expect(page.getByTestId('phase').first()).toContainText('(queued)');
     await expect(page.getByTestId('completed')).toHaveCount(0);
 
     await expect(page.getByTestId('completed')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByTestId('phase')).toHaveCount(6);
+    // A translation key, not a sentence: the server stopped sending prose
+    // when `B-038` landed, and the harness resolves nothing.
+    await expect(page.getByTestId('phase').nth(1)).toContainText('generation.phase.ANALYSING');
+    await expect(page.getByTestId('phase')).toHaveCount(5);
     await expect(page.getByTestId('completed')).toContainText('gen-1');
   });
 
