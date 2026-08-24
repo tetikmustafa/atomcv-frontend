@@ -32,6 +32,7 @@ Bölüm 11.5 ve 11.8 ikisini düzyazıyla anlatıp adlandırmıyor. Tam küme:
 | `sign_up` | Özellik hesap gerektiriyor | Kayda git, durumu koru |
 | `paste_full_posting` | İlan metni yetersizdi | İlan alanına odaklan |
 | `continue_as_general_cv` | İlansız devam | Boş `jobDescription` ile yeniden gönder |
+| `continue_anyway` | Ön kontrol reddetti ama kullanıcı ısrar ediyor | Aynı metni ön kontrolü atlayan onayla yeniden gönder (Adım 2.3; Bölüm 18.1 üç çıkış yolu sunuyor, sözlükte ikisi vardı) |
 | `switch_to_manual_form` | Çıkarım başarısız | Manuel profil formuna git |
 | `complete_profile` | Üretecek kadar profil yok | Profil düzenleyiciyi aç (Adım 1.8'de eklendi; Bölüm 25.3 bu adı kullanıyordu, sözlükte yoktu) |
 | `retry` | Geçici hata | Değiştirmeden yeniden gönder |
@@ -184,6 +185,19 @@ tanımlayıcı ve alan adı taşır — sorunun şeklini, ona sebep olan metni d
   `retry` resolution'ı. Bunu vermek ucuz: `generations.selection_state`
   `pdf_expires_at`'ten bağımsız kalıcı bir anlık görüntüdür, yani PDF her zaman
   yeniden üretilebilir — süre dolması kullanıcıya emeğine mal olmaz.
+- **Aşama 2'de bayt saklanmıyor** (karar: 2026-08-24). R2 hesabı Adım 3.1'de
+  açılıyor, dolayısıyla `pdf_key` ve `pdf_expires_at` NULL kalıyor ve indirme
+  **`content_snapshot`'tan** yeniden render ediyor: bir derleme, sıfır LLM
+  çağrısı. **`selection_state` tek başına yetmez** — atomları id'yle adlandırır
+  ve o id'lerin altındaki metin `atom_variants`'ta durmadan düzenlenir; profili
+  yeniden okuyan bir indirme, işverene gönderilenden **başka bir belge** verir
+  ve bunu kimse söylemez. `content_snapshot`, § 22.2'nin id taşımayan
+  `RenderRequest`'inin kendisidir, yani ikinci koşu birebir aynı girdiyi alır.
+  Anlık görüntüsü olmayan bir satır `410` + `retry` döner; bugünün profilinden
+  render etmek, hiç gönderilmemiş bir belge üretmek olurdu.
+  Yani yukarıdaki geri düşüş Aşama 2'de tek yol; `410 Gone` yolu R2 ile
+  birlikte gelecek. Bunun bedeli indirme başına bir derleme, karşılığı da
+  aynı `selection_state`'in aynı PDF'i üretmesinin ölçülebilir olması.
 - `GET /profile/export` biçimi `?format=json|markdown` ile seçer; indirme
   endpoint'iyle aynı desen. Bilinmeyen biçim 400 `VALIDATION_FAILED`
   (`fields: ["format"]`).
@@ -204,17 +218,28 @@ Her SSE olayı bir `id` taşır ve yeniden bağlanmada `Last-Event-ID` onurland�
 Bunsuz ilerleme ekranının tek bir hata modu olur: iş çoktan bitmişken spinner
 sonsuza kadar döner — P4'ün yasakladığı sessiz kötü sonuç.
 
+**Uygulanan yol ikinci seçenek** (Adım 2.6): bağlanır bağlanmaz güncel durum
+gönderiliyor, `Last-Event-ID`'den oynatma yapılmıyor. Gerçek replay iş başına
+tampon ister ve anlık durum aynı işi görüyor — üstelik yalnız yeniden
+bağlananları değil, **202 ile abonelik arasında biten işleri** de kurtarıyor.
+`id` tek bir akış içinde sıralamadır; istemci sürekliliğine değil, terminal
+olaya güvenmeli. Akış terminal olayla kapanır.
+
 ```json
 // GET /api/v1/jobs/{id}
 {
   "jobId": "...",
   "status": "queued | running | completed | failed",
   "phase": "C",
+  "label": "generation.phase.RENDERING",   // çeviri anahtarı, cümle değil
   "pct": 60,
   "generationId": "...",
   "error": { "code": "...", "params": {}, "resolutions": [] }
 }
 ```
+
+Sahibi olmayan bir iş **404** döner, 403 değil: bir id'nin var olduğunu
+yabancıya söylemek de bilgidir (mutlak kural 3).
 
 `generationId` yalnız `completed`'da, `error` yalnız `failed`'da bulunur; bu
 ikisi terminal durumlardır. Akış terminal olay olmadan kapanırsa bu endpoint'i

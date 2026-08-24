@@ -11,88 +11,90 @@
 
 ## OPEN
 
-*(şu an açık madde yok)*
+### B-039 · Kota indi: iki yeni durum, bir yeni hata kodu
+**Since:** commit `<bu PR>` · Adım 2.7 · **Spec:** `spec/10-security.md` § 44, EK D.6.5
+
+**`GET /api/v1/account/usage`** günün kullanımını veriyor: her metrik için
+`{ metric, used, limit, resetsAt }`. **İki metrik** var (`generation`,
+`profile_extract`) ve ikisi de her zaman dönüyor — eksik giriş "sıfır" demek
+değil, hiç olmuyor. `resetsAt` **mutlak bir an** (UTC gece yarısı, Türkiye'de
+03:00); metni kullanıcının yerelinde siz yazıyorsunuz.
+
+**`QUOTA_EXCEEDED` (429)** artık gerçekten dönüyor, `params`: `metric` (string),
+`resetsAt` (timestamp). **`resolutions` boş** — kapalı sözlükte "yarın tekrar
+dene" yok ve `retry` bunun tersini söylüyor ("geçici hata, aynen yeniden
+gönder"). Mesajınız `resetsAt`'ten kendi cümlesini kursun.
+
+**Yeni kod: `GENERATION_PAUSED` (503), parametresiz, `retry` resolution'ı ile.**
+§ 44.3'ün acil freni: maliyet anomalisinde üretim durur. **Veri erişimi
+durmaz** — kullanıcı profilini görebilir, düzenleyebilir, dışa aktarabilir; UI
+bunu böyle anlatmalı, "hesabınız kapandı" gibi değil. `errors.GENERATION_PAUSED`
+için ICU mesajı gerekiyor.
+
+Kota **kuyruğa alırken** düşüyor ve **başarısız her işte geri veriliyor**, yani
+düşen bir üretim kullanıcının hakkını yemiyor.
+
+---
+
+### B-038 · İlana özel üretimin uçları + SSE indi; ilerleme metni **sizin**
+**Since:** Adım 2.6 · **Spec:** `spec/08-api.md` § 35.3, `spec/08b-api-contract.md` EK D.6.4
+
+`POST /api/v1/generations` **202** + `Location` + gövdede `{ jobId, status,
+streamUrl }`. `GET /api/v1/jobs/{jobId}` durum, `.../stream` SSE,
+`GET /api/v1/generations/{id}/download` PDF. Şekiller OpenAPI'de.
+
+**`POST /generations/general` KALDIRILDI** (`B-022` kapandı). Genel CV modu
+kaybolmadı: `jobDescription` opsiyonel, yokluğu genel mod. Boş gövde (`{}`) 202.
+
+**Ön kontroller senkron:** okunmayan ilan ve boş profil **422 ile anında**,
+kuyruğa girmeden. `B-037`'nin bayrağı: `acknowledgePreflight: true`.
+
+**Aksiyonunuz — `label` bir çeviri anahtarı, cümle değil** (§ 30.6 düz metin
+taşıyordu, § 35.4 ile çelişiyordu). Anahtarlar: `generation.phase.ANALYSING`,
+`.MEASURING`, `.SCORING`, `.RENDERING`.
+
+**SSE:** üç olay adı — koşarken `phase`, sonra **tam olarak bir tane**
+`completed` ya da `failed`, akış kapanır. Bağlanır bağlanmaz güncel durum
+geliyor, yani ekran boş başlamıyor ve **202 ile abonelik arasında biten iş de
+sonucunu gönderiyor**. `Last-Event-ID` kabul ediliyor ama **oynatma yok**;
+sürekliliğe değil terminal olaya güvenin. Akış terminal olay olmadan kapanırsa
+`GET /jobs/{jobId}` geri düşüş.
+
+**Terminal alanlar yalnız kendi durumlarında:** `generationId` sadece
+`completed`'da, `error` sadece `failed`'da. **`Idempotency-Key`** onurlandırılıyor.
+**Download üretim anındaki metinden** render ediliyor — sonradan bir madde
+düzenlenirse indirilen CV değişmez; yeniden render edilecek şeyi olmayan satır
+`410` + `GENERATION_ARTIFACT_EXPIRED` + `retry`.
+
+**`gen:api` çalıştırılmalı.**
+
+---
+
+### B-037 · `resolutions[].action` sözlüğü onuncu değeri kazandı: `continue_anyway`
+**Since:** commit `<bu PR>` · Adım 2.3 · **Spec:** `spec/08b-api-contract.md` EK D.6.1, `spec/05-pipeline-a-c.md` § 18.1
+
+Ön kontrol (§ 18.1) **engelleme değil sorma**: üç çıkış yolu var, sözlükte
+ikisi vardı. `retry` karşılamıyor — aynı metin aynı şekilde yine reddedilir,
+dönen bir döngü olurdu.
+
+**Aksiyon:** `errors.resolutions.continue_anyway` için ICU mesajı ve düğme.
+Kod `UNPARSEABLE_JOB_DESCRIPTION` (422), `params` değişmedi (`confidence`,
+`skillsFound`); ön kontrol reddinde **ikisi de 0**, makullük kapısı (§ 18.4)
+reddettiğinde gerçek değerler geliyor. Sıra: `continue_anyway`,
+`paste_full_posting`, `continue_as_general_cv`.
+
+**Uç indi:** `POST /generations` gövdesinde `acknowledgePreflight: true`
+(bkz. `B-038`).
 
 ---
 
 ## ACK — frontend tamamladı, backend arşivleyebilir
 
-### B-035 · `PUT /profile` gövdesinde `sourceLanguage` artık **zorunlu**
-**Since:** commit `38993f5` · F-004 kapanışı · **Spec:** `spec/08-api.md` § 35.6
-F-004'te sorduğunuz iki seçenekten "temizlensin" tarafını seçtik, ama kolon
-`NOT NULL` olduğu için temizlenecek bir değer yok — `DEFAULT`'una düşürmek
-Türkçe yazılmış bir profili herhangi bir baş düzenlemesinde sessizce
-İngilizceye çevirirdi. Bu yüzden alan **gövdede zorunlu** oldu: eksikse
-**400 `VALIDATION_FAILED`** + `params.fields: ["sourceLanguage"]`.
-Artık başın **hiçbir** alanı merge edilmiyor, istisna kalmadı.
-**Aksiyon:** Sizde kırılan bir ekran olmamalı — baş formu dokuz alanı da
-gönderiyor. Ama şema değişti: `sourceLanguage` OpenAPI'de `required`, yani
-`gen:api`'den sonra üretilen tipte opsiyonelliği kalkıyor. Alanı göndermeyen
-**mock'lar ve testler** 400 almaya başlar; `POST`/`PATCH` uçları etkilenmiyor.
-
-### B-036 · Hata `params.fields` artık isteğin gönderdiği alanı adlandırıyor
-**Since:** commit `2be3bc0`, `5c5a67f` · F-005 + F-006 · **Spec:** `spec/08-api.md` § 35.2
-Entry tarih kuralı (F-005) ve sözcükleme silme (F-006) için `params.fields`'ın
-ne döndüğü sözleşmeye tabloyla yazıldı. Sözcükleme tarafında ölçümünüz eksikti:
-ret **tek kural değil, iki** ve ikisi farklı alan döndürüyor.
-
-```
-PATCH  entries/{id} {"startDate": …}     400 fields: ["startDate"]   ← değişti
-PATCH  entries/{id} {"endDate":   …}     400 fields: ["endDate"]
-PATCH  entries/{id} iki uç birden        400 fields: ["startDate","endDate"]
-POST   entries      ters aralık          400 fields: ["startDate","endDate"]  ← değişti
-DELETE …/variants/{vid}  son sözcükleme  400 fields: ["variantId"]
-DELETE …/variants/{vid}  birincil, başkası var
-                                         400 fields: ["primary"]  ← siz variantId ölçmüştünüz
-```
-
-**Aksiyon:** İki yerde. (1) `params.fields`'ı input'a çeviren eşlemede
-`startDate` artık gerçek bir değer ve create iki alan birden döndürüyor.
-(2) Mock handler'larınız her iki silme reddi için de `variantId` döndürüyor
-olmalı — `primary` durumu ayrı, ve sözcükleme silme kontrolünü çizerken
-ayırmanız gereken şey tam olarak bu: `variantId` "atomu sil", `primary`
-"önce başkasını varsayılan yap" demek.
-
-**Değişmeyen:** hiçbir tarihe dokunmayan bir `PATCH` artık **hiç
-denetlenmiyor**. F-002'den önce ters kaydedilmiş bir satırın başlığı bu
-sayede düzenlenebiliyor; o satırların tarihini düzeltmek yine ayrı bir yama.
-**Frontend (B-035):** Baş formu `sourceLanguage`'ı koşullu gönderiyordu
-(`profile.sourceLanguage ? {…} : {}`) — yani alanı olmayan bir profilde onu
-düşürürdü ve artık 400 alırdı. Koşul kaldırıldı, dokuz alan da her seferinde
-gidiyor. Mock `PUT` de ikisini birden zorunlu tutuyor ve eksik olan(lar)ı
-`params.fields`'ta adlandırıyor; `sourceLanguage` merge'ü kaldırıldı.
-**`gen:api` henüz çalıştırılamadı** — sunucu ayakta değil. Şema `required`
-olduğunda üretilen tipte `ProfileUpdate['sourceLanguage']` zorunlu olacak ve
-bizim `toUpdate`'imiz `string | undefined` verdiği için typecheck kırılacak;
-o kırılma doğru yerde ve orada karşılanacak.
-
-**Frontend (B-036):** İki yer de yapıldı. Entry create mock'u artık
-`["startDate","endDate"]`, sözcükleme silme iki ayrı ret üretiyor
-(`variantId` / `primary`). Entry `PATCH` mock'u da yazıldı ve kuralı
-**yamanın sonucuna** uyguluyor; hiçbir tarihe dokunmayan bir yama
-denetlenmiyor. Üçü de testli, üçü de negatif kontrolden geçti.
-
-Ölçüm hatası bizde: gerçek uca vurduk ama o vakada yalnız `status`'ü
-logladık, `params`'ı hiç basmadık — `variantId`'yi *son sözcükleme*
-vakasından ölçüp ikisine genelledik. Mock'tan ölçülmedi; tek ölçülmüş
-vakadan iki vakaya genelleme yapıldı. Sonda artık iki reddi de ayrı basıyor.
-
-Bunun somut karşılığı: entry düzenleme formu `toEntryPatch` ile **gördüğü
-her alanı** gönderiyor, boşları `null` olarak. Yalnız değişeni göndermek
-`params.fields`'ın kullanıcının ekranda görmediği bir alanı adlandırmasına
-yol açardı.
-
+*(boş — `B-035` ve `B-036` `resolved/to-frontend-2026-08.md`'de)*
 
 ---
 
-## Kalıcı kurallar — `spec/`'e işlendi, burada tutulmuyor
+## Kalıcı kurallar
 
-| Eski # | Konu | Nerede |
-|---|---|---|
-| 1-4 | Run/mark kuralları (`href` zorunluluğu, bilinmeyen mark koruması, `v` sunucuya ait, `m` daima dizi) | `spec/04-data-model.md` § 14.1 |
-| 5 | `content_hash` düz metnin hash'i | `spec/04-data-model.md` § 16.2 |
-| 6 | Sözlükler küçük harf, hata kodu büyük harf | `spec/08b-api-contract.md` |
-| 7, 10-12 | Hata kataloğu, `params` disiplini, göreli `type` | `spec/08b-api-contract.md` |
-| 8 | ETag kapsamı (`generations` ETag taşımaz) | `spec/08-api.md` § 35.6 |
-| 9 | Anonim TTL kayar — "son etkinliğinden iki saat sonra" | `spec/08-api.md` § 35.7 |
-| 13-20, 23 | Profil/bölüm/entry/atom/varyant uçları, export, `completeness`, `complete_profile` | `spec/08-api.md` |
+Eski maddelerin `spec/`'e işlendiği yerlerin tablosu
+`resolved/to-frontend-2026-08.md`'ye taşındı (2026-08-24) — dosya sınırı.

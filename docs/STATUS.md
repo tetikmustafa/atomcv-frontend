@@ -3,7 +3,7 @@
 > İki repo da bu dosyayı okur ve kendi satırlarını günceller. **Kural: 60 satırı geçmez.**
 > Ayrıntılı inşa kayıtları repo-yerel `notes/current.md`'dedir, buraya taşınmaz.
 
-**Son güncelleme:** 2026-08-21 · `F-003`…`F-007` kapandı, kota gün sınırı UTC olarak karara bağlandı
+**Son güncelleme:** 2026-08-24 · **Aşama 2 tamamen kapandı**; **`B-037`…`B-039` açık**
 
 ---
 
@@ -12,22 +12,22 @@
 | Aşama / Adım | Durum |
 |---|---|
 | Aşama 0 — İskelet | ✅ |
-| 1.1 Domain modeli | ✅ |
-| 1.2 Profil CRUD + şema | ✅ |
-| 1.3 LaTeX container | ✅ |
-| 1.4 Renderer | ✅ |
-| 1.5 Ölçüm sistemi | ✅ |
-| 1.6 Faz C (seçim) | ✅ |
-| 1.7 Faz E/F | ✅ |
-| 1.8 Genel mod + PDF ucu | ✅ |
-| 1.9 Golden set + kritik testler | ✅ |
-| **Aşama 2 — İlana özel üretim** | ⬜ Sırada |
+| Aşama 1 — Yürüyen iskelet (1.1-1.9) | ✅ |
+| **Aşama 2 — İlana özel üretim** | ✅ kapanış listesi 8/8 |
+| 2.1 hesaplar · 2.2 gateway · 2.3 Faz A · 2.4 embedding · 2.5 Faz B · 2.6 kuyruk+SSE | ✅ |
+| 2.7 kota ve maliyet | ✅ (Axiom dataset'i 3.1'e taşındı) |
 
-**Aşama 2 planı:** `spec/14-build-guide.md` § XI-A.5, Adım 2.1-2.7.
-**Aşama 1'in devrettikleri:** `notes/current.md` — kapanmadan Aşama 2'ye girilmez.
+**Aşama 3 planı:** § XI-A.6. Aşama 2'nin kaydı `notes/archive/stage-2.md`'de.
+**`B-039` açık:** `GET /account/usage`, `QUOTA_EXCEEDED` (429) ve yeni
+`GENERATION_PAUSED` (503) — ICU mesajı gerekiyor. **`B-038` açık:** `POST /generations` (202), `GET /jobs/{id}`, SSE ve
+`GET /generations/{id}/download` yayımlandı; `POST /generations/general`
+**kaldırıldı** (`B-022` kapandı). İlerleme `label`'ı **çeviri anahtarı**
+(`generation.phase.*`). **`gen:api` çalıştırılmalı.** **`B-037` açık:** `resolutions[].action` `continue_anyway`
+kazandı, ICU mesajı gerekiyor. Spec § 14.3, § 14.5, § 18.1-18.6, § 19.2, § 27.1-27.3,
+§ 28.4, § 30.2-30.6, § 35.3, § 53.3, § 54.2, § 10.1, EK D.6.1, D.6.3-4, XI-A.5-6
+güncellendi — **`sync-spec.sh` Aşama 2 kapanışında** çalıştırılacak (karar: 2026-08-21).
 
-**Aşama 1 kontrol listesi:** 9/9 ✅ · **`F-003`…`F-007` kapandı** → `spec/08-api.md` § 35.2, § 35.6
-**Test:** 312 birim · 142 entegrasyon · 44 latex
+**Aşama 1:** 9/9 ✅, `F-001`…`F-007` kapandı · **Test:** 567 birim · 239 entegrasyon · 47 latex
 
 ## Frontend — `atomcv-frontend`
 
@@ -55,6 +55,6 @@ gerçek uca karşı 34 kontrol geçti. Notlar `notes/archive/stage-1.md`.
 
 ## Sonraki senkronizasyon noktası
 
-Backend Aşama 2'de `POST /generations` + 202 + SSE'yi bitirdiğinde:
-`gen:api` yeniden çalıştırılacak, `POST /generations/general` **kaldırılacak**.
-Frontend o uca kalıcı ekran bağlamamalı (handoff · B-022).
+**Şimdi.** `POST /generations` + 202 + SSE + download indi, `/generations/general`
+kaldırıldı. Frontend `gen:api`'yi çalıştırıp üretim akışını bu uçlara bağlayabilir
+(handoff · `B-038`).

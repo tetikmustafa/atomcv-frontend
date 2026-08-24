@@ -498,6 +498,13 @@ CREATE TABLE feature_flags (
 }
 ```
 
+**`cvLanguage: "auto"` "ilanı izle" demektir**, ve iki modda farklı sonuç
+verir. İlana özel üretimde Faz A'nın `jdLanguage`'i okunur; genel CV modunda
+izlenecek bir ilan yok, bu yüzden profilin `source_language`'ine düşülür.
+İlan bir dil adlandırmadıysa (`jdLanguage` boş) yine `source_language`
+kullanılır. Dili açıkça adlandıran bir tercih bir karardır ve ilanı yener;
+isteğin kendi `language` alanı ikisini de yener.
+
 ### 14.4 `generations.options`
 
 ```json
@@ -536,6 +543,13 @@ CREATE TABLE feature_flags (
 ```
 
 `rejected.reason` değerleri: `BUDGET` | `LOW_SCORE` | `INACTIVE` | `DIVERSITY_CAP` | `USER_EXCLUDED`
+
+**Sapma — `customizationId` yerine özelleştirmenin kendisi yazılır.** İşaret
+edilecek bir `template_customizations` satırı yok (A şama 2 sabit bir
+özelleştirmeyle render ediyor) ve hiçbir şeye çözülen bir id, bu anlık
+görüntüyü tam olarak var olma sebebi için kullanılamaz kılardı: yeniden render
+fontu, kenar boşluğunu ve satır aralığını istiyor. Tablo satır kazandığında id
+onlara join edebilir; bu alan **ne çalıştığının** kaydı olarak kalır.
 
 ### 14.6 `generations.trace`
 

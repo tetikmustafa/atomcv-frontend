@@ -83,11 +83,17 @@ EN: responsibilities, requirements, qualifications, experience, role,
     team, apply, skills, duties, preferred, seeking, position
 ```
 
-En az 2 sinyal aranır. **Engelleme değil, sorma:**
+En az 2 sinyal aranır, ve **ayrı** sinyaller sayılır: "deneyim"i dokuz kez yazan bir ilan bir şey söylemiştir, dokuz değil. **Engelleme değil, sorma:**
 ```
 Girdiğin metin bir iş ilanına benzemiyor.
 [ Yine de devam et ] [ Metni düzenle ] [ Genel CV oluştur ]
 ```
+
+Üçünün karşılığı sırasıyla `continue_anyway`, `paste_full_posting`, `continue_as_general_cv` (EK D.6.1). Üçü de tek kodla gelir: `UNPARSEABLE_JOB_DESCRIPTION`, `confidence: 0` ve `skillsFound: 0` ile — ön kontrol hiçbir şeyi analiz etmemiştir ve sıfır bunu dürüstçe söyler.
+
+**Redde götüren kontrol telde ayrışmaz**, çünkü katalog tek kod yayımlıyor. Kod içinde ayrışır (`TOO_SHORT`, `TOO_LONG`, `LOW_ENTROPY`, `NOT_JOB_LIKE`): metrik ve log için ayrım gerekiyor — "ilan reddedildi" hiçbir şey söylemez, "düşük entropiden reddedildi" sezgisel kuralın gözden geçirilmesi gerektiğini söyler.
+
+Sıra önemlidir: uzunluk entropiden **önce** bakılır, yoksa 40.000 karakterlik tekrarlı bir yapıştırma "tekrarlı olduğu için" reddedilir, gerçekte olduğu şey için değil.
 
 ### 18.2 LLM çağrısı — çıktı şeması
 
@@ -118,6 +124,8 @@ Girdiğin metin bir iş ilanına benzemiyor.
 }
 ```
 
+**Kapalı sözlük dışı bir değer parse'ı düşürmez, `null` olur.** `strict: true` ile sağlayıcı sözlüğü zaten zorlar (§ 27.2), dolayısıyla bu ancak zayıf `json_object` modunda olur — ve "staff" yanıtlayan bir model için tüm cevabı düşürmek, § 18.4'ün kapısının hiç okumadığı bir alan uğruna tam bir retry ödemek olurdu. Beklenmeyen **alanlar** da yok sayılır: modelin fazladan bir alan yazması başarısızlık değildir, kapı önemli alanlara bakar.
+
 **Kritik:** `responsibilities`, `keywords`, `canonical` alanları **her zaman İngilizce** — ilan hangi dilde olursa olsun. Sebep: atomların embedding'i İngilizce varyanttan hesaplanıyor, karşılaştırma aynı dilde olmalı. `jdLanguage` yine de saklanır (cover letter dili önerisi için).
 
 ### 18.3 Prompt yapısı
@@ -137,6 +145,10 @@ yaz, ilan hangi dilde olursa olsun. Orijinal anlamı koru.
 {jd}
 </job_description>
 ```
+
+**Prompt iki mesaj olarak gider.** Fence'in üstündeki talimatlar **sistem** mesajı, `<job_description>` bloğu **kullanıcı** mesajıdır. İki sebep: § 27.4 sabit bir öneki indiriyor ve önek ancak ilan içinde değilse sabit kalır; ayrıca "bu bölge veri" ayrımı, fence gerçekten iki mesajın sınırı olduğunda daha net okunur. Sınır, *kendi satırında* duran `<job_description>` etiketidir — etiket adı üstteki talimatın içinde de geçtiği için satır sonları işaretin parçasıdır.
+
+**İlanın kendi metni kaçırılmaz.** `</job_description>` içeren bir ilan fence'i erken kapatabilir; buna karşı savunma modelin uyabileceği ya da uymayabileceği bir tırnaklama şeması değil, cevabın şemaya uymak ve § 18.4'ün kapısından geçmek zorunda olmasıdır.
 
 ### 18.4 Makullük kapısı (LLM SONRASI)
 
@@ -159,6 +171,12 @@ boolean hasAbnormalFieldLength(JobAnalysis a) {
 
 Kapıdan geçemezse **Faz B'ye hiç geçilmez** — maliyet oluşmaz.
 
+Sıra önemlidir: incelik (güven, beceri sayısı, sorumluluk) **şekilden önce** bakılır, yani zayıf bir ilan zayıf olduğu için reddedilir, "şüpheli çıktı" diye değil.
+
+**Sağlayıcı arızası bu kapıdan geçmez, kendisi olarak yolculuk eder.** Zincir tükendiğinde hata `ALL_PROVIDERS_UNAVAILABLE` olarak kalır; onu `UNPARSEABLE_JOB_DESCRIPTION`'a çevirmek kullanıcıyı, hiç sorun olmamış bir metni düzeltmeye gönderirdi.
+
+**Uzunluk denetimi § 18.3'ün injection savunmasının yapısal yarısıdır.** Fence modele bölgenin veri olduğunu söyler; bu denetim modelin buna inanmayı bıraktığını fark eder. Enjekte edilmiş bir talimat daha kısa bir cevap üretmez — bir paragrafla adlandırılmış bir beceri ya da talimat taşıyan bir başlık üretir, ve bunların şekli vardır. Tavanlar gerçek bir ilanın ürettiğinin çok üstünde: uzun ama gerçek bir sorumluluğu reddeden bir kapı, hiç kapı olmamasından kötüdür.
+
 ### 18.5 Embedding hedefi sentezi
 
 Ham ilan metni embed'lenmez (sosyal haklar, şirket tanıtımı gibi gürültü içerir):
@@ -177,11 +195,19 @@ String embeddingTarget(JobAnalysis jd) {
 ### 18.6 Önbellekleme
 
 ```java
-String cacheKey = "jd:" + sha256(normalize(jobDescription));
+String cacheKey = "jd:" + promptVersion + ":" + sha256(normalize(jobDescription));
 // normalize: whitespace sadeleştirme, satır sonu birleştirme, trim
 ```
 
 Redis, **7 gün TTL**. Sadece analiz sonucu saklanır, ham metin değil.
+
+**Anahtar prompt sürümünü de taşır.** Prompt değişikliği geçersizleştirmek zorunda: taşımasa v2 prompt'u bir hafta boyunca v1'in cevaplarını sunardı ve — daha kötüsü — § 53.3'ün A/B testi hiçbir şey ölçmezdi, çünkü v2'ye kovalanan kullanıcılar o ilan için v1'in çoktan cache'lediğini okurdu.
+
+**Yalnız kapıdan geçen analiz yazılır.** Reddi cache'lemek onu bir hafta dondurur; bir kez sapan modele yeniden sorulmalı.
+
+**Cache arızası ıskalamadır, başarısız üretim değil.** Bu bir optimizasyon, ve arızası ürünü düşüren bir optimizasyon hiç olmamasından kötüdür. Aynı yol, kayıtlı değerin artık kayda uymadığı durumu da karşılar: `JobAnalysis`'e alan eklemek ondan önce yazılmış her girdiyi okunamaz yapar ve doğru cevap yine yeniden analiz etmektir.
+
+**Sıra:** ön kontrol → cache → çağrı. Ön kontrol bedava, dolayısıyla reddedilecek bir ilan için ağ gidiş dönüşü bile yapılmaz.
 
 **Kazanç:** Faz G düzenleme döngüsü, farklı şablon/dil denemeleri, popüler ilanlar.
 
@@ -232,7 +258,41 @@ double skillOverlap(Atom atom, JobAnalysis jd) {
     double preferred = weightedOverlap(atomSkills, jd.preferredSkills(), 0.4);
     return clamp(required + preferred, 0, 1);
 }
+
+double keywordCoverage(Atom atom, JobAnalysis jd) {
+    List<String> words = atom.contentTokens();   // EN varyantı + entry başlığı
+    long covered = jd.keywords().stream()
+            .filter(kw -> tokens(kw).allMatch(words::contains))
+            .count();
+    return jd.keywords().isEmpty() ? 0 : (double) covered / jd.keywords().size();
+}
 ```
+
+**Keyword bileşeni atomun *sözcüklerini* okur, etiketlerini değil.** Etiket
+bileşeni zaten `jdTags`'e karşı ölçüyor ve `jdTags` ilanın keyword'lerini
+içeriyor: keyword'ü de etiketlerden hesaplamak tek sinyali 0.35 ağırlıkla iki
+kez saymak, ve atomun kendi metnini hiç okumamak olurdu — Kubernetes'i on bir
+kez adı geçen bir madde, hiç geçmeyen bir maddeyle aynı puanı alırdı.
+
+**Bir keyword, sözcüklerinin *hepsi* atomunkiler arasında geçiyorsa sayılır.**
+İlanlar öbek yazar ("distributed systems"), maddeler cümle yazar; eşitlik
+neredeyse hiçbir şeyi eşleştirmezdi. Hepsini istemek de "systems"in tek başına
+öbeği sahiplenmesini engelliyor.
+
+**Atomun sözcükleri EN varyantından okunur**, keyword'ler her zaman İngilizce
+olduğu için (§ 18.2). EN varyantı yoksa birincil varyant yine de okunur:
+teknoloji adları ve özel isimler iki dilde de aynı yazılır ve bir keyword
+listesinin çoğu odur. **Entry'nin başlığı ve kurumu da bu kümeye girer** —
+sayfada maddeyle birlikte basılıyorlar, ve bir ilanın aradığı role ait
+maddeleri ilgisiz bir rolünkilerin üstüne çıkaran şey bu.
+
+**Benzerlik pgvector sorgusuyla değil, Java'da hesaplanır.** Faz B çalıştığında profil ağacı zaten bellektedir (Faz C onu istiyor): sorgu, yüklü olanı getirmek için bir gidiş dönüş ekler ve sıralamayı § 51.2'nin determinizm testinin ulaşamayacağı yere, SQL'e taşır. Skorlayıcı saf bir fonksiyondur.
+
+**Kosinüs [0,1]'e ölçeklenir**, ham [-1,1] kullanılmaz: negatif bir bileşen ağırlıklı toplamdan *çıkarır* ve alakasız bir madde boş bir maddenin altına düşerdi. Ölçekten sonra "alakasız" 0.5, "zıt" 0'dır ve ağırlıklar buna göre seçilmiştir.
+
+**Vektörü olmayan atom 0.5 alır, 0 değil.** § 28.2 embedding'i sonradan kuyrukta hesaplar, yani az önce yazılmış bir atomun vektörü yoktur; onu "azami alakasız" saymak kullanıcının az önce önemli bulduğu içeriği gömerdi. Farklı boyuttaki iki vektör de aynı yolu izler — başka bir modelin çıktısı karşılaştırılabilir değildir.
+
+**`skillOverlap`'in paydası zorunlu listedir, birleşim değil.** İki zorunlu ve on iki tercih edilen beceri sayan bir ilanda, ikisini de karşılayan bir atom tam puan almalıdır. Tercih edilenler üstüne eklenir ve toplam clamp'lenir: bir zorunluyu kaçıran atomu yukarı çekebilirler ama onun yerine geçemezler.
 
 ### 19.3 Kritik prensip: eleme yok, sıralama var
 
@@ -277,11 +337,30 @@ double generalModeScore(Atom atom) {
 
 ```java
 // Eşit skorlarda kararlı sıralama — ZORUNLU
-Comparator.comparingDouble(ScoredAtom::score).reversed()
+Comparator.comparingLong(ScoredAtom::relevanceBucket).reversed()   // round(score, 0.02)
+          .thenComparing(comparingDouble(ScoredAtom::secondary).reversed())
           .thenComparing(a -> a.atomId().toString());
 ```
 
 Bu satır olmadan aynı girdi farklı çıktı üretebilir.
+
+**§ 19.4'ün "yakın skorlu atomlar arasında" ifadesi bir kova genişliğidir**
+(karar: Adım 2.7 sonrası). Skor 0.02'nin katına yuvarlanır ve yuvarlanmış değer
+sıralama anahtarı olur; ağırlıklar bir ondalığa elle ayarlandığı için 0.02
+içindeki iki atom anlamlı biçimde farklı değildir.
+
+**Epsilon değil kova, ve sebebi ciddi.** "Bu iki skor birbirine yakın mı" diye
+soran bir karşılaştırıcı **geçişli değildir**: a ≈ b ve b ≈ c ama a ≢ c olduğunda
+`List.sort` tutarsızlığı fark eder ve `IllegalArgumentException: Comparison
+method violates its general contract` fırlatır — büyük bir profilde, üretimde,
+her küçük testi geçmiş olarak. Yuvarlama, yakınlığı bir bağıntı değil bir
+denklik sınıfı yapar ve sonuç sıradan bir tam sıralamadır.
+
+**İlgi skoru baskın kalır:** bir kova fark, ikincil skor ne derse desin bir kova
+farktır — yeni ama alakasız bir madde, eski ama alakalı birinin üstüne çıkamaz.
+Kova içinde § 19.4 karar verir. **id son çare olarak kalır** (zorunlu), ama artık
+çok daha az sıklıkla ulaşılır; id'ler her içe aktarımda yeniden üretildiği için
+bu iyi bir yöndür.
 
 ---
 

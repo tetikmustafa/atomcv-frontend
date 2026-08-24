@@ -175,9 +175,42 @@ public interface LlmProvider {
     boolean isAvailable();      // API anahtarı var mı
     ModelTier tier();
 
-    <T> Result<LlmResponse<T>> callStructured(StructuredRequest<T> req);
+    <T> LlmOutcome<T> callStructured(StructuredRequest<T> req);
 }
 
+public sealed interface LlmOutcome<T> {
+    record Answered<T>(LlmResponse<T> response) implements LlmOutcome<T> {}
+    record Failed<T>(LlmFailure failure)        implements LlmOutcome<T> {}
+}
+
+public record LlmFailure(Kind kind, String provider, String detail) {
+    public enum Kind {
+        RATE_LIMITED(true), SERVER_ERROR(true), TIMEOUT(true), UNREACHABLE(true),
+        SCHEMA_MISMATCH(false), REQUEST_REJECTED(false);
+        // true → zincirdeki sonraki sağlayıcı; false → aynı sağlayıcıda retry (27.3)
+        public boolean tryNextProvider() { ... }
+    }
+}
+
+// Prompt'un yanındaki schema.json'ın (53.1) üstünde bir value object.
+// name gerekli: OpenAI/OpenRouter response_format'ta şema adı istiyor,
+// Anthropic adaptörü onu zorlanan tool'un adı olarak kullanıyor (27.2).
+public record JsonSchema(String name, JsonNode node) {}
+```
+
+**Sağlayıcı `Result` değil `LlmOutcome` döndürür.** Ayrım hata tipinde: tek bir
+sağlayıcının 429'u ya da şema uyumsuzluğu **kullanıcıya çıkmaz**, çünkü hata
+kataloğunda (EK D.6) LLM için yalnız iki kod var —
+`ALL_PROVIDERS_UNAVAILABLE (503, tried[])` ve `EMBEDDING_UNAVAILABLE (503)`.
+`PipelineError` kullanıcının gördüğü hiyerarşidir; sağlayıcı seviyesindeki
+başarısızlık `llm` modülünün içinde kalır ve dışarı yalnız zincirin sonucu çıkar.
+
+Bunun kabul edilen sonucu: ısrarlı bir şema uyumsuzluğu da kullanıcıya
+`ALL_PROVIDERS_UNAVAILABLE` görünür. Kullanıcı için ayrım yok — ikisi de "model
+cevap vermedi" — ama telemetride var: `llm_invocations.outcome` `schema_error`
+olarak ayrı duruyor.
+
+```java
 public record StructuredRequest<T>(
     String promptId,
     String promptVersion,
@@ -211,6 +244,8 @@ public record LlmResponse<T>(
 | **DeepSeek** | `/chat/completions` | `response_format: json_object` (şema promptta, şemasız mod) |
 
 **Claude'un farkı önemli:** Bare JSON mode yok; forced tool use tek güvenilir yol. Bu, adaptörde ayrı kod yolu gerektirir.
+
+**"Desteklenmiyorsa" tespitle değil yapılandırmayla çözülür.** Hangi mekanizmayı hangi modelin desteklediği modele ait bir olgudur ve yanıt bunu güvenilir biçimde söylemez; hata metnine bakarak tahmin etmek her başarısızlığı sessizce zayıf moda düşürürdü. Adaptör başına açık bir ayar taşınır — OpenRouter'da `atomcv.llm.openrouter.structured-output: JSON_SCHEMA | JSON_OBJECT`. `JSON_SCHEMA` `strict: true` ile gider; `strict` olmadan sağlayıcı şemayı öneri sayar ve § 53.5'in Faz A için istediği %99 uyum tutmaz.
 
 ### 27.3 Fallback zinciri
 
@@ -249,7 +284,17 @@ public <T> Result<LlmResponse<T>> call(StructuredRequest<T> req) {
 }
 ```
 
-**Önemli ayrım:** 429/5xx/timeout → sonraki sağlayıcı. Şema uyumsuzluğu → aynı sağlayıcıda retry (farklı sağlayıcı da aynı hatayı verecek).
+**Önemli ayrım:** 429/5xx/timeout → sonraki sağlayıcı. Şema uyumsuzluğu → aynı sağlayıcıda retry (farklı sağlayıcı da aynı hatayı verecek). Ayrımı `LlmFailure.Kind.tryNextProvider()` taşır (27.1).
+
+**`tried` boş olabilir ve bu normaldir.** Anahtarı olmayan sağlayıcı *sessizce* atlanır ve `tried`'a yazılmaz: beş vendor listeleyen bir zincir, tek anahtarlı bir kurulumda eksik değil olağan durumdur. Boş liste "hiçbir şey yapılandırılmamış" demek, "hepsi çöktü" değil.
+
+`ProviderChain.call` `Result<LlmResponse<T>>` döndürür — hata tipi `PipelineError` ve bugün üretebildiği tek durum `AllProvidersUnavailable(tried)`. Sağlayıcıdan zincire dönüşüm burada olur.
+
+**Aynı sağlayıcıdaki retry sayısı:** `atomcv.llm.schema-retries`, varsayılan **1**. Bir kez sapan model çoğu zaman ikincide tutturur; daha fazlası yanlış bir prompt için tekrar tekrar ödemektir. Sayı tükendiğinde yürüyüş durur, sonraki vendor denenmez.
+
+**Zincirdeki bilinmeyen sağlayıcı id'si ölümcül değildir**, `warn` basılıp atlanır. Ölümcül olsaydı yukarıdaki beş vendorlu varsayılan zincirle, adaptörlerin yalnız biri yazılmışken açılış yapılamazdı; sessiz olsaydı bir yazım hatası fark edilmezdi.
+
+**Zincir env-driven'dır** (§ 5.4): `LLM_CHAIN_CHEAP` / `LLM_CHAIN_MID` virgülle ayrılmış id listesi taşır, yani sıra sürüm çıkmadan değiştirilebilir.
 
 ### 27.4 Maliyet optimizasyonları
 
@@ -336,6 +381,17 @@ if (!embeddingProvider.isHealthy()) {
 ```
 
 Kalite düşer ama sistem çalışır. Kullanıcıya bilgi verilmez (iç detay), ama telemetriye kaydedilir.
+
+**`isHealthy()` TEI'nin kendi `/health`'ini sorar, port testi yapmaz.** Container portu ağırlıklar yüklenmeden çok önce açar; "bir şey dinliyor mu" diye soran bir kontrol, 2.5 GB'lık ilk açılışın tamamı boyunca *sağlıklı* raporlar ve skorlama her çağrıya 503 dönen bir servise karşı çalışır.
+
+**`isHealthy()` bir sinyaldir, garanti değil.** Geçmiş bir anı anlatır, ve
+`true` döndükten sonra çağrının kendisi hâlâ düşebilir. Bu yüzden geri çekilme
+iki katmanlı: kontrol, bilinen bir arızada gidiş dönüşü hiç harcamamak için;
+`EmbeddingException` yakalaması, üretimin *ortasında* başlayan arıza için.
+Yalnız kontrol olsaydı fallback sadece üretimden önce başlamış kesintileri
+kapsardı.
+
+**Kısmi cevap reddedilir.** Servis istenenden az vektör dönerse ya da boyut 1024 değilse çağrı hata verir: eksik bir cevap yanlış vektörü yanlış atomla eşleştirir, ve bu hiç vektör olmamasından kötüdür — profil başkasının maddesine göre skorlanır ve hiçbir şey bozuk görünmez.
 
 ---
 
@@ -492,6 +548,26 @@ WHERE id = (
 RETURNING *;
 ```
 
+**`SKIP LOCKED`'ın aldığı şey mükerrer claim değil, bloklanmama.** Ölçüldü:
+sözcükler kaldırıldığında dört worker sekiz işi hâlâ mükerrersiz alıyor, çünkü
+READ COMMITTED'de düz `FOR UPDATE` kilidi bekliyor, serbest kalınca yüklemi
+yeniden değerlendiriyor, satırı artık `queued` bulmayıp bir sonrakine geçiyor.
+Fark **canlılık**: `SKIP LOCKED` olmadan boştaki her yoklama tek bir yavaş
+üretimin arkasına park edebilir, ve kuyruk kuyruk olmaktan çıkar. Testi de buna
+göre kurmak gerekiyor — mükerrerliği ölçen bir test iki sözcük silindiğinde
+geçmeye devam eder (`CLAUDE.md` · Testing Requirements).
+
+**Kuyruğun iki okuyucusu ayrı tiplerdir.** `JobQueue` worker içindir ve
+kapsamsızdır — worker'ın davranan bir kullanıcısı yoktur, sıradakini alır.
+`JobRepository` kullanıcı içindir ve her okuması kapsamlıdır: iş id'si sisteme
+ait olup tarayıcıya verilen tek tanımlayıcıdır ve ilerleme akışı onunla
+adreslenir (mutlak kural 3). Tek sınıf, üstünde kapsamsız bir metot taşıyan
+kapsamlı bir repository olurdu — birinin er geç controller'dan çağıracağı şekil.
+
+**`jobs`'ta `version` kolonu yok ve olmamalı.** İki worker'ı tek satırdan uzak
+tutan şey iyimser kilitleme değil, claim'in kendisidir; ikinci ve daha zayıf bir
+cevap eklemek çözülmüş bir soruyu yeniden açardı.
+
 ### 30.3 Öncelik sınıfları
 
 ```
@@ -513,6 +589,7 @@ public void heartbeat() { jobRepo.touchHeartbeat(workerId, runningJobIds); }
 // Zombi toplayıcı
 @Scheduled(fixedDelay = 60_000)
 public void reclaimStale() { jobRepo.reclaim(Duration.ofMinutes(2)); }
+// Deneme HAKKI geri verilmez, ve hakkı bitmiş iş kuyruğa değil 'failed'e gider
 
 // Graceful shutdown
 @PreDestroy
@@ -521,6 +598,16 @@ public void shutdown() {
     if (!executor.awaitTermination(30, SECONDS)) jobRepo.releaseLocks(workerId);
 }
 ```
+
+**Toplayıcı denemeyi geri vermez.** Üretimin ortasında öldürülmüş bir worker'ı
+pekâlâ üretimin kendisi öldürmüş olabilir; kendini sonsuza kadar geri alan bir
+iş, tek bir zehirli payload'ın kuyruğu düşürme yoludur. **Denemesi bitmiş bir iş
+kuyruğa dönemez**, ama `running` bırakılamaz da: `failed`'e alınır, yoksa
+birinin izlediği ekranda hiç durmayan bir spinner olur.
+
+**Her instance kendi işlerini de toplar.** Koşul sahiplik değil heartbeat'tir:
+ölü görünecek kadar takılmış bir instance, kendisi tarafından da başkası
+tarafından da ölü sayılır.
 
 ### 30.5 Retry politikası
 
@@ -545,6 +632,14 @@ long backoffMs(int attempts) {
 }
 ```
 
+**Üs kaydırmadan önce sınırlanır ve sonuç bir tavana vurur (5 dakika).**
+`2^attempts` 63'te `long`'u taşırır ve gecikme negatife döner: iş hemen çalışır,
+ve sonsuza kadar öyle yapar. Normalde bir iş o kadar denenmez, ama zombi
+toplayıcı bir işi retry bütçesinin ima ettiğinden daha çok kez geri verebilir.
+
+**Jitter süs değil.** Onsuz aynı kesintiye düşen bütün işler aynı ana geri gelir
+ve birlikte yine düşer.
+
 ### 30.6 SSE ilerleme bildirimi
 
 ```java
@@ -559,9 +654,16 @@ public SseEmitter stream(@PathVariable UUID jobId, @AuthenticationPrincipal Prin
 ```
 
 **Olay tipleri:**
+
+> **Düzeltme — `label` bir çeviri anahtarıdır, cümle değil.** Aşağıdaki örnek
+> düz metin taşıyordu ve § 35.4 ile çelişiyordu: sunucu anahtar gönderir,
+> metni frontend yazar. Tek dilde gönderilen bir cümle her yeni dilde yeniden
+> gönderilmek zorunda kalırdı, ve ilerleme satırı üründe en çok görülen metin.
+> Değerler `generation.phase.<FAZ>` biçiminde.
+
 ```
 event: phase
-data: {"phase":"D","label":"Metinler uyarlanıyor","pct":60,"detail":"4/7"}
+data: {"phase":"B","label":"generation.phase.SCORING","pct":50,"detail":"4/7"}
 
 event: completed
 data: {"generationId":"...","pageCount":1,"matchLevel":"STRONG"}
@@ -569,6 +671,36 @@ data: {"generationId":"...","pageCount":1,"matchLevel":"STRONG"}
 event: failed
 data: {"code":"CONFLICTING_PREFERENCES","params":{...},"resolutions":[...]}
 ```
+
+**Bağlanır bağlanmaz güncel durum gönderilir.** İki şeyi birden çözüyor:
+yeniden bağlanan istemci tampon olmadan yakalanıyor, ve **202 ile abonelik
+arasında biten bir iş** hiçbir şey göndermeden sessiz kalmıyor — bu, bu alt
+sistemin en kötü arızası ve düzeltmesi tek satır. Zaten terminal olan bir işe
+abone olan istemci sonucu alıp kapanıyor; beş dakika boş bağlantı tutulmuyor.
+
+**Terminal olay akışı kapatır.** Zaman aşımıyla biten bir akış, takılmış bir
+üretimden ayırt edilemez.
+
+**`Last-Event-ID` kabul edilir ama oynatma yapılmaz.** Gerçek replay iş başına
+tampon ister; EK D.6.4 daha ucuz ve dürüst alternatifi ("en azından güncel
+durumu yeniden gönder") kabul ediyor ve bağlanışta gönderilen anlık durum tam
+olarak odur. Olay `id`'leri **tek bir akışın** olaylarını sıralar, daha
+fazlasını değil.
+
+**Kayıt süreç içi ve bunun bir son kullanma tarihi var.** Bugün tek instance hem
+worker'ları koşturuyor hem akışı sunuyor. İki instance olduğu an A'ya bağlı
+izleyici B'de koşan işi duymaz — çıkış yolu aşağıdaki `LISTEN/NOTIFY`, ve durum
+ucu ikisinde de çalışıyor.
+
+**Kaybedilmiş worker sonucunu yazamaz.** Zorla kapanış kilitleri bırakır *ve*
+handler'ı keser; kesilen handler yine de sonuç yazma noktasına ulaşır ve o ana
+kadar iş başkası tarafından alınmış olabilir. Canlı bir claim'in üstüne terminal
+durum yazmak, bir işin iki kez koşup bir kez raporlanmasıdır — bu yüzden yazma,
+satırın `locked_by`'ı hâlâ bu worker'ı gösteriyorsa yapılır. **Ölçüldü:** koruma
+olmadan kapanış testi üç koşudan birinde düşüyordu.
+
+**Satır önce yazılır, sonra duyurulur.** Tersi, geri düşeceği uçtan daha çok
+şey bilen bir istemci demek olurdu.
 
 **Çok-instance dağıtımı** (ileride):
 ```java

@@ -49,8 +49,20 @@ public class FakeLlmProvider implements LlmProvider {
 
 **Kayıt modu kritik:** Bir kez `local-record` ile çalıştır, fixture'lar `src/test/resources/fixtures/llm/` altına düşsün. Bu fixture'lar aynı zamanda golden test set'in girdisi olur.
 
+**Fixture'lar classpath'te değil, dosya sisteminde.** `local-record` uygulamayı `bootRun` ile çalıştırıp fixture *yazıyor* ve paketlenmiş bir kaynağa yazılamaz; okuma ile yazma aynı yeri göstermezse kaydedilen fixture hiç oynatılmaz. Yol `atomcv.llm.fake.fixture-dir` ile verilir, yalnız `local-*` profillerinde etkindir, üretim jar'ına girmez.
+
+Dosya adı `{promptId}/{version}-{sha256[0:12]}.json` — girdinin **hash'i**, metni değil. Değişen bir ilan ıskalar: alakasız bir kaydı oynatmak fixture'ın hiç olmamasından kötüdür, çünkü hat başka bir işin analizi üzerinde çalışır.
+
+**`synthesize` bayrağı.** `local-fake`'te açık: hiçbir fixture'ın karşılamadığı çağrı şema biçiminde bir yer tutucuyla cevaplanır, yoksa temiz bir klon hiç üretim yapamazdı. `local-record` ve `local-real`'de **kapalı** — sentetik bir cevabın fixture olarak kaydedilmesi onu gerçek bir kayıttan ayırt edilemez yapardı.
+
+`FakeLlmProvider` iki kademeye birden cevap verir; tek tier'a bağlansa `local-fake` altında diğer zincir hiç çalışmazdı.
+
+**`local-fake` zinciri override etmek zorundadır** (`chain.cheap`/`chain.mid` → `[fake]`). Taban yapılandırma gerçek adaptörü sayar ve o profilde anahtar yoktur; override olmasa her üretim `ALL_PROVIDERS_UNAVAILABLE` ile biterdi — üstelik yapılandırma doğru görünürken. Bu, "bedava ve çevrimdışı çalışır"ın tam tersidir, dolayısıyla bir testle bağlanır.
+
 Diğer sahte sağlayıcılar:
-- `FakeEmbeddingProvider` — metin hash'inden deterministik vektör
+- `FakeEmbeddingProvider` — metin hash'inden deterministik vektör. Tohum, metnin *stringi* değil **küçük harfe indirilmiş ayrı kelimelerinin sıralı kümesi**: cümleyi yeniden sıralamak vektörü korur, bir kelimeyi değiştirmek korumaz — § 28.2'nin `content_hash` geçersizleştirmesi böylece gerçek bir değişiklik üzerinde denenebilir. Vektörler **birim uzunluktadır**, çünkü § 19 kosinüs benzerliği hesaplıyor ve normalize etmeyen bir fake o normalizasyondaki bir hatayı bir aşama boyunca gizlerdi. **Sıralama hakkında hiçbir şey iddia edilemez** — aynı konudaki iki metin burada alakasız iki metinden daha yakın değildir; o, gerçek servisin ya da golden set'in işidir.
+
+Sahte ve gerçek sağlayıcı **profil ile ayrılır** (`local-fake` / `!local-fake`), ve bu testlidir: iki bean olursa context hiçbir profili adlandırmayan bir belirsizlik mesajıyla açılmaz, sıfır olursa eksik sınıf gibi görünür — iki başarısızlık da sessizdir.
 - `FakeLatexCompiler` — sabit PDF döner (`--profile full` gerekmez)
 
 ### 54.3 Seed data

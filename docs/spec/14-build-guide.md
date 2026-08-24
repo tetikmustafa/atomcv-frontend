@@ -1000,9 +1000,14 @@ make record
 2. TeiEmbeddingProvider (HTTP)
 3. FakeEmbeddingProvider (hash → deterministik vektör)
 4. content_hash bazlı invalidation
-5. pgvector kolonu + migration
+5. pgvector kolonunun Hibernate eşlemesi
 6. Fallback (servis düşerse ağırlıkları yeniden dağıt)
 ```
+
+**Madde 5 migration istemiyor.** Kolon `V1`'de zaten var (`atoms.embedding
+vector(1024)`, `atoms.embedding_hash TEXT`); eksik olan yalnız eşleme. Yeni bir
+migration yazmak, uygulanmış bir migration'ı değiştirmeden mümkün olmazdı
+(mutlak kural 2) ve gereksiz olurdu.
 
 ### Adım 2.5 — Faz B
 
@@ -1017,9 +1022,15 @@ make record
 
 ### Adım 2.6 — Kuyruk ve SSE
 
+> **Düzeltme.** Birinci madde yanlıştı: `jobs` tablosu **`V1`'de zaten var**
+> (2.4'ün pgvector maddesiyle aynı hata). Eksik olan eşlemeydi; migration
+> yazmak mutlak kural 2'yi ihlal ederdi. İkinci madde de ikiye ayrıldı:
+> `JobQueue` worker'ın kapsamsız yüzü, `JobRepository` kullanıcının kapsamlı
+> yüzü — gerekçe § 30.2'de.
+
 ```
-1. jobs tablosu migration
-2. JobRepository (SKIP LOCKED sorgusu)
+1. jobs eşlemesi (migration YOK)
+2. JobQueue (SKIP LOCKED) + JobRepository (kullanıcı kapsamlı)
 3. JobWorker + heartbeat
 4. Zombi toplayıcı (@Scheduled)
 5. Retry politikası
@@ -1031,26 +1042,40 @@ make record
 
 ### Adım 2.7 — Kota ve maliyet
 
+> **Düzeltme, dördüncü ve beşinci kez.** `usage_counters` ve `feature_flags`
+> **`V1`'de zaten var**. Bu adımda yazılan şey eşleme ve kurallar; migration
+> yazmak mutlak kural 2'yi ihlal eder. Artık bir kalıp: bu kılavuz "tablo"
+> dediğinde **önce `V1`'e bak**.
+
 ```
-1. usage_counters tablosu
+1. usage_counters eşlemesi (migration YOK)
 2. QuotaService (atomik INSERT ON CONFLICT)
 3. FeatureFlag tablosu + kill switch
 4. AnomalyDetector (@Scheduled)
-5. Axiom entegrasyonu (OpenTelemetry)
+5. OTLP dışa aktarımı (Axiom hedefi Adım 3.1'de açılır)
 6. /api/v1/account/usage endpoint'i
 ```
 
 ### ✅ Aşama 2 kontrolü
 
+> **Düzeltme — sıralama çelişkisi.** Bu liste "Axiom'da loglar görünüyor"
+> diyor, ama Axiom dataset'i **Adım 3.1'de** açılıyor (§ XI-A.6). Aşama 2'de
+> yapılabilecek olan OTLP dışa aktarımını bağlamak; ihracatçı bir URL
+> verilene kadar kapalı duruyor, çünkü gidecek yeri olmayan bir ihracatçı
+> zamanlayıcıyla yeniden deneyip kendi arızasını loglar — gözlem, gözlenen
+> sistemi bozar. Kutu **3.1'e taşındı**.
+
 ```
-□ İlan yapıştırılıp CV üretiliyor
-□ Sağlayıcı fallback çalışıyor (birincil key'i bozarak test et)
-□ SSE ilerleme akıyor
-□ Kota doluyor ve engelliyor
-□ Kill switch çalışıyor
-□ Anlamsız ilan reddediliyor
-□ Injection denemesi sistem davranışını değiştirmiyor
-□ Axiom'da loglar görünüyor
+✅ İlan yapıştırılıp CV üretiliyor   ← JobSpecificCvIT: Faz A (fake sağlayıcı),
+                                       Faz B, seçim, gerçek TeX, ve /download
+✅ Sağlayıcı fallback çalışıyor       ← ProviderChainTest
+✅ SSE ilerleme akıyor                ← JobStreamIT
+✅ Kota doluyor ve engelliyor         ← QuotaIT + GenerationEnqueueServiceTest
+✅ Kill switch çalışıyor              ← QuotaIT
+✅ Anlamsız ilan reddediliyor         ← JobDescriptionPreflight + QueuedGenerationApiIT
+✅ Injection denemesi davranışı       ← PlausibilityGate + JobAnalysisPromptTest
+   değiştirmiyor
+→  Axiom'da loglar görünüyor          ← Adım 3.1 (dataset yok)
 ```
 
 ---
@@ -1067,7 +1092,8 @@ make record
 □ Cloudflare → Turnstile → Site ekle (atomcv.mustafatetik.com)
 □ Resend → hesap aç, domain doğrula (aşağıda)
 □ Sentry → proje oluştur
-□ Axiom → dataset oluştur
+□ Axiom → dataset oluştur  ← Aşama 2'nin "loglar görünüyor" kutusu buraya taşındı;
+                              OTLP ihracatçısı bağlı, tek eksik OTLP_URL/anahtar
 ```
 
 ### Adım 3.2 — E-posta domain kurulumu

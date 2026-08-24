@@ -284,6 +284,18 @@ Kuyruğa alırken → sayacı artır
 
 **Bir üretim = bir kota birimi**, kaç iç retry olduğu fark etmez.
 
+**Artırma ve kontrol tek ifadedir** (Adım 2.7): `INSERT … ON CONFLICT DO UPDATE
+… RETURNING count`. Oku-sonra-yaz, aynı anda gelen iki isteğin ikisinin de 19
+görüp ikisinin de geçmesine izin verir — testte hiç görünmeyen, faturada görünen
+bir yarış.
+
+**İade sıfırda dibe vurur.** Hiç sayılmamış bir kullanım için iade — zombi
+toplayıcı bir işi geri verdikten sonra ikinci kez düşmesi gibi — satırı negatife
+iter ve kimsenin istemediği bedava kota dağıtır.
+
+**Kota kuyruğa alırken düşer, ama idempotency aramasından sonra.** Zaten var olan
+bir işi döndürmek ikinci bir birime mal olmamalı.
+
 ### 44.3 Anomali tespiti ve kill switch
 
 ```java
@@ -308,7 +320,40 @@ public void detectAnomalies() {
 }
 ```
 
+**Uygulanan hâli (Adım 2.7): iki sinyal var, bütçe freni yok.** Kullanıcı
+baselineʼı ve kayıt patlaması indi; ikisi de **raporluyor, davranmıyor** —
+sıkılaştırılacak bir rate limiter yok ve freni tek yoğun kullanıcı için çekmek
+herkesi durdurur, o karar alarmı okuyana ait. Baseline kullanıcının **kendi**
+son yedi günü: sabit bir sayı ağır kullanıcıda işe yaramaz, hafif kullanıcıda
+her gün alarm çalar. Geçmişi olmayan kullanıcı join'le eleniyor — ilk gün
+anomali değil, onu günlük kota sınırlıyor.
+
+**Bütçe freni davranan tek sinyal, ve bu asimetri kasıtlı.** Günün faturası
+tavanı aşıyorsa mesele dağıtımın kendisidir ve herkesi durdurmak doğru cevaptır;
+tek yoğun kullanıcı ise tek kişiyle ilgilidir ve herkesi durdurmak değildir.
+**Fren tek yönlüdür:** buradaki hiçbir şey üretimi geri açmaz, çünkü sebebin
+giderilip giderilmediğini zamanlanmış bir iş bilemez — gece yarısı kendini
+kaldıran bir fren aynı kaçağın her gece tekrarlamasına izin verirdi.
+
+**Maliyet her çağrıda kaydedilir, arızalar dâhil** (§ 27.5): şema hatası dönen
+bir sağlayıcı da ürettiği token'ları faturalandırır, ve yalnız başarıları sayan
+bir toplam tam da önemli olan kötü günü olduğundan az gösterir. Fiyat tablosu
+yapılandırmadır; **cache'lenmiş girdi ayrı fiyatlanır ve taze girdinin *yerine*
+sayılır** (§ 27.4) — üstüne eklemek cache'e düşen her çağrıyı şişirir ve freni
+kimsenin ödemediği bir faturada çektirir. **Fiyatı bilinmeyen model sıfır eder,
+tahmin değil**: operatörün üzerine karar vereceği bir sayıya uydurma para
+koymak, görünür bir boşluktan kötüdür; `llm.unpriced_calls` onları sayar.
+
 **Kritik:** Fren **veri erişimini kesmez.** Üretim durur ama kullanıcı profilini görebilir ve dışa aktarabilir.
+
+**Ayarlanmamış bayrak AÇIK sayılır.** Tabloya hiç dokunmamış bir dağıtım hizmet
+vermeli, her şeyi kapatmış gibi davranmamalı. **Bayrak önbelleğe alınmaz:** olay
+ortasında çevrilmek için var, önbellek ise kararla etki arasına TTL kadar gecikme
+koyar. Üretim başına bir birincil-anahtar okuması burada kısılacak maliyet değil.
+
+**Fren kotanın önünde koşar:** duraklatılmış bir dağıtım, reddedeceği bir istek
+için kimsenin hakkını harcamamalı. Kod `GENERATION_PAUSED` (503, parametresiz)
+döner — istekte değiştirilecek bir şey yok.
 
 ### 44.4 Sahte hesap koruması
 
