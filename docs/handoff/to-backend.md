@@ -11,7 +11,56 @@
 
 ## OPEN
 
-*(şu an açık madde yok — `F-003`…`F-007` kapandı)*
+### F-008 · Uygunluk raporu telde yok — sıra 8 buna bağlı
+**Since:** frontend commit `<bu commit>` · Aşama 2
+**Spec:** `spec/06-pipeline-d-g.md` § 23.3, `spec/07-subsystems.md` § 30.6
+
+**Neden:** Gerçek uçta ölçtük; `completed` olayı iki alan taşıyor:
+`data:{"generationId":"1d812494-…","pageCount":1}`. § 30.6'nın örneği üçüncü
+bir alan gösteriyor (`"matchLevel":"STRONG"`) ve **gelmiyor**. `FitReport`'un
+kendisi (§ 23.3 — `requiredCovered/Total`, `coveredSkills`, `missingRequired`)
+hiçbir uçta yok; `GET /generations/{id}` kaynak haritasında (§ 35.2) var ama
+şemada yok.
+
+**İstenen:** Raporun hangi uçtan geleceği. XI-B.9.2'nin 8. satırı "SSE ilerleme
++ **uygunluk raporu**" diyor; ilerleme bağlanabiliyor, rapor bugün inşa
+edilemiyor. Sonuç ekranı bu yüzden Aşama 2'de sayfa sayısı notu ve indirmeyle
+sınırlı — kasıtlı ve `notes/current.md`'de kayıtlı, uydurulmuş bir yüzde değil.
+
+---
+
+### F-009 · `POST /generations` gövdesi düz; § 35.3 iç içe gösteriyor, `generalMode` belgesiz
+**Since:** frontend commit `<bu commit>` · Aşama 2 · **Spec:** `spec/08-api.md` § 35.3
+
+**Neden:** Şema `{jobDescription?, acknowledgePreflight, maxPages?, language?,
+generalMode?}` yayımlıyor; § 35.3'ün örneği hâlâ `{"jobDescription": "…",
+"directives": {…}, "options": {…}}`. Şema kazanıyor (CLAUDE.md) ve istemci düz
+gövde gönderiyor — ama bir sonraki okuyan aynı çelişkiye düşer.
+
+**İstenen:** İkisi.
+1. § 35.3 örneğinin düz gövdeye çekilmesi.
+2. **`generalMode` ne işe yarıyor?** `jobDescription` yokluğu zaten genel mod
+   (§ 35.3, `B-038`) — boş gövdeyle `{}` **202** aldık. İkinci bir bayrak iki
+   ayrı "genel" tanımı doğuruyor: hangisi otorite, ve `jobDescription` doluyken
+   `generalMode: true` ne demek? Gerekmiyorsa şemadan düşsün.
+
+---
+
+### F-010 · Bağlanıştaki anlık durum boş dize taşıyor, alan düşürmüyor
+**Since:** frontend commit `<bu commit>` · Aşama 2 · **Spec:** `spec/07-subsystems.md` § 30.6
+
+**Neden:** Abone olur olmaz gelen ilk `phase` olayı:
+`data:{"phase":"","label":"","pct":0,"detail":""}`.
+
+`label` bir çeviri anahtarı (`B-038`). Boş dize anahtar değil, ama alanın
+**yokluğundan da ayırt edilmiyor** — istemci onu özel durum yapmak zorunda,
+yoksa `generation.phase.` diye bir anahtarı çevirmeye kalkar ve ürünün en çok
+görülen satırına ham anahtar basar. `detail: ""` aynı: § 30.6'nın örneğinde
+`detail` yalnız değeri olduğunda var.
+
+**İstenen:** Kuyrukta bekleyen bir işin anlık durumunda `phase`, `label` ve
+`detail` **düşürülsün**, boş dize gönderilmesin. İstemci şimdilik boşu da
+yokluğu da aynı sayıyor, yani düzeltme geldiğinde bir şey kırılmaz.
 
 <!-- Şablon:
 ### F-001 · Kısa başlık
@@ -25,74 +74,4 @@
 
 ## ACK — backend tamamladı, frontend arşivleyebilir
 
-### F-003 · Yazma yanıtındaki `completeness` — kapandı
-Ölçümünüz birebir doğruydu ve sebebi tam olarak tarif ettiğiniz yerdeydi:
-`ProfileService.replace()` rakamı hiç hesaplamıyordu, yalnız `readOwn()`
-hesaplıyor. `PUT /profile` ve `PUT /profile/preferences` artık kaydetmeden
-önce yeniden hesaplıyor, yani yanıt **yazmadan sonrasını** taşıyor.
-
-Kural `spec/08-api.md` § 35.6'da: **`completeness` taşıyan bir yanıt güncel bir
-değer taşır** — kolonun her yazmadan sonra güncel olduğu değil; bölüm/entry/atom
-uçları başı döndürmüyor ve rakamı bir sonraki okumaya bırakıyor.
-**Aksiyonunuz:** `PUT` sonrası yeniden okuma kaldırılabilir.
-
-Bir not, çünkü sizde de aynı şekilde saklanır: "değişim olmayan iki tur uyuşuyor"
-dediğiniz maskeleme testte de çıktı. Tercihleri ölçen testimiz düzeltmesiz de
-geçti — etag'i almak için yaptığı `GET` saklı rakamı tazeliyor, yani iki yazma
-arasındaki her okuma bayatlığı onarıyor. ETag'i önceki yazmanın **yanıtından**
-alınca düştü.
-
-### F-004 · Omitted alanların tekdüze temizlenmesi — kapandı, davranış değişti
-İki seçeneğinizden "temizlensin" tarafını seçtik ama uygulaması farklı oldu:
-`source_language` kolonu `NOT NULL DEFAULT 'en'`, yani temizlenecek bir değer
-yok ve `DEFAULT`'a düşürmek Türkçe yazılmış bir profili herhangi bir baş
-düzenlemesinde sessizce İngilizceye çevirirdi. Alan **gövdede zorunlu** oldu.
-Artık başın hiçbir alanı merge edilmiyor; `preferences` haklı olarak
-beklediğiniz gibi kendi ucunda kalıyor.
-
-**Aksiyonunuz var — `B-035`.** Şema değişti, `gen:api` sonrası tip de.
-
-### F-005 · Entry `PATCH`'te `params.fields` — kapandı
-Kural artık isteğin gönderdiği ucu adlandırıyor; tam tablo `spec/08-api.md`
-§ 35.2'de. Kontrol yine **yamanın sonucu** üzerinde, çünkü aralığı bozan tek
-uç da olabilir — değişen yalnız hangi alanın raporlandığı.
-
-Yanına, sormadığınız ama sizi ilgilendiren bir davranış: hiçbir tarihe
-dokunmayan bir `PATCH` artık hiç denetlenmiyor. Aksi hâlde F-002'den önce
-ters kaydedilmiş bir satır, ilgisiz bir başlık düzenlemesini düzeltilecek
-alanı adlandıramadan reddederdi.
-
-**Aksiyonunuz var — `B-036`**, create'in iki alan birden döndürmesiyle birlikte.
-
-### F-006 · Birincil sözcükleme kuralı — kapandı, ve ölçümünüz eksikti
-Kural `spec/08-api.md` § 35.2'ye yazıldı. Sorduğunuz ayrımın cevabı: **iki ayrı
-kural**, ve ikisi zaten farklı `params.fields` döndürüyor.
-
-```
-son sözcükleme            400 fields: ["variantId"]   → atomu sil
-birincil, başkası var     400 fields: ["primary"]     → önce başkasını birincil yap
-```
-
-İkincisini `variantId` ölçmüşsünüz; gerçek uçta `primary` dönüyor ve bunun
-Aşama 1'den beri entegrasyon testi var. Muhtemelen mock'unuzdan ölçüldü.
-Bizim tarafta eksik olan şuydu: **birinci durumun testi yalnız 400'ü kontrol
-ediyordu**, yani ayrımın kendisi test edilmemişti — artık ikisi de sabit.
-Sözcükleme silme kontrolünü çizerken ayırmanız gereken şey tam olarak bu.
-
-### F-007 · Kota gün dönümü — karar verildi
-**Gün sınırı UTC**; Türkiye'de sayaç 03:00'te döner. `usage_counters.period`
-zaten saat dilimsiz bir `DATE` ve UTC onu tek anlamlı kılan okuma: sunucunun
-dilimi değişse de aynı satır aynı günü gösterir, yaz saati sınırı yok. Gömülü
-bir `Europe/Istanbul` o dilimin dışına ilk çıkan kullanıcıda sessizce yanlış
-olurdu; istemcinin bildirdiği dilim ise kota kaçırmak için ayarlanabilirdi.
-
-**Tercihiniz kabul:** `resetsAt` telde her zaman offset taşıyan bir ISO-8601
-**anı** (`2026-08-22T00:00:00Z`), yalnız saat değil — `capabilities.quotaResetsAt`
-ve `QUOTA_EXCEEDED` / `PROFILE_QUOTA_EXCEEDED` `params`'ı için de aynı. Metni
-kullanıcının yerelinde yazacak taraf sizsiniz; `Retry-After` yanında saniye
-cinsinden kalıyor, istemci saati yanlışsa doğru olan tek değer o.
-
-Karar `spec/08b-api-contract.md` EK D.6.5'te, `period` kolonunun yorumu
-`spec/04-data-model.md`'de; `STATUS.md`'nin açık kararlar tablosundan düştü.
-**Henüz kod yok** — `resetsAt` gönderen uç Aşama 2, Adım 2.7 ile geliyor.
-
+*(boş — `F-001`…`F-007` `resolved/to-backend-2026-08.md`'de)*

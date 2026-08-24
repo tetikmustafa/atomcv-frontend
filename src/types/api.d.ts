@@ -195,7 +195,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/generations/general": {
+    "/api/v1/generations": {
         parameters: {
             query?: never;
             header?: never;
@@ -205,12 +205,14 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Generate a general CV as a PDF
-         * @description No job description, no LLM: the profile is scored on its own terms, selection fills the page, and the document comes back directly. Synchronous and stored nowhere — a generation resource with a job and a download link arrives in Stage 2.
+         * Generate a CV against a job posting
+         * @description Answers 202 with a job to follow. A generation reads the                     posting with an LLM, scores the whole profile against it,                     then renders and compiles — half a minute is ordinary, and                     a request held open for that long is a request that times                     out somewhere in between.
          *
-         *     The page limit is a guarantee. When the compiled document exceeds it the server shrinks the budget and tries again twice; only then does it answer PAGE_LIMIT_EXCEEDED, so retrying the same request unchanged will not help.
+         *     The preflights are synchronous. A posting that does not                     read as one and a profile with nothing in it are both                     refused here, on the spot, rather than accepted and failed                     thirty seconds later.
+         *
+         *     `Idempotency-Key` is honoured: the same key from the same                     user answers with the job it already made, so a double                     click produces one CV and not two.
          */
-        post: operations["generalCv"];
+        post: operations["generate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -333,6 +335,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/{jobId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where a job has got to
+         * @description `generationId` is present only when the status is `completed`, `error` only when it is `failed`. Both are terminal, and a client may stop polling on either.
+         *
+         *     Polling this is the supported fallback for a progress stream that closed without a terminal event — a spinner over work that already finished is the one outcome the product refuses to produce.
+         */
+        get: operations["status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{jobId}/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Watch a job as it runs
+         * @description A server-sent event stream. Three event names: `phase`                     while it runs, then exactly one of `completed` or                     `failed`, after which the stream closes.
+         *
+         *     The current state is sent immediately on connect, so a                     client that reconnects is caught up without replay — and a                     job that finished between the 202 and the subscribe sends                     its outcome rather than nothing at all.
+         *
+         *     `Last-Event-ID` is accepted and not replayed from: ids                     order the events of one stream, and the snapshot on                     connect does the catching up. If the stream ever closes                     without a terminal event, `GET /jobs/{jobId}` is the                     supported way to find out what happened.
+         */
+        get: operations["stream"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/generations/{generationId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download a generation as a PDF
+         * @description Re-rendered from the stored content snapshot, never from                     the profile. Editing a bullet afterwards does not change                     a CV that has already been sent — the document that comes                     back is the one that was made.
+         *
+         *     No LLM and no scoring: one compilation, and the same                     generation produces the same bytes on any day.
+         */
+        get: operations["download"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/account/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Today's usage against today's limits
+         * @description `resetsAt` is an absolute instant, not an hour: the day boundary is UTC and the client writes the sentence in the user's own locale. Counters roll over at UTC midnight, which is 03:00 in Turkey.
+         */
+        get: operations["usage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -439,7 +529,7 @@ export interface components {
              * @description Translation key: the client resolves errors.{CODE}
              * @enum {string}
              */
-            code: "INSUFFICIENT_PROFILE" | "UNPARSEABLE_JOB_DESCRIPTION" | "CONFLICTING_PREFERENCES" | "FEATURE_REQUIRES_ACCOUNT" | "QUOTA_EXCEEDED" | "ALL_PROVIDERS_UNAVAILABLE" | "COMPILATION_FAILED" | "PAGE_LIMIT_EXCEEDED" | "REWRITE_VALIDATION_FAILED" | "EMBEDDING_UNAVAILABLE" | "PDF_NOT_TEXT_BASED" | "PDF_ENCRYPTED" | "EXTRACTION_EMPTY" | "EXTRACTION_TIMEOUT" | "LANGUAGE_UNDETECTED" | "PROFILE_QUOTA_EXCEEDED" | "ANONYMOUS_SESSION_EXPIRED" | "ATOM_LIMIT_EXCEEDED" | "NO_ANONYMOUS_PROFILE" | "PROFILE_ALREADY_EXISTS" | "GENERATION_ARTIFACT_EXPIRED" | "CSRF_TOKEN_INVALID" | "RESOURCE_NOT_FOUND" | "VERSION_CONFLICT" | "PRECONDITION_REQUIRED" | "VALIDATION_FAILED" | "INTERNAL_ERROR" | "METHOD_NOT_ALLOWED" | "NOT_ACCEPTABLE" | "UNSUPPORTED_MEDIA_TYPE";
+            code: "INSUFFICIENT_PROFILE" | "UNPARSEABLE_JOB_DESCRIPTION" | "CONFLICTING_PREFERENCES" | "FEATURE_REQUIRES_ACCOUNT" | "QUOTA_EXCEEDED" | "ALL_PROVIDERS_UNAVAILABLE" | "COMPILATION_FAILED" | "PAGE_LIMIT_EXCEEDED" | "REWRITE_VALIDATION_FAILED" | "EMBEDDING_UNAVAILABLE" | "GENERATION_PAUSED" | "PDF_NOT_TEXT_BASED" | "PDF_ENCRYPTED" | "EXTRACTION_EMPTY" | "EXTRACTION_TIMEOUT" | "LANGUAGE_UNDETECTED" | "PROFILE_QUOTA_EXCEEDED" | "ANONYMOUS_SESSION_EXPIRED" | "ATOM_LIMIT_EXCEEDED" | "NO_ANONYMOUS_PROFILE" | "PROFILE_ALREADY_EXISTS" | "GENERATION_ARTIFACT_EXPIRED" | "CSRF_TOKEN_INVALID" | "RESOURCE_NOT_FOUND" | "VERSION_CONFLICT" | "PRECONDITION_REQUIRED" | "VALIDATION_FAILED" | "INTERNAL_ERROR" | "METHOD_NOT_ALLOWED" | "NOT_ACCEPTABLE" | "UNSUPPORTED_MEDIA_TYPE";
             /**
              * @description Values the translated message interpolates. Keys and types are fixed per code; the server refuses to publish anything undeclared.
              * @example {
@@ -455,7 +545,7 @@ export interface components {
         };
         Resolution: {
             /** @enum {string} */
-            action?: "increase_page_limit" | "review_pins" | "keep_top_pinned" | "sign_up" | "paste_full_posting" | "continue_as_general_cv" | "switch_to_manual_form" | "complete_profile" | "retry";
+            action?: "increase_page_limit" | "review_pins" | "keep_top_pinned" | "sign_up" | "paste_full_posting" | "continue_as_general_cv" | "continue_anyway" | "switch_to_manual_form" | "complete_profile" | "retry";
             params?: {
                 [key: string]: unknown;
             };
@@ -748,8 +838,15 @@ export interface components {
             /** @description Every atom of that group, in order */
             ids: string[];
         };
-        /** @description Overrides for a general CV. Anything omitted follows the profile. */
-        GeneralCvRequest: {
+        /** @description A generation against a job posting */
+        GenerationRequest: {
+            /** @description The posting, pasted as it was found. Omitted or blank means a general CV: no posting, no LLM. */
+            jobDescription?: string;
+            /**
+             * @description Proceed even though the preflight refused the text
+             * @default false
+             */
+            acknowledgePreflight: boolean;
             /**
              * Format: int32
              * @description How many pages the CV may take
@@ -757,10 +854,26 @@ export interface components {
              */
             maxPages?: number;
             /**
-             * @description Which wording to render, as an ISO 639-1 code
+             * @description Which wording to render, as an ISO 639-1 code. Omitted, the profile decides — and its `auto` follows the posting.
              * @example en
              */
             language?: string;
+            generalMode?: boolean;
+        };
+        /** @description A generation that was accepted and queued */
+        AcceptedJobResponse: {
+            /**
+             * Format: uuid
+             * @description Follow it at /api/v1/jobs/{jobId}
+             */
+            jobId?: string;
+            /** @enum {string} */
+            status?: "queued" | "running" | "completed" | "failed" | "cancelled";
+            /**
+             * @description Server-sent events for this job
+             * @example /api/v1/jobs/9b1c4e7a-.../stream
+             */
+            streamUrl?: string;
         };
         SectionPatch: {
             /** @enum {string} */
@@ -842,6 +955,32 @@ export interface components {
             entries?: components["schemas"]["EntryExport"][];
             /** @description Atoms hanging straight off the section */
             atoms?: components["schemas"]["Atom"][];
+        };
+        /** @description A job's progress or its outcome */
+        JobStatusResponse: {
+            /** Format: uuid */
+            jobId?: string;
+            /** @enum {string} */
+            status?: "queued" | "running" | "completed" | "failed" | "cancelled";
+            phase?: string;
+            label?: string;
+            /** Format: int32 */
+            pct?: number;
+            detail?: string;
+            /** Format: uuid */
+            generationId?: string;
+            error?: {
+                [key: string]: unknown;
+            };
+        };
+        Usage: {
+            metric?: string;
+            /** Format: int32 */
+            used?: number;
+            /** Format: int32 */
+            limit?: number;
+            /** Format: date-time */
+            resetsAt?: string;
         };
     };
     responses: never;
@@ -1512,48 +1651,32 @@ export interface operations {
             };
         };
     };
-    generalCv: {
+    generate: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": components["schemas"]["GeneralCvRequest"];
+                "application/json": components["schemas"]["GenerationRequest"];
             };
         };
         responses: {
-            /** @description The document */
-            200: {
+            /** @description Queued; follow the Location */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/pdf": unknown;
+                    "*/*": components["schemas"]["AcceptedJobResponse"];
                 };
             };
-            /** @description CONFLICTING_PREFERENCES */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description INSUFFICIENT_PROFILE or PAGE_LIMIT_EXCEEDED */
+            /** @description UNPARSEABLE_JOB_DESCRIPTION or INSUFFICIENT_PROFILE */
             422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description COMPILATION_FAILED */
-            502: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2021,6 +2144,128 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["JobStatusResponse"];
+                };
+            };
+            /** @description No such job, or it belongs to someone else */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    stream: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description No such job, or it belongs to someone else */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    download: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                generationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": unknown;
+                };
+            };
+            /** @description No such generation, or it belongs to someone else */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description GENERATION_ARTIFACT_EXPIRED — nothing left to re-render */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    usage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Usage"][];
                 };
             };
         };

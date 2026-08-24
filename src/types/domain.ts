@@ -15,7 +15,9 @@
 import type { components } from './api';
 
 /**
- * The 27 codes the server publishes (`spec/08b-api-contract.md`). Derived, not transcribed.
+ * The codes the server publishes (`spec/08b-api-contract.md`). Derived, not
+ * transcribed — and deliberately not counted here, because a count in a
+ * comment is a number nobody updates when `gen:api` runs.
  *
  * `params` keys are fixed per code and the server refuses to publish an
  * undeclared one, so a missing value is a catalogue fix — never a field
@@ -26,7 +28,9 @@ export type ErrorCode = NonNullable<components['schemas']['ApiError']['code']>;
 /**
  * Actions the server may offer as a way out of an error (`spec/08-api.md` § 35.4).
  *
- * Nine values, confirmed against the published enum (`spec/08b-api-contract.md`).
+ * Derived for the same reason as the codes above: the published enum grew a
+ * tenth value in Stage 2 (`continue_anyway`, handoff B-037) and the only
+ * thing that had to change here was nothing.
  */
 export type KnownResolutionAction = NonNullable<components['schemas']['Resolution']['action']>;
 

@@ -14,7 +14,7 @@
 Plan: `spec/14-build-guide.md` § XI-A.5 · frontend sırası
 `spec/15-repos-and-claude.md` § XI-B.9.2, satır 6.
 
-**Henüz başlanmadı.** Aşama 1'in tam kaydı `archive/stage-1.md`'de.
+Aşama 1'in tam kaydı `archive/stage-1.md`'de.
 
 Kapanış turu: `gen:api` şemadan tek bir fark getirdi — `ProfileUpdate`'te
 `sourceLanguage` artık `required` — ve typecheck'i tam öngörülen yerde kırdı.
@@ -31,11 +31,50 @@ yüklenerek: API seviyesinde 20 kontrol (B-035, B-036'nın altı vakası, F-003,
 bölüm `PATCH`), tarayıcıda MSW kapalı 14 kontrol (baş kaydetme, bölüm
 yeniden adlandırma, entry düzenleme ve bir alanı `null` ile boşaltma).
 
+### F2.1 — sözleşme indi, katalog kapandı
+
+`gen:api` gerçek uca karşı çalıştı. `POST /generations/general` gitti; yerine
+`POST /generations` **202** geldi, yanına `GET /jobs/{id}`, `.../stream`,
+`GET /generations/{id}/download` ve `GET /account/usage`.
+
+**Typecheck tam tasarlandığı yerde kırıldı.** `errorCatalogue.test.ts` her kodun
+ve her aksiyonun bir ICU mesajı olmasını *derleme zamanında* şart koşuyor; şema
+`GENERATION_PAUSED` ve `continue_anyway` getirince iki `satisfies` düştü.
+Yazılmış bir mesajı değil, **yazılmamış olanı** gösteren bir hata — bu dosyanın
+tek varlık sebebi o.
+
+- `continue_anyway`'in Türkçesi § 18.1'den **birebir**: "Yine de devam et".
+  İngilizcesi ona uydurularak yazıldı (CLAUDE.md · *Code Style* istisnası).
+- `GENERATION_PAUSED` "hesabın kapandı" demiyor: § 44.3'te fren **veri erişimini
+  kesmiyor**, profil okunur ve dışa aktarılabilir kalıyor. Metin bunu söylüyor.
+- `domain.ts`'teki "27 kod" ve "dokuz değer" yorumları silindi. Türetilmiş bir
+  tipin yanındaki sayı, `gen:api` her koştuğunda bayatlayan bir bilgidir; ikisi
+  de zaten bayattı.
+
+### Gerçek uca karşı ölçülenler — üçü handoff'ta yazmıyor
+
+Sahte sağlayıcıyla bir üretim koşturuldu (`used` 6 → 8) ve akış dinlendi.
+
+| Ölçülen | Sonuç |
+|---|---|
+| `completed` yükü | `{generationId, pageCount}` — **`matchLevel` yok** (`F-008`) |
+| Bağlanıştaki anlık durum | `{"phase":"","label":"","pct":0,"detail":""}` — boş dize, alan düşmüyor (`F-010`) |
+| İstek gövdesi | Düz: `jobDescription`, `acknowledgePreflight`, `maxPages`, `language`, `generalMode` — § 35.3 iç içe gösteriyor (`F-009`) |
+| Ön kontrol | İki ayrı sinyal kelimesi taşımayan ilan **422**, üç çıkış yolu spec sırasında |
+| `download` | `application/pdf` · `Content-Disposition: attachment` · `Cache-Control: no-store`; bilinmeyen id **404 `RESOURCE_NOT_FOUND`** |
+| `/account/usage` | **Çıplak dizi**, nesne değil; iki metrik de her zaman geliyor |
+| Faz anahtarları | `ANALYSING` · `MEASURING` · `SCORING` · `RENDERING`; `pct` 10/30/50/70 |
+
+**Sonuç ekranının dar kalması bu ölçümün sonucu**, tercih değil: `GET
+/generations/{id}` yayımlanmadan gösterilecek şey sayfa sayısı ve indirme.
+Yerine bir yüzde koymak § 23.3'ün adıyla yasakladığı şeydir.
+
 ### Aşama 1'den devralınan, Aşama 2'de yeniden bakılacaklar
 
-- **`POST /generations/general` geçicidir** (handoff · B-022). Senkron,
-  hiçbir yere kaydetmiyor, Aşama 2'de `POST /generations` + 202 + iş akışı
-  onun yerini alacak. **Kalıcı ekran bağlanmadı** ve bağlanmamalı.
+- **`POST /generations/general` kaldırıldı** (B-022 kapandı, B-038). Genel
+  mod kaybolmadı, aynı uca taşındı: `jobDescription` yokluğu genel moddur ve
+  boş gövde `{}` 202 alıyor — ölçüldü. Ona kalıcı ekran hiç bağlanmadığı için
+  devirde sökülecek bir şey de yok.
 - **Çift gönderim koruması `Idempotency-Key`'e taşınacak.** Aşama 1'de tek
   savunma "istek uçarken düğme disabled" — profil create'lerinde
   `Idempotency-Key` yok (`spec/08b-api-contract.md` § D.6.5). Aşama 2'nin
@@ -57,7 +96,7 @@ yeniden adlandırma, entry düzenleme ve bir alanı `null` ile boşaltma).
 | **Bayat sözcüklemeyi yeniden üretecek kontrol yok** | Aşama 1 ne uç ne de `stale`'i true yapacak iş yayınlıyor (B-024). Rozet ve açıklaması var, düğme yok — çalışamayacak düğme, zaten bir şeyin bozuk olduğunu söyleyen ekranda hiç yoktan kötü. |
 | **Sözcükleme tek başına silinemiyor** | Sunucuda **iki ayrı kural** var (B-036): son sözcüklemeyi silmek `400` + `["variantId"]`, birincili silmek `400` + `["primary"]`. İkincil bir sözcüklemeyi kaldıran kontrol yazılabilirdi; yazılmadı, çünkü tek başına anlamlı bir jest değil — silinmek istenen şey madde. Uç fonksiyonu ve iki reddi de üreten mock duruyor. |
 | **Profil başında dil eksenleri düzenlenemiyor** | `sourceLanguage` ve `enabledLanguages` **içerik dili** ekseni (Bölüm 38.1), arayüz dili değil — `routing.locales`'i burada kullanmak `lib/i18n/locales.ts`'in açıkça uyardığı hata olurdu. Hangi dillerin sunulabileceği `capabilities`'e bağlı ve Aşama 1 onu yayınlamıyor; sabit liste yazmak "anonim modu hardcoded varsayımdan değil `capabilities`'ten kapıla" kuralını çiğner. Form ikisini de **olduğu gibi geçiriyor** ve ikisi de gövdede **zorunlu** (B-035). |
-| **`POST /generations/general`'a kalıcı ekran bağlı değil** | Yukarıda. |
+| **Sonuç ekranında ne önizleme ne uygunluk raporu var** | İkisi de veri istiyor, veri yok: `GET /generations/{id}` yayımlanmadı ve `completed` `matchLevel` taşımıyor (`F-008`). Yerine yüzde koymak § 23.3'ün adıyla yasakladığı şey. Önizleme ayrıca ölçülmüş bir karar: react-pdf ~300 KB ve gösterebileceği tek yeni şey PDF'in kendisi. |
 | **Dark mode bağlı değil** | CLAUDE.md · *Deferred by Decision*. Yarım uygulamak — `prefers-color-scheme`'i geri koymak — kullanıcıya değiştiremeyeceği bir tema verir. |
 
 ---

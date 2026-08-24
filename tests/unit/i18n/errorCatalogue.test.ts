@@ -29,6 +29,9 @@ const PARAMS = {
     issues: ['metric lost', 'technology added'],
   },
   EMBEDDING_UNAVAILABLE: {},
+  // 503. The kill switch of § 44.3: parameterless, because there is
+  // nothing in the request to change.
+  GENERATION_PAUSED: {},
   PDF_NOT_TEXT_BASED: {},
   PDF_ENCRYPTED: {},
   EXTRACTION_EMPTY: {},
@@ -72,6 +75,7 @@ const RESOLUTION_PARAMS = {
   sign_up: {},
   paste_full_posting: {},
   continue_as_general_cv: {},
+  continue_anyway: {},
   switch_to_manual_form: {},
   retry: {},
   complete_profile: {},

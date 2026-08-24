@@ -35,11 +35,12 @@ güncellendi — **`sync-spec.sh` Aşama 2 kapanışında** çalıştırılacak 
 |---|---|
 | Aşama 0 — İskelet | ✅ |
 | Aşama 1 — Profil editörü | ✅ |
-| Aşama 2 — Üretim akışı + SSE | ⬜ |
+| Aşama 2 — Üretim akışı + SSE | 🔄 sözleşme indi |
 
-**Açık `B-nnn` yok.** **Test:** 305 birim · 15 e2e · **bundle** 244.0 / 75.8 KB.
-**Aşama 1 kapandı:** 1.2'nin frontend kutuları ✅, devredilenler 4/4, `gen:api` güncel,
-gerçek uca karşı 34 kontrol geçti. Notlar `notes/archive/stage-1.md`.
+**Açık: `B-037`…`B-039`.** **Test:** 309 birim · 15 e2e · **bundle** 244.0 / 75.8 KB.
+**`gen:api` çalıştı** — `/generations` 202'ye döndü, `/jobs/*`, `/download` ve
+`/account/usage` indi; `GENERATION_PAUSED` + `continue_anyway` ICU mesajları yazıldı.
+**`F-008`…`F-010` açık:** uygunluk raporu hiçbir uçta yok. Aşama 1: `archive/stage-1.md`.
 
 ---
 
@@ -55,6 +56,5 @@ gerçek uca karşı 34 kontrol geçti. Notlar `notes/archive/stage-1.md`.
 
 ## Sonraki senkronizasyon noktası
 
-**Şimdi.** `POST /generations` + 202 + SSE + download indi, `/generations/general`
-kaldırıldı. Frontend `gen:api`'yi çalıştırıp üretim akışını bu uçlara bağlayabilir
-(handoff · `B-038`).
+**`F-008`.** Uygunluk raporunun hangi uçtan geleceği kararlanmadan sonuç ekranı
+sayfa sayısı notu + indirmeyle sınırlı kalıyor.
