@@ -33,3 +33,21 @@ export const profileKeys = {
    */
   atom: (id: string) => [...profileKeys.all, 'atom', id] as const,
 };
+
+/**
+ * A running job, and the only server-state key the SSE stream writes into.
+ *
+ * The stream and `GET /jobs/{id}` describe the same thing, so they share a
+ * key: the fallback poll reconciles a cache the stream has been filling
+ * rather than a second copy of it. Two keys here would be two sources of
+ * truth for one job, and the screen would have to decide which one is real.
+ */
+export const jobKeys = {
+  all: ['jobs'] as const,
+  status: (jobId: string) => [...jobKeys.all, jobId] as const,
+};
+
+export const accountKeys = {
+  all: ['account'] as const,
+  usage: () => [...accountKeys.all, 'usage'] as const,
+};

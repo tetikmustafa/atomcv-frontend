@@ -2,7 +2,16 @@ import { isServer } from '@tanstack/react-query';
 import { NetworkError, toApiError } from './errors';
 import { toIfMatch, type Version } from './etag';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '/api/v1';
+/**
+ * Same origin by design. In production nginx routes `/api/*` to Spring; in
+ * development a rewrite in `next.config.ts` preserves the illusion, which is
+ * what keeps `SameSite=Strict` cookies working and CORS out of the picture.
+ *
+ * Exported because `EventSource` cannot go through this module: it is not
+ * `fetch`, takes no headers, and builds its own request. It still needs the
+ * same prefix.
+ */
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '/api/v1';
 
 /**
  * PATCH bodies go out as plain JSON.
@@ -83,7 +92,7 @@ async function send(
 
   let response: Response;
   try {
-    response = await fetch(`${BASE_URL}${path}`, {
+    response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -144,6 +153,19 @@ async function requestVersioned<T>(
   return { data: await readBody<T>(response), ...(etag ? { version: etag } : {}) };
 }
 
+/**
+ * The server's own name for the file, when it sent one.
+ *
+ * Deliberately not clever: only the unquoted and double-quoted `filename`
+ * forms, no RFC 5987 `filename*`. The caller has a fallback name, and a
+ * half-implemented decoder that mangles a Turkish filename is worse than a
+ * predictable one.
+ */
+function filenameFrom(header: string | null): string | undefined {
+  const match = header?.match(/filename="?([^";]+)"?/i);
+  return match?.[1];
+}
+
 export const api = {
   get: <T>(path: string, options?: RequestOptions) =>
     request<T>('GET', path, undefined, options ?? {}),
@@ -172,6 +194,23 @@ export const api = {
    */
   getText: async (path: string, options?: RequestOptions) =>
     (await send('GET', path, undefined, options ?? {})).text(),
+
+  /**
+   * For endpoints that answer with a file rather than a document.
+   *
+   * Goes through `fetch` rather than a plain link for one reason: a link
+   * navigates, and a navigation turns `410 GENERATION_ARTIFACT_EXPIRED` into
+   * a page of JSON instead of an error with a way out of it (rule 7). The
+   * cost is that the caller owns the object URL and has to revoke it.
+   */
+  getFile: async (path: string, options?: RequestOptions) => {
+    const response = await send('GET', path, undefined, options ?? {});
+
+    return {
+      blob: await response.blob(),
+      filename: filenameFrom(response.headers.get('Content-Disposition')),
+    };
+  },
 
   /**
    * Merge-patch semantics: keys you omit are left alone, an explicit `null`

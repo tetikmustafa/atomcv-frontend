@@ -113,6 +113,47 @@ yani geç abone olan hiçbir fazı tekrar almıyor. Sonra iki test daha yazıld�
 negatif kontrol tekrarlandı: anlık durum kaldırıldığında **ikisi birden**
 düşüyor.
 
+### F2.3 — API katmanı ve akış hook'u
+
+`endpoints/generations · jobs · account`, `useStartGeneration`,
+`useJobStream`, `useDownloadGeneration`, `useUsage`. Operasyon yardımcıları
+(`Returns`, `Accepts`) `profile.ts`'ten `lib/api/operations.ts`'e çıktı ve
+başarı kodlarına **202 eklendi** — onsuz kabul edilen iş gövdesi `void` olarak
+tipleniyordu, yani derleyicinin memnuniyetle geçireceği bir yalan.
+
+- **Akış ile `GET /jobs/{id}` tek bir cache anahtarına yazıyor.** Geri düşüş
+  ikinci bir doğruluk kaynağı değil; aynı kaynağın başka bir taşıyıcıyla
+  doldurulması. İki anahtar olsaydı ekran hangisinin gerçek olduğuna karar
+  vermek zorunda kalırdı.
+- **Boş `label` tek bir yerde yutuluyor** (`toProgress`). `F-010` orada
+  savunuluyor, çağrı yerlerinde değil.
+- **`pageCount` yalnız akışta var.** `GET /jobs/{id}` taşımıyor, yani geri
+  düşüşle uzlaşan bir iş sonuca sahip ama sayfa sayısına değil. Ekran bunu
+  varsaymak yerine hayatta kalmak zorunda — `F-008`'in bir sonucu daha.
+- **Terminal olaydan sonra `EventSource` kendi kendine yeniden bağlanır.**
+  Kapalı bağlantıyı hata olarak bildiriyor; hook terminal olayda `close()`
+  ediyor ve `onerror`'da "zaten bitti mi" diye bakıyor. Bakmasaydı, söyleyecek
+  şeyi kalmamış bir akış sonsuza kadar yeniden açılırdı.
+- **`Idempotency-Key` çağrı başına değil, kullanıcının kastettiği deneme
+  başına.** Düşen istekten sonra tekrar tıklama aynı işe düşüyor; gövde
+  değişince ya da istek başarınca anahtar bırakılıyor — sonucu görmüş bir
+  kullanıcının aynı ilanı tekrar istemesi ikinci bir üretimdir.
+- **Taşıyıcı durumu ait olduğu işle saklanıyor** (`{ jobId, mode }`), efektle
+  sıfırlanmıyor: sıfırlayan bir efekt, yeni işin önceki işin taşıyıcısıyla
+  çizildiği bir render'dan **sonra** koşardı ve "done" sonucu gösteren durum.
+- **jsdom'da `EventSource` yok.** `tests/support/eventSource.ts` bir taklit
+  değil, `fetch` üstünde gerçek bir istemci — okuduğu kareler MSW'nin
+  sunduğu kareler. Yeniden bağlanmayı **bilerek** uygulamıyor: gerçek olan
+  kendiliğinden yeniden bağlanır, hook'un o andaki tek işi kapatıp geri
+  düşmektir; yeniden bağlanan bir ikiz vakayı sınamak yerine gizlerdi.
+
+**Negatif kontrol iki kez koşturuldu, ilki bir test hatası buldu.** "Kuyruktaki
+anlık durumun adlandırılacak fazı yok" testi, boş `label` savunması
+kaldırıldığında da geçiyordu: `status` veri gelmeden de `queued`, `phaseKey`
+de `null` — yani test **boş cache'e karşı** geçiyordu. Artık önce karenin
+cache'e düştüğü bekleniyor; savunma kaldırılınca düşüyor. Geri düşüş testi ilk
+denemede doğru davrandı.
+
 ### Aşama 1'den devralınan, Aşama 2'de yeniden bakılacaklar
 
 - **`POST /generations/general` kaldırıldı** (B-022 kapandı, B-038). Genel

@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { toHaveNoViolations } from 'jest-axe';
 import { server } from '@/mocks/node';
+import { installEventSource, resetEventSource } from './support/eventSource';
 import { resetGenerationFixture } from '@/mocks/generationFixture';
 import { resetProfileFixture } from '@/mocks/profileFixture';
 
@@ -26,6 +27,13 @@ globalThis.ResizeObserver ??= class {
 };
 
 /**
+ * jsdom ships no `EventSource` either, and § 36.4 specifies it for progress.
+ * The double is a real client over `fetch`, so what it reads is what MSW
+ * serves — the same frames the browser gets.
+ */
+installEventSource();
+
+/**
  * The same handlers the browser worker uses. A behaviour asserted here is the
  * behaviour seen in development, which is the whole reason MSW was chosen
  * over a test-only fake.
@@ -44,6 +52,7 @@ afterEach(() => {
   // Same reason, different counter: a quota the previous test used up would
   // fail the next one on a limit it never asked for.
   resetGenerationFixture();
+  resetEventSource();
   cleanup();
 });
 

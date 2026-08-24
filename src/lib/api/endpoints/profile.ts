@@ -6,46 +6,20 @@
  * out means each function can be read against the endpoint it names.
  *
  * **Every shape is bound to the operation it belongs to**, through `Returns`
- * and `Accepts` below, rather than picked out of `components['schemas']` by
- * hand. Naming the item type was all the generator allowed while ten
- * operations declared no success response (handoff B-029); now that they do,
- * the binding is what makes a change to the response *wrapper* a typecheck
- * failure instead of a runtime surprise. It caught one the day it was
- * written — see `reorder*`.
+ * and `Accepts` in `../operations`, rather than picked out of
+ * `components['schemas']` by hand. Naming the item type was all the generator
+ * allowed while ten operations declared no success response (handoff B-029);
+ * now that they do, the binding is what makes a change to the response
+ * *wrapper* a typecheck failure instead of a runtime surprise. It caught one
+ * the day it was written — see `reorder*`.
  */
 
 import { api, type Versioned } from '../client';
 import type { Version } from '../etag';
-import type { components, operations } from '@/types/api';
+import type { Accepts, Returns } from '../operations';
+import type { components } from '@/types/api';
 
 type Schemas = components['schemas'];
-
-type Responses<Op extends keyof operations> = operations[Op]['responses'];
-
-/** The one success response an operation declares. */
-type Success<Op extends keyof operations> = Responses<Op>[Extract<
-  keyof Responses<Op>,
-  200 | 201 | 204
->];
-
-/**
- * What a call resolves to: the success body in the media type asked for, or
- * `void` where the response declares no content at all. A 204 lands on the
- * second branch, which is why `delete*` needs no special case.
- */
-type Returns<Op extends keyof operations, Media extends string = 'application/json'> =
-  Success<Op> extends { content: infer Body }
-    ? Media extends keyof Body
-      ? Body[Media]
-      : never
-    : void;
-
-/** What a call sends. */
-type Accepts<Op extends keyof operations> = operations[Op] extends {
-  requestBody: { content: { 'application/json': infer Body } };
-}
-  ? Body
-  : never;
 
 /* -------------------------------------------------------------------------
  * The item types
