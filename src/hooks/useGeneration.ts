@@ -69,6 +69,7 @@ export type JobProgress = {
  * be treated as one.
  */
 export function useStartGeneration() {
+  const queryClient = useQueryClient();
   const attempt = useRef<{ body: string; key: string } | null>(null);
 
   const keyFor = useCallback((body: GenerationRequest) => {
@@ -83,6 +84,9 @@ export function useStartGeneration() {
     mutationFn: (body: GenerationRequest) => startGeneration(body, keyFor(body)),
     onSuccess: () => {
       attempt.current = null;
+      // The quota is charged on enqueue, so the number on screen is one
+      // behind the moment this resolves.
+      void queryClient.invalidateQueries({ queryKey: accountKeys.usage() });
     },
   });
 }
@@ -162,6 +166,7 @@ export function useJobStream(jobId: string, streamUrl?: string): JobProgress {
 
       setTransport({ jobId, mode: 'done' });
       source.close();
+      void queryClient.invalidateQueries({ queryKey: accountKeys.usage() });
     });
 
     source.addEventListener('failed', (event) => {
@@ -174,6 +179,9 @@ export function useJobStream(jobId: string, streamUrl?: string): JobProgress {
 
       setTransport({ jobId, mode: 'done' });
       source.close();
+      // A failed job gives the allowance back (`B-039`), so the counter has
+      // to be read again rather than left showing what was spent.
+      void queryClient.invalidateQueries({ queryKey: accountKeys.usage() });
     });
 
     source.onerror = () => {

@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { GenerateScreen } from '@/components/generation/GenerateScreen';
+import { UsageNote } from '@/components/generation/UsageNote';
 import { routing } from '@/lib/i18n/routing';
 
 /**
@@ -25,6 +26,13 @@ export default async function GeneratePage({ params }: PageProps<'/[locale]/gene
       <header className="flex flex-col gap-2">
         <h1 className="text-xl font-semibold">{t('title')}</h1>
         <p className="text-muted-foreground max-w-prose text-sm">{t('intro')}</p>
+        {/*
+          Outside `GenerateScreen` so it survives the swap from form to
+          progress: the count moves the moment a job is queued, and a note
+          that unmounted at that moment would never show the change it is
+          there to report.
+        */}
+        <UsageNote />
       </header>
 
       <GenerateScreen />

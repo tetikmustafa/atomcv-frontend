@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NextIntlClientProvider } from 'next-intl';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GenerateScreen } from '@/components/generation/GenerateScreen';
@@ -145,6 +145,43 @@ describe('a refusal this screen cannot act on itself', () => {
     await user.click(screen.getByRole('button', { name: 'Open the profile editor' }));
 
     expect(push).toHaveBeenCalledWith('/profile');
+  });
+});
+
+describe('the two ways the server says not now', () => {
+  it('offers no way out of a quota, because there is none', async () => {
+    const { generations, QUOTA } = await import('@/mocks/generationFixture');
+    generations.usage.generation = QUOTA.generation;
+
+    await submitPosting();
+
+    const panel = await screen.findByRole('alert');
+
+    // The closed vocabulary has no "come back tomorrow", and `retry` would
+    // say the opposite of the truth (`B-039`). What is left is the sentence.
+    expect(within(panel).queryAllByRole('button')).toHaveLength(0);
+    expect(panel).toHaveTextContent('every resume you can generate today');
+  });
+
+  it('says the brake is on without saying the account is gone', async () => {
+    const { pauseGeneration } = await import('@/mocks/generationFixture');
+    pauseGeneration();
+
+    const user = await submitPosting();
+    const panel = await screen.findByRole('alert');
+
+    // § 44.3: generation stops, data access does not. The sentence has to
+    // leave the profile out of it.
+    expect(panel).toHaveTextContent('Generation is paused');
+    expect(panel).toHaveTextContent('read, edit and export');
+
+    pauseGeneration(false);
+    await user.click(within(panel).getByRole('button', { name: 'Try again' }));
+
+    // `retry` here means exactly what it says: nothing about the request was
+    // wrong, so the same one is sent again.
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    await screen.findByRole('progressbar');
   });
 });
 

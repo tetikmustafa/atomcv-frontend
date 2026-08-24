@@ -63,10 +63,11 @@ export function JobProgress({
   useEffect(() => {
     if (progress.status !== 'completed' || !progress.generationId) return;
 
-    // `replace`, not `push`: the job is finished and its progress screen has
-    // nothing left to show, so Back should reach the form the user came from
-    // rather than a bar frozen at 100%.
-    router.replace(`/generations/${progress.generationId}`);
+    // `push`, so Back reaches the form. The progress screen is not its own
+    // history entry — it is `/generate` with a job in component state — so a
+    // remount shows an empty form rather than a bar frozen at 100%, and
+    // `replace` would only have thrown away the step the user came through.
+    router.push(`/generations/${progress.generationId}`);
   }, [router, progress.status, progress.generationId]);
 
   if (progress.status === 'failed') {

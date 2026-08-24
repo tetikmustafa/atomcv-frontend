@@ -7,7 +7,7 @@
     "UNPARSEABLE_JOB_DESCRIPTION": "We couldn't make sense of that job posting. Only {skillsFound, plural, =0 {no skills} =1 {one skill} other {# skills}} came out of it, which isn't enough to tailor anything to.",
     "CONFLICTING_PREFERENCES": "The content you've pinned needs about {pinnedPages, number} pages, and the limit is set to {maxPages, plural, =1 {one page} other {# pages}}.",
     "FEATURE_REQUIRES_ACCOUNT": "{feature} needs an account.",
-    "QUOTA_EXCEEDED": "You've used today's {metric} allowance. It renews at {resetsAt, time, short}.",
+    "QUOTA_EXCEEDED": "{metric, select, generation {You have used every resume you can generate today.} profile_extract {You have used every profile import you can make today.} other {You have used today's allowance.}} It renews {resetsAt, date, short} at {resetsAt, time, short}.",
     "ALL_PROVIDERS_UNAVAILABLE": "None of the AI providers answered. Nothing was lost — your profile is untouched.",
     "COMPILATION_FAILED": "The document didn't come out. {detail}",
     "PAGE_LIMIT_EXCEEDED": "Your content came to {actual, plural, =1 {one page} other {# pages}} and the limit is {limit, plural, =1 {one} other {#}}. It was already shortened as far as it goes.",
@@ -19,7 +19,7 @@
     "EXTRACTION_EMPTY": "Nothing readable came out of that file.",
     "EXTRACTION_TIMEOUT": "Reading that file took too long and was stopped.",
     "LANGUAGE_UNDETECTED": "We couldn't tell what language that's written in. Closest guesses: {detectedCandidates}.",
-    "PROFILE_QUOTA_EXCEEDED": "You've reached today's limit of {limit, plural, =1 {one profile} other {# profiles}}. It renews at {resetsAt, time, short}.",
+    "PROFILE_QUOTA_EXCEEDED": "You've reached today's limit of {limit, plural, =1 {one profile} other {# profiles}}. It renews {resetsAt, date, short} at {resetsAt, time, short}.",
     "ANONYMOUS_SESSION_EXPIRED": "This session ended, two hours after your last activity here.",
     "ATOM_LIMIT_EXCEEDED": "You're at {current, number} of {limit, plural, =1 {one item} other {# items}}.",
     "NO_ANONYMOUS_PROFILE": "There's no unsaved profile to claim.",
@@ -296,6 +296,12 @@
     "downloading": "Preparing the file…",
     "again": "Generate another",
     "announceDownloaded": "Download started"
+  },
+  "Usage": {
+    "label": "Today's usage",
+    "metric": "{metric, select, generation {Resumes} profile_extract {Profile imports} other {Allowance}}",
+    "count": "{used} of {limit}",
+    "renews": "Renews {resetsAt, date, short} at {resetsAt, time, short}"
   },
   "Footer": {
     "privacy": "Privacy",

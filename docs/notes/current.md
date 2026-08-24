@@ -206,6 +206,48 @@ oldu; `AppShell` artık `MainNav` taşıyor, `aria-current` ile. Profil rotası
 **244.0 → 250.6 KB toplam, 75.8 → 82.2 KB kendi payı** — tavanın (280 / 105)
 altında, ve gezilebilir olmanın fiyatı.
 
+### F2.6 — kota: sayaç, 429 ve fren
+
+- **`{metric}` cümleye ham giriyordu.** Katalog "Bugünkü {metric} hakkını
+  kullandın" diyordu; `metric` bir tel sözcüğü (`generation`,
+  `profile_extract`) ve hiçbir dilde kelime değil — Türkçe okuyucuya "Bugünkü
+  generation hakkını kullandın" yazacaktı. Artık ICU `select` ile katalogda
+  seçiliyor, `other` dalı da var: sunucunun ekleyeceği üçüncü bir metrik
+  cümleyi bozmuyor.
+- **`{resetsAt, time, short}` yalnız saat gösteriyordu.** Sayaç UTC gece
+  yarısında dönüyor, yani Türkiye'de 03:00 — ama **yarının** 03:00'ü.
+  Saat 05:00'te kotayı dolduran birine "03:00'te yenilenir" demek, yirmi iki
+  saati "birazdan" diye okutur. Artık gün de yazıyor.
+- **Sayaç harcanmadan önce görünüyor** (`UsageNote`, `/generate` başlığında).
+  Yalnız çarparak öğrenilen bir sınır, kullanıcının arıza olarak yaşadığı bir
+  sınırdır (§ 44).
+- **Yalnız `generation` çiziliyor.** `/account/usage` her zaman iki metrik
+  döndürüyor ve eksik girişin anlamı "sıfır" değil "böyle bir metrik yok"
+  (`B-039`) — ama profil içe aktarma Aşama 3, ve ürünün henüz yapamadığı bir
+  şeyin sayacı gürültü.
+- **Not sayfada, `GenerateScreen`'in içinde değil.** Kota iş kuyruğa girerken
+  düşüyor; formun yerini ilerleme çubuğu aldığında sökülen bir not, tam da
+  bildirmek için var olduğu değişimi hiç göstermezdi.
+- **Kota iki yerde tazeleniyor:** iş kabul edilince (harcandı) ve iş düşünce
+  (geri verildi — `B-039`). İkisinde de gözlemci ekranda duruyor, yoksa
+  invalidation hiçbir şey yapmazdı.
+- **`Retry-After` okunmuyor**, ve bu bilinçli: onu tüketecek otomatik bir
+  yeniden deneme yok, ve 429 zaten `retry` resolution'ı taşımıyor. Okunmayan
+  bir başlığı `ApiError`'a eklemek, kullanıcısı olmayan bir alan olurdu.
+  Otomatik deneme geldiği gün doğru olan tek değer o.
+
+**Bir düzeltme: bitişte `replace` yanlıştı.** Gerekçesi "geri tuşu %100'de
+donmuş çubuğa gitmesin"di, ama ilerleme ekranı **kendi geçmiş girdisi değil** —
+`/generate`'in bileşen durumu. Yeniden takılınca zaten boş form geliyor.
+`replace` yalnız kullanıcının geçtiği adımı geçmişten siliyordu: geri tuşu
+formu değil profili buluyordu. `push` oldu. Kotanın düştüğünü geri gidip
+gösteren e2e testi bunu yakaladı.
+
+**Ön kapı testi bir kez soğuk derlemeye takıldı.** `next dev` rotayı ilk
+istendiğinde derliyor ve e2e ona karşı koşuyor (MSW üretim derlemesinde
+kapalı). İlk geçişe 30 s verildi; tekrarlanabilir bir hata değildi ama
+okunmayan test tam olarak flake olan testtir.
+
 ### Aşama 1'den devralınan, Aşama 2'de yeniden bakılacaklar
 
 - **`POST /generations/general` kaldırıldı** (B-022 kapandı, B-038). Genel

@@ -18,10 +18,19 @@ const REAL_POSTING = [
   'Preferred qualifications include message queues and infrastructure as code.',
 ].join(' ');
 
+/**
+ * In through the front door, with room for a cold compile.
+ *
+ * `next dev` builds a route the first time it is asked for, and this suite
+ * runs against it because MSW is disabled in production builds by design. The
+ * generous timeout covers that first crossing only — it was a real flake
+ * before it was there, and a flaky front-door test is one people stop reading.
+ */
 async function openGenerate(page: Page) {
   await page.goto('/en/profile');
   await page.getByRole('link', { name: 'Generate', exact: true }).click();
-  await expect(page).toHaveURL(/\/en\/generate$/);
+  await expect(page).toHaveURL(/\/en\/generate$/, { timeout: 30_000 });
+  await expect(page.getByRole('button', { name: 'Generate', exact: true })).toBeVisible();
 }
 
 test.describe('generating a resume', () => {
@@ -54,6 +63,21 @@ test.describe('generating a resume', () => {
     // The page count rides the stream, so a result watched from the start
     // has it.
     await expect(page.getByText('One page.')).toBeVisible();
+  });
+
+  test('counts the allowance down as it is spent', async ({ page }) => {
+    await openGenerate(page);
+
+    // Before the request, not after the refusal: a limit a user only meets by
+    // hitting it is a limit they experience as a failure (§ 44).
+    await expect(page.getByTestId('usage-count')).toHaveText('0 of 5');
+
+    await page.getByRole('button', { name: 'Generate', exact: true }).click();
+    await expect(page).toHaveURL(/\/en\/generations\/gen-1$/, { timeout: 15_000 });
+
+    await page.goBack();
+    // Charged on enqueue, so the number moved while the job was still running.
+    await expect(page.getByTestId('usage-count')).toHaveText('1 of 5');
   });
 
   test('asks rather than blocks when the text does not read as a posting', async ({ page }) => {
