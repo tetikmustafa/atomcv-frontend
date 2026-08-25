@@ -76,9 +76,13 @@ const SIGNAL_WORDS = [
  * Modelled on the rule rather than on a magic string: a mock that refused
  * `'bad posting'` would let the client believe every other text passes, and
  * the first real paste would prove otherwise.
+ *
+ * Returns **which** measurement refused (`B-043`), not merely that one did.
+ * The order is the rule's, so the reason a text gets is the first thing
+ * actually wrong with it — and `null` means it passed.
  */
-function readsAsAPosting(text: string): boolean {
-  if (text.length > 20_000) return false;
+function preflightRefusal(text: string): string | null {
+  if (text.length > 20_000) return 'too_long';
 
   // `toLowerCase` with no locale: this is a wire vocabulary, not user text,
   // and the Turkish locale folds `I` to a dotless `ı` — after which
@@ -88,10 +92,13 @@ function readsAsAPosting(text: string): boolean {
     .split(/[^\p{L}\p{N}]+/u)
     .filter(Boolean);
 
-  if (words.length < 40) return false;
-  if (new Set(words).size / words.length < 0.15) return false;
+  if (words.length < 40) return 'too_short';
+  if (new Set(words).size / words.length < 0.15) return 'low_entropy';
+  if (new Set(words.filter((word) => SIGNAL_WORDS.includes(word))).size < 2) {
+    return 'not_job_like';
+  }
 
-  return new Set(words.filter((word) => SIGNAL_WORDS.includes(word))).size >= 2;
+  return null;
 }
 
 /**
@@ -191,21 +198,29 @@ export const generationHandlers = [
 
     const jobDescription = body.jobDescription?.trim() ?? '';
 
-    if (jobDescription !== '' && !body.acknowledgePreflight && !readsAsAPosting(jobDescription)) {
+    const refusal = body.acknowledgePreflight ? null : preflightRefusal(jobDescription);
+
+    if (jobDescription !== '' && refusal) {
       return HttpResponse.json(
         problem(
           422,
           'UNPARSEABLE_JOB_DESCRIPTION',
           GENERATIONS,
-          // The spec's order: insist, fix the text, or drop the posting.
+          // The spec's order: insist, fix the text, or drop the posting. All
+          // three survive here and only here — `continue_anyway` skips the
+          // preflight, so it is meaningless once the preflight has passed
+          // (`B-043`).
           [
             { action: 'continue_anyway' },
             { action: 'paste_full_posting' },
             { action: 'continue_as_general_cv' },
           ],
-          // Both zero. The preflight analysed nothing, and zero says so
-          // honestly; real numbers arrive only from the plausibility gate.
-          { confidence: 0, skillsFound: 0 },
+          // `reason` says which of § 18.1's four measurements refused. The
+          // other two still travel — the catalogue declares them — but both
+          // are zero here, because the preflight analysed nothing. Reading
+          // the sentence off `skillsFound` alone was how "no skills came out
+          // of it" ended up accidentally true rather than true by rule.
+          { reason: refusal, confidence: 0, skillsFound: 0 },
         ),
         { status: 422 },
       );
@@ -243,11 +258,16 @@ export const generationHandlers = [
         : { postingLanguage: looksEnglish(jobDescription) ? 'en' : 'tr' }),
       startedAt: Date.now(),
       outcome: generations.nextOutcome,
+      ...(generations.nextFailure ? { failure: generations.nextFailure } : {}),
       ...(key ? { idempotencyKey: key } : {}),
     };
 
     generations.jobs.push(job);
+    // Both claimed here, together: the outcome and the error that goes with
+    // it belong to this job now, and a request queued after it must not
+    // inherit either.
     generations.nextOutcome = 'completed';
+    generations.nextFailure = undefined;
     // Charged on enqueue and given back when a job fails (`B-039`); the
     // refund is in the stream, where the outcome is known.
     generations.usage.generation += 1;
@@ -278,7 +298,7 @@ export const generationHandlers = [
         jobId: job.jobId,
         status: 'failed',
         pct: snapshot.pct,
-        error: failure(),
+        error: failure(job),
       });
     }
 
@@ -352,7 +372,7 @@ export const generationHandlers = [
         } else {
           // The quota is given back on every failed job (`B-039`).
           generations.usage.generation = Math.max(0, generations.usage.generation - 1);
-          controller.enqueue(encoder.encode(sseFrame('failed', failure(), id)));
+          controller.enqueue(encoder.encode(sseFrame('failed', failure(job), id)));
         }
 
         controller.close();
@@ -485,12 +505,17 @@ function frame(step: PhaseEvent): PhaseEvent {
  * error a 4xx body would carry, which is what lets one renderer handle both
  * transports instead of two parallel `switch (code)` blocks.
  */
-function failure(): FailedEvent {
-  return {
-    code: 'COMPILATION_FAILED',
-    params: { detail: 'Undefined control sequence.', rawSourceAvailable: true },
-    resolutions: [{ action: 'retry' }],
-  };
+function failure(job: MockJob): FailedEvent {
+  // What a test asked for, when it asked. The default stands in for the
+  // failure that has nothing to do with the request — a compiler that fell
+  // over — while `gateRefusal` covers § 18.4, which very much does (`B-043`).
+  return (
+    job.failure ?? {
+      code: 'COMPILATION_FAILED',
+      params: { detail: 'Undefined control sequence.', rawSourceAvailable: true },
+      resolutions: [{ action: 'retry' }],
+    }
+  );
 }
 
 function until(at: number) {

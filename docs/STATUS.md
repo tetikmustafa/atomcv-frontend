@@ -3,7 +3,7 @@
 > İki repo da bu dosyayı okur ve kendi satırlarını günceller. **Kural: 60 satırı geçmez.**
 > Ayrıntılı inşa kayıtları repo-yerel `notes/current.md`'dedir, buraya taşınmaz.
 
-**Son güncelleme:** 2026-08-25 · **`F-013`…`F-015` kapandı**; **`B-042` açık**
+**Son güncelleme:** 2026-08-25 · **`F-016` kapandı**; **`B-043` açık**
 
 ---
 
@@ -18,15 +18,14 @@
 | 2.7 kota ve maliyet | ✅ (Axiom dataset'i 3.1'e taşındı) |
 
 **Aşama 3 planı:** § XI-A.6. Aşama 2'nin kaydı `notes/archive/stage-2.md`'de.
-**`F-013`…`F-015` kapandı**, biri şemayı değiştiriyor — **`B-042` açık,
-`gen:api` çalıştırılmalı**: `GET /generations/{id}` `contentLanguage` ve
-`postingLanguage` taşıyor. Diğer ikisi sunucuda kapandı, aksiyon yok:
-sağlayıcının dört sessiz hata yolu artık WARN basıyor (`F-014`), ve fiyat
-tablosu kullanılan modeli kapsıyor + açılışta fiyatsız modeli adıyla uyarıyor
-(`F-015`). `B-040`, `B-041` arşivlendi. **`sync-spec.sh` çalıştırılmalı** —
-§ 21.8, § 27.2, § 27.4 ve § 35.3 değişti.
+**`F-016` kapandı** — `UNPARSEABLE_JOB_DESCRIPTION` artık `params.reason`
+taşıyor (sekiz değerli kapalı sözlük: ön kontrolün dördü + § 18.4'ün dördü) ve
+`resolutions` sebebe göre değişiyor. **`B-043` açık, `gen:api` + sekiz
+`errors.*` anahtarı gerekiyor**; `continue_anyway` kapı reddinden kalktı.
+`B-042` arşivlendi. **`sync-spec.sh` çalıştırılmalı** — § 18.1, § 18.4 ve
+EK D.6.1 değişti.
 
-**Aşama 1:** 9/9 ✅, `F-001`…`F-007` kapandı · **Test:** 606 birim · 251 entegrasyon · 48 latex
+**Aşama 1:** 9/9 ✅, `F-001`…`F-007` kapandı · **Test:** 614 birim · 251 entegrasyon · 48 latex
 
 ## Frontend — `atomcv-frontend`
 
@@ -36,9 +35,10 @@ tablosu kullanılan modeli kapsıyor + açılışta fiyatsız modeli adıyla uya
 | Aşama 1 — Profil editörü | ✅ |
 | Aşama 2 — Üretim akışı + SSE | ✅ |
 
-**`B-042` kapandı** — `gen:api` çalıştı, not yazıldı. **`F-016` açık**, gerçek
-LLM'e karşı ilk turda çıktı: üç ilan üç farklı rapor üretti, sentetik değer yok.
-**Test:** 366 birim · 25 e2e · **bundle** profil 250.7 / üretim 214.8 KB.
+**`B-042` kapandı.** **`B-043` kısmen:** sekiz `errors.*` anahtarı yazıldı ve
+resolution'lar sunucudan okunuyor; **`gen:api` kaldı** — backend kapalıydı,
+fark beklenmiyor ama ölçülmedi.
+**Test:** 391 birim · 25 e2e · **bundle** profil 250.7 / üretim 214.8 KB.
 **Aşama 2 tam kapandı**; notlar `notes/archive/stage-2.md`.
 
 ---
@@ -55,6 +55,5 @@ LLM'e karşı ilk turda çıktı: üç ilan üç farklı rapor üretti, sentetik
 
 ## Sonraki senkronizasyon noktası
 
-**`F-016`** — ön kontrolün dört ret sebebi tek kodda toplanıyor ve `params`
-ikisiyle çelişiyor. Sonrası Aşama 3'ün ilk ucu (`/auth/session` ve
-`capabilities`).
+**`B-043`** — sebebe göre hata cümlesi ve resolution satırı. Sonrası Aşama 3'ün
+ilk ucu (`/auth/session` ve `capabilities`).

@@ -49,6 +49,49 @@ describe('resolving an error to a sentence', () => {
     expect(sentence).not.toContain('SOMETHING_NEW');
   });
 
+  /**
+   * `B-043`. The catalogue's sentence for this code branches on `reason`, and
+   * an ICU `select` whose argument never arrives renders the message as its
+   * own key path — measured, and a failure with no braces in it to notice.
+   *
+   * Today's server always sends `reason`. This is about the client that meets
+   * a server older than the field, which is the same reason the code fallback
+   * above exists.
+   */
+  it('still reads as a sentence when the server sends no reason at all', () => {
+    const { result } = renderHook(() => useErrorMessage(), { wrapper });
+
+    const sentence = result.current(
+      new ApiError({
+        status: 422,
+        code: 'UNPARSEABLE_JOB_DESCRIPTION',
+        params: { confidence: 0, skillsFound: 0 },
+      }),
+    );
+
+    expect(sentence).not.toContain('UNPARSEABLE_JOB_DESCRIPTION');
+    expect(sentence).not.toMatch(/[{}]/);
+    expect(sentence.length).toBeGreaterThan(0);
+  });
+
+  it('lets the real reason win over that default', () => {
+    const { result } = renderHook(() => useErrorMessage(), { wrapper });
+
+    const describe_ = (reason: string) =>
+      result.current(
+        new ApiError({
+          status: 422,
+          code: 'UNPARSEABLE_JOB_DESCRIPTION',
+          params: { reason, confidence: 0.95, skillsFound: 8 },
+        }),
+      );
+
+    // The gate refused the model's answer, so the sentence must not send the
+    // user back to rewrite text that is perfectly fine.
+    expect(describe_('suspicious_output')).not.toBe(describe_('too_short'));
+    expect(describe_('suspicious_output')).toMatch(/nothing is wrong/i);
+  });
+
   /** What `toApiError` produces when the body could not be read at all. */
   it('has a sentence for the synthetic code', () => {
     const { result } = renderHook(() => useErrorMessage(), { wrapper });

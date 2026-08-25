@@ -17,7 +17,10 @@ import type { ErrorCode, KnownResolutionAction } from '@/types/domain';
  */
 const PARAMS = {
   INSUFFICIENT_PROFILE: { completeness: 28, missing: ['atoms', 'sections'] },
-  UNPARSEABLE_JOB_DESCRIPTION: { confidence: 0.3, skillsFound: 2 },
+  // `reason` joined the catalogue with `B-043` and the message branches on
+  // it. The other two still travel, but they measure only two of the eight
+  // reasons — which is why the sentence is chosen by `reason` first.
+  UNPARSEABLE_JOB_DESCRIPTION: { reason: 'too_few_skills', confidence: 0.3, skillsFound: 2 },
   CONFLICTING_PREFERENCES: { pinnedPages: 2.3, maxPages: 1 },
   FEATURE_REQUIRES_ACCOUNT: { feature: 'Cover letters' },
   QUOTA_EXCEEDED: { metric: 'generation', resetsAt: '2026-08-16T00:00:00Z' },
@@ -113,6 +116,15 @@ describe.each(CATALOGUES)('the %s error catalogue', (locale, messages) => {
     // catalogue does not declare — the server will never send it, so the
     // sentence would reach a user with `{maxPage}` still in it.
     expect(rendered).not.toMatch(/[{}]/);
+    /*
+      And the other way a message fails, which has no braces in it at all:
+      next-intl renders a message as **its own key path** when an ICU `select`
+      or `plural` argument is missing entirely. Measured, not assumed — and
+      the brace check above sails straight past it, because `errors.CODE` is
+      punctuation-free. This is the assertion that would have caught it.
+    */
+    expect(rendered).not.toBe(code);
+    expect(rendered).not.toContain(`errors.${code}`);
   });
 
   it.each(Object.entries(RESOLUTION_PARAMS))('labels the %s action', (action, params) => {
@@ -125,6 +137,55 @@ describe.each(CATALOGUES)('the %s error catalogue', (locale, messages) => {
   /** `toApiError` synthesises this for a body it could not read at all. */
   it('has a message for the synthetic fallback code', () => {
     expect(t('UNEXPECTED_ERROR')).not.toMatch(/[{}]/);
+  });
+
+  /**
+   * `B-043`: eight reasons behind one code, and the sentence is chosen by
+   * `reason` rather than by `skillsFound`. Before this, every refusal read as
+   * "no skills came out of it" — accidentally true for the preflight, which
+   * sends zero because it analysed nothing, and simply wrong for the gate.
+   */
+  describe('the eight reasons behind UNPARSEABLE_JOB_DESCRIPTION', () => {
+    const REASONS = [
+      'too_short',
+      'too_long',
+      'low_entropy',
+      'not_job_like',
+      'low_confidence',
+      'too_few_skills',
+      'no_responsibilities',
+      'suspicious_output',
+    ] as const;
+
+    const render = (reason: string) =>
+      t(
+        'UNPARSEABLE_JOB_DESCRIPTION',
+        formatErrorParams({ reason, confidence: 0.42, skillsFound: 3 }, locale),
+      );
+
+    it.each(REASONS)('says something of its own for %s', (reason) => {
+      const rendered = render(reason);
+
+      expect(rendered.length).toBeGreaterThan(0);
+      expect(rendered).not.toMatch(/[{}]/);
+      expect(rendered).not.toContain('errors.');
+    });
+
+    it('gives each reason a different sentence', () => {
+      // Eight branches that render the same string would pass every check
+      // above while telling the user nothing new.
+      expect(new Set(REASONS.map(render)).size).toBe(REASONS.length);
+    });
+
+    it('falls back rather than printing a key for a reason it has never seen', () => {
+      // The vocabulary is closed today. `other` is what keeps a client that
+      // meets a server which grew a ninth reason from rendering its own key.
+      const rendered = render('a_reason_from_the_future');
+
+      expect(rendered.length).toBeGreaterThan(0);
+      expect(rendered).not.toMatch(/[{}]/);
+      expect(rendered).not.toContain('errors.');
+    });
   });
 });
 

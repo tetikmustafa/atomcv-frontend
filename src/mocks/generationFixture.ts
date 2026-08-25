@@ -16,6 +16,7 @@
  * payloads are the exception and `contracts.ts` says why.
  */
 
+import type { FailedEvent } from './contracts';
 import type { components } from '@/types/api';
 
 type Schemas = components['schemas'];
@@ -48,6 +49,13 @@ export type MockJob = {
   /** Wall-clock ms, the origin of this job's schedule. */
   startedAt: number;
   outcome: MockOutcome;
+  /**
+   * The error this job reports when it fails. Carried on the job rather than
+   * read from the fixture at stream time: the job is created long before
+   * anyone subscribes, and a second job enqueued in between would otherwise
+   * hand this one its error.
+   */
+  failure?: FailedEvent;
   idempotencyKey?: string;
 };
 
@@ -59,6 +67,8 @@ export type GenerationFixture = {
   paused: boolean;
   /** The outcome the next accepted job gets. Reset after it is claimed. */
   nextOutcome: MockOutcome;
+  /** The error the next failing job reports. Absent means the default one. */
+  nextFailure?: FailedEvent;
   /**
    * Attempts, not spend. A refused request takes a unit too — otherwise a
    * user past their limit could hammer the endpoint for free (`B-040`) — so
@@ -104,6 +114,7 @@ function initial(): GenerationFixture {
     expired: [],
     paused: false,
     nextOutcome: 'completed',
+    nextFailure: undefined,
     usage: { generation: 0, profile_extract: 0 },
   };
 }
@@ -154,8 +165,43 @@ export function pauseGeneration(paused = true) {
  * server, not of what the client asked for. Encoding one as a special
  * `jobDescription` would teach product code a string the real server ignores.
  */
-export function failNextJob() {
+export function failNextJob(error?: FailedEvent) {
   generations.nextOutcome = 'failed';
+  generations.nextFailure = error;
+}
+
+/**
+ * § 18.4's gate, refusing **the model's answer** rather than the user's text.
+ *
+ * Worth having as a fixture because it is the case the result of `B-043` is
+ * about: it arrives over the *stream*, not as a 4xx — the preflight is what
+ * answers synchronously — and it carries **two** resolutions, not three.
+ * `continue_anyway` is absent by design: acknowledging the preflight cannot
+ * help with a refusal that happened after the preflight already passed.
+ *
+ * `suspicious_output` is the one that gets `retry`, and that is not decorative
+ * either: the refused analysis is deliberately not cached, so asking again can
+ * genuinely come back different.
+ */
+export function gateRefusal(
+  reason: 'low_confidence' | 'too_few_skills' | 'no_responsibilities' | 'suspicious_output',
+): FailedEvent {
+  const retriable = reason === 'suspicious_output';
+
+  return {
+    code: 'UNPARSEABLE_JOB_DESCRIPTION',
+    params: {
+      reason,
+      // Real numbers here, unlike the preflight's zeroes: the gate ran on an
+      // analysis. They are also why the sentence must be chosen by `reason` —
+      // a confident answer can still be refused for its shape.
+      confidence: retriable ? 0.95 : 0.42,
+      skillsFound: reason === 'too_few_skills' ? 1 : 8,
+    },
+    resolutions: retriable
+      ? [{ action: 'retry' }, { action: 'continue_as_general_cv' }]
+      : [{ action: 'paste_full_posting' }, { action: 'continue_as_general_cv' }],
+  };
 }
 
 /** Drops a generation's stored content, so `download` answers 410. */

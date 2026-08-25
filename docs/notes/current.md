@@ -17,6 +17,42 @@ Plan: `spec/14-build-guide.md` § XI-A.6 · frontend sırası
 **Henüz başlanmadı.** Aşama 2 tam olarak kapandı: uygunluk raporu dahil,
 `B-040` ve `B-041` ile.
 
+### `B-043` — bir kodun arkasındaki sekiz sebep
+
+`F-016`'nın dönüşü. Sekiz sebep tek `errors.*` anahtarında, **ICU `select`**
+ile — `Fit.level` ve `Usage.metric` ile aynı kalıp, resolver'a dokunmadan.
+
+**Ölçülen ve koda yazılan şey:** next-intl'de eksik bir `select` argümanı
+mesajı **kendi anahtar yoluna** çeviriyor (`errors.UNPARSEABLE_JOB_DESCRIPTION`
+ekranda), bilinmeyen bir *değer* ise `other` dalına düşüyor. İkisi hiç
+benzemiyor ve ilki sessiz: içinde süslü parantez olmadığı için katalog
+testinin brace kontrolü onu **kaçırıyordu**.
+
+- `useErrorMessage` artık `SELECT_DEFAULTS` ile `reason`'ı garanti ediyor.
+  Gerçek params üstüne yazıyor, hiç ezmiyor.
+- Katalog testi `rendered !== code` **ve** `errors.` içermemeyi de sınıyor.
+  Negatif kontrolü yapıldı: `reason`'ı params'tan çıkarınca iki katalog da
+  düşüyor, brace kontrolü ise geçiyor — delik tam oradaydı.
+- Ön kontrol / kapı ayrımı kopyaya işlendi: ön kontrol **kullanıcının
+  metnini** reddetti (yol göster), kapı **modelin cevabını** (metni suçlama).
+
+**Mock artık kapıyı da taşıyor.** Önceden yalnız ön kontrol vardı ve o
+senkron; kapı reddi **akıştan** geliyor ve **iki** resolution getiriyor.
+`gateRefusal()` bunu üretiyor, `failNextJob(error?)` yerleştiriyor. Hata
+**işin üstünde** taşınıyor, fixture'da değil: iş oluşturulurken alınıyor,
+akış anında okunuyor, arada gelen ikinci bir iş bunun hatasını miras almasın.
+
+**Testte ölçülen bir tuzak:** `user.type` karakter başına olay gönderiyor;
+birkaç yüz karakterlik gerçek bir ilan 5 sn sınırını aşıyor, **ve yarıda
+ölen test yarım yazılmış metni `too_short` yaptırıp geç bir POST'u bir
+sonraki testin `bodies`'ine düşürüyor**. Üç yeni test kırılırken iki eski
+test de onunla kırıldı. `user.paste`'e geçildi — ekranın kendi metni de
+zaten "yapıştır" diyor.
+
+**Açık kalan tek şey:** `gen:api` çalıştırılmadı, backend kapalıydı.
+`params` şemada `Record<string, unknown>`, `code` ve `Resolution.action`
+enum'ları da değişmedi — **fark beklemiyorum ama ölçmedim.**
+
 ### Aşama 2'ye sonradan eklenen: `B-042` — CV dilinin notu
 
 Gerçek uca karşı test ederken çıktı, ve çıkış yolu kaydedilmeye değer:

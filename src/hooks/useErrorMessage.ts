@@ -25,6 +25,23 @@ import type { Resolution } from '@/types/domain';
 const FALLBACK_CODE = 'UNEXPECTED_ERROR';
 
 /**
+ * Defaults for params a message may branch on with ICU `select`.
+ *
+ * Measured, because the two absences behave nothing alike: an **unknown**
+ * value falls to the `other` branch, while a **missing** argument renders the
+ * message as its own key — `errors.UNPARSEABLE_JOB_DESCRIPTION` in front of
+ * the user, which is the failure this file's header is about.
+ *
+ * So the discriminator is always present. `reason` is a closed vocabulary
+ * (`B-043`) and today's server always sends it; this is what keeps a client
+ * that meets an older one, or a code that gains a branch later, from printing
+ * a key instead of a sentence. Merged under the real params, never over them.
+ *
+ * Harmless where it is not used: ICU ignores an argument no branch reads.
+ */
+const SELECT_DEFAULTS: Record<string, IcuValue> = { reason: 'unknown' };
+
+/**
  * next-intl types `t` against the catalogue, which is exactly what cannot
  * hold here: the key is a server code from an open vocabulary. One cast, made
  * once, guarded by the `t.has` check at each call site — rather than an
@@ -43,7 +60,7 @@ export function useErrorMessage() {
     (error: Pick<ApiError, 'code' | 'params'>): string => {
       const key = t.has(error.code) ? error.code : FALLBACK_CODE;
 
-      return t(key, formatErrorParams(error.params, locale));
+      return t(key, { ...SELECT_DEFAULTS, ...formatErrorParams(error.params, locale) });
     },
     [t, locale],
   );

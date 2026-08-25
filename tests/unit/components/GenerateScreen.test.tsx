@@ -5,6 +5,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GenerateScreen } from '@/components/generation/GenerateScreen';
+import { failNextJob, gateRefusal } from '@/mocks/generationFixture';
 import { server } from '@/mocks/node';
 import en from '@/messages/en.json';
 
@@ -59,14 +60,35 @@ afterEach(() => {
 
 const NOT_A_POSTING = 'hire someone good';
 
+/**
+ * Pasted, not typed, and not only because it is what the screen asks for.
+ * `user.type` sends one event per character: a real posting is a few hundred
+ * of them, which runs past the 5s timeout — and a test that dies mid-`type`
+ * leaves a half-written posting to be refused as `too_short` and a late POST
+ * to land in the *next* test's `bodies`. Both were measured here.
+ */
 async function submitPosting(posting?: string) {
   const user = userEvent.setup();
   render(<GenerateScreen />, { wrapper });
 
-  if (posting) await user.type(screen.getByLabelText('Job posting'), posting);
+  if (posting) {
+    await user.click(screen.getByLabelText('Job posting'));
+    await user.paste(posting);
+  }
   await user.click(screen.getByRole('button', { name: 'Generate' }));
 
   return user;
+}
+
+/**
+ * The panel a *stream* failure draws, which is not the one a 4xx draws.
+ *
+ * The preflight answers the POST, so its panel is there within a tick. § 18.4's
+ * gate runs after Faz A, so its panel waits on the job's own clock — the mock
+ * lands the terminal event at `TERMINAL_AT`, past `findBy`'s default second.
+ */
+function findFailurePanel() {
+  return screen.findByRole('alert', {}, { timeout: 5_000 });
 }
 
 describe('starting a generation', () => {
@@ -86,7 +108,10 @@ describe('starting a generation', () => {
     const panel = await screen.findByRole('alert');
     const buttons = screen.getAllByRole('button').map((button) => button.textContent);
 
-    expect(panel).toHaveTextContent('make sense of that job posting');
+    // The sentence is the one for *this* refusal, not a generic one: three
+    // words is `too_short`, and § 18.1's four measurements each say something
+    // the others do not (`B-043`).
+    expect(panel).toHaveTextContent('too short to work from');
     expect(buttons).toEqual([
       'Continue anyway',
       'Paste the full posting',
@@ -132,6 +157,67 @@ describe('starting a generation', () => {
     expect(bar).toHaveAttribute('aria-valuemin', '0');
     expect(bar).toHaveAttribute('aria-valuemax', '100');
   });
+});
+
+/**
+ * `B-043`. Two refusals, one code, and they do not arrive the same way: the
+ * preflight answers the POST, while § 18.4's gate runs after Faz A and comes
+ * back over the **stream**. What the user is told, and what they are offered,
+ * differ because what was refused differs — their text, or our reading of it.
+ */
+describe('a posting the gate refuses after reading it', () => {
+  /** Long enough and signalled enough to get past § 18.1's preflight. */
+  const REAL_POSTING = [
+    'We are seeking a senior backend engineer to join a small platform team.',
+    'Responsibilities: designing services, operating them in production, and',
+    'mentoring the engineers around you. Requirements: several years of Java,',
+    'PostgreSQL, container orchestration and a habit of writing things down.',
+    'Preferred qualifications include message queues and infrastructure as code.',
+  ].join(' ');
+
+  it('offers what the server sent, which is two buttons and not three', async () => {
+    failNextJob(gateRefusal('low_confidence'));
+    await submitPosting(REAL_POSTING);
+
+    const panel = await findFailurePanel();
+    const offered = within(panel)
+      .getAllByRole('button')
+      .map((button) => button.textContent);
+
+    // `continue_anyway` is gone from gate refusals, and its absence is the
+    // point: acknowledging the preflight cannot help with a refusal that
+    // happened after the preflight already passed. A screen that drew three
+    // fixed buttons would still be offering it.
+    expect(offered).toEqual(['Paste the full posting', 'Build a general resume instead']);
+    expect(offered).not.toContain('Continue anyway');
+  }, 10_000);
+
+  it('tells the user their own text is fine when the model’s answer was not', async () => {
+    failNextJob(gateRefusal('suspicious_output'));
+    await submitPosting(REAL_POSTING);
+
+    const panel = await findFailurePanel();
+
+    // The gate refused our reading, not their paste. Sending them back to
+    // rewrite a posting that is perfectly good is the wrong instruction.
+    expect(panel).toHaveTextContent(/nothing is wrong with what you pasted/i);
+    expect(panel).not.toHaveTextContent(/paste the whole advert/i);
+  }, 10_000);
+
+  it('retries the same request for a malformed reading', async () => {
+    failNextJob(gateRefusal('suspicious_output'));
+    const user = await submitPosting(REAL_POSTING);
+
+    const panel = await findFailurePanel();
+    await user.click(within(panel).getByRole('button', { name: 'Try again' }));
+
+    await waitFor(() => expect(bodies).toHaveLength(2));
+
+    // Unchanged, and that is what makes it a way out rather than a loop: the
+    // refused analysis is deliberately not cached, so asking again can come
+    // back different (`B-043`).
+    expect(await sent(1)).toMatchObject({ jobDescription: REAL_POSTING });
+  }, 10_000);
 });
 
 describe('a refusal this screen cannot act on itself', () => {
