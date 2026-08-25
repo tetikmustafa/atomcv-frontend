@@ -49,9 +49,19 @@ sonraki testin `bodies`'ine düşürüyor**. Üç yeni test kırılırken iki es
 test de onunla kırıldı. `user.paste`'e geçildi — ekranın kendi metni de
 zaten "yapıştır" diyor.
 
-**Açık kalan tek şey:** `gen:api` çalıştırılmadı, backend kapalıydı.
-`params` şemada `Record<string, unknown>`, `code` ve `Resolution.action`
-enum'ları da değişmedi — **fark beklemiyorum ama ölçmedim.**
+**`gen:api` çalıştı: fark yok.** Tahmin doğruydu ama artık ölçüldü.
+
+**Gerçek uca karşı üç red görüldü** — `too_short` (422, üç resolution),
+`too_few_skills` ve `no_responsibilities` (ikisi de akıştan, iki resolution,
+`continue_anyway` yok). Sonuncusu `F-016`'nın şikâyetinin kendisi: **güven 1,
+18 beceri, yine de red.** Yükler `tests/unit/i18n/wireErrors.test.ts`'e
+alındı — katalog testi *bildirilen* params'a karşı, o dosya *gerçekten gelen*
+yüke karşı; `B-043` ikisinin ayrıştığı yerdi.
+
+**`suspicious_output` telde görülemedi.** `gpt-4.1-nano` uzun beceri adlarını
+normalleştiriyor, üç ilan denendi. O sebebin `retry` satırı mock'ta ve testte
+var ama **backend'in tarifine dayanıyor, ölçüme değil.** Tetiklenebilirse
+doğrulanmalı.
 
 ### Aşama 2'ye sonradan eklenen: `B-042` — CV dilinin notu
 
@@ -85,7 +95,7 @@ konmadı — silinecek şey, kapatılacak şey değil.
 
 | Boşluk | Neden böyle |
 |---|---|
-| **Sonuç ekranında ne önizleme ne uygunluk raporu var** | İkisi de veri istiyor, veri yok (`F-008`). Önizleme ayrıca ölçülmüş bir karar: react-pdf ~300 KB ve gösterebileceği tek yeni şey PDF'in kendisi. |
+| **Sonuç ekranında PDF önizlemesi yok** | Ölçülmüş bir karar: react-pdf ~300 KB ve gösterebileceği tek yeni şey PDF'in kendisi. *(Aynı satır bir zamanlar uygunluk raporunu da sayıyordu; rapor `B-041` ile indi ve 2026-08-25'te gerçek uca karşı doğrulandı. Kasıtlı boşluk listesi bayatlayabiliyor — denetlenmesi gerekiyor.)* |
 | **"Bir sayfadan kısa CV" notu yazılmadı** | `pageCount` tam sayı ve sunucu "sayfa dolmadı" diye bir sinyal göndermiyor. Sinyalsiz yazılırsa her CV'de çıkar. |
 | **`keep_top_pinned` düğmesi çizilmiyor** | Şema sabitlenmiş atomları isteğe koyacak bir alan yayımlamıyor; çizilse basılınca hiçbir şey yapmazdı. |
 | **Metin düzenleme düz metin, mark'ları düşürüyor** | Mark farkında editör kural 4'ün lazy-load edeceği bileşen ve henüz yok. Kabul edilebilir olmasının tek sebebi **söylenmesi**: atomun gerçekten mark'ı varsa kaydetmeden **önce** uyarı çıkıyor (P8). |

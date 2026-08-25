@@ -35,11 +35,12 @@ EK D.6.1 değişti.
 | Aşama 1 — Profil editörü | ✅ |
 | Aşama 2 — Üretim akışı + SSE | ✅ |
 
-**`B-042` kapandı.** **`B-043` kısmen:** sekiz `errors.*` anahtarı yazıldı ve
-resolution'lar sunucudan okunuyor; **`gen:api` kaldı** — backend kapalıydı,
-fark beklenmiyor ama ölçülmedi.
-**Test:** 391 birim · 25 e2e · **bundle** profil 250.7 / üretim 214.8 KB.
-**Aşama 2 tam kapandı**; notlar `notes/archive/stage-2.md`.
+**`B-042` ve `B-043` kapandı**, açık `B-nnn` yok. `gen:api` fark üretmedi.
+**Test:** 401 birim · 25 e2e · **bundle** profil 250.7 / üretim 214.8 KB.
+**Aşama 2 gerçek uca karşı yeniden denetlendi (2026-08-25): 26/26 kontrol.**
+Kota, idempotency, SSE ilerleme (0→10→30→50→70), uygunluk raporu, iki dil
+etiketi, PDF + 406, terminal olayın tekrar oynatılması. Üç gerçek hata reddi
+`wireErrors.test.ts`'e alındı. **Yalnız `suspicious_output` tetiklenemedi.**
 
 ---
 
