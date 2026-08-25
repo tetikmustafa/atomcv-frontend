@@ -3,7 +3,7 @@
 > İki repo da bu dosyayı okur ve kendi satırlarını günceller. **Kural: 60 satırı geçmez.**
 > Ayrıntılı inşa kayıtları repo-yerel `notes/current.md`'dedir, buraya taşınmaz.
 
-**Son güncelleme:** 2026-08-25 · **Aşama 2 iki repoda da tam kapandı**; açık madde yok
+**Son güncelleme:** 2026-08-25 · **`F-013`…`F-015` kapandı**; **`B-042` açık**
 
 ---
 
@@ -18,14 +18,15 @@
 | 2.7 kota ve maliyet | ✅ (Axiom dataset'i 3.1'e taşındı) |
 
 **Aşama 3 planı:** § XI-A.6. Aşama 2'nin kaydı `notes/archive/stage-2.md`'de.
-**`F-009`…`F-012` kapandı** ve şemayı değiştirdiler — **`B-040` açık,
-`gen:api` çalıştırılmalı**: `generalMode` düştü, ilerleme alanları opsiyonel
-oldu, `usage` `attempted` kazandı. `B-037`…`B-039` arşivlendi.
-**`F-008` de kapandı** — Faz F'nin uygunluk raporu indi (`B-041`):
-`GET /generations/{id}`, `completed` olayında `matchLevel`, `GET /jobs/{id}`'de
-`pageCount`. **`sync-spec.sh` çalıştırılmalı.**
+**`F-013`…`F-015` kapandı**, biri şemayı değiştiriyor — **`B-042` açık,
+`gen:api` çalıştırılmalı**: `GET /generations/{id}` `contentLanguage` ve
+`postingLanguage` taşıyor. Diğer ikisi sunucuda kapandı, aksiyon yok:
+sağlayıcının dört sessiz hata yolu artık WARN basıyor (`F-014`), ve fiyat
+tablosu kullanılan modeli kapsıyor + açılışta fiyatsız modeli adıyla uyarıyor
+(`F-015`). `B-040`, `B-041` arşivlendi. **`sync-spec.sh` çalıştırılmalı** —
+§ 21.8, § 27.2, § 27.4 ve § 35.3 değişti.
 
-**Aşama 1:** 9/9 ✅, `F-001`…`F-007` kapandı · **Test:** 593 birim · 250 entegrasyon · 48 latex
+**Aşama 1:** 9/9 ✅, `F-001`…`F-007` kapandı · **Test:** 606 birim · 251 entegrasyon · 48 latex
 
 ## Frontend — `atomcv-frontend`
 
@@ -35,12 +36,10 @@ oldu, `usage` `attempted` kazandı. `B-037`…`B-039` arşivlendi.
 | Aşama 1 — Profil editörü | ✅ |
 | Aşama 2 — Üretim akışı + SSE | ✅ |
 
-**Açık `B-nnn` yok** — `B-040` ve `B-041` ACK'te. **Test:** 362 birim · 25 e2e ·
-**bundle** profil 250.6 / üretim 214.8 KB.
-**Aşama 2 tam kapandı:** üretim akışı, SSE, kota **ve uygunluk raporu**. Gerçek
-uca karşı MSW kapalı iki tur (10 + 9 kontrol) geçti; üç gerçek hata buldular —
-`Accept` → 406, dev proxy'nin SSE'yi gzip'lemesi, yeniden yüklemede sonucun
-kaybolması. Notlar `notes/archive/stage-2.md`.
+**`B-042` kapandı** — `gen:api` çalıştı, not yazıldı. **`F-016` açık**, gerçek
+LLM'e karşı ilk turda çıktı: üç ilan üç farklı rapor üretti, sentetik değer yok.
+**Test:** 366 birim · 25 e2e · **bundle** profil 250.7 / üretim 214.8 KB.
+**Aşama 2 tam kapandı**; notlar `notes/archive/stage-2.md`.
 
 ---
 
@@ -56,5 +55,6 @@ kaybolması. Notlar `notes/archive/stage-2.md`.
 
 ## Sonraki senkronizasyon noktası
 
-**Yok.** Aşama 2 iki tarafta da kapandı; sıradaki temas Aşama 3'ün ilk ucu
-(`/auth/session` ve `capabilities`).
+**`F-016`** — ön kontrolün dört ret sebebi tek kodda toplanıyor ve `params`
+ikisiyle çelişiyor. Sonrası Aşama 3'ün ilk ucu (`/auth/session` ve
+`capabilities`).
