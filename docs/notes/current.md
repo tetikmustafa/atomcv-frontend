@@ -58,10 +58,20 @@ zaten "yapıştır" diyor.
 alındı — katalog testi *bildirilen* params'a karşı, o dosya *gerçekten gelen*
 yüke karşı; `B-043` ikisinin ayrıştığı yerdi.
 
-**`suspicious_output` telde görülemedi.** `gpt-4.1-nano` uzun beceri adlarını
-normalleştiriyor, üç ilan denendi. O sebebin `retry` satırı mock'ta ve testte
-var ama **backend'in tarifine dayanıyor, ölçüme değil.** Tetiklenebilirse
-doğrulanmalı.
+**`suspicious_output` telde görülemedi — ve görülememesi doğru sonuç.**
+`gpt-4.1-nano` uzun beceri adlarını normalleştiriyor, üç ilan denendi. Backend
+cevapladı (2026-08-25): bu bir *incelik* değil **şekil** denetimi — § 18.4'ün
+uzunluk tavanları, ve tavanlar gerçek bir ilanın ürettiğinin çok üstünde
+duruyor, çünkü uzun ama gerçek bir sorumluluğu reddeden bir kapı hiç kapı
+olmamasından kötü. Kapıyı açan şey enjeksiyon; uslu bir modele ilan yazdırarak
+açılması **beklenmiyor**. Backend'de `PlausibilityGateTest` onu kurgulanmış
+analizle doğrudan sınıyor. **Açık uç değil, kapandı.**
+
+**Kapı sırayla bakıyor** — `low_confidence` → `too_few_skills` →
+`no_responsibilities` → uzunluk (§ 18.4, "Sıra önemlidir"). Sekiz dallı
+`select` için anlamı: hem zayıf hem bozuk bir ilan bize `too_few_skills` olarak
+gelir. `suspicious_output` "sayılar yerinde ama şekil bozuk" hâlinin adı — o
+dalın telde neden nadir olduğunu açıklayan şey bu. Koda dokunmuyor.
 
 ### Aşama 2'ye sonradan eklenen: `B-042` — CV dilinin notu
 

@@ -36,11 +36,11 @@ CI main'de yeşil. `suspicious_output` sorunuzun cevabı `to-frontend.md`'de.
 | Aşama 2 — Üretim akışı + SSE | ✅ |
 
 **`B-042` ve `B-043` kapandı**, açık `B-nnn` yok. `gen:api` fark üretmedi.
-**Test:** 401 birim · 25 e2e · **bundle** profil 250.7 / üretim 214.8 KB.
-**Aşama 2 gerçek uca karşı yeniden denetlendi (2026-08-25): 26/26 kontrol.**
-Kota, idempotency, SSE ilerleme (0→10→30→50→70), uygunluk raporu, iki dil
-etiketi, PDF + 406, terminal olayın tekrar oynatılması. Üç gerçek hata reddi
-`wireErrors.test.ts`'e alındı. **Yalnız `suspicious_output` tetiklenemedi.**
+**Aşama 0-2 bu makinede baştan geçti (2026-08-25):** typecheck, lint, format,
+**401 birim · 25 e2e**, build + bütçe (profil 250.7 / üretim 214.8 KB), MSW
+üretim yığınında yok. Öncesinde gerçek uca karşı 26/26 kontrol: kota,
+idempotency, SSE (0→10→30→50→70), uygunluk raporu, iki dil etiketi, PDF + 406.
+**`suspicious_output` kapandı** — tetiklenememesi beklenen sonuç, kapı sıralı.
 
 ---
 
