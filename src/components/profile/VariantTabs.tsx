@@ -19,6 +19,7 @@
 import { Tabs } from 'radix-ui';
 import { useLocale, useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
+import { languageName } from '@/lib/i18n/languageNames';
 import type { Variant } from '@/lib/api/endpoints/profile';
 
 export type VariantTabsProps = {
@@ -45,13 +46,10 @@ export function VariantTabs({
   const t = useTranslations('Editor.variants');
   const locale = useLocale();
 
-  // Rule 9: a language code is not a language name, and the name belongs in
-  // the reader's language rather than in its own — "Turkish" for an English
-  // interface, "Türkçe" for a Turkish one, from one source either way.
-  const languageName = (code: string) => {
-    if (!code) return t('unknownLanguage');
-    return new Intl.DisplayNames([locale], { type: 'language' }).of(code) ?? code;
-  };
+  // Rule 9, and the rule itself lives in `languageNames` now that the result
+  // screen needs it too. Only the sentence for "no language at all" is ours:
+  // the helper returns `undefined` there rather than inventing one.
+  const nameOf = (code: string) => languageName(code, locale) ?? t('unknownLanguage');
 
   const selected = variants.find((variant) => variant.id === selectedId);
 
@@ -64,7 +62,7 @@ export function VariantTabs({
             value={variant.id!}
             className="data-[state=active]:bg-muted data-[state=active]:text-foreground text-muted-foreground focus-visible:ring-ring/50 flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm outline-none focus-visible:ring-3"
           >
-            <span>{labelFor(variant, languageName)}</span>
+            <span>{labelFor(variant, nameOf)}</span>
 
             {variant.primary && (
               <span className="text-muted-foreground text-xs">{t('primary')}</span>

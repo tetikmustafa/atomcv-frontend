@@ -94,6 +94,18 @@ function readsAsAPosting(text: string): boolean {
   return new Set(words.filter((word) => SIGNAL_WORDS.includes(word))).size >= 2;
 }
 
+/**
+ * Which language Faz A would read this posting as — as far as a mock can say.
+ *
+ * Standing in for a model with one signal that is actually decisive between
+ * the two languages the product ships in: the letters Turkish has and English
+ * does not. That is enough for the case `B-042` exists for, and it is honest
+ * about being a stand-in rather than pretending to detect a language.
+ */
+function looksEnglish(text: string): boolean {
+  return !/[çğıöşü]/i.test(text);
+}
+
 function sseFrame(event: string, data: unknown, id: number) {
   return `id: ${id}\nevent: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
@@ -215,6 +227,20 @@ export const generationHandlers = [
       // No posting, no report: § 23.3's counts are counts *against a posting*
       // (`B-041`).
       ...(jobDescription === '' ? {} : { fitReport: FIT_REPORT }),
+      /*
+        B-042. The mock profile is Turkish, so a posting the gate reads as
+        English produces the case worth encoding: the document stays in the
+        profile's language and the two tags disagree. General mode has no
+        posting to read a language off, so only `contentLanguage` survives —
+        and the note must not be drawn there.
+
+        The language is guessed from the posting the way a mock may: this
+        stands in for Faz A, which is the only thing that really knows.
+      */
+      contentLanguage: 'tr',
+      ...(jobDescription === ''
+        ? {}
+        : { postingLanguage: looksEnglish(jobDescription) ? 'en' : 'tr' }),
       startedAt: Date.now(),
       outcome: generations.nextOutcome,
       ...(key ? { idempotencyKey: key } : {}),
@@ -361,6 +387,9 @@ export const generationHandlers = [
       pageCount: 1,
       createdAt: new Date(job.startedAt).toISOString(),
       ...(job.fitReport ? { fitReport: job.fitReport } : {}),
+      // `B-042`. Omitted rather than blank, the way `F-010` settled it.
+      ...(job.contentLanguage ? { contentLanguage: job.contentLanguage } : {}),
+      ...(job.postingLanguage ? { postingLanguage: job.postingLanguage } : {}),
     });
   }),
 

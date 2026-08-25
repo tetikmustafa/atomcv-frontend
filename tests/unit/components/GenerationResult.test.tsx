@@ -127,6 +127,72 @@ describe('a finished generation', () => {
     expect(level).not.toHaveTextContent('MODERATE');
   });
 
+  /**
+   * `B-042`. `auto` resolves to the posting's language only when the profile
+   * can actually be written in it; when it cannot, the document stays in the
+   * profile's language and the two tags disagree. The reader pasted an
+   * English posting and got a Turkish CV, so they are owed the reason.
+   */
+  describe('when the CV is not in the posting’s language', () => {
+    it('says so, naming both languages in the reader’s own', async () => {
+      const generationId = await generate({ jobDescription: POSTING, acknowledgePreflight: false });
+
+      render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+      const note = await screen.findByTestId('language-note');
+
+      // Rule 9: names, not tags. And in the interface language — the person
+      // reading this screen is the user, not the recruiter.
+      expect(note).toHaveTextContent('Turkish');
+      expect(note).toHaveTextContent('English');
+      expect(note.textContent).not.toMatch(/\b(tr|en)\b/);
+    });
+
+    it('names them in Turkish for a Turkish reader', async () => {
+      const generationId = await generate({ jobDescription: POSTING, acknowledgePreflight: false });
+
+      render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('tr') });
+
+      const note = await screen.findByTestId('language-note');
+
+      expect(note).toHaveTextContent('Türkçe');
+      expect(note).toHaveTextContent('İngilizce');
+    });
+
+    it('stays quiet when the posting is in the language the CV came out in', async () => {
+      // The same posting in Turkish: the gate reads it as Turkish, the profile
+      // is Turkish, nothing diverged and there is nothing to explain.
+      const turkish = [
+        'Küçük bir platform ekibine kıdemli bir backend mühendisi arıyoruz.',
+        'Sorumluluklar: servis tasarlamak, üretimde işletmek ve çevrenizdeki',
+        'mühendislere mentorluk etmek. Gereksinimler: birkaç yıl Java deneyimi,',
+        'PostgreSQL, konteyner orkestrasyonu ve yazılı iletişim alışkanlığı.',
+        'Tercih edilen nitelikler mesaj kuyrukları ve kod olarak altyapıdır.',
+      ].join(' ');
+
+      const generationId = await generate({
+        jobDescription: turkish,
+        acknowledgePreflight: true,
+      });
+
+      render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+      await screen.findByRole('button', { name: 'Download PDF' });
+      expect(screen.queryByTestId('language-note')).not.toBeInTheDocument();
+    });
+
+    it('stays quiet in general mode, where there was no posting to read', async () => {
+      const generationId = await generate();
+
+      render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+      await waitFor(() => expect(screen.getByText(en.Result.generalNote)).toBeInTheDocument());
+      // `postingLanguage` is absent, not equal — a note comparing a language
+      // against nothing would be drawn on every general CV.
+      expect(screen.queryByTestId('language-note')).not.toBeInTheDocument();
+    });
+  });
+
   it('has no violations', async () => {
     const generationId = await generate({ jobDescription: POSTING, acknowledgePreflight: false });
 

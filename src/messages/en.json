@@ -297,7 +297,8 @@
     "again": "Generate another",
     "announceDownloaded": "Download started",
     "loading": "Fetching your resume…",
-    "generalNote": "No posting was given, so there is nothing to measure this against."
+    "generalNote": "No posting was given, so there is nothing to measure this against.",
+    "languageNote": "Written in {content}, not {posting}. A resume is written in one language, and your profile does not yet have {posting} wording for everything on this page."
   },
   "Fit": {
     "heading": "How this matches the posting",

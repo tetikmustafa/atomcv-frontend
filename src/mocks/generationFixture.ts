@@ -38,6 +38,13 @@ export type MockJob = {
   generationId: string;
   /** Absent in general mode, exactly as the server omits it. */
   fitReport?: MockFitReport;
+  /**
+   * B-042's two language axes. Both are absent when blank, as the server
+   * sends them, and `postingLanguage` is absent entirely in general mode:
+   * there was no posting to read a language off.
+   */
+  contentLanguage?: string;
+  postingLanguage?: string;
   /** Wall-clock ms, the origin of this job's schedule. */
   startedAt: number;
   outcome: MockOutcome;

@@ -297,7 +297,8 @@
     "again": "Bir tane daha oluştur",
     "announceDownloaded": "İndirme başladı",
     "loading": "CV’n getiriliyor…",
-    "generalNote": "İlan verilmedi, yani karşılaştırılacak bir şey yok."
+    "generalNote": "İlan verilmedi, yani karşılaştırılacak bir şey yok.",
+    "languageNote": "{content} yazıldı, {posting} değil. Bir CV tek dilde yazılır ve profilinde bu sayfaya girecek her şeyin {posting} sözcüklemesi henüz yok."
   },
   "Fit": {
     "heading": "İlanla ne kadar örtüşüyor",

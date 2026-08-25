@@ -13,16 +13,30 @@
  * said in words rather than drawn as a row of zeroes.
  */
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { FitReport } from '@/components/generation/FitReport';
 import { Button } from '@/components/ui/button';
 import { Link } from '@/lib/i18n/navigation';
+import { languageName } from '@/lib/i18n/languageNames';
 import { useDownloadGeneration, useGenerationResult } from '@/hooks/useGeneration';
 import { announce } from '@/stores/announcerStore';
 
+/**
+ * The primary subtag, for comparing two BCP 47 tags as *languages*.
+ *
+ * `en` and `en-GB` are one language written two ways, and a raw `!==` would
+ * tell the reader their resume came out in the wrong one. `toLowerCase` is
+ * not locale-sensitive — the explicit locale is there to say so, because rule
+ * 11 is about the transform that is (`toLocaleLowerCase` under `tr`).
+ */
+function primaryLanguage(tag: string | undefined) {
+  return tag?.split('-')[0]?.toLocaleLowerCase('en');
+}
+
 export function GenerationResult({ generationId }: { generationId: string }) {
   const t = useTranslations('Result');
+  const locale = useLocale();
   const { data, isPending, error, refetch } = useGenerationResult(generationId);
   const download = useDownloadGeneration();
 
@@ -51,12 +65,35 @@ export function GenerationResult({ generationId }: { generationId: string }) {
   // repeating — `isRetriable` is what decides, inside the panel's own retry.
   if (error) return <ErrorPanel error={error} onRetry={() => void refetch()} />;
 
+  /*
+    B-042: `auto` resolves to the posting's language only when the profile can
+    actually be written in it. When it could not, the two tags differ and the
+    document is in the profile's language — which the reader is owed an
+    explanation for, since they pasted an English posting and got a Turkish CV.
+
+    A note, not a warning: nothing went wrong and there is nothing to retry.
+    Both tags are optional on the wire and absent when blank, so the sentence
+    is drawn only when both are there and they disagree.
+  */
+  const contentLang = primaryLanguage(data.contentLanguage);
+  const postingLang = primaryLanguage(data.postingLanguage);
+  const languagesDiffer = Boolean(contentLang && postingLang && contentLang !== postingLang);
+
   return (
     <div className="flex flex-col gap-4">
       <p>
         {t('ready')}
         {data.pageCount !== undefined ? ` ${t('pages', { count: data.pageCount })}` : ''}
       </p>
+
+      {languagesDiffer && (
+        <p data-testid="language-note" className="text-muted-foreground text-sm">
+          {t('languageNote', {
+            content: languageName(data.contentLanguage, locale) ?? data.contentLanguage!,
+            posting: languageName(data.postingLanguage, locale) ?? data.postingLanguage!,
+          })}
+        </p>
+      )}
 
       {download.error && <ErrorPanel error={download.error} />}
 

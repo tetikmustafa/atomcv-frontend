@@ -17,6 +17,32 @@ Plan: `spec/14-build-guide.md` § XI-A.6 · frontend sırası
 **Henüz başlanmadı.** Aşama 2 tam olarak kapandı: uygunluk raporu dahil,
 `B-040` ve `B-041` ile.
 
+### Aşama 2'ye sonradan eklenen: `B-042` — CV dilinin notu
+
+Gerçek uca karşı test ederken çıktı, ve çıkış yolu kaydedilmeye değer:
+**önce ekranda bir tuhaflık görüldü** (Türkçe maddelerin üstünde İngilizce ay
+adları), sebebi backend'de bulundu (`F-013`), backend üçüncü bir çözüm seçti
+ve alanları yayımladı, biz de cümleyi yazdık. Üç repo-turu, tek oturum.
+
+Kural artık şu: **bir belge tek dilde yazılır**, ve `auto` ilanın diline
+yalnız profil o dilde gerçekten yazılabiliyorsa çözülür. Yazılamıyorsa CV
+profilin dilinde kalır ve `contentLanguage` ile `postingLanguage` ayrışır —
+notun çizildiği tek durum bu.
+
+- **Karşılaştırma birincil alt etiket üzerinden.** `en` ile `en-GB` bir
+  dildir; ham `!==` kullanıcıya CV'sinin yanlış dilde çıktığını söylerdi.
+- **`languageNames.ts` kuralın tek sahibi.** İkinci çağrı yeri olunca
+  çıkarıldı; `VariantTabs` da oradan okuyor. Bir `Intl` kuralının ikinci
+  kopyası ikisinin ayrışma yoludur.
+- **Türkçe metin çekim eki almıyor** — "Türkçe yazıldı", "İngilizce değil".
+  Dil adı yerine geçen bir kalıpta ek, ilk başka dilde kırılır.
+- **Not, uyarı değil.** İnce profilin notuyla aynı gerekçe: bozulan bir şey
+  yok, tekrar denenecek bir şey yok.
+
+Bu geçici ve geçiciliği kasıtlı: § 21.8'in çeviren fazı indiğinde alanlar aynı
+değeri taşımaya başlar ve not kendiliğinden çizilmez olur. Bayrak arkasına
+konmadı — silinecek şey, kapatılacak şey değil.
+
 ---
 
 ## Kasıtlı boşluklar — sorulmadan "düzeltilmez"

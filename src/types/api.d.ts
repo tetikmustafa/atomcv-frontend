@@ -1029,6 +1029,16 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
             fitReport?: components["schemas"]["FitReport"];
+            /**
+             * @description The language the document was written in, as a BCP 47 tag
+             * @example tr
+             */
+            contentLanguage?: string;
+            /**
+             * @description The language Faz A read the posting as. When it differs from                 contentLanguage the CV was written in the profile's language                 instead: the profile has no wording for every atom in the                 posting's language, and one document is written in one                 language.
+             * @example en
+             */
+            postingLanguage?: string;
         };
         /** @description One metric's allowance for today */
         Usage: {
