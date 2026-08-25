@@ -11,47 +11,7 @@
 
 ## OPEN
 
-### F-016 · "Okunamadı" derken params'ın %95 güven yazması
-**Since:** frontend commit `1373586` · `local-real`, gerçek ilanlarla
-**Neden:** Sıradan bir React ilanı **422 `UNPARSEABLE_JOB_DESCRIPTION`** ile
-reddedildi, ama parametreleri reddi yalanlıyordu:
-
-```
-params: { confidence: 0.95, skillsFound: 8 }
-```
-
-`PlausibilityGate`'in **dört** verdict'i tek hata koduna düşüyor ve `params`
-yalnız ilk ikisinin ölçtüğünü taşıyor:
-
-```
-LOW_CONFIDENCE       confidence anlatıyor      ✓
-TOO_FEW_SKILLS       skillsFound anlatıyor     ✓
-NO_RESPONSIBILITIES  params sessiz             ✗
-SUSPICIOUS_OUTPUT    params sessiz             ✗
-```
-
-Bu vakayı **daralttık**: aynı ilanın gereksinimleri kısa beceri adlarına
-bölünmüş hâli sorunsuz geçti. Yani reddeden `SUSPICIOUS_OUTPUT`'tu — modelin
-çıkardığı bir alan `MAX_SKILL_NAME`'i (60) aşmıştı; muhtemelen
-`"Accessibility: WCAG 2.2 AA, screen reader testing, keyboard interaction"`
-tek beceri adı olarak çıkarıldı.
-
-Ekranda çıkan cümle şu oluyor: *"ilanı okuyamadık — güven %95, 8 beceri
-bulundu."* Kullanıcı yapıştırdığı metnin tamamen normal olduğunu biliyor.
-
-Not: `SUSPICIOUS_OUTPUT`'un kendi yorumu bunu zaten ayırıyor — *"the first
-three say the posting was thin, this one says the answer is not shaped like
-an analysis at all."* İki farklı şey, tek kod ve tek cümle.
-
-**İstenen:** biri, sizin tercihiniz:
-1. `SUSPICIOUS_OUTPUT` kendi koduna ayrılsın — kullanıcının ilanı değil,
-   modelin cevabı sorunlu; doğru çözüm **yeniden denemek** olabilir, ve
-   `retry` resolution'ı bugün bu 422'de yok.
-2. `params` verdict'i taşısın (kapalı sözlük), ve `errors.*` anahtarını ona
-   göre çözelim — dört sebebe dört cümle.
-
-Uzun alanı **kırpmak** üçüncü bir yol ama sessizce yanlış: § 18.4'ün tavanı
-enjeksiyona karşı, ve kırpılmış bir beceri adı uygunluk raporuna girer.
+*(şu an açık madde yok)*
 
 <!-- Şablon:
 ### F-001 · Kısa başlık
@@ -64,6 +24,24 @@ enjeksiyona karşı, ve kırpılmış bir beceri adı uygunluk raporuna girer.
 ---
 
 ## ACK — backend tamamladı, frontend arşivleyebilir
+
+### F-016 · Tek kodun arkasındaki sekiz sebep — kapandı
+İkinci seçeneğiniz, ama **dörde değil sekize**. Şikâyetiniz § 18.4'ün kapısı
+üzerineydi; ön kontrol de dört verdict'ini aynı koda düşürüyor ve `(0, 0)`
+gönderiyordu, yani "hiç yetkinlik çıkmadı" cümlesi kazara doğruydu. Yalnız
+bildirdiğiniz yarıyı düzeltmek aynı maddeyi ikinci kez açtırırdı.
+
+`params.reason` sekiz değerli kapalı bir sözlük ve hangi kapının reddettiğini
+söylüyor. `confidence` ile `skillsFound` gitmeye devam ediyor — katalog onları
+bildiriyor — ama cümle artık önce `reason`'dan seçilir.
+
+Birinci seçeneğinizi almadık, ama **asıl gördüğünüz şeyi** aldık:
+`suspicious_output` `retry` alıyor. Onbirinci bir hata kodu açmadan, çünkü API
+açısından sonuç aynı — değişen, kullanıcıya söylenen şey.
+
+Aramadığınız bir şey de çıktı: **`continue_anyway` kapı reddinde `retry` ile
+birebir aynı işi yapıyordu.** Onay yalnız ön kontrolü atlıyor, ön kontrol zaten
+geçilmişti. Kaldırdık. **Aksiyonunuz var — `B-043`.**
 
 ### F-013 · Tek CV iki dil taşıyor — kapandı, üçüncü bir yolla
 İkisinden birini değil, ortasını seçtik: **bir belge tek dilde yazılır ve o dil
