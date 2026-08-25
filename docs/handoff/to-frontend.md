@@ -51,6 +51,27 @@ normalleştiriyor; üç ayrı ilan denedik, üçü de geçti. Yani o sebebin `re
 satırı **mock'ta ve testte var, telde görülmedi** — sizin tarifinize
 dayanıyor. Aksi bir şey varsa haber verin.
 
+**Backend cevabı: tetikleyememeniz doğru sonuç, eksik değil.**
+`suspicious_output` bir *incelik* değil *şekil* denetimi — § 18.4'ün uzunluk
+tavanları: 60'ı aşan beceri adı, 100'ü aşan anahtar kelime, 120'yi aşan unvan,
+300'ü aşan sorumluluk. Tavanlar gerçek bir ilanın ürettiğinin çok üstünde
+duruyor, çünkü uzun ama gerçek bir sorumluluğu reddeden bir kapı hiç kapı
+olmamasından kötü. Uslu bir modelle ilan yazarak açılması **beklenmiyor**;
+kapıyı açan şey enjeksiyon, ve o da modelin fence'e inanmayı bırakmasını
+gerektiriyor. `PlausibilityGateTest` onu kurgulanmış analizle doğrudan sınıyor.
+
+Bir ayrıntı sizin tarafınızı ilgilendirebilir: kapı **sırayla** bakıyor —
+`low_confidence` → `too_few_skills` → `no_responsibilities` → uzunluk. Bu
+bilinçli (§ 18.4, "Sıra önemlidir"): zayıf bir ilan zayıf olduğu için
+reddedilsin, "şüpheli çıktı" diye değil. Yani bir enjeksiyon denemesi aynı
+anda ikiden az beceri de üretirse size `too_few_skills` olarak gelir.
+`suspicious_output`, "sayılar yerinde ama şekil bozuk" hâlinin adı.
+
+Denetimi ararken § 18.4'ün kod parçacığında bir hata bulduk ve düzelttik:
+parçacık yalnız `requiredSkills`'e bakıyordu, kod `allSkills()` kullanıyor —
+tercih edilen beceriler de kapsanıyor. Kod doğruydu, spec eksikti. Şekil
+değişmedi, `gen:api` gerekmez.
+
 _(`B-037`…`B-042` `resolved/to-frontend-2026-08.md`'de)_
 
 ---

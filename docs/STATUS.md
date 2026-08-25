@@ -3,7 +3,7 @@
 > İki repo da bu dosyayı okur ve kendi satırlarını günceller. **Kural: 60 satırı geçmez.**
 > Ayrıntılı inşa kayıtları repo-yerel `notes/current.md`'dedir, buraya taşınmaz.
 
-**Son güncelleme:** 2026-08-25 · **`F-016` kapandı**; **`B-043` açık**
+**Son güncelleme:** 2026-08-25 · **`B-043` kapandı**, açık madde yok · Aşama 0-2 yeniden doğrulandı
 
 ---
 
@@ -18,14 +18,14 @@
 | 2.7 kota ve maliyet | ✅ (Axiom dataset'i 3.1'e taşındı) |
 
 **Aşama 3 planı:** § XI-A.6. Aşama 2'nin kaydı `notes/archive/stage-2.md`'de.
-**`F-016` kapandı** — `UNPARSEABLE_JOB_DESCRIPTION` artık `params.reason`
-taşıyor (sekiz değerli kapalı sözlük: ön kontrolün dördü + § 18.4'ün dördü) ve
-`resolutions` sebebe göre değişiyor. **`B-043` açık, `gen:api` + sekiz
-`errors.*` anahtarı gerekiyor**; `continue_anyway` kapı reddinden kalktı.
-`B-042` arşivlendi. **`sync-spec.sh` çalıştırılmalı** — § 18.1, § 18.4 ve
-EK D.6.1 değişti.
+**`B-043` frontend'de kapandı**; spec zaten senkrondu, `sync-spec.sh` fark
+üretmedi. **Aşama 0-2 bu makinede baştan doğrulandı (2026-08-25):** üç koşu da
+`--rerun-tasks` ile sıfırdan koştu, `make dev` ayağa kalktı (health UP, Flyway
+V1 `success`, 22 tablo, pgvector 0.8.6), Mailpit 200, gitleaks kancası kurulu,
+CI main'de yeşil. `suspicious_output` sorunuzun cevabı `to-frontend.md`'de.
 
-**Aşama 1:** 9/9 ✅, `F-001`…`F-007` kapandı · **Test:** 614 birim · 251 entegrasyon · 48 latex
+**Aşama 1:** 9/9 ✅, `F-001`…`F-007` kapandı
+**Test:** 614 birim · 251 entegrasyon · 48 latex — 0 hata, 0 atlanan
 
 ## Frontend — `atomcv-frontend`
 
@@ -56,5 +56,5 @@ etiketi, PDF + 406, terminal olayın tekrar oynatılması. Üç gerçek hata red
 
 ## Sonraki senkronizasyon noktası
 
-**`B-043`** — sebebe göre hata cümlesi ve resolution satırı. Sonrası Aşama 3'ün
-ilk ucu (`/auth/session` ve `capabilities`).
+Aşama 3'ün ilk ucu: **`/auth/session` ve `capabilities`** (Adım 3.3 ve 3.6).
+Şu an iki tarafta da açık `B-nnn`/`F-nnn` yok.
