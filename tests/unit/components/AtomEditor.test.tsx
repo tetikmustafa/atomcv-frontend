@@ -7,7 +7,8 @@ import { axe } from 'jest-axe';
 import { describe, expect, it } from 'vitest';
 import { AtomEditor } from '@/components/profile/AtomEditor';
 import { listAtoms, patchAtom, type Atom } from '@/lib/api/endpoints/profile';
-import { profileKeys } from '@/lib/api/queryKeys';
+import { profileKeys, sessionKeys } from '@/lib/api/queryKeys';
+import { signIn } from '@/mocks/sessionFixture';
 import en from '@/messages/en.json';
 
 function makeClient() {
@@ -28,7 +29,18 @@ async function seeded(client: QueryClient) {
   return atoms;
 }
 
-async function renderEditor(atomId = 'atom-1') {
+/**
+ * Signed in by default, because the controls are what this file is about and
+ * `canEditAtomControls` is false anonymously (§ 35.7). The gate itself gets
+ * its own test, which opts out.
+ *
+ * When signed in the helper waits for the slider before handing back, so no
+ * test can race the session fetch and read an absence that only means "not
+ * yet".
+ */
+async function renderEditor(atomId = 'atom-1', { authenticated = true } = {}) {
+  if (authenticated) signIn();
+
   const client = makeClient();
   await seeded(client);
 
@@ -41,6 +53,8 @@ async function renderEditor(atomId = 'atom-1') {
   }
 
   const utils = render(<AtomEditor atomId={atomId} />, { wrapper: Wrapper });
+  if (authenticated) await screen.findByRole('slider', { name: 'Importance' });
+
   return { ...utils, client };
 }
 
@@ -84,6 +98,25 @@ describe('the atom editor', () => {
     await waitFor(() => {
       expect(screen.getAllByRole('status').some((r) => r.textContent === 'Saved')).toBe(true);
     });
+  });
+
+  /**
+   * `canEditAtomControls` (§ 35.7), and the assertion has two halves on
+   * purpose. The controls are gone — but the **wording is still there**,
+   * because § 9 promises a narrower product rather than a degraded one, and a
+   * gate that took the atom's own text with it would be the second thing.
+   */
+  it('hides the atom controls from a session that may not use them', async () => {
+    const { client } = await renderEditor('atom-1', { authenticated: false });
+
+    // Waited for, not assumed. Asserting an absence before the session has
+    // landed would pass for the wrong reason — and would keep passing if the
+    // gate were deleted.
+    await waitFor(() => expect(client.getQueryData(sessionKeys.current())).toBeDefined());
+
+    expect(screen.queryByRole('slider', { name: 'Importance' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: /always include/i })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Text')).toBeInTheDocument();
   });
 
   /**

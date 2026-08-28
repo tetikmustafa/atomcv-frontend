@@ -48,3 +48,18 @@ export type Session = Required<Omit<RawSession, 'capabilities'>> & {
 export function getSession() {
   return api.get<Session>('/auth/session');
 }
+
+/**
+ * Ends the session server-side.
+ *
+ * Answers `204` whether or not there was one to end, so there is no "were you
+ * even signed in" branch to write. The cookie is cleared by the response, not
+ * by us — rule 10 holds here too.
+ *
+ * What comes back is an **anonymous** session, not nothing: § 35.7's endpoint
+ * stamps one for a caller that arrives without a cookie. So the screen after
+ * signing out is the anonymous product, not a locked door.
+ */
+export function logout() {
+  return api.post<void>('/auth/logout');
+}

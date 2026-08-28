@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { SessionNotice } from '@/components/session/SessionNotice';
 import { Announcer } from './Announcer';
 import { MainNav } from './MainNav';
 
@@ -16,6 +17,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="border-border border-b">
           <MainNav />
         </header>
+        {/*
+          Outside `<main>`, because it is about the session rather than about
+          the page — and inside the scrolling region it would be a warning the
+          reader scrolls past on the one screen where they were working.
+        */}
+        <SessionNotice />
         <main id="main" tabIndex={-1} className="flex-1 outline-none">
           {children}
         </main>

@@ -13,11 +13,11 @@
 ## OPEN
 
 > **Dosya hâlâ 100 satır sınırının üstünde, ve sebebi arşivleme gecikmesi
-> değil:** on dört madde açık. Sınır bir okunabilirlik kuralı; onu delen şey
+> değil:** on üç madde açık. Sınır bir okunabilirlik kuralı; onu delen şey
 > burada bir belge sorunu değil, **bir koordinasyon sorunu** — ve mekanizma
-> 2026-08-29'da ilk kez çalıştı: dilim 0 dört maddeyi kapattı, dördü de
-> `resolved/to-frontend-2026-08.md`'ye taşındı ve dosya kendiliğinden 496'dan
-> küçüldü. Kalan on dördü aşağıda, dilim dilim kapanacak.
+> 2026-08-29'da çalışmaya başladı: dilim 0 dördünü, dilim 1 birini kapattı,
+> beşi de `resolved/to-frontend-2026-08.md`'ye taşındı ve dosya 496'dan
+> küçüldü. Kalan on üçü aşağıda, dilim dilim kapanacak.
 >
 > Gezinebilir olsun diye aşağıda bir dizin var. Gerekçelerin kalıcı olanı
 > `spec/`'e işlendi; burada yalnız *ne yapman lazım* duruyor.
@@ -26,7 +26,6 @@
 
 | ID | Konu | Ne yapman lazım, tek cümlede |
 |---|---|---|
-| `B-046` | Oturum ve yetenekler | `/auth/session` ve `/auth/logout`; yetenek kümesi ekranı sürüyor. |
 | `B-048` | OAuth | İki rota: `/auth/complete` ve `/auth/error`. |
 | `B-049` | Magic link | Bir rota (`/verify`) ve bir tuzak: bağlantı GET'tir, giriş POST'tur. |
 | `B-050` | Turnstile + 429 | Link isteği bir widget tokenı istiyor ve 429 dönebiliyor. |
@@ -40,19 +39,6 @@
 | `B-059` | Gizlilik Politikası | Alt işleyen listesine Resend + AWS SES (Tokyo). **Yayın öncesi zorunlu.** |
 | `B-060` | İkinci CV | `409 PROFILE_ALREADY_EXISTS`, iki resolution, `?mode=replace`. |
 | `B-061` | Maddesiz entry | Altında madde olmayan bir entry artık CV'ye çıkabiliyor — editörde engellemeyin. |
-
-### B-046 · `/auth/session`, `/auth/logout`, ve hesabın yetenek kümesi
-**Since:** commit <sha> · Adım 3.3 · **Spec:** `spec/08-api.md` § 35.7
-
-`GET /auth/session` → `authenticated` + `capabilities`, `no-store`.
-`POST /auth/logout` → `204`, oturumu sunucuda iptal eder; oturumsuz da `204`.
-
-§ 35.7 yalnız **anonim** kümeyi yazmıştı; hesaplı hâlinin tam tablosu artık
-orada — hesapta diller `["en","tr"]`, dört yetenek `true`, kotalar 20 · 5.
-
-**Aksiyon:** `maxAtoms` ve `anonymousExpiresAt` hesapta `null` değil, JSON'da
-**hiç yok** — tipleriniz opsiyonel okusun; olmayan bir limite karşı çizilen
-ilerleme çubuğu yanlış bir ekran. `allowedTemplates` bugün `["classic"]`.
 
 ### B-048 · OAuth indi — sizden iki rota
 **Since:** commit <sha> · Adım 3.3 dilim 2 · **Spec:** `spec/10-security.md` § 40.6.1
@@ -427,11 +413,16 @@ maliyetini ödemez. Sayfa sınırı garantisi aynen duruyor.
 
 ## ACK — frontend tamamladı, backend arşivleyebilir
 
-_(`B-037`…`B-043` ve Aşama 3 dilim 0'ın kapattığı `B-044`, `B-045`, `B-047`,
-`B-055` — hepsi `resolved/to-frontend-2026-08.md`'de.)_
+_(`B-037`…`B-043`, dilim 0'ın kapattığı `B-044`, `B-045`, `B-047`, `B-055` ve
+dilim 1'in kapattığı `B-046` — hepsi `resolved/to-frontend-2026-08.md`'de.)_
 
 **`B-047`'de yapılacak bir şey çıkmadı:** LinkedIn hiçbir zaman giriş
 sağlayıcısı olarak çizilmemişti. Silinmedi, hiç yoktu — madde yine de kapalı.
+
+**`B-046`'da bir şey ertelendi ve sebebi kayıtlı:** `/auth/logout` bağlı ve
+test edildi, ama **çıkış düğmesi çizilmedi** — bugün kimse giriş yapamıyor,
+yani ulaşılamayan bir durumun düğmesi olurdu. Düğme dilim 2'de giriş yoluyla
+birlikte iniyor.
 
 ---
 

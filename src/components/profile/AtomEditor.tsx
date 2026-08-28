@@ -35,6 +35,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useAutosave } from '@/hooks/useAutosave';
 import { useAtom, useDeleteAtom, usePatchAtom, usePatchVariant } from '@/hooks/useProfile';
+import { useCapabilities } from '@/hooks/useSession';
 import { plainText } from '@/lib/content/plainText';
 import { parseRichContent, type Run } from '@/lib/content/richContent';
 import type { AtomPatch } from '@/lib/api/endpoints/profile';
@@ -70,6 +71,14 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
   const t = useTranslations('Editor.atom');
   const tDelete = useTranslations('Editor.delete');
   const { data: atom, isPending, error: readError } = useAtom(atomId);
+  /*
+    One cache entry, two hundred observers — which is what `useQuery` on a
+    shared key costs, and it is the cheaper half of the trade. Threading
+    capabilities down as a prop would mean passing it through the section
+    list and every entry heading, and the first component that forgot to
+    forward it would silently draw a control the caller may not use.
+  */
+  const capabilities = useCapabilities();
 
   const patchAtom = usePatchAtom();
   const patchVariant = usePatchVariant();
@@ -204,24 +213,40 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
         wordingField
       )}
 
-      <ImportanceSlider
-        value={atom.importance ?? 0}
-        onChange={(value) => importance.change({ importance: value })}
-      />
-      <SaveStatus
-        status={importance.status}
-        onRetry={importance.retry}
-        onDiscard={importance.discard}
-      />
+      {/*
+        `canEditAtomControls` (§ 35.7). Hidden rather than disabled, and the
+        difference matters at this scale: a locked control repeated beside
+        every one of two hundred atoms is an upsell in the middle of the
+        person's own work, and § 9's promise is a **narrower** product, not a
+        nagging one. Nothing is lost by their absence — manual control is
+        optional by design, and the default output is the same either way.
 
-      <LockToggles
-        values={{
-          active: atom.active ?? true,
-          alwaysInclude: atom.alwaysInclude ?? false,
-          verbatim: atom.verbatim ?? false,
-        }}
-        onChange={(toggle: LockToggle, value) => controls.change({ [toggle]: value })}
-      />
+        Closed while the session is still loading: a slider that appears and
+        then vanishes can be dragged in between, and the save would be
+        refused. The server enforces this regardless; the gate is UX.
+      */}
+      {capabilities?.canEditAtomControls === true && (
+        <>
+          <ImportanceSlider
+            value={atom.importance ?? 0}
+            onChange={(value) => importance.change({ importance: value })}
+          />
+          <SaveStatus
+            status={importance.status}
+            onRetry={importance.retry}
+            onDiscard={importance.discard}
+          />
+
+          <LockToggles
+            values={{
+              active: atom.active ?? true,
+              alwaysInclude: atom.alwaysInclude ?? false,
+              verbatim: atom.verbatim ?? false,
+            }}
+            onChange={(toggle: LockToggle, value) => controls.change({ [toggle]: value })}
+          />
+        </>
+      )}
 
       {/*
         The lists the pipeline reads: `skills` is what matching scores

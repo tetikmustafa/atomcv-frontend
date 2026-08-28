@@ -74,6 +74,9 @@
     "profile": "Profil",
     "generate": "CV oluştur"
   },
+  "Session": {
+    "expiring": "Bu oturum {at, time, short} itibarıyla sona eriyor — buradaki son işleminden iki saat sonra, yani çalışmaya devam etmek bu süreyi ileri atıyor. Henüz bir hesaba kaydedilmiş bir şey yok."
+  },
   "ErrorPanel": {
     "dismiss": "Kapat",
     "retry": "Tekrar dene"

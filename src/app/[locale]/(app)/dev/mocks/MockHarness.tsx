@@ -100,8 +100,18 @@ export function MockHarness() {
             <dd data-testid="allowed-languages">
               {session.data.capabilities.allowedLanguages.join(', ')}
             </dd>
+            {/*
+              Both printed as they arrive, `undefined` included: in an account
+              neither key is in the JSON at all (§ 35.7), and this page exists
+              to show what the wire actually carries rather than a tidied
+              version of it.
+            */}
             <dt>maxAtoms</dt>
-            <dd data-testid="max-atoms">{session.data.capabilities.maxAtoms}</dd>
+            <dd data-testid="max-atoms">{String(session.data.capabilities.maxAtoms)}</dd>
+            <dt>anonymousExpiresAt</dt>
+            <dd data-testid="anonymous-expires-at">
+              {String(session.data.capabilities.anonymousExpiresAt)}
+            </dd>
           </dl>
         )}
       </section>

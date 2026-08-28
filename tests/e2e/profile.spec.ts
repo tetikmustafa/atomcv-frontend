@@ -1,4 +1,20 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+import { MOCK_SESSION_KEY } from '../../src/mocks/sessionFixture';
+
+/**
+ * Signs the browser in before the first navigation.
+ *
+ * The atom controls are `canEditAtomControls`, which is false anonymously
+ * (§ 35.7), so the two tests that touch them describe an account. There is no
+ * sign-in endpoint to call yet and the mock deliberately does not invent one —
+ * the page carries the answer instead.
+ */
+async function asAccount(page: Page) {
+  await page.addInitScript(
+    ([key]) => window.localStorage.setItem(key!, 'account'),
+    [MOCK_SESSION_KEY],
+  );
+}
 
 /**
  * The profile editor in a real browser.
@@ -29,6 +45,7 @@ test.describe('the profile editor', () => {
   });
 
   test('opens a section and saves a toggle without a save button', async ({ page }) => {
+    await asAccount(page);
     await page.goto('/en/profile');
 
     await page.getByRole('button', { name: 'Experience', exact: true }).click();
@@ -44,11 +61,33 @@ test.describe('the profile editor', () => {
   });
 
   /**
+   * The other side of `asAccount`, and the one an anonymous visitor actually
+   * gets. § 9 promises a **narrower** product rather than a degraded one, so
+   * the assertion has both halves: the controls are gone and the person's own
+   * wording is still there.
+   */
+  test('gives an anonymous session the wording but not the atom controls', async ({ page }) => {
+    // Waited for rather than assumed. Asserting an absence before the session
+    // has landed would pass even if the gate were deleted.
+    const session = page.waitForResponse((response) => response.url().includes('/auth/session'));
+    await page.goto('/en/profile');
+    await session;
+
+    await page.getByRole('button', { name: 'Experience', exact: true }).click();
+
+    const first = page.getByRole('article').first();
+    await expect(first.getByLabel('Text')).toBeVisible();
+    await expect(first.getByRole('slider', { name: 'Importance' })).toHaveCount(0);
+    await expect(first.getByRole('switch', { name: 'Always include' })).toHaveCount(0);
+  });
+
+  /**
    * Rule 5, in the browser. The slider's arrow-key handling is Radix's, and
    * it depends on measuring the track — which jsdom cannot do at all, so the
    * unit test proves the wiring and this proves the behaviour.
    */
   test('moves the importance slider with the keyboard', async ({ page }) => {
+    await asAccount(page);
     await page.goto('/en/profile');
     await page.getByRole('button', { name: 'Experience', exact: true }).click();
 

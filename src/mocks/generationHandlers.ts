@@ -27,10 +27,10 @@ import {
   generations,
   jobSnapshot,
   phasesAfter,
-  QUOTA,
   TERMINAL_AT,
   type MockJob,
 } from './generationFixture';
+import { currentQuota } from './sessionFixture';
 
 type Schemas = components['schemas'];
 type GenerationRequest = Schemas['GenerationRequest'];
@@ -172,7 +172,7 @@ export const generationHandlers = [
       );
     }
 
-    if (generations.usage.generation >= QUOTA.generation) {
+    if (generations.usage.generation >= currentQuota().generation) {
       const at = resetsAt();
 
       // The refusal takes a unit too, and that is the point: without it a
@@ -451,8 +451,11 @@ export const generationHandlers = [
    */
   http.get('*/api/v1/account/usage', () =>
     HttpResponse.json<Schemas['Usage'][]>([
-      metric('generation', generations.usage.generation, QUOTA.generation),
-      metric('profile_extract', generations.usage.profile_extract, QUOTA.profile_extract),
+      // The same `currentQuota()` the capability set reads. An account has a
+      // different pair, and a usage screen disagreeing with `capabilities`
+      // was the failure this single source exists to prevent (§ 35.7).
+      metric('generation', generations.usage.generation, currentQuota().generation),
+      metric('profile_extract', generations.usage.profile_extract, currentQuota().profile_extract),
     ]),
   ),
 ];

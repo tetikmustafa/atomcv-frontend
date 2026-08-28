@@ -6,6 +6,7 @@ import { server } from '@/mocks/node';
 import { installEventSource, resetEventSource } from './support/eventSource';
 import { resetGenerationFixture } from '@/mocks/generationFixture';
 import { resetProfileFixture } from '@/mocks/profileFixture';
+import { resetSessionFixture } from '@/mocks/sessionFixture';
 
 expect.extend(toHaveNoViolations);
 
@@ -52,6 +53,9 @@ afterEach(() => {
   // Same reason, different counter: a quota the previous test used up would
   // fail the next one on a limit it never asked for.
   resetGenerationFixture();
+  // A test that signed in would otherwise hand the next one an account, and
+  // the capability gates would pass for the wrong reason.
+  resetSessionFixture();
   resetEventSource();
   cleanup();
 });

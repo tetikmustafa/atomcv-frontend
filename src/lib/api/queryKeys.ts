@@ -61,3 +61,16 @@ export const accountKeys = {
   all: ['account'] as const,
   usage: () => [...accountKeys.all, 'usage'] as const,
 };
+
+/**
+ * Who is here. One key, no parameters — there is only ever one session, and
+ * the server decides which one from a cookie the client cannot read.
+ *
+ * Deliberately not under `accountKeys`: an anonymous caller has a session and
+ * no account, and nesting it there would make "invalidate the account" also
+ * throw away the thing that says whether there is one.
+ */
+export const sessionKeys = {
+  all: ['session'] as const,
+  current: () => [...sessionKeys.all] as const,
+};

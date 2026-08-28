@@ -407,3 +407,45 @@ görmemiş bir ekran %60'ta boş bir başlık çizer ve bunu hiçbir test yakala
 çerçeve sayısı buna göre güncellendi. Fazın **her üretimde görünmediği**
 (genel CV modu, becerisiz ilan) çağrı yerlerine yorum olarak işlendi — %50'den
 %70'e atlayan bir çubuk düşmüş bir çerçeve değil.
+
+---
+
+## Aşama 3 · dilim 1 — 2026-08-29
+
+### B-046 · `/auth/session`, `/auth/logout`, ve hesabın yetenek kümesi
+İki uç da bağlı, iki yetenek kümesi de mock'ta, ve kapılar ekranda.
+
+**Türetme düz `Required<>` değil.** § 35.7 dört bayrağı, iki kotayı ve iki
+sayacı **iki oturum türü için de** garanti ediyor; `endpoints/auth.ts` onları
+zorunlu okuyor. Sebebi bir yetenek kapısının üç değerli olmaması gerektiği:
+`undefined` sessizce "yapamaz" dalına düşer ve kullanıcının **sahip olduğu**
+özelliği gizler. Gerçekten değişen üçü (`maxAtoms`, `quotaResetsAt`,
+`anonymousExpiresAt`) opsiyonel — maddeniz hesapta "JSON'da hiç yok" diyor,
+şema `nullable` diyor, ikisi de okunabiliyor. Bir test hesapta iki alanın da
+**anahtar olarak bulunmadığını** sınıyor, `null` olmadığını değil.
+
+**`allowedTemplates` artık `["classic"]`.** Mock üçünü sayıyordu; § 35.7'nin
+örneği kayıttan eski. Render edilemeyecek bir şablonu listelemek üretim anında
+patlayan bir seçenek sunmaktır.
+
+**İlk görünür kapı `canEditAtomControls`.** Önem kaydırıcısı ve üç kilit
+anahtarı anonimde **gizleniyor**, kilitli gösterilmiyor: iki yüz atomun her
+birinin yanında tekrarlanan kilitli bir kontrol, kişinin kendi çalışmasının
+ortasına yerleştirilmiş bir satış konuşmasıdır ve § 9'un sözü **daha dar** bir
+ürün, dırdır eden bir ürün değil. Kaybolan bir şey yok — elle kontrol zaten
+isteğe bağlı, varsayılan çıktı iki halde de aynı. Oturum yüklenirken kapı
+**kapalı**: görünüp kaybolan bir kaydırıcı arada sürüklenebilir.
+
+**`GET /auth/session` önbellekten servis edilmiyor.** `staleTime: 0` (30 sn'lik
+varsayılan editörün yüzlerce atom anahtarı için var ve içinde saat olan bir
+değer için tam olarak yanlış) ve `refetchOnWindowFocus` — genelde kapalı,
+burada açık. Doksan dakika sonra sekmeye dönen kişi, süre bildiriminin
+yazıldığı kişi.
+
+**Çıkış düğmesi henüz çizilmedi, uç bağlı.** `logout()` ve `useLogout()`
+duruyor ve test ediliyor; düğme dilim 2'de giriş yoluyla birlikte iniyor,
+çünkü bugün kimse giriş yapamıyor ve ulaşılamayan bir durumun düğmesi
+kontrol edilemez. `useLogout` önbelleği **temizliyor**, invalidate etmiyor:
+her şey **biri olarak** çekildi ve sıradaki başka biri; invalidate eski
+profili her sorgu yeniden çekene kadar ekranda bırakır, ki ortak bir
+makinede bu bir kişinin CV'sini sonrakine göstermektir.

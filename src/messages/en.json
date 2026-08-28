@@ -74,6 +74,9 @@
     "profile": "Profile",
     "generate": "Generate"
   },
+  "Session": {
+    "expiring": "This session ends at {at, time, short} — two hours after your last activity here, so carrying on pushes it back. Nothing is saved to an account yet."
+  },
   "ErrorPanel": {
     "dismiss": "Dismiss",
     "retry": "Try again"

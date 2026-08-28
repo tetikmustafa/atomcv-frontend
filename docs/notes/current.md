@@ -89,6 +89,60 @@ saatte tekrar deneyin yazacaksanız kullanın" dediği biçimde yazıldı; başl
 okuyan hâli, onu ilk gerçekten gösterecek ekranla (dilim 2, magic link formu)
 birlikte iniyor.
 
+### Dilim 1 — oturum · 2026-08-29
+
+`B-046` kapandı; madde kaydı `resolved/`'da. Kodda kalan şeyler:
+
+**`useSession` iki varsayılanı geçiyor ve ikisi de gerekçeli.** `staleTime: 0`
+— 30 sn'lik varsayılan editörün yüzlerce atom anahtarı için var ve içinde saat
+olan bir değer için tam olarak yanlış. `refetchOnWindowFocus: true` — genelde
+kapalı, çünkü autosave sekme değişimiyle kavga etmemeli; burada **tam da olay
+bu**, doksan dakika sonra sekmeye dönen kişi süre bildiriminin yazıldığı kişi.
+
+**Bildirim `Date.now()` okumuyor, `dataUpdatedAt` okuyor** — ve bunu lint
+buldu (`react-hooks/purity`). Kural saflık için var ama asıl kazanç başka:
+render sırasında saati okuyan bileşen, kimsenin planlamadığı bir render'da
+saatin ne dediğini gösterir, yani bildirim geç, erken ya da hiç çıkmaz.
+`dataUpdatedAt` pencereye tek bir anlam veriyor — **sunucunun söylediği anda
+ne kadar kaldığını söylediği** — ve yeni cevap indiğinde yeniden
+değerlendiriliyor. Yanılma yönü de güvenli: kişi çalışırken istekleri TTL'i
+ileri kaydırıyor, bu sayı geride kalıyor, bildirim erken çıkıyor.
+
+**Eşik on beş dakika, ve sebebi çıkış yolunun süresi.** Bildirimin işi girişe
+yönlendirmek; giriş bir e-posta beklemek ve bir bağlantıya tıklamak demek.
+Çaresinden kısa süre tanıyan bir uyarı yalnızca kaybın duyurusudur. Daha uzunu
+iki saat boyunca duran, dolayısıyla okunmayan bir şerit olurdu.
+
+**Kapı gizliyor, kilitlemiyor.** İki yüz atomun her birinin yanında tekrarlanan
+kilitli bir kontrol, kişinin kendi çalışmasının ortasına konmuş bir satış
+konuşmasıdır; § 9 **daha dar** bir ürün vaat ediyor, dırdır eden bir ürün
+değil. Ve elle kontrol zaten isteğe bağlı — varsayılan çıktı iki halde de aynı.
+Oturum yüklenirken kapı kapalı (`=== true`): görünüp kaybolan bir kaydırıcı
+arada sürüklenebilir ve yazma reddedilir.
+
+**`useCapabilities` atom başına çağrılıyor, prop olarak geçirilmiyor.** İki yüz
+gözlemci tek bir cache girdisine bağlanıyor; takas bilinçli. Alternatif
+capabilities'i bölüm listesinden her entry başlığına kadar taşımaktı, ve iletmeyi
+unutan ilk bileşen sessizce kullanılamayacak bir kontrol çizerdi.
+
+**Mock'un tarayıcı kanalı bir bayrak, sahte bir uç değil.** Playwright kendi
+sürecinde koşuyor ve MSW handler'ları sayfada; modül durumuna erişemiyor.
+`localStorage`'daki `atomcv-mock-session`'ı `addInitScript` yazıyor. Gerçek
+backend'de olmayan bir "sahte giriş" ucu uydurmak, handler'lara telde karşılığı
+olmayan bir şekil koymak olurdu — bu mock'ların yapmaması gereken tek şey.
+
+**İki e2e testi hesaba taşındı, biri anonim olarak eklendi.** Kaydırıcı ve
+toggle testleri hesabın kontrollerini deniyordu; artık `asAccount` ile
+koşuyorlar. Yeni test anonim kapının **iki yarısını** da sınıyor: kontroller
+yok, **sözcükleme duruyor**. Yokluk iddiası oturum yanıtı beklendikten sonra
+yapılıyor — beklemeden yazılsaydı kapı silinse bile geçerdi.
+
+**Negatif kontroller yapıldı:** kapı `true` yapılınca anonim testi kırılıyor,
+eşik kaldırılınca "vakit varken bir şey söylemiyor" testi kırılıyor.
+
+**Bundle:** profil 250.6 → **251.2**, üretim 214.8 → **215.6** KB. Pazarlama
+rotaları 168.3'te sabit — `SessionNotice` yalnız `(app)` altında.
+
 ### `B-043` — bir kodun arkasındaki sekiz sebep
 
 `F-016`'nın dönüşü. Sekiz sebep tek `errors.*` anahtarında, **ICU `select`**

@@ -85,6 +85,15 @@ export type GenerationFixture = {
 export const QUOTA = { generation: 5, profile_extract: 3 } as const;
 
 /**
+ * The account's, which is a different pair rather than a bigger version of
+ * the same one (§ 35.7, and `B-046` names the numbers).
+ *
+ * `sessionFixture.currentQuota()` picks between them, so a signed-in caller's
+ * `capabilities` and `/account/usage` still read from one place.
+ */
+export const ACCOUNT_QUOTA = { generation: 20, profile_extract: 5 } as const;
+
+/**
  * The phase progression, re-measured against the running backend on
  * 2026-08-25, after `B-040`.
  *
