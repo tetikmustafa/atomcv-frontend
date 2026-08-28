@@ -83,6 +83,12 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS citext;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
+-- KURAL: bir CITEXT kolonu VARCHAR parametreyle aranırsa Postgres
+-- karşılaştırmayı büyük/küçük harf DUYARLI yapar. UNIQUE index duyarsız
+-- korur, JPA'nın türettiği sorgu duyarlı arar; ikisi çelişince var olan satır
+-- bulunamaz ve insert 500 verir. `users.email` ya da `email_suppressions.email`
+-- üstündeki HER yeni sorgu `CAST(:x AS citext)` yazar.
+
 -- ─────────────────────────────── KİMLİK ───────────────────────────────
 
 CREATE TABLE users (
@@ -100,7 +106,7 @@ CREATE TABLE users (
 CREATE TABLE oauth_identities (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    provider        TEXT NOT NULL CHECK (provider IN ('google','github','linkedin')),
+    provider        TEXT NOT NULL CHECK (provider IN ('google','github')),   -- V2: linkedin çıkarıldı
     provider_uid    TEXT NOT NULL,
     access_token_enc TEXT,                     -- şifreli
     scopes          TEXT[],

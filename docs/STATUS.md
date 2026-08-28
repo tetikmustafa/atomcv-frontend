@@ -3,7 +3,7 @@
 > İki repo da bu dosyayı okur ve kendi satırlarını günceller. **Kural: 60 satırı geçmez.**
 > Ayrıntılı inşa kayıtları repo-yerel `notes/current.md`'dedir, buraya taşınmaz.
 
-**Son güncelleme:** 2026-08-25 · **`B-043` kapandı**, açık madde yok · Aşama 0-2 yeniden doğrulandı
+**2026-08-28** · **3.9 · 2/2 — backend'in MVP payı bitti** · frontend'de açık: **`B-044`**–**`B-058`**, on beşi de bekliyor
 
 ---
 
@@ -11,50 +11,50 @@
 
 | Aşama / Adım | Durum |
 |---|---|
-| Aşama 0 — İskelet | ✅ |
-| Aşama 1 — Yürüyen iskelet (1.1-1.9) | ✅ |
-| **Aşama 2 — İlana özel üretim** | ✅ kapanış listesi 8/8 |
-| 2.1 hesaplar · 2.2 gateway · 2.3 Faz A · 2.4 embedding · 2.5 Faz B · 2.6 kuyruk+SSE | ✅ |
-| 2.7 kota ve maliyet | ✅ (Axiom dataset'i 3.1'e taşındı) |
+| Aşama 0 · 1 — Yürüyen iskelet · **2 — İlana özel üretim** (2.1-2.7) | ✅ · ✅ 8/8 |
+| **Aşama 3 — hesap ve MVP** · 3.1 dış servis hesapları | 🔄 · ✅ |
+| 3.2 e-posta domain | 🔄 geliştiricide (DNS + DMARC) · 3.3 kimlik ✅ 4/4 |
+| 3.4 CV yükleme ve çıkarım ✅ 4/4 · 3.5 çok dillilik ✅ 2/2 | ✅ |
+| 3.6 anonim mod ✅ 6/6 · 3.7 profil editörü **frontend'de** | ✅ |
+| 3.8 Faz D ✅ 5/5 · 3.9 hukuki ✅ 2/2 — silme, geri bildirim · **kalan: 3.2 DNS** | ✅ |
 
-**Aşama 3 planı:** § XI-A.6. Aşama 2'nin kaydı `notes/archive/stage-2.md`'de.
-**`B-043` frontend'de kapandı**; spec zaten senkrondu, `sync-spec.sh` fark
-üretmedi. **Aşama 0-2 bu makinede baştan doğrulandı (2026-08-25):** üç koşu da
-`--rerun-tasks` ile sıfırdan koştu, `make dev` ayağa kalktı (health UP, Flyway
-V1 `success`, 22 tablo, pgvector 0.8.6), Mailpit 200, gitleaks kancası kurulu,
-CI main'de yeşil. `suspicious_output` sorunuzun cevabı `to-frontend.md`'de.
+**Aşama 3 planı:** § XI-A.6. **Kimlik:** Redis oturum + CSRF, Google/GitHub,
+magic link; `POST /auth/magic-link` üç katman rate limit + Turnstile arkasında
+(§ 40.5.1). **Üretimde iki değişken zorunlu:** `TURNSTILE_SECRET_KEY` (yoksa
+açılmaz) ve `FORWARD_HEADERS_STRATEGY=framework` (yoksa IP katmanı tek kova
+olur) — § 46.5. **Çıkarım:** PDF/DOCX/TEX/TXT/MD, dosya saklanmıyor (§ 31.3.1);
+tek LLM çağrısı iki dil üretiyor (§ 31.4.1); alias sözlüğü karşılaştırmanın iki
+tarafında da (§ 31.5.1). **`POST /profile/import`** — `202` + iş, beş ret
+senkron (§ 31.6.1-2), sözleşme **`B-051`**. **Anonim yükleme aynı uçtan**: hesap
+istemiyor, hak adrese göre, profil hiçbir tabloda satır değil (§ 31.6.3) —
+**`B-053`**. **Yükseltme girişin içinde**, id'leriyle birlikte; hesabın profili
+varsa yazılmıyor ve söyleniyor (§ 41.3.3), `/auth/verify` artık `200` + gövde —
+**`B-054`**.
 
-**Aşama 1:** 9/9 ✅, `F-001`…`F-007` kapandı
-**Test:** 614 birim · 251 entegrasyon · 48 latex — 0 hata, 0 atlanan
+**`F-001`…`F-016` kapandı, açık `F-nnn` yok.** **Test:** 989 birim · 396 entegrasyon — 0 hata · **latex 44/48** (dört test fixture'sız düşüyor, 3.8 öncesi de)
 
 ## Frontend — `atomcv-frontend`
 
 | Aşama / Adım | Durum |
 |---|---|
-| Aşama 0 — İskelet | ✅ |
-| Aşama 1 — Profil editörü | ✅ |
-| Aşama 2 — Üretim akışı + SSE | ✅ |
+| Aşama 0 — İskelet · 1 — Profil editörü · 2 — Üretim akışı + SSE | ✅ |
 
-**`B-042` ve `B-043` kapandı**, açık `B-nnn` yok. `gen:api` fark üretmedi.
-**Aşama 0-2 bu makinede baştan geçti (2026-08-25):** typecheck, lint, format,
-**401 birim · 25 e2e**, build + bütçe (profil 250.7 / üretim 214.8 KB), MSW
-üretim yığınında yok. Öncesinde gerçek uca karşı 26/26 kontrol: kota,
-idempotency, SSE (0→10→30→50→70), uygunluk raporu, iki dil etiketi, PDF + 406.
-**`suspicious_output` kapandı** — tetiklenememesi beklenen sonuç, kapı sıralı.
-
----
+**`B-044`-`B-054` açık, hiçbiri ACK almadı** — `to-frontend.md` bu yüzden 279 satır.
+`/auth/complete`, `/auth/error`, `/verify`, Turnstile widget'ı sizde.
+**Test:** 401 birim · 25 e2e · **bundle** profil 250.7 / üretim 214.8 KB.
+**Aşama 2 gerçek uca karşı denetlendi (2026-08-25): 26/26** — yalnız
+`suspicious_output` tetiklenemedi, o da beklenen sonuç.
 
 ## Açık kararlar (ikisini de ilgilendirir)
 
 | Soru | Bekleyen taraf |
 |---|---|
 | Üretimde migration nasıl çalışır | backend · Aşama 2 |
-| Anonim akış kuyruğu kullanacak mı | backend · Aşama 3 |
-| Atomsuz entry seçilemiyor | backend · Bölüm 20.2 modelini etkiler |
-
----
+| Atomsuz entry seçilemiyor | backend · § 20.2 modelini etkiler |
+| Hesabın profili varken anonim çalışma birleşecek mi | **ürün** · bugün `kept_existing` |
 
 ## Sonraki senkronizasyon noktası
 
-Aşama 3'ün ilk ucu: **`/auth/session` ve `capabilities`** (Adım 3.3 ve 3.6).
-Şu an iki tarafta da açık `B-nnn`/`F-nnn` yok.
+**Frontend `B-044`-`B-058`'i alsın** — 15 madde, tek bir `ACK` almadı ve dosya
+390 satır. Backend'in MVP payı bitti; **sırada 3.7 profil editörü ve bu maddeler
+sizde.** Backend'de kalan tek iş 3.2 (DNS + DMARC, geliştiricide).

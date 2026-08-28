@@ -19,6 +19,13 @@ Optional<AtomVariant> pickExisting(Atom atom, String targetLang, String tone) {
 
 Uygun varyant varsa **maliyet sıfır** — kullanıcının profil editöründe yaptığı yatırım burada karşılık buluyor.
 
+**Bu adım Faz D'nin içinde değil, Faz C'nin önünde koşuyor** (Adım 3.8, dilim 3
+— § 21.5.1). Seçim, seçtiği varyantın **ölçülmüş** maliyetini bütçeye yazıyor;
+sözcüklemeyi sonradan değiştiren bir Faz D, sayfaya yüksekliği hiç ölçülmemiş
+bir satır bastırırdı. Kod `AlternativeWording.pick` olarak seçim paketinde
+duruyor, Faz D de yeniden seçmek yerine seçimin kaydettiği varyant id'sini
+okuyor.
+
 ### 21.2 Adım 2 — Üç kademeli müdahale eşiği
 
 | Skor | Müdahale | Gerekçe |
@@ -40,6 +47,42 @@ int maxChars = (int)(original.plainText().length() * 1.05);   // %5 tolerans
 ```
 
 Prompt'ta belirtilir **ve kodda doğrulanır**.
+
+#### 21.3.1 Kararlar (Adım 3.8, dilim 1)
+
+**Düzeltme — § 21.1 varyantı `similarity(v.embedding(), jdVector)` ile
+sıralıyor, ve varyantın embedding'i yok.** Vektör `atoms` üzerinde ve İngilizce
+sözcüklemeden hesaplanıyor (§ 31.6.2); diller arası karşılaştırmanın istediği
+de bu. Bir cümlenin iki sözcüklemesi zaten neredeyse aynı noktaya gömülüyor,
+yani onları ilana karşı sıralamak gürültü ölçmek olurdu. Aralarını gerçekten
+açan şey kişinin kendi ayarı — **dil ve ton** — ve seçim onunla yapılıyor.
+Kalanı belirlenimci bir eşitlik bozucu: aynı üretim iki kez istendiğinde aynı
+CV çıkmalı (İlke 2).
+
+**Dil tondan önce geliyor, ve ton yalnız bir tercih.** Yanlış dilde bir CV bir
+biçem sorusu değil; istenen tonda sözcüklemesi olmayan atom ise elindekini
+koruyor — § 21.8'in eksik çeviri için yaptığı geri düşüşün aynısı.
+
+**§ 21.1 ilk kez tonu okuyor.** Seçim bugüne kadar `variantIn(language)` ile
+ilk eşleşeni alıyordu; profil editöründe iki sözcükleme tutan kişinin yatırımı
+tam olarak burada karşılık buluyor, ve **hiçbir model çağrılmadan**.
+
+**Ekleme — "uzunsa sıkıştır" eşiği yazılı değildi: 160 karakter.** Yaklaşık iki
+basılı satır. Altında sıkıştırmak birkaç puan sayfa kazandırıp cümlenin anlamını
+riske atıyor; sorun olmayan cümleyi değiştirmenin bedeli var. Karakter cinsinden,
+punto cinsinden değil: karar cümle hakkında, ve yazı tipi boyutu kısa bir maddeyi
+kesmeye değer kılamaz.
+
+**Taban bir eşik, tercih değil.** Kodun bariz şekli "skor yüksekse uyarla, değilse
+uzunsa sıkıştır" — doğru okunuyor ve ilanla ilgisi olmayan maddeleri sessizce
+kısaltıyor. § 21.2'nin üçüncü kademesi **hiç dokunma**: ilgisiz bir cümle
+kısaltılarak iyileşmiyor, sebepsizce değiştirilmiş oluyor. *(Ekilen ihlal ilk
+denemede hiçbir testi düşürmedi; eksik olan testti.)*
+
+**Üst sınır sekiz.** § 21.2 "6-8" diyor. Sınır iki şey için var: maliyet, ve her
+cümlesi ilanın sözcükleriyle doldurulmuş CV. İkincisini zaten taban hallediyor —
+gerçek bağlantısı olmayan atom sınır ne olursa olsun aday değil. Verilen aralıkta
+büyük sayı, gerçekten uyan bir CV'nin daha azını dokunulmadan bırakıyor.
 
 ### 21.4 Prompt
 
@@ -79,6 +122,43 @@ try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
 }
 ```
 
+#### 21.5.1 Kararlar (Adım 3.8, dilim 3)
+
+**Sapma — `StructuredTaskScope` kullanılmıyor, ve asıl sebep preview API
+olması değil.** § 21.5'in kapsamı bir `ShutdownOnFailure`: bir görev
+başarısız olunca kardeşlerini iptal ediyor. Bu faz için yanlış kural, çünkü
+§ 21.6 başarısız bir yeniden yazımın ne demek olduğunu zaten söylüyor —
+orijinal cümle kalır. Bir maddenin tökezlemesi, parası ödenmiş yedi cevabı
+çöpe atmanın gerekçesi değil. Yerine sanal iplik başına bir görev
+(`newVirtualThreadPerTaskExecutor`): aynı dağılım, aynı buluşma, ve bir
+görevin başarısızlığı bir görevin başarısızlığı olarak kalıyor.
+
+**Ekleme — yeniden yazım üretim başına bir kez, deneme başına değil.** § 23.1
+uzun çıkan belgeyi küçülen bütçeyle yeniden seçtiriyor; ayakta kalan atomlar
+zaten yeniden yazılmış olanlar. Boru hattı bu yüzden kabul edilen yeniden
+yazımları denemeler arasında taşıyor. Kaybı bozuk bir CV değil, kimsenin
+görmediği bir fatura.
+
+**Ekleme — ilan hiçbir beceri adı taşımıyorsa Faz D koşmuyor.** Maliyet için
+değil: § 21.6'nın desteklenmeyen iddia kontrolü ilanın sözlüğüne karşı ölçülüyor
+(§ 21.6.1), ve boş bir sözlükle yeniden yazım herhangi bir teknolojiyi
+adlandırıp her kontrolü geçebilirdi. Bu bir dürüstlük kapısı.
+
+**Ekleme — genel CV modunda Faz D hiç koşmuyor.** § 21.2'nin kademeleri Faz B
+skorları, ve genel modda karşısında bir ilan yok (§ 19.4). Boru hattı Faz D'yi
+bir parametre olarak alıyor; genel mod hiçbir şey yapmayanı geçiyor.
+
+**Yeniden yazım profile yazılmıyor.** Faz E'ye atom id'sinden içeriğe bir
+eşleme olarak ulaşıyor: kişinin yazdığı cümle onun, yeniden yazım tek bir
+üretimin doğrusu. Eşlemede olmayan atom yazıldığı gibi basılıyor — § 21.6'nın
+"sonra orijinali kullan" kuralı böylece render'ın yanlış yapamayacağı bir şey
+oluyor. Kalıcılık ayrıca bir iş istemiyor: `generations.content_snapshot`
+zaten render girdisini kopyalıyor (§ 22.2).
+
+**Prompt sürümü yalnız Faz D bir şey değiştirdiğinde kayda giriyor.** Profili
+harfiyen basmış bir üretimin kaydında yeniden yazım prompt'unun adı, onu
+okuyanı yanlış prompt'a gönderirdi (§ 53.3).
+
 ### 21.6 Doğrulama katmanı
 
 ```java
@@ -115,6 +195,50 @@ public ValidationResult validate(RichContent original, String rewritten, Atom at
 
 Sistem asla doğrulanmamış içerik yayınlamaz. `UNSUPPORTED_CLAIM` için **sıfır tolerans**.
 
+#### 21.6.1 Kararlar (Adım 3.8, dilim 2)
+
+**Servis `Result` değil içerik döndürüyor.** § 21.6'nın kuralı "iki deneme,
+sonra orijinal" — yani bu katmanın çağırana bildirebileceği bir başarısızlık
+yok. Kişi CV istedi; elindeki cümle zaten orada ve onu basmak **bozulmuş değil
+doğru** bir cevap. Sağlayıcı kesintisi de aynı cevabı alıyor: ret değil, yeniden
+yazılmamış bir satır.
+
+**Ekleme — desteklenmeyen iddia sözlüğü ilanın becerileri + alias sözlüğü.**
+§ 21.6 `extractTechnologies(rewritten)` diyor ve bu kod tabanında genel bir
+teknoloji çıkarıcı yok. Asıl korkulan davranış zaten dar: modelin **az önce
+gösterildiği** ilan becerilerini cümleye sokması. Sözlük bu yüzden ilanın
+`requiredSkills` + `preferredSkills`'i, üstüne alias sözlüğünün bildiği adlar.
+Zorunlu ve tercih edilen birlikte: yalnız zorunluları bilen bir doğrulayıcı,
+tercih edilen bir beceriyi denetimsiz bıraktırırdı.
+
+**Ekleme — orijinalde zaten geçen teknoloji rewrite'a yazılmıyor.** § 21.6
+yalnız `atom.skills`'e bakıyor; skills listesi eksik çıkarılmış her atomun her
+yeniden yazımı bu yüzden reddedilirdi — kişi kendi maddesine "Postgres" yazmış,
+çıkarım listelememiş, ve model **korumasını söylediğimiz** kelimeyi koruduğu
+için atılıyor. Kontrol, yeniden yazımın **eklediği** iddia hakkında; bu ayrım
+bir korumayla bir kesintinin arasındaki fark.
+
+**Sorunlar tür olarak taşınıyor, değer olarak değil.** Kaybolan sayıyı ya da
+kayan cümleyi taşıyan bir kayıt, kullanıcının CV'sini loglanan bir değere
+sokardı (mutlak kural 4) — ve hiçbir çağıranın ihtiyacı yok: hepsinin cevabı
+aynı iki adım.
+
+**Ölçülemeyen kontrol geçmiş sayılmıyor.** Embedding servisi kapalıysa beşinci
+kural atlanıyor, diğer dördü duruyor, ve hiçbir yerde ölçülmemiş bir benzerlik
+raporlanmıyor.
+
+**Listeler çitin içinde.** `allowedSkills`, `mustKeep`, `postingWants` —
+üçü de kişinin ya da ilanın içeriği. § 43.1'in sınırı "hangi alan yapılandırılmış
+görünüyor" değil, **verinin nerede başladığı**. Talimat yarısında yalnız bizim
+sayılarımız var: karakter tavanı, niyet, dil, ton.
+
+**Kosinüs tek yerde.** Faz B atomları ilana karşı puanlıyor, Faz D yeniden
+yazımın hâlâ aynı şeyi söyleyip söylemediğine bakıyor; aynı aritmetiğin ikinci
+bir kopyası, ikisinin bir yuvarlama kuralıyla ayrışabileceği bir yer olurdu.
+`shared.math.Vectors`'te duran şey saf matematik; **karşılaştırılamayan vektörle
+ne yapılacağı** çağıranda kalıyor — Faz B nötr yarım puan veriyor (profil
+vektörsüz de sıralanabilsin), Faz D "kontrol edilemedi" diyor.
+
 ### 21.7 About sentezi
 
 About tek atom değil, birden fazla atomdan sentezleniyor:
@@ -127,6 +251,47 @@ Kural:  Yalnızca girdideki becerilerden ve metriklerden bahset
 ```
 
 Doğrulama: About'ta geçen her teknoloji, seçilmiş atomların `skills` birleşiminde olmalı.
+
+#### 21.7.1 Kararlar (Adım 3.8, dilim 4)
+
+**Ekleme — About yalnız zaten varsa yazılıyor.** § 21.7 paragrafın nasıl
+yazılacağını söylüyor, nereye gideceği hakkında sessiz. Yoktan yaratılamaz:
+seçim yalnız seçtiği atomları ücretlendirdi ve sayfa sınırını onun üstüne söz
+verdi; hiçbir bölümün taşımadığı bir paragraf, bütçenin hiç hesaba katmadığı
+bir blok olurdu. About'unu kapatmış ya da bütçeye kurban vermiş biri zaten
+cevabını vermiş oluyor. Kod, seçimin **sayfada tuttuğu** `ABOUT` atomunu
+arıyor; bulamazsa Faz D o iş için hiç çalışmıyor.
+
+**Ekleme — girdi profil değil, sayfa.** Beceriler ve sayılar seçilmiş
+atomlardan toplanıyor. Bütçeye kurban gitmiş bir beceriyi öne çıkaran bir özet,
+işverenin elinde olmayan bir CV'yi anlatır.
+
+**Ekleme — tavan min(65 kelime, orijinal × 1.05).** § 21.3 burada da bağlayıcı:
+sayfa, About'un **şu anki** metnine göre ölçüldü. § 21.7'nin ~65 kelimesi bu
+yüzden bir tavan, bir ödenek değil; hangisi küçükse o kazanıyor.
+
+**Ekleme — üç kontrol, iki tanesi kasten yok.** § 21.6'nın "korunması gereken"
+kuralları burada anlamsız (sentez tek bir cümlenin yeniden yazımı değil), ve
+**anlamsal kayma kontrolü yok**: paragraf bilerek eskisinden farklı, eskisine
+karşı ölçmek tam da faz çalıştığında düşen bir kural olurdu. Kalanlar
+§ 21.7'nin kendi kuralı (andığı her teknoloji sayfada var), **uydurulmuş sayı
+yok** (`NUMBER_INVENTED` — özet, "üç yıl" ile "dört yıl"ın "on yıl" olduğu
+yerdir) ve tavan. Sayı kontrolü rakam okuyor: kişinin "sekiz yıl"ı modelin
+"8 yıl"ı olarak dönerse reddediliyor, çünkü yazıyla sayıyı her dilde doğru
+okumanın yolu yok — bedeli bir paragrafın kişinin kendi metnine düşmesi, ve
+prompt bunu yapmamayı söylüyor.
+
+**Ekleme — sözcük dağarcığı tek yerde, ve alias sözlüğünün iki yarısı da
+içinde.** `ClaimVocabulary`: dosya `k8s = kubernetes` diyor, yani yalnız sol
+tarafı okuyan bir doğrulayıcı modelin **gerçekten yazdığı** adı hiç görmüyor.
+Bu gerçek bir açıktı ve iki doğrulayıcıyı birden ilgilendiriyordu.
+
+**Ekleme — ilanın becerileri değil sorumlulukları gösteriliyor.** § 18'in
+`keywords`'ü ilanın söz dağarcığı, yani doldurulmuş bir özetin çekeceği yer.
+Doğrulayıcı sonucu zaten reddederdi; prompt'a hiç göstermemek daha iyi.
+
+**About maddelerle aynı fan-out'ta.** Sayfanın tamamı verildiği için en yavaş
+görev o; maddelerden sonra koşmak gecikmesini onlarınkine eklerdi.
 
 ### 21.8 Dil yönetimi
 

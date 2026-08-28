@@ -81,6 +81,8 @@ yalnızca yerine koyar.
 | `PAGE_LIMIT_EXCEEDED` | 422 | `actual: integer`, `limit: integer` |
 | `REWRITE_VALIDATION_FAILED` | 500 | `atomId: uuid`, `issues: string[]` |
 | `EMBEDDING_UNAVAILABLE` | 503 | — |
+| `UNSUPPORTED_DOCUMENT` | 415 | `accepted: string[]` |
+| `DOCUMENT_TOO_LARGE` | 413 | `limitBytes: integer` |
 | `PDF_NOT_TEXT_BASED` | 422 | — |
 | `PDF_ENCRYPTED` | 422 | — |
 | `EXTRACTION_EMPTY` | 422 | — |
@@ -93,6 +95,12 @@ yalnızca yerine koyar.
 | `PROFILE_ALREADY_EXISTS` | 409 | — |
 | `GENERATION_ARTIFACT_EXPIRED` | 410 | — |
 | `CSRF_TOKEN_INVALID` | 403 | — |
+| `AUTHENTICATION_REQUIRED` | 401 | — |
+| `OAUTH_FAILED` | 400 | `reason: string` |
+| `MAGIC_LINK_INVALID` | 400 | — |
+| `TRANSLATION_FAILED` | 422 | — |
+| `RATE_LIMITED` | 429 | `resetsAt: timestamp` |
+| `CHALLENGE_FAILED` | 403 | — |
 | `RESOURCE_NOT_FOUND` | 404 | — |
 | `VERSION_CONFLICT` | 412 | — |
 | `PRECONDITION_REQUIRED` | 428 | — |
@@ -107,6 +115,75 @@ kaynağın kastedildiğini istemci zaten bilir (isteği o attı), ve advice
 katmanının elinde o bilgi olmadığı için tek alternatif uydurmaktı.
 
 **`EXTRACTION_TIMEOUT` için 504 seçildi**; doküman bir durum vermiyordu.
+
+**Adım 3.5: `TRANSLATION_FAILED` (422).** Arka plan işinden geliyor ve
+neredeyse hiç kullanıcıya çıkmıyor — kişinin gördüğü şey sözcüklemenin **hâlâ
+bayat işaretli** kalması, ki o da doğru cümle. Kod, `GET /jobs/{id}`'ye soran
+bir istemciye "internal error"dan iyisini söyleyebilmek için var. Parametresiz:
+çevirinin düşürdüğü şey kullanıcının kendi içeriği (mutlak kural 4).
+
+**Adım 3.4 dilim 4: `POST /profile/import` telde.** `202` + `Location` +
+`jobId`, üretimle birebir aynı kalıp. Beş ret senkron (`415`, `413`, iki `422`,
+`429`), üç ret işten geliyor (`LANGUAGE_UNDETECTED`, `EXTRACTION_EMPTY`,
+`ALL_PROVIDERS_UNAVAILABLE`). `PROFILE_QUOTA_EXCEEDED`'ın `limit`'i
+yapılandırmadan **geri okunuyor** — hatanın doğduğu yerde uydurulan bir sayı,
+sunucunun kendi yapılandırmasını yanlış bildirmesi olurdu.
+
+**Adım 3.6 dilim 6: `POST /auth/verify` artık `204` değil `200`.** Gövde tek
+alan taşıyor — `profileUpgrade` — ve OAuth tarafında aynı şey iniş adresinin
+`profile` parametresi. **Değişikliğin sebebi tek seferlikliği:** anonim
+profilin ne olduğu istemcinin bir kez okuyup davrandığı bir olgu; `/session`'a
+eklenseydi iki hafta boyunca tekrarlanır, istemci de mesajı gösterip
+göstermediğini hatırlamak zorunda kalırdı. Dört değer: `upgraded`, `none`,
+`kept_existing`, `unavailable` (§ 41.3.3).
+
+**Adım 3.6 dilim 5: `POST /profile/import` kimlik istemiyor.** Anonim oturum
+çerezi yeterli; sözleşmenin geri kalanı değişmiyor — aynı `202`, aynı ret
+kümesi, aynı terminal olay. Değişen tek şey `PROFILE_QUOTA_EXCEEDED`'ın kime
+ait olduğu: anonim çağıranda hak **adrese** göre sayılıyor (§ 44.1), yani aynı
+ağdan başka biri harcamış olabilir ve mesaj kişiye ait bir hak gibi
+okunmamalı.
+
+**Adım 3.4 dilim 2: iki kodun ilk kullanıcısı çıktı.** `LANGUAGE_UNDETECTED`
+ve `EXTRACTION_EMPTY` EK D.6'da duruyordu ve hiçbir şey üretmiyordu; artık
+profil çıkarımı ikisini de üretiyor. `EXTRACTION_EMPTY` **iki sebebi birden
+taşıyor** — modelin hiçbir şey bulamadığı CV ve alan uzunluğu denetiminin
+reddettiği cevap — ve bu § 43.2'nin gereği: ikisini ayıran bir mesaj,
+enjeksiyonu yazana fark edildiğini söylerdi. `LANGUAGE_UNDETECTED`'ın
+`detectedCandidates`'ı en fazla tek elemanlı: model bir sıralama değil bir dil
+döndürüyor, ve düşük güvenli tahmin tek aday olarak sunuluyor.
+
+**Adım 3.4 dilim 1'de eklenen iki kod.** EK D.6 § 31.10'un tablosunu
+kodluyor, o da dosya kabul edildikten *sonra* başlıyor; § 31.2'nin ilk iki
+basamağının kodu yoktu.
+
+`UNSUPPORTED_DOCUMENT` **kabul edilen uzantı listesini yayınlıyor**, istemciye
+gömülmesin diye: bir biçim eklendiğinde dosya seçicinin mesajı frontend sürümü
+beklemeden doğru olur. Tek kod üç sebep için — okumadığımız bir uzantı,
+uzantıyla çelişen bir medya tipi, ikisiyle de çelişen baytlar — çünkü hepsinde
+kullanıcının yapacağı şey aynı, ve cümle her hâlükârda "PDF, DOCX, TEX, TXT ya
+da MD yükle" diye bitiyor.
+
+`DOCUMENT_TOO_LARGE` **sınırı yayınlıyor, gönderilen boyutu değil.** İstemci ne
+yüklediğini biliyor, ve sunucunun okuması bu hatanın çoğu kez doğduğu noktada
+güvenilir değil: Spring çok büyük bir multipart'ı baytlar sayılmadan reddediyor.
+Bazen doğru olan bir sayı, hatada hiç olmamasından kötüdür.
+
+**Adım 3.3 dilim 4'te eklenen iki kod.** Bölüm 40.5 ile 44.4 davranışı
+tanımlıyor, kodu vermiyordu.
+
+`RATE_LIMITED` **hangi katmanın reddettiğini yayınlamaz.** Kullanıcının okuduğu
+cümle üç durumda da aynı — bekle, sonra tekrar dene — ve global katmanı adıyla
+söylemek, servisi yoklayan birine trafiğinin isabet ettiğini bildirir. Katman
+operatöre log satırıyla gider. Bölüm 40.4'ün sorusunu da açmaz: adres katmanı
+yalnızca o pencereyi zaten kendisi harcamış bir çağıranı reddedebilir, yani
+dönen cevap onun ne yaptığını anlatır, adresin hesabı olup olmadığını değil.
+
+`CHALLENGE_FAILED` **satıcının değil işin adını taşır** — `OTLP_*` kararının
+aynısı: bu kodu frontend render ediyor ve mesaj kataloğunda saklıyor,
+Cloudflare'den çıkmak kullanıcıya görünen bir cümleyi yalana çevirmemeli.
+Parametresizdir: eksik, süresi dolmuş, harcanmış ve sahte token istemciye tek
+bir iş bırakır — widget'ı sıfırla, yeniden sor.
 
 **Katalog kodda zorlanıyor, yalnız belgelenmiyor.** `params`, hata nesnesi
 kurulurken bildirime karşı doğrulanır: eksik anahtar, fazladan anahtar ve yanlış
@@ -323,6 +400,32 @@ Sayaçlar (`generationsUsedToday`, `dailyGenerationQuota`, `quotaResetsAt`)
 | TTL davranışı (Bölüm 9 "2 saat sonra silinir" diyor) | **TTL kayar: etkinlikte tazelenir.** Mutlak iki saat, inceleme ekranında çalışmakta olan kullanıcıyı keserdi — P8'in önlemek için var olduğu emek kaybı. Kullanıcıya gösterilen metin "son etkinliğinden iki saat sonra" demeli. |
 | CSRF (Bölüm 40.1 adını koyup tanımlamıyor) | Spring Security'nin double-submit varsayılanı: sunucu okunabilir (HttpOnly olmayan) `XSRF-TOKEN` çerezi verir, istemci güvensiz metotlarda (POST/PUT/PATCH/DELETE) `X-XSRF-TOKEN` başlığında yankılar, uyuşmazlıkta `403` + `CSRF_TOKEN_INVALID`. Oturum çerezi zaten `SameSite=Strict` olduğu için asıl vektör kapalı; bu derinlemesine savunmadır, o yüzden kimlikle birlikte gelir, öne çekilmez. |
 | Profil devralma | `POST /api/v1/profile/claim` → `200`, `404 NO_ANONYMOUS_PROFILE`, `409 PROFILE_ALREADY_EXISTS`. 409 yalnız **değiştir veya koru** sunar, **birleştir sunmaz**: birleştirme atom düzeyinde tekilleştirme demek (Bölüm 7, Jaro-Winkler + embedding) ve o Aşama 4 işi. Erken sunmak ya endpoint'i alakasız bir işe bağlar ya da içeriği sessizce çoğaltan bir birleştirme gönderir — P8 ikincisini yasaklar. API, yerine getiremeyeceği bir resolution'ı adlandırmamalı. |
+
+**`AUTHENTICATION_REQUIRED` neden ayrı bir kod (Adım 3.3).** Katalog uzun süre
+oturumu **hiç olmayan** bir isteğe cevapsızdı: `ANONYMOUS_SESSION_EXPIRED`
+süresi dolmuş anonim oturumun, `FEATURE_REQUIRES_ACCOUNT` erişilemeyen bir
+özelliğin adı. `sid` çerezi taşımayan bir istek ikisi de değil. Süre dolma
+kodunu ödünç almak sunucuya hiç var olmamış bir oturum hakkında cümle
+kurdururdu — kullanıcının okuduğu cümle, ve logların sonradan düzeltemeyeceği
+bir teşhis. Tek resolution `sign_up`. Adım 3.6 çerezsiz çağırana anonim oturum
+basmaya başlayınca kod **nadirleşir, yanlış olmaz**: kullanıcı kapsamlı bir uca
+hiçbir şey taşımadan gelen isteğin cevabı olarak kalır.
+
+**`MAGIC_LINK_INVALID` bilerek parametresizdir (Adım 3.3).** Katalogda başka
+her yerde kapalı bir `reason` daha iyi bir şekildir; burada açıktır — süresi
+dolmuş, kullanılmış, yanlış verifier ve hiç var olmamış ayırt edilebilirse
+tahmin yürüten kişi tahmininin hangi yarısının doğru olduğunu öğrenir
+(§ 40.4.1).
+
+**`OAUTH_FAILED` tek kod, yedi sebep (Adım 3.3).** `reason` kapalı bir sözlük:
+`state_invalid`, `declined`, `provider_disabled`, `provider_unavailable`,
+`email_missing`, `email_unverified`, `account_disabled`. `F-016`'nın istediği
+şekil — istemci tek bir ICU anahtarını `select` ile çözer, sonradan eklenen bir
+sebep `other` dalına düşer, ham anahtar ekrana çıkmaz.
+
+**Ve genelde gövdede değil, sorgu parametresinde gelir.** İki OAuth ucu da
+tarayıcı gezinmesidir; hata, frontend'in hata rotasına `?code=OAUTH_FAILED&reason=...`
+ile yönlendirmedir. Katalogdaki 400, biri onu JSON olarak isterse ne olacağıdır.
 
 #### D.6.7 — Kapsam dışı bırakılanlar
 

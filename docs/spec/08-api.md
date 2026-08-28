@@ -30,8 +30,9 @@ POST   /api/v1/auth/magic-link              magic link iste
 POST   /api/v1/auth/verify                  token doğrula (POST! prefetch koruması)
 GET    /api/v1/auth/session                 oturum + capabilities
 POST   /api/v1/auth/logout
-GET    /api/v1/auth/oauth/{provider}/start
-GET    /api/v1/auth/oauth/{provider}/callback
+GET    /api/v1/auth/providers                yapılandırılmış sağlayıcılar
+GET    /api/v1/auth/oauth/{provider}/start    302 sağlayıcıya
+GET    /api/v1/auth/oauth/{provider}/callback 302 iniş rotasına (§ 40.6.1)
 
 ── Profil ──────────────────────────────────────────
 GET    /api/v1/profile                      yoksa yaratır, 404 dönmez (EK D.8)
@@ -378,6 +379,61 @@ GET /api/v1/auth/session
 ```
 
 **Sunucu yine de doğrular** — istemci kontrolü sadece UX.
+
+**Hesaplı oturumun kümesi (Adım 3.3).** Yukarıdaki gövde `authenticated: false`
+taşıyor ve uzun süre yazılı olan tek küme oydu. Hesabınki:
+
+| Alan | Anonim | Hesap |
+|---|---|---|
+| `allowedLanguages` | `["en"]` | `atomcv.capabilities.account-languages`, varsayılan `["en", "tr"]` |
+| `allowedTemplates` | kayıtta var olanlar | aynısı |
+| `canCustomizeTemplate`, `canEditAtomControls`, `canAddAlternatives`, `canSaveHistory` | `false` | `true` |
+| `dailyGenerationQuota`, `dailyProfileQuota` | 5, 3 | `QuotaService`'in uyguladığı sayılar |
+| `generationsUsedToday`, `profilesUsedToday` | 0 | aynı sayaçtan |
+| `maxAtoms` | 60 | **alan yok** |
+| `quotaResetsAt` | `null` | mutlak an (EK D.6.5) |
+| `anonymousExpiresAt` | EK D.6.6 | **alan yok** |
+
+Hesapta `maxAtoms` ve `anonymousExpiresAt` `null` değil, **JSON'da hiç yok**:
+`ATOM_LIMIT_EXCEEDED` anonim kapıdır ve olmayan bir limite karşı çizilen bir
+ilerleme çubuğu yanlış bir ekrandır.
+
+`allowedTemplates` **kayıtta gerçekten var olan** şablonları taşır, bu örneğin
+saydığı üçü değil. Render edilemeyecek bir şablonu listelemek, üretim anında
+patlayan bir seçenek sunmaktır.
+
+Sayılar `QuotaService`'ten okunur, yapılandırmadan ikinci kez değil: kullanıcının
+birazdan alacağı 429 ile çelişen bir yetenek ekranı, hiç yetenek ekranı
+olmamasından kötüdür.
+
+#### 35.7.1 Kararlar (Adım 3.6, dilim 1)
+
+**Anonim oturum aynı çerezi kullanıyor** — § 35.7'nin tasarımı bu, kısayol
+değil: kimlik doğrulama, istemcinin `capabilities`'e sorduğu bir soruya
+dönüşüyor, taşınacak ikinci bir kimlik bilgisine değil. Farklı olan pencere:
+**kayan iki saat**, otuz güne karşı. Giriş yapmamış birinin geri döneceği
+saklanmış bir şeyi yok, o yüzden uzun bir pencere yalnızca daha uzun ömürlü bir
+kimlik bilgisi olurdu.
+
+**Oturum ya üçünü birden taşır ya hiçbirini** (kullanıcı, rol, yöntem).
+Kullanıcısı olup rolü olmayan bir oturum, yetkilendirmesine kimsenin karar
+vermediği bir oturumdur; rolü olup kullanıcısı olmayan bir oturum, kimseye ait
+olmayan bir roldür. İkisi de bu iki durumdan kötü.
+
+**TTL oturumdan okunuyor, parametre olarak geçmiyor.** Tazeleme ile oluşturma
+böylece anlaşmazlığa düşemiyor: hesabın uzunluğuna kayan bir pencere, iki saati
+sessizce bir aya çevirirdi ve oturumda yanlış görünen hiçbir şey olmazdı.
+
+**Anonim oturum bir oturumdur, kullanıcı değil.** `CurrentUser.find()` boş
+dönüyor, yani kullanıcı kapsamlı bir uç hâlâ `AUTHENTICATION_REQUIRED` +
+`sign_up` ile reddediyor — hesap isteyen bir yerde doğru cevap bu.
+
+**`anonymousExpiresAt` `lastSeenAt`'ten hesaplanıyor, `createdAt`'ten değil.**
+Pencere kayıyor; ötekini söylemek istemciyi sürekli ilerleyen bir ana geri
+saydırırdı.
+
+**Uç oturumu kendisi basıyor.** İstemci ilk olarak burayı çağırıyor; aksi hâlde
+"henüz yok" diye bir durumu ele alması gerekirdi.
 
 ### 35.8 Tip üretimi (repolar arası)
 

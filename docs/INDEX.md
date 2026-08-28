@@ -73,7 +73,11 @@ Toplam ~600 satır sabit maliyet. Gerisi göreve göre.
 | LaTeX container, güvenlik izolasyonu | `spec/07-subsystems.md` § 29 |
 | Kuyruk, SSE, worker | `spec/07-subsystems.md` § 30 |
 | CV yükleme, çıkarım | `spec/07-subsystems.md` § 31 |
-| Çok dillilik, varyant senkronu | `spec/07-subsystems.md` § 32 |
+| Dosya doğrulama merdiveni, metin çıkarımı kararları | `spec/07-subsystems.md` § 31.2, § 31.3.1 |
+| LLM ile yapılandırma, çıkarım prompt'u | `spec/07-subsystems.md` § 31.4, § 31.4.1 |
+| Beceri/tarih/run normalizasyonu, alias sözlüğü | `spec/07-subsystems.md` § 31.5, § 31.5.1 |
+| Yükleme ucu, çıkarım işi, profile yazma | `spec/07-subsystems.md` § 31.6.1 |
+| Çok dillilik, varyant senkronu | `spec/07-subsystems.md` § 32, § 32.2.1, § 32.3.1 |
 | Şablon, özelleştirme | `spec/07-subsystems.md` § 33 |
 | Cover letter | `spec/07-subsystems.md` § 34 |
 
@@ -92,6 +96,8 @@ Toplam ~600 satır sabit maliyet. Gerisi göreve göre.
 | Görev | Dosya |
 |---|---|
 | Auth, oturum, magic link | `spec/10-security.md` § 40 |
+| Anonim mod, kalıcı olmayan profil | `spec/08-api.md` § 35.7.1 · `spec/10-security.md` § 41.3.1 |
+| Rate limit, Turnstile, bot koruması | `spec/10-security.md` § 40.5, § 40.5.1, § 44.4 |
 | Multi-tenant izolasyon, IDOR | `spec/10-security.md` § 41 |
 | Dosya yükleme, SSRF, format injection | `spec/10-security.md` § 42 |
 | Prompt injection | `spec/10-security.md` § 43 |

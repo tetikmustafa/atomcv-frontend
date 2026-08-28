@@ -801,6 +801,54 @@ Metin tabanlı bir PDF yükleyebilir veya bilgilerini elle girebilirsin.
 ```
 OCR kapsam dışı.
 
+#### 31.3.1 Kararlar (Adım 3.4, dilim 1)
+
+**Dosya hiçbir yere yazılmıyor.** § 31 nereye gittiğini hiç söylemiyor; karar
+şu: metin çıkarımı istek içinde koşuyor ve bir sonraki aşamaya yalnız **metin**
+geçiyor. Sebebi § 31.10'un ilk üç satırı — şifreli PDF, taranmış PDF, sıfır
+atom — hepsi kullanıcının hemen davranabileceği şeyler; kuyruğa alınmış bir
+çıkarımda bunlar sekiz saniye sonra düşen bir iş olarak gelirdi. Yan
+kazanç: nesne deposu projeye hiç girmiyor ve CV diske hiç düşmüyor.
+**§ 31.10'un "çıkarım timeout → retry ×3" satırı LLM yapılandırmasına aittir**
+(§ 31.4), PDFBox'a değil.
+
+**Merdivenin sırası tasarımın kendisi.** Uzantı biçimi *seçer*; bildirilen
+medya tipi yalnızca **çelişebilir**; boyut baytları kimse okumadan önce
+bakılır; imza okuyucudan önce bakılır. Tarayıcılar `.tex` ve `.md` için
+rutin olarak `application/octet-stream` gönderdiğinden **tanınmayan bir
+bildirim sessizliktir, itiraz değil** — onu itiraz saymak sorunsuz dosyaları
+reddederdi.
+
+**Metin biçimlerinin imzası yok, yerine NUL baytı var.** İlk kilobaytta bir
+NUL: hiçbir metin dosyasında yok, hemen her ikilide var. Çözmeyi denemek
+değil, çünkü `new String(bytes, UTF_8)` bozuk diziyi hataya değil değiştirme
+karakterine çevirir — bir JPEG'e "evet, metin" der.
+
+**İki yeni hata kodu.** EK D.6 § 31.10'un tablosunu kodluyor, o da dosya
+kabul edildikten *sonra* başlıyor; ilk iki basamağın kodu yoktu.
+`UNSUPPORTED_DOCUMENT` (415) kabul edilen uzantı listesini yayınlıyor —
+liste tek sahipli olsun diye — ve `DOCUMENT_TOO_LARGE` (413) yalnız sınırı
+yayınlıyor, gönderilen boyutu değil: Spring çok büyük bir multipart'ı baytlar
+sayılmadan reddediyor ve bazen doğru olan bir sayı hatada hiç olmamasından
+kötüdür.
+
+**Metinsiz PDF "taranmış", metinsiz başka her şey "boş".** § 31.10 ikisini
+burada ve yalnız burada ayırıyor, ve ayrım kullanıcının okuduğu cümle:
+"bu taranmış bir görsel olabilir, metin tabanlı bir PDF yükle" onu aynı
+dosyayı ikinci kez denemekten alıkoyan şey.
+
+**§ 31.3'ün karışık metin sezgisinin iki terimi de tanımsızdı.**
+`orphanWordRatio` **tek kelimelik satırların oranı** olarak okundu — dizgicinin
+"orphan"ı, ve sütun körü bir çıkarımın ürettiği şeyin tarifi. Sonuç bir
+**not**, ret değil: § 31.3 onu yapılandırma prompt'una bir cümle olarak
+taşıyor, ve sırası bozuk olabileceği söylenmiş bir model CV'yi yine okuyabilir.
+
+**Markdown işaretleri sökülmüyor, LaTeX komutları söküllüyor.** İkisi zıt
+göründüğü için: Markdown bir *taslak* — model `## Deneyim`'i başlık,
+`- yaptım`ı madde olarak okur; LaTeX ise bir dizgi programıdır ve komutları
+prose değildir. LaTeX tarafında argüman korunur, komut atılır (kalın yazılmış
+bir isim yine isimdir), preamble ise bütünüyle atılır.
+
 ### 31.4 LLM ile yapılandırma (tek çağrı)
 
 ```json
@@ -843,6 +891,51 @@ OCR kapsam dışı.
 
 **Kritik:** İngilizce karşılık (`text_en`) **aynı çağrıda** üretilir — ayrı çeviri adımı yok. Kaynak dil zaten EN ise ikinci alan istenmez.
 
+#### 31.4.1 Kararlar (Adım 3.4, dilim 2)
+
+**Düzeltme — § 31.4'ün örnek payload'ı iki adlandırma karıştırıyor**
+(`text_source` yanında `properNouns`). Kod camelCase kullanıyor; repodaki
+öteki prompt şeması (`job_analysis`) da öyle, ve tek şemada iki kural modelin
+en kolay yanlış yaptığı şey. Bu yapı hiçbir zaman frontend'e çıkmıyor —
+§ 31.5 onu profil alanlarına çeviriyor.
+
+**`textEn`, kaynak dil İngilizceyse `null`.** § 31.4 "ikinci alan istenmez"
+diyor; bir JSON şeması alanı koşullu yapamaz, o yüzden alan nullable ve ne
+zaman boş bırakılacağını prompt söylüyor.
+
+**`SectionKind` paylaşılıyor, `Contact` paylaşılmıyor.** Bölüm kinds'ı için
+paralel bir sözlük iki listeyi eşzamanlı tutmak demekti; bir şema testi ikisini
+birbirine bağlıyor. `Contact` aynı türden bir paylaşım gibi görünüyor ve değil:
+o bir JSONB kolonu ve **bilinçli olarak** bilinmeyen anahtarı reddediyor —
+geri okurken sessizce düşen bir alan, bir yeniden adlandırmanın veri
+kaybetme şeklidir. Burada kural tersi, ve iletişim bloğu modelin alan
+uydurmaya en yatkın olduğu yer. İki kayıt, ve § 31.5 birini ötekine çeviriyor.
+
+**Uyarı kodları kapalı bir sözlük.** § 31.4 tek kod gösteriyor ve sözlüğün
+kapalı olup olmadığını söylemiyor. Kapalı: frontend tek bir ICU anahtarını
+`select` ile çözüyor, yani görmediği bir kod ham anahtar yerine `other` dalına
+düşüyor (F-016'nın kararı). Şimdilik yalnız **modelin** bildirebileceği altı
+kod var; § 31.5'in normalizasyonu kendi kodlarını getirecek.
+
+**Üç ret, ikisi dışarıdan aynı görünüyor.** Dil çözülemezse **sorulur**
+(§ 31.10), çünkü seçilen dil her atomun hangi varyantının yazılacağına karar
+veriyor — yanlış tahmin, bunu söyleyen hiçbir ekran olmadan bütün profili
+yanlış dilde üretir. Sıfır atom ile **alan uzunluğu denetiminin** reddi ise
+tek cevap: § 43.2 enjeksiyonu yazana fark edildiğini söyleyen bir mesaja izin
+vermiyor. Sağlayıcı kesintisi kendisi olarak yolculuk ediyor — onu okunamayan
+CV'ye çevirmek, kullanıcıyı bir sağlayıcı düştüğü için elle forma yollardı ve
+§ 30.5'in tekrar etmesi gereken bir işi tekrar etmemesine yol açardı.
+
+**Karışık metin notu çitin *içinde*.** Sistem yarısında dursaydı her çağrıda
+duran bir talimat olurdu ve § 27.4'ün indirdiği sabit ön eki bozardı; o, tek
+bir belge hakkında bir not.
+
+**Prompt yer tutucusu artık etiketten türetiliyor** (`{{cv_text}}` ↔
+`<cv_text>`), böylece bir prompt bir çit ilan edip başkasına yazamıyor.
+`job_analysis`'in `{{jobDescription}}`'ı bu yüzden `{{job_description}}` oldu —
+yer tutucu istek kurulmadan önce doldurulduğu için modele giden metin
+birebir aynı, hiçbir eval geçersizleşmiyor.
+
 ### 31.5 Kod tarafı normalizasyon
 
 ```
@@ -864,6 +957,55 @@ OCR kapsam dışı.
 text.toLowerCase(Locale.ROOT)
 ```
 JVM: `-Duser.language=en -Duser.country=US`
+
+#### 31.5.1 Kararlar (Adım 3.4, dilim 3)
+
+**Yedi adımın hiçbiri modelden istenmiyor.** Bölünme kasıtlı: bir modele
+kanonik beceri adı, tarih biçimi ya da sıralama sorulursa **çoğu zaman**
+uyar — ve "çoğu zaman", sonraki bir karşılaştırmanın tam olmasına bağlı olduğu
+bir şey için mümkün olan en kötü oran. Model belgenin ne dediğini bildiriyor;
+iki belge arasında aynı olmak zorunda olan her şey kodda kararlaştırılıyor.
+
+**Alias sözlüğü `shared`'da, çünkü karşılaştırmanın iki tarafı da onu
+uygulamak zorunda.** Faz B atomun becerilerini ilanın becerileriyle
+puanlıyor ve ikisi iki ayrı okumadan geliyor. Tek tarafa uygulanan bir
+sözlük, hiç sözlük olmamasından kötüdür: "React.js" diyen bir ilan "react"a
+normalleştirilmiş bir atomla eşleşmeyi bırakır ve bozulan çiftler tam olarak
+sözlüğün düzeltmek için eklendiği çiftler olur. `RelevanceScorer` ona
+devrediyor — zaten kendi yorumu "üç çağıranın da aynı fikirde olması gerek"
+diyordu, ingestion dördüncüsü.
+
+**Düzeltme — § 31.4'ün tarih alanlarındaki şema kalıbı (dilim 2) kaldırıldı.**
+`^\d{4}-\d{2}$` normalleşmemiş bir tarihi şema ihlaline çeviriyordu, yani
+üründeki **en pahalı çağrının tamamı** tek alan için tekrar ediliyordu — ve
+§ 31.5'in koda verdiği işi modelden istiyordu. Prompt artık "yorumlaman
+gereken bir tarihi belgenin yazdığı gibi döndür" diyor.
+
+**Ayrıştırılamayan tarih `null`, ve aysız yıl da ayrıştırılamamış sayılır.**
+"2019" on iki ayın herhangi biri olabilir; Ocak'a genişletmek belgenin hiç
+iddia etmediği on bir ay uydurmaktır. Uyarı hangisi olduğunu söylüyor, çünkü
+kullanıcıya sorulacak soru farklı.
+
+**Vurgular bağımsız aranıp sonra sıralanıyor**, imleçten ileri yürünmüyor:
+model önemli bulduğunu listeliyor, önce geleni değil, ve ileri yönlü bir
+yürüyüş sırasız listelenen her vurguyu sessizce düşürürdü. Çakışan iki vurguda
+**erken başlayan** kazanıyor — § 12'de iç içe run yok, ve kural çıktının
+girdinin bir bölüntüsü kalmasını sağlıyor: **runlar cümleye geri birleşiyor.**
+
+**Cümlede bulunmayan vurgu düşürülüyor**, yaklaştırılmıyor. Prompt tam
+alıntı istemesinin sebebi bu; bulanık eşleşme, modelin hangi kelimeleri
+kastettiğine kodun karar vermesi olurdu.
+
+**`properNouns` `ORGANIZATION` işareti almıyor.** § 31.4 ürünleri, işverenleri,
+kurumları ve yerleri tek listede topluyor; herhangi birini kurum diye
+işaretlemek verinin desteklemediği bir iddia olurdu — üstelik bilinmeyen bir
+işaret düz metin olarak render edilir (§ 16.2) ve vurgu tamamen kaybolurdu.
+`EMPHASIS`, onlar hakkında bilinen şeyin ta kendisi.
+
+**`display_order` sıralamadan *sonra* yazılıyor.** O, okuyucunun gördüğü sıra;
+önce yazmak modelin cevap verdiği sırayı kaydederdi. **Eğitim yeniden
+sıralanmıyor:** okuyucu en yüksek dereceyi en üstte bekler ve bu her zaman en
+yeni satır değildir.
 
 ### 31.6 Gözden geçirme ekranı (zorunlu)
 
@@ -899,6 +1041,105 @@ t=8s   Çıkarım bitti → ekran açılır
        └── XeLaTeX ölçümü (~15s)
 t=25s  Her şey hazır (kullanıcı hâlâ inceliyor)
 ```
+
+#### 31.6.1 Kararlar (Adım 3.4, dilim 4)
+
+**`POST /profile/import`, multipart, `202` + iş.** Ayrım § 31.10'un ilk üç
+satırı: şifreli PDF, taranmış PDF ve içi boş dosya kullanıcının **hemen**
+davranacağı şeyler, o yüzden istekte reddediliyor. Kalan iş bir LLM çağrısı;
+o kuyrukta, ve § 31.6 önüne bir ekran koyuyor.
+
+**Kuyruğa metin giriyor, bayt değil** (§ 31.3.1'in kararı). **Bedeli:**
+çıkarılan metin iş terminal duruma gelene kadar `jobs.payload`'da duruyor ve
+**tamamlanmış işleri budayan bir şey yok.** Açık madde olarak kaydedildi;
+saklama süresi her iş tipinin sorusu, yalnız bunun değil.
+
+**Kota kapıda alınıyor, hiçbir şey çıkmadıysa geri veriliyor** (§ 44.2) —
+reddedilen dosyada da, reddedilen çıkarımda da. Birincisi olmadan kullanıcı
+üründeki en küçük hakkını ilk basamağı geçemeyen dosyalara yakabilirdi.
+
+**Yazma kapsamlı depolardan, `ProfileResolver`'ın verdiği `ProfileRef` ile**
+(mutlak kural 3). Toplu içe aktarma, birinin "sadece bu seferlik" ham depoya
+uzanıp kimsenin kontrol etmediği bir id altına yüz satır yazacağı yerin ta
+kendisi. **Tek transaction:** beş bölümün üçünü taşıyan bir profil kısmi
+başarı değil, kullanıcının fark etmesi gereken bir hata.
+
+**İki eşleme modelden istenmiyor.** Atomun `kind`'ı üstündeki bölümden
+geliyor — bölüm zaten ne olduğunu söylüyor. `YearMonth` ayın birine
+dönüşüyor, çünkü `entries.start_date` bir `DATE`; gün bir depolama artığı,
+iddia değil.
+
+**Çok büyük multipart artık `413 DOCUMENT_TOO_LARGE`.** Dilim 1'de bilinçli
+bırakılmıştı: uç yokken tetiklenemiyordu ve hiç düşmemiş bir kapı, çalıştığı
+bilinmeyen kapıdır. Sınır, `shared`'ın iş modülüne bağımlı olamaması yüzünden
+`spring.servlet.multipart.max-file-size`'dan okunuyor — zaten isteği reddeden
+sayı o.
+
+#### 31.6.2 Kararlar (Adım 3.4, dilim 4b)
+
+**Arka plan kutusu iki iş, iki bekleme değil.** Ekran profil var olur olmaz
+açılıyor; vektörler ve ölçülen yükseklikler altında geliyor. Satır içi
+yapılsaydı, ürünün birine beklemesini söylediği **tek ana** yirmi saniye
+eklerdi, ve ikisi de ilk üretime kadar gerekli değil.
+
+**İşler yazmadan *sonra* kuyruğa giriyor.** `ProfileWriter` kendi
+transaction'ını taşıyor; satırlar commit olmadan bir işçi bunlardan birini
+alsaydı boş bir profil bulup hiçbir şey yapmazdı — bildirebileceği bir hata
+değil, sessizce hiç embed edilmemiş bir profil. Sıra testle sabitlendi.
+
+**Embedding yalnız İngilizce varyanttan.** Türkçe bir cümleyle İngilizce bir
+cümle arasındaki benzerlik eşleşmeyi değil dilleri ölçer (§ 28). **İngilizce
+varyantı olmayan atom atlanıyor**, kaynağından embed edilmiyor: yanlış uzaydaki
+bir vektör, hiç vektör olmamasından kötüdür — çünkü skorlama onu kullanır.
+Karşılaştırma `content_hash` ile, zaman damgasıyla değil (§ 28.2).
+
+**Ölçüm tek özelleştirme için.** `TemplateCustomization.CLASSIC`, tercihleri
+elle değiştirilmemiş bir profilin üreteceği şey. Ötekileri şimdiden ölçmek,
+kimsenin istemediği sayfalar için XeLaTeX koşusu olurdu; onlar istendiğinde
+dolduruluyor.
+
+**İkisinin de başarısızlığı içe aktarmanın başarısızlığı değil.** Skorlama
+embedding'siz çalışmaya düşüyor (§ 28.4), seçim ölçülmemiş için tahmine
+düşüyor ve bunu söylüyor (§ 20.4). İkisi de tekrar edilebilir ve başarana
+kadar görünmez.
+
+**Açık — `local-fake` için kayıtlı fixture hâlâ yok.** `make record` gerçek
+bir anahtar ve gerçek bir CV istiyor; fixture anahtarı istek metninin
+özetinden türediği için elle yazılan bir fixture yalnız tek bir girdide
+ateşlenir, yani uydurulamaz. Yerelde çıkan profil şema şeklinde ve anlamsız —
+**ucun sözleşmesi doğru, içeriği değil.**
+
+#### 31.6.3 Kararlar (Adım 3.6, dilim 5 — anonim yükleme)
+
+**Aynı iş, son satırda ayrılıyor.** İçe aktarım anonim bir kişi için de aynı
+üç aşamayı koşuyor — oku, yapılandır, normalize et — ve yalnız yazma yeri
+değişiyor: dört tablo yerine tek bir Redis belgesi (§ 41.3). Ayrımın *nerede*
+yapıldığı önemli: `EphemeralProfileWriter`, `ProfileWriter`'ın eşleme
+kararlarını (bir bölümün içeriğinin hangi atom türü olduğu, ayın nasıl tarihe
+döndüğü) tekrar etmiyor, çağırıyor. Bunlar **CV'nin ne demek olduğuna** dair
+kararlar, nerede saklandığına dair değil; ikinci bir kopya iki ayrı CV modeli
+demek olurdu.
+
+**Transaction yok, çünkü yapacak bir şey yok.** Anonim profil tek bir yazma;
+yarım yazılamaz, dolayısıyla yarım okunamaz da. Deponun seçilme sebebi buydu.
+
+**Anonim tamamlanmada arka plan işi kuyruğa girmiyor.** Embedding ve ölçüm
+(§ 31.6.2) bu profilin sahip olmadığı satırlara yazıyor; kuyruğa verilseydi
+zaten başarmış bir iş sonradan düşer, kişiye CV'sinin içe aktarılamadığı
+söylenirdi. Anonim kişi vektörsüz tahmin ve skorlama alıyor — § 20.4 ile
+§ 28.4'ün zaten tarif ettiği, **bozulmuş ama çalışan** yol.
+
+**İade edilecek özne yükün içinde taşınıyor.** Anonim yükleme adresin kotasını
+harcıyor (§ 44.1) ve işçi isteğin dışında koşuyor: adresi göremez. § 44.2'nin
+iadesi bu yüzden `jobs.payload`'daki özneye yapılıyor, işçinin tahmin ettiği
+bir özneye değil. **Yanlış özneye iade, hiç iade etmemekten kötüdür** — hiç
+harcamamış birini alacaklandırır ve harcayan kişi başarısız bir denemenin
+bedelini ödemeye devam eder.
+
+**Prompt deneyi (§ 53.3) anonim çağıranı profil id'siyle kovalıyor**, oturum
+id'siyle değil. İkisi de oturum boyunca sabit — kovalamanın istediği tek şey
+bu — ama biri çerezin kendisi, ve çerezin bir tanımlayıcı olarak elden ele
+dolaşmakta işi yok.
 
 ### 31.7 Manuel form
 
@@ -1030,6 +1271,45 @@ public void onVariantUpdated(VariantUpdatedEvent e) {
   [ İngilizceyi yeniden üret ] [ Benim halimi koru ]
 ```
 
+#### 32.2.1 Kararlar (Adım 3.5, dilim 1)
+
+**Kural iki yarım, ve ikisini birleştirmek hata.** Düzenlenen bir sözcüklemeden
+türeyen **her şey bayatlar** — kim yazmış olursa olsun, çünkü kişi ikisinin
+ayrıştığını bilmeye hak sahibi. **Yalnız kişinin yazmadıkları kuyruğa girer**:
+birinin kendi cümlesini, o kişi Türkçede bir yazım hatası düzeltti diye makine
+çevirisiyle değiştirmek, ürünün onu sessizce ezmesidir. Ekran seçimi ona
+bırakıyor.
+
+**Sapma — § 32.2 bunu bir olay dinleyicisi olarak yazıyor, kod doğrudan çağrı
+yapıyor.** Tek yayıncı ve tek abone var; araya olay koymak, önemli olan tek
+şeyi maliyet olarak çıkarırdı: **işaretleme düzenlemeyle aynı transaction'da
+oluyor.** Commit sonrası tetiklenen bir dinleyici kaçırılabilir, ve kaynağı
+değiştikten sonra taze kalmış bir sözcükleme, kimsenin haberdar edilmediği
+yanlış bir çeviridir.
+
+**Sözcükler değişmediyse hiçbir şey olmuyor.** Birincil yapma ya da ton
+değişikliği, o sözcüklemenin her çevirisini hâlâ doğru bırakır.
+
+**Hedef dil sistem yarısına yazılıyor, çitin içine değil.** Maddelerinden
+birine "Target language: en" yazan bir CV, aksi hâlde emri kendisi verirdi.
+Ön ek böylece dile göre değişiyor — gerçek bir maliyeti yok, çünkü çağrı başına
+değil **dil başına** bir ön ek var (§ 27.4).
+
+**§ 21.8'in dördüncü adımı: sayılar rakam olarak karşılaştırılıyor.** Yereller
+aynı niceliği `300,000` ve `300.000` diye yazar; ayıracı reddeden bir kontrol
+**her doğru Türkçe çeviriyi** reddederdi — bir kapının kapatılma biçimi tam
+olarak budur. Rakamlar iddia, noktalama dizgi. Özel isimler `Locale.ROOT` ile
+katlanarak karşılaştırılıyor (mutlak kural 7).
+
+**Rakamsız bir metrik yargılanmıyor.** "ekibin dörtte biri" sözcüklemesiyle
+taşınıyor ve karşılaştırılacak bir şey yok; bu denetim **kaybolduğunu
+kanıtlayabildiğini** reddeder, kontrol edemediğini değil.
+
+**Yapacak iş olmamasının üç yolu var ve hiçbiri başarısızlık değil:**
+sözcükleme silinmiş, kişi düzenlemiş, ya da kaynağı boşalmış. Kuyruk bir
+profile dokunan tek şey değil, ve dünya ilerlediği için başarısızlık bildiren
+bir iş, aslında bitmiş bir şey için ekrana kırmızı işaret koyar.
+
 ### 32.3 ⚠️ Kritik: Türkçe metin İngilizceden uzun
 
 Türkçe, aynı içerik için tipik olarak **%10-20 daha uzun** metin üretir (sondan eklemeli yapı).
@@ -1054,6 +1334,25 @@ double cost = atom.variantFor(targetLang)
 ```
 ℹ Türkçe metinler daha uzun olduğu için bu sürümde 2 madde daha az yer aldı.
 ```
+
+#### 32.3.1 Kararlar (Adım 3.5, dilim 2)
+
+**Sıralama zaten doğruydu; eksik olan iddiaydı.** Seçim hedef dildeki
+sözcüklemeyi alıp **onun kendi ölçülmüş yüksekliğini** okuyor. Var olan test
+doğru varyantın seçildiğini tutuyordu; ötekinin maliyetini yüklemek o testi
+geçerdi — ve bu tam olarak bölümün anlattığı hata: İngilizce maliyetle
+optimize edilmiş, Türkçe render edilince taşan bir sayfa. İki test artık
+ikisini birden tutuyor.
+
+**⚠️ testi: aynı bütçe daha az Türkçe madde tutuyor.** İki dilin farklı
+kümeler seçmesi düzeltilecek bir kusur değil — **madde değil punto** ölçen bir
+sınırın anlamı bu, ve alternatifi taşan bir belgedir.
+
+**`userEdited` yalnız temizlenebilir, ve yalnız bilerek.** § 32.2'nin
+"İngilizceyi yeniden üret" düğmesi bu; temizlemek bayat bir sözcüklemeyi
+**hemen** kuyruğa alıyor, çünkü kaynak aylarca düzenlenmeyebilir ve sözcükleme
+şimdi bayat. `true` göndermek **reddediliyor**: birinin adına yazarlık iddia
+etmek, bir makine çevirisini insan adının arkasına saklayabilecek tek yön.
 
 ### 32.4 Ölçüm
 
@@ -1190,6 +1489,53 @@ validate(coverLetter, selectedAtoms, profile):
 "I am a passionate/dedicated/results-driven..."
 "Thank you for considering my application"
 ```
+
+#### 34.4.1 Kararlar (Adım 3.8, dilim 5)
+
+**Ekleme — mektup Faz D'nin başarısızlığı bildirebilen tek parçası.** Reddedilen
+bir yeniden yazım kişinin kendi cümlesini, reddedilen bir About kendi
+paragrafını bastırıyor; mektubun arkasında bir orijinal yok. İki sonuç kalıyor:
+dürüst bir mektup ya da bildirilen bir ret. Yeni kod `COVER_LETTER_REJECTED`
+(422, `params.issues`), çözüm eylemi `retry`, ve kuyruk onu tekrar denemeye
+değer sayıyor.
+
+**Ekleme — mektup istenirse yazılıyor, hem de iki yoldan.** `POST /generations`
+gövdesinde `coverLetter: true` (varsayılan kapalı — ilke 5: mektup ikinci bir
+LLM çağrısı ve CV isteyenlerin çoğu mektup istemiyor), ya da sonradan
+`POST /generations/{id}/cover-letter/regenerate`. **Üretim sırasında yazılan
+mektubun reddi CV'yi düşürmüyor**: kişi belgeyi istedi, belge çıktı, mektup
+düğmeyle tekrar istenebilir.
+
+**Ekleme — "deneyim süresi" kariyerin *aralığı*, entry'lerin toplamı değil.**
+Aynı anda tutulan iki iş, iki satır ve tek bir hayat dilimi; toplamak
+§ 34.4'ün "en sık uydurma" dediği şeyi **bizim** yapmamız olurdu. Tarihsiz
+entry hiçbir şey katmıyor.
+
+**Ekleme — "şirket adı doğru mu" kapalı küme olarak yanıtlanıyor.** Genel bir
+kurum sözlüğü yok ve buradaki yanlış pozitif **bütün mektubu** kaybettiriyor.
+Cevaplanabilen şey asıl gerçekleşen hata: az önce bu kişinin CV'sini okumuş bir
+modelin mektubu orada gördüğü işverene hitap etmesi. Selamlama bu yüzden
+kişinin **kendi** kurumlarına karşı kontrol ediliyor; yazılan şirket olmayan
+birini anmak reddediliyor.
+
+**Ekleme — sayı kontrolü rakam okuyor.** Cevaptaki her rakam dizisi sayfada
+(metriklerde, alıntılanan cümlelerde ya da kişinin şirket notunda) geçmeli;
+yıl iddiaları önce tarihlere karşı denetleniyor ve o rakamlar ikinci kez
+"uydurma" diye raporlanmıyor.
+
+**Ekleme — `auto` mektup dili ilanı izliyor, CV'yi değil.** § 5.4 `jdLanguage`'ı
+zaten bunun için saklıyor. `F-013` CV'nin dilini profilin her atom için
+sözcüklemesi olmasına bağladı; mektup sıfırdan yazıldığı için o kısıt onu
+bağlamıyor. Türkçe profili İngilizce ilana başvuran biri Türkçe CV ve İngilizce
+mektup alıyor, ve ikisi de doğru.
+
+**Ekleme — uç nokta saatte on mektupla sınırlı.** § 34.6 kişinin birkaç taslak
+denemesini istiyor; tavanı olmayan bir LLM ucu ise faturayı başkasının yazdığı
+bir şey. `RateLimiter`'ın `cover_letter` katmanı, kullanıcı başına 10/saat.
+
+**Klişe listesi iki dilde.** § 34.4 İngilizce dört madde veriyor; ürünün
+gönderdiği iki dilin ikisi de listeleniyor, çünkü aynı boş cümle Türkçe de
+yazılıyor.
 
 ### 34.5 Şirket bilgisi eksikliği
 

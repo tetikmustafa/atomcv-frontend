@@ -97,21 +97,48 @@ LLM_CHAIN_CHEAP=gemini,deepseek,openrouter
 LLM_CHAIN_MID=openai,anthropic,openrouter
 
 # Güvenlik
-SESSION_SECRET=
 OAUTH_GOOGLE_CLIENT_ID=      OAUTH_GOOGLE_CLIENT_SECRET=
 OAUTH_GITHUB_CLIENT_ID=      OAUTH_GITHUB_CLIENT_SECRET=
-OAUTH_LINKEDIN_CLIENT_ID=    OAUTH_LINKEDIN_CLIENT_SECRET=
 TURNSTILE_SECRET_KEY=        NEXT_PUBLIC_TURNSTILE_SITE_KEY=
+SESSION_COOKIE_DOMAIN=       SESSION_COOKIE_SECURE=true
+FORWARD_HEADERS_STRATEGY=framework
+RATE_LIMIT_SIGN_IN_GLOBAL=200
 
 # Servisler
 RESEND_API_KEY=
-AXIOM_TOKEN=                 AXIOM_DATASET=
+OTLP_ENABLED=   OTLP_URL=   OTLP_AUTHORIZATION=   OTLP_DATASET=
 SENTRY_DSN=
 R2_ACCOUNT_ID=  R2_ACCESS_KEY=  R2_SECRET_KEY=  R2_BUCKET=
 
 # Bütçe
 DAILY_BUDGET_USD=40
 ```
+
+**`SESSION_SECRET` yok, ve olmamalı.** Oturum kimliği `SecureRandom`'dan gelen
+256 bitlik opak bir değer ve Redis'te duruyor; imzalanan hiçbir şey yok,
+dolayısıyla imzalayacak bir sır da yok. Kullanılmayan bir sır, yalnızca
+sızabilecek bir sırdır.
+
+**`FORWARD_HEADERS_STRATEGY` üretimde `framework`, ve bu bir tercih değil.**
+Bölüm 40.5'in IP katmanı çağıranın adresine göre kova seçiyor; Nginx'in arkasında
+`getRemoteAddr()` Nginx'i döner. Ayar yapılmazsa **bütün dağıtım tek kovayı
+paylaşır** — yapılandırılmış görünen, testlerini geçen, ve onuncu giriş
+isteğinde herkesi kilitleyen bir limiter. `framework`, Spring'in
+`ForwardedHeaderFilter`'ının isteği başlıklardan yeniden yazmasını sağlar; yalnız
+başlığı proxy koyduğu için güvenlidir. **Porta doğrudan ulaşılabilen hiçbir yerde
+`framework` yazılmaz** — orada başlık istemcinin uydurabileceği bir şeydir ve
+her istemci kendi kovasını seçer. Yerelin varsayılanı bu yüzden `none`.
+
+**`TURNSTILE_SECRET_KEY` üretimde zorunlu ve yokluğunda uygulama açılmaz**
+(§ 40.5.1). Bu değişkeni unutmuş bir dağıtım kusursuz çalışır ve magic link ucu
+korumasız durur; davranıştan anlaşılmayan tek eksik, açılışta söylenmek zorunda.
+
+**Gözlemlenebilirlik değişkenleri `AXIOM_*` değil `OTLP_*`.** Kod
+`management.otlp.metrics.export.*` altından okuyor, ve isim satıcının değil
+telin adı: Axiom'dan çıkılırsa değişken adı yalan söylemez. İki tuzak birlikte
+geliyor — `OTLP_AUTHORIZATION` `Bearer ` önekini de taşır, ve
+`micrometer-registry-otlp` **metrik** gönderdiği için URL sağlayıcının
+*metrics* ucudur; trace ucuna giden metrik sessizce reddedilir.
 
 ---
 
@@ -355,6 +382,36 @@ CREATE TABLE support_grants ( ... );   -- Bölüm 13
 ```
 
 **Erişim denetim kaydı:** Sen içeriğe baktığında `accessed_at` yazılır ve kullanıcı bunu görebilir.
+
+#### 48.4.1 Kararlar (Adım 3.9, dilim 2)
+
+**Ekleme — izin geri alınabilir, ve aynı formdan.** § 48.4 kutuyu ve denetim
+kaydını tarif ediyor, geri almayı söylemiyor; `revoked_at` kolonu zaten orada
+duruyordu. `contentGranted: false` göndermek açık bir izni kapatıyor. Geri
+alınamayan bir onay, onay değil bir anahtardır.
+
+**Ekleme — ikinci "evet" pencereyi ileri itmiyor.** Kırk sekiz saat kişinin
+ilk kabulünden başlıyor; iki kez kaydedilen bir form, kimse istemeden sonu
+ötelerdi. Açık bir grant varken yeni satır açılmıyor.
+
+**Ekleme — grant satırı kalıyor, silinmiyor.** Geri almak da erişimin
+geçmişinin parçası: kişiye "izin vermiştin, sonra geri aldın" diyebilmenin tek
+yolu o satır.
+
+**Ekleme — yanıt grant'i geri yolluyor** (`open`, `expiresAt`, `accessedAt`,
+`revokedAt`). § 48.4 kişinin içeriğine bakıldığını görebilmesini istiyor;
+`accessedAt` biri gerçekten bakana kadar null. Kontrol edilemeyen bir onay
+kutudan ibarettir.
+
+**Ekleme — üretim başına tek bir yargı** (`V4` unique index). Öbür başparmağa
+basmak fikrini değiştirmek, ikinci bir görüş bildirmek değil; ikisini de sayan
+bir oran tıklama sayardı. Tablo `user_id`'yi nullable tutuyor ve Postgres
+NULL'ları farklı sayıyor, yani kısıt yalnız hesapları kapsıyor — anonim üretim
+indiğinde kendi öznesi için kendi cevabını isteyecek.
+
+**Yorum saklanıyor, loglanmıyor, geri de yollanmıyor.** Kişi onu bize okumamız
+için yazdı; bu, bir teşhiste görünmesiyle aynı şey değil (mutlak kural 4). Geri
+yollamak da kendi sözlerinin sebepsiz yolculuğu olurdu.
 
 ### 48.5 Replay
 

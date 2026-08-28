@@ -19,7 +19,7 @@
 | **Flyway** | Veritabanı migration | Versiyonlu, sıralı, checksum korumalı şema evrimi. Elle DDL asla. |
 | **Jakarta Bean Validation** | Girdi doğrulama | Deklaratif, standart |
 | **Resilience4j** | Retry, circuit breaker, timeout | LLM ve derleme servisleri için dayanıklılık |
-| **Bucket4j** | Rate limiting | Uygulama seviyesi kota; Redis backend destekli |
+| ~~Bucket4j~~ → Redis'te kayan pencere | Rate limiting | **Alınmadı (Adım 3.3, dilim 4).** Bölüm 40.5 sınırlarını "3 istek / 15 dakika" diye yazıyor, ki bu pencere; token kovası ortalaması aynı çıkan başka bir kuraldır. Kararı `Retry-After` verdi — bir sonraki slotun ne zaman boşaldığını yalnız pencere söyleyebilir. Sıralı küme + tek Lua script; yeni bağımlılık yok, oturum ve OAuth state'in zaten kullandığı kalıp. § 40.5.1 |
 | **Spring RestClient** | HTTP istemcisi | LLM API'lerine raw REST çağrıları için; SDK bağımlılığı yok |
 | **Apache PDFBox** | PDF metin çıkarımı | En olgun Java PDF kütüphanesi; **FontBox** ile TTF/OTF metrik okuma da bedava geliyor |
 | **Apache POI** | DOCX okuma/yazma | Java'da standart |
@@ -128,7 +128,7 @@ Model adları **env değişkeni**dir, koda gömülmez — model isimlendirmeleri
 | **Resend** | Transactional e-posta | 3.000/ay ücretsiz, modern API, iyi DNS kurulum rehberi |
 | **Cloudflare Turnstile** | Bot koruması | Ücretsiz, CAPTCHA'sız UX, Cloudflare ekosisteminde |
 | **Cloudflare R2** | Nesne depolama (PDF, yedek) | S3 uyumlu, **egress ücretsiz** (restore testi bedava) |
-| **OAuth: Google/GitHub/LinkedIn** | Kimlik | Magic link'e alternatif; e-posta teslimat riskini azaltır |
+| **OAuth: Google/GitHub** | Kimlik | Magic link'e alternatif; e-posta teslimat riskini azaltır |
 
 **Kendi SMTP sunucusu neden yok:** VPS IP'leri evrensel olarak güvenilmez kabul edilir. Gmail/Outlook doğrudan spam'e atar. IP itibarı aylar sürer, tek şikayet sıfırlar.
 
