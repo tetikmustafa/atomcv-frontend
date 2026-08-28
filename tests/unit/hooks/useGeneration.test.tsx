@@ -48,7 +48,7 @@ async function startJob() {
   let job: Awaited<ReturnType<typeof result.current.mutateAsync>> | undefined;
 
   await act(async () => {
-    job = await result.current.mutateAsync({ acknowledgePreflight: false });
+    job = await result.current.mutateAsync({ acknowledgePreflight: false, coverLetter: false });
   });
 
   return job!;
@@ -143,7 +143,7 @@ describe('the double-submit defence', () => {
     pauseGeneration();
 
     const { result } = renderHook(() => useStartGeneration(), { wrapper });
-    const body = { acknowledgePreflight: false };
+    const body = { acknowledgePreflight: false, coverLetter: false };
 
     await act(async () => {
       await result.current.mutateAsync(body).catch(() => undefined);
@@ -164,7 +164,7 @@ describe('the double-submit defence', () => {
 
   it('asks again with a new key once the first one produced a job', async () => {
     const { result } = renderHook(() => useStartGeneration(), { wrapper });
-    const body = { acknowledgePreflight: false };
+    const body = { acknowledgePreflight: false, coverLetter: false };
 
     await act(async () => {
       await result.current.mutateAsync(body);

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
-import type { SessionResponse } from '@/mocks/contracts';
+import { getSession } from '@/lib/api/endpoints/auth';
 import type { components } from '@/types/api';
 import { announce } from '@/stores/announcerStore';
 
@@ -35,7 +35,7 @@ export function MockHarness() {
 
   const session = useQuery({
     queryKey: ['session'],
-    queryFn: () => api.get<SessionResponse>('/auth/session'),
+    queryFn: getSession,
   });
 
   useEffect(() => {

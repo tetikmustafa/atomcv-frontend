@@ -94,14 +94,22 @@ export const QUOTA = { generation: 5, profile_extract: 3 } as const;
  * translation key that is an empty string is not a key, and the shape says so
  * now instead of leaving the client to know it.
  *
- * The four real phases and their `pct` values are the server's, not invented:
- * `ANALYSING` 10, `MEASURING` 30, `SCORING` 50, `RENDERING` 70.
+ * The five real phases and their `pct` values are the server's, not invented:
+ * `ANALYSING` 10, `MEASURING` 30, `SCORING` 50, `REWRITING` 60,
+ * `RENDERING` 70.
+ *
+ * **`REWRITING` does not always happen** (`B-055`). Faz D never runs in
+ * general-CV mode, and it is skipped when the posting names no skills, so a
+ * bar that jumps 50 → 70 is correct rather than a dropped frame. The mock
+ * sends it because a screen that has never seen the phase is the one that
+ * renders a blank caption at 60%.
  */
 export const SCHEDULE = [
   { at: 0, pct: 0 },
   { at: 400, phase: 'A', label: 'generation.phase.ANALYSING', pct: 10 },
   { at: 800, phase: 'B', label: 'generation.phase.MEASURING', pct: 30 },
   { at: 1200, phase: 'B', label: 'generation.phase.SCORING', pct: 50 },
+  { at: 1400, phase: 'D', label: 'generation.phase.REWRITING', pct: 60 },
   { at: 1600, phase: 'C', label: 'generation.phase.RENDERING', pct: 70 },
 ] as const satisfies readonly { at: number; phase?: string; label?: string; pct: number }[];
 

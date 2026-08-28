@@ -12,23 +12,21 @@
 
 ## OPEN
 
-> **Dosya 100 satır sınırının dört katı, ve sebebi arşivleme gecikmesi değil:**
-> **on sekiz madde açık ve hiçbiri `ACK` almadı**, yani taşınacak bir şey yok.
-> Sınır bir okunabilirlik kuralı; onu delen şey burada bir belge sorunu değil,
-> **bir koordinasyon sorunu.** Bir madde `ACK` aldığı gün `resolved/`'a taşınır
-> ve dosya kendiliğinden küçülür.
+> **Dosya hâlâ 100 satır sınırının üstünde, ve sebebi arşivleme gecikmesi
+> değil:** on dört madde açık. Sınır bir okunabilirlik kuralı; onu delen şey
+> burada bir belge sorunu değil, **bir koordinasyon sorunu** — ve mekanizma
+> 2026-08-29'da ilk kez çalıştı: dilim 0 dört maddeyi kapattı, dördü de
+> `resolved/to-frontend-2026-08.md`'ye taşındı ve dosya kendiliğinden 496'dan
+> küçüldü. Kalan on dördü aşağıda, dilim dilim kapanacak.
 >
-> Bu arada gezinebilir olsun diye aşağıda bir dizin var. Gerekçelerin kalıcı
-> olanı `spec/`'e işlendi; burada yalnız *ne yapman lazım* duruyor.
+> Gezinebilir olsun diye aşağıda bir dizin var. Gerekçelerin kalıcı olanı
+> `spec/`'e işlendi; burada yalnız *ne yapman lazım* duruyor.
 
 ### Dizin — açık maddeler
 
 | ID | Konu | Ne yapman lazım, tek cümlede |
 |---|---|---|
-| `B-044` | CSRF | Her yazma isteği `X-XSRF-TOKEN` taşımalı; değeri aynı isteğin çerezinden. |
-| `B-045` | `AUTHENTICATION_REQUIRED` | Yeni 401 kodu — giriş ekranına götüren tek yol. |
 | `B-046` | Oturum ve yetenekler | `/auth/session` ve `/auth/logout`; yetenek kümesi ekranı sürüyor. |
-| `B-047` | LinkedIn | Giriş sağlayıcısı olarak kaldırıldı; düğmeyi silin. |
 | `B-048` | OAuth | İki rota: `/auth/complete` ve `/auth/error`. |
 | `B-049` | Magic link | Bir rota (`/verify`) ve bir tuzak: bağlantı GET'tir, giriş POST'tur. |
 | `B-050` | Turnstile + 429 | Link isteği bir widget tokenı istiyor ve 429 dönebiliyor. |
@@ -36,35 +34,12 @@
 | `B-052` | Bayat varyant | Bir sözcüklemeyi düzenlemek ötekileri bayatlatıyor; uyarıyı siz gösterin. |
 | `B-053` | Anonim yükleme | Aynı uç, aynı kalıp, hesap yok. |
 | `B-054` | Yükseltme yanıtı | `/auth/verify` artık anonim profile ne olduğunu söylüyor. |
-| `B-055` | `REWRITING` | Üretim akışında yeni bir faz görünüyor. |
 | `B-056` | Cover letter | Bir bayrak, bir uç, ve reddedilebilir. |
 | `B-057` | Hesap silme | `DELETE /api/v1/account`. |
 | `B-058` | Geri bildirim | Bir başparmak ve 48 saatlik bir içerik izni. |
 | `B-059` | Gizlilik Politikası | Alt işleyen listesine Resend + AWS SES (Tokyo). **Yayın öncesi zorunlu.** |
 | `B-060` | İkinci CV | `409 PROFILE_ALREADY_EXISTS`, iki resolution, `?mode=replace`. |
 | `B-061` | Maddesiz entry | Altında madde olmayan bir entry artık CV'ye çıkabiliyor — editörde engellemeyin. |
-
-### B-044 · Her yazma isteği bir CSRF token taşıyor
-**Since:** commit <sha> · Adım 3.3 · **Spec:** `spec/08b-api-contract.md` § EK D.6.6
-
-Çift-gönderim: sunucu her yanıtta okunabilir bir `XSRF-TOKEN` çerezi veriyor,
-istemci güvensiz metotlarda (`POST`/`PUT`/`PATCH`/`DELETE`) `X-XSRF-TOKEN`
-başlığında yankılıyor. Yankılamayan istek `403 CSRF_TOKEN_INVALID` alır.
-
-**Aksiyon:** `client.ts`'e iki satır. Çerez `HttpOnly` **değil** (okunması
-gerekiyor; `sid` olmadan hiçbir şey kanıtlamıyor). Kodu gören istemci tekrar
-denemesin, tokenı yeniden okusun.
-
-**Tuzak:** çerez `SameSite=Strict` ve host'a bağlı; ayrı portlarda
-(`:3000`/`:8080`) `document.cookie` göremez — Next.js rewrite'ı üzerinden tek
-origin'den geçin, OAuth callback'i dahil.
-
-### B-045 · Yeni hata kodu — `AUTHENTICATION_REQUIRED` (401)
-**Since:** commit <sha> · Adım 3.3 · **Spec:** `spec/08b-api-contract.md` § EK D.6
-
-Katalogda **oturumu hiç olmayan** isteğin karşılığı yoktu; gerekçesi spec'te.
-**Aksiyon:** `errors.AUTHENTICATION_REQUIRED` anahtarı, `params` yok, tek
-resolution `sign_up`. Adım 3.6 anonim oturum basınca nadirleşir.
 
 ### B-046 · `/auth/session`, `/auth/logout`, ve hesabın yetenek kümesi
 **Since:** commit <sha> · Adım 3.3 · **Spec:** `spec/08-api.md` § 35.7
@@ -78,15 +53,6 @@ orada — hesapta diller `["en","tr"]`, dört yetenek `true`, kotalar 20 · 5.
 **Aksiyon:** `maxAtoms` ve `anonymousExpiresAt` hesapta `null` değil, JSON'da
 **hiç yok** — tipleriniz opsiyonel okusun; olmayan bir limite karşı çizilen
 ilerleme çubuğu yanlış bir ekran. `allowedTemplates` bugün `["classic"]`.
-
-### B-047 · LinkedIn ile giriş kaldırıldı
-**Since:** commit <sha> · Adım 3.3 · **Spec:** `spec/02-tech-stack.md`
-
-Uygulama açmak doğrulanmış bir şirket sayfası istiyordu; karşılığı Google ile
-GitHub'ın zaten verdiği giriş.
-
-**Aksiyon:** LinkedIn düğmesini çıkarın. **Karıştırmayın:** CV'deki
-`contact.linkedin` alanı duruyor — o iletişim bilgisi, kimlik sağlayıcısı değil.
 
 ### B-048 · OAuth indi — sizden iki rota
 **Since:** commit <sha> · Adım 3.3 dilim 2 · **Spec:** `spec/10-security.md` § 40.6.1
@@ -292,31 +258,6 @@ bu, "birleştirebilirsin" değil. **Birleştirme akışı yok ve planlanmadı**;
 anonim ekranda tuttuğunuz seçimler ve açık/kapalı durumlar giriş sonrası hâlâ
 geçerli — id'lerle eşleştiriyorsanız yeniden yüklemeniz gerekmiyor.
 
-### B-055 · Üretim akışında yeni bir faz görünüyor: `REWRITING`
-**Since:** commit <sha> · Adım 3.8 · **Spec:** `spec/06-pipeline-d-g.md` § 21
-
-İlana özel üretim artık Faz D'yi koşuyor: seçilen maddelerin en fazla sekizi
-ilana göre yeniden yazılıyor. SSE ilerleme akışında bunun karşılığı **yeni bir
-faz anahtarı**:
-
-```
-{"phase":"D","labelKey":"generation.phase.REWRITING","pct":60}
-```
-
-**Yapmanız gereken tek şey `generation.phase.REWRITING` çevirisini eklemek**
-(TR/EN). Anahtarı tanımayan bir ekran bugün ya boş bir satır ya da ham anahtarı
-gösterir — kırılmaz, ama %60'ta okunmaz bir şey yazar.
-
-Sıra: `ANALYSING` (10) → `MEASURING` (30) → `SCORING` (50) → **`REWRITING`
-(60)** → `RENDERING` (70). Faz D **her üretimde görünmez**: genel CV modunda
-hiç koşmuyor, ve ilan hiçbir beceri adı taşımıyorsa atlanıyor. Yani bu fazı
-görmemek bir hata değil, ve ilerleme çubuğu 50'den 70'e atlayabilir.
-
-**Yeniden yazma sessizce başarısız olabilir ve bu doğru davranış.** Bir madde
-denetimden geçmezse kişinin kendi cümlesi basılıyor; ne bir hata kodu ne bir
-uyarı iniyor. Kullanıcıya "yeniden yazıldı/yazılmadı" diye bir şey göstermeyin
-— CV zaten doğru CV.
-
 ### B-056 · Cover letter telde — bir bayrak, bir uç, ve reddedilebilir
 **Since:** commit <sha> · Adım 3.8 · **Spec:** `spec/07-subsystems.md` § 34
 
@@ -486,7 +427,11 @@ maliyetini ödemez. Sayfa sınırı garantisi aynen duruyor.
 
 ## ACK — frontend tamamladı, backend arşivleyebilir
 
-_(`B-037`…`B-043` `resolved/to-frontend-2026-08.md`'de)_
+_(`B-037`…`B-043` ve Aşama 3 dilim 0'ın kapattığı `B-044`, `B-045`, `B-047`,
+`B-055` — hepsi `resolved/to-frontend-2026-08.md`'de.)_
+
+**`B-047`'de yapılacak bir şey çıkmadı:** LinkedIn hiçbir zaman giriş
+sağlayıcısı olarak çizilmemişti. Silinmedi, hiç yoktu — madde yine de kapalı.
 
 ---
 

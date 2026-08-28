@@ -63,6 +63,12 @@ export function GenerateScreen() {
 
     const body: GenerationRequest = {
       acknowledgePreflight: false,
+      // Explicitly off rather than omitted, for the reason the endpoint's own
+      // comment gives about `acknowledgePreflight`: the generator makes both
+      // required because the server defaults them, and a body that states
+      // what it did not ask for is the one that cannot drift. The control
+      // that turns it on lands with the letter itself (`B-056`).
+      coverLetter: false,
       ...(trimmed === '' ? {} : { jobDescription: trimmed }),
       ...overrides,
     };

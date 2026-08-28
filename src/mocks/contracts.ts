@@ -14,6 +14,11 @@
  * Stage 2 took `JobAccepted` out: `POST /generations` is published, and
  * `AcceptedJobResponse` is its generated shape.
  *
+ * Stage 3 took `Capabilities` and `SessionResponse` out: `GET /auth/session`
+ * is published, and `src/lib/api/endpoints/auth.ts` derives both from it.
+ * With them went the note explaining why `anonymousExpiresAt` was withheld —
+ * the server publishes it now, so the mock sends it.
+ *
  * Rules while it lives, unchanged:
  *   - Nothing outside `src/mocks/` may import it.
  *   - A type goes the moment `gen:api` produces its replacement, one at a
@@ -21,33 +26,6 @@
  */
 
 import type { ProblemDetail, Resolution } from '@/types/domain';
-
-/**
- * § 35.7. Server-side truth; the client uses it for UX only.
- *
- * Still hand-shaped because `/auth/session` is Stage 3 and the schema has no
- * counterpart. `anonymousExpiresAt` is deliberately absent: it lands with the
- * anonymous session, and a field the mock invents ahead of the server is a
- * field the client would learn to depend on.
- */
-export type Capabilities = {
-  allowedLanguages: string[];
-  allowedTemplates: string[];
-  canCustomizeTemplate: boolean;
-  canEditAtomControls: boolean;
-  canAddAlternatives: boolean;
-  canSaveHistory: boolean;
-  dailyGenerationQuota: number;
-  generationsUsedToday: number;
-  dailyProfileQuota: number;
-  profilesUsedToday: number;
-  maxAtoms: number;
-};
-
-export type SessionResponse = {
-  authenticated: boolean;
-  capabilities: Capabilities;
-};
 
 /**
  * § 30.6's three event payloads.

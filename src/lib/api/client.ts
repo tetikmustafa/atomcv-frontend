@@ -1,4 +1,5 @@
 import { isServer } from '@tanstack/react-query';
+import { CSRF_HEADER, isUnsafeMethod, readCsrfToken } from './csrf';
 import { NetworkError, toApiError } from './errors';
 import { toIfMatch, type Version } from './etag';
 
@@ -96,10 +97,18 @@ async function send(
   if ('version' in options) headers.set('If-Match', toIfMatch(options.version));
   if (options.idempotencyKey) headers.set('Idempotency-Key', options.idempotencyKey);
 
-  // TODO(csrf): the backend has not defined its CSRF scheme yet — no token
-  // name, header name or delivery method is specified anywhere in docs/. The
-  // session cookie is SameSite=Strict, which already blocks the cross-site
-  // vector; the token is defence in depth and lands with auth in Aşama 3.
+  // Double-submit, on unsafe methods only (`B-044`). The session cookie is
+  // already `SameSite=Strict`, so this is defence in depth rather than the
+  // only thing standing there — but a write that omits it is refused, so it
+  // is not optional either.
+  //
+  // A missing token sends no header rather than an empty one: before the
+  // first response there is nothing to echo, and `403 CSRF_TOKEN_INVALID`
+  // with a reload is a better outcome than a header that claims a value.
+  if (isUnsafeMethod(method)) {
+    const token = readCsrfToken();
+    if (token) headers.set(CSRF_HEADER, token);
+  }
 
   let response: Response;
   try {

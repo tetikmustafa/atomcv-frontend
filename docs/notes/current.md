@@ -14,8 +14,80 @@
 Plan: `spec/14-build-guide.md` § XI-A.6 · frontend sırası
 `spec/15-repos-and-claude.md` § XI-B.9.2.
 
-**Henüz başlanmadı.** Aşama 2 tam olarak kapandı: uygunluk raporu dahil,
-`B-040` ve `B-041` ile.
+Aşama 2 tam olarak kapandı (uygunluk raporu dahil, `B-040` ve `B-041` ile).
+Backend'in Aşama 3'ü telde: dilimleme `B-044`-`B-061`'i sekiz dilime bölüyor,
+sıra **temel → oturum → giriş → yükleme → cover letter → bayat varyant →
+editör → kapanış**. Sebebi tek cümlede: CSRF her yazma isteğinin önünde.
+
+### Dilim 0 — temel · 2026-08-29
+
+`B-044` · `B-045` · `B-047` · `B-055` kapandı; kayıtları
+`handoff/resolved/to-frontend-2026-08.md`'de. Burada duran şey **koda dair
+olan**, madde metni değil.
+
+**`gen:api` çalıştı ve 728 satır getirdi — hiçbir şey kalkmadan.** Aşama 3'ün
+tamamı yayımlanmış: on bir yeni operasyon (`session`, `logout`, `request`,
+`verify`, `providers`, `start`, `callback`, `importCv`, `coverLetter`,
+`feedback`, `delete_1`), dokuz yeni hata kodu, iki yeni resolution.
+
+**Typecheck'in verdiği on hatanın onu da tasarlanmış alarmdı.** Kataloğun
+tüketicilik kapısı (`Uncovered extends never`) dokuz kodu ve iki action'ı tek
+tek saydı. Aşama 2'de yazılan kapının ilk gerçek işi buydu ve çalıştı: yeni bir
+kod, kimsenin yazmadığı bir mesaj olarak değil, **derlemeyen bir dosya** olarak
+geldi.
+
+**`coverLetter` üretilen tipte zorunlu çıkıyor** — şemada `required` dizisi
+yok, ama openapi-typescript `default`'u olan alanı zorunlu sayıyor;
+`acknowledgePreflight` de aynı sebeple zaten öyleydi. Gövdeye `false` yazıldı,
+opsiyonele çevrilmedi: `generations.ts`'in kendi yorumunun `acknowledgePreflight`
+için verdiği gerekçe burada da geçerli — istemediğini **söyleyen** gövde
+sürüklenemez.
+
+**CSRF çerezi her istekte yeniden okunuyor, önbelleğe alınmıyor.** Sunucu
+tokenı döndürürse önbellekli kopya tek reddi kalıcı redde çevirir; `B-044`'ün
+"tekrar deneme, yeniden oku" cümlesinin koddaki karşılığı bu. Üç tuzak teste
+yazıldı: yüzde-kodlanmış değer (`+`, `=` taşıyan base64 token ham gönderilirse
+hiç eşleşmez), çerez yokken **başlığın hiç gönderilmemesi**, ve isim
+karşılaştırmasının tam olması — `other=XSRF-TOKEN` diye bir çerez kavanozda
+duruyorsa önek eşleşmesi onu bulur.
+
+**Negatif kontrol yapıldı:** başlığı kuran üç satır kaldırılınca altı testin
+dördü kırılıyor. Geçen ikisi *yokluk* iddiaları (GET'te başlık yok, çerezsizken
+başlık yok) ve doğru davranışları bu — kırılmamaları beklenen sonuç.
+**MSW başlığı hiç denetlemiyor**, yani bu davranış sessizce kaybolabilirdi;
+testlerin var olma sebebi tam olarak bu.
+
+**`contracts.ts` iki tip daha eksildi.** `Capabilities` ve `SessionResponse`
+artık şemada; `lib/api/endpoints/auth.ts` ikisini de **türetiyor**. Türetme
+düz `Required<>` değil: § 35.7 dört bayrağı, iki kotayı ve iki sayacı her iki
+oturum türü için de garanti ediyor, o yüzden onlar zorunlu — bir yetenek kapısı
+üç değerli olursa `undefined` sessizce "yapamaz" dalına düşer ve kullanıcının
+sahip olduğu özelliği gizler. Gerçekten değişen üçü (`maxAtoms`,
+`quotaResetsAt`, `anonymousExpiresAt`) opsiyonel kaldı: `B-046` hesapta
+**JSON'da hiç yok** diyor, şema `nullable` diyor, ve ikisi de okunabiliyor.
+
+**Mock artık `anonymousExpiresAt` gönderiyor ve her istekte yeniden hesaplıyor.**
+Donmuş bir an, TTL'in kaydığını (§ 35.7) göremeyen bir ekranı da geçirirdi.
+
+**`REWRITING` yalnız katalog anahtarı değildi.** Anahtarı eklemek `B-055`'in
+istediği şeydi, ama fazı hiç görmemiş bir ekran %60'ta boş bir başlık çizer ve
+bunu hiçbir test yakalamaz — o yüzden `SCHEDULE`'a da girdi. Bedeli iki birim
+testi ve bir e2e sayısı; ödenmeye değer, çünkü ikisi de fazın **gerçekten**
+aktığını doğruluyor.
+
+**`COVER_LETTER_REJECTED`'ın mesajı `issues`'ı saymıyor, ve bu geçici.** Altı
+değer makine belirteci (`unsupported_claim`, `cliche`…); ham basılırsa ekrana
+`unsupported_claim ve cliche` çıkar. Aynı gerekçe `REWRITE_VALIDATION_FAILED`'da
+da uygulanmıştı. Sözlüğün kapalı olup olmadığı `F-017` ile soruldu; cevap
+gelince dilim 4'te (cover letter ekranı) altısı da adlandırılacak.
+
+**`RATE_LIMITED` bugün `resetsAt`'ten kuruluyor, `Retry-After`'dan değil.**
+`B-050` süreyi başlıktan kurmayı istiyor ve haklı — kullanıcının saati
+yanlışsa doğru olan tek şey o. Ama `Retry-After` bir **başlık**, ve `toApiError`
+bugün gövdeden başka bir şey okumuyor. Cümle o yüzden maddenin "yalnız şu
+saatte tekrar deneyin yazacaksanız kullanın" dediği biçimde yazıldı; başlığı
+okuyan hâli, onu ilk gerçekten gösterecek ekranla (dilim 2, magic link formu)
+birlikte iniyor.
 
 ### `B-043` — bir kodun arkasındaki sekiz sebep
 

@@ -365,3 +365,45 @@ Denetimi ararken § 18.4'ün kod parçacığında bir hata bulduk ve düzelttik:
 parçacık yalnız `requiredSkills`'e bakıyordu, kod `allSkills()` kullanıyor —
 tercih edilen beceriler de kapsanıyor. Kod doğruydu, spec eksikti. Şekil
 değişmedi, `gen:api` gerekmez.
+
+---
+
+## Aşama 3 · dilim 0 — 2026-08-29
+
+`to-frontend.md`'nin `OPEN` bölümünden taşındı. Dördü de tek dilimde kapandı;
+ayrıntılı inşa kaydı `notes/current.md` § Aşama 3 · dilim 0'da.
+
+### B-044 · Her yazma isteği bir CSRF token taşıyor
+Çift-gönderim `client.ts`'te: `POST`/`PUT`/`PATCH`/`DELETE` çerezdeki
+`XSRF-TOKEN`'ı `X-XSRF-TOKEN` başlığında yankılıyor, `GET` yankılamıyor.
+
+**Frontend:** `lib/api/csrf.ts` çerezi **her istekte yeniden okuyor**, önbelleğe
+almıyor — sunucu tokenı döndürürse önbellekli bir kopya tek reddi kalıcı redde
+çevirirdi, ve `CSRF_TOKEN_INVALID`'in tekrar denenmemesinin sebebi tam olarak
+bu. Değer `decodeURIComponent`'ten geçiyor: çerez kavanozunda yüzde-kodlanmış
+duran bir base64 token (`+`, `=`) ham gönderilirse hiçbir zaman eşleşmiyor.
+Çerez yokken **başlık hiç gönderilmiyor**; boş bir başlık bir iddia olurdu.
+
+Altı test `tests/unit/lib/csrf.test.ts`'te, negatif kontrolü yapıldı —
+başlığı kuran satır kaldırılınca dördü kırılıyor. MSW başlığı hiç denetlemiyor,
+yani bu davranışın sessizce kaybolması mümkündü; testler o yüzden var.
+
+### B-045 · Yeni hata kodu — `AUTHENTICATION_REQUIRED` (401)
+`errors.AUTHENTICATION_REQUIRED` iki katalogda, parametresiz. `sign_up`
+resolution'ı zaten vardı; panel onu sunucudan geldiği gibi çiziyor.
+
+### B-047 · LinkedIn ile giriş kaldırıldı
+**Silinecek bir şey çıkmadı:** LinkedIn hiçbir zaman giriş sağlayıcısı olarak
+çizilmemişti — kimlik yüzeyi bu repoda henüz yok. Duran tek `linkedin`
+`ProfileHead`'in iletişim alanı, ve maddenin kendisi onun kalmasını söylüyor.
+
+### B-055 · Üretim akışında yeni bir faz: `REWRITING`
+`generation.phase.REWRITING` iki katalogda ("Tailoring your wording to the
+posting" / "İfadelerin ilana göre uyarlanıyor").
+
+**Mock da fazı gönderiyor**, çünkü anahtarı eklemek yetmiyordu: fazı hiç
+görmemiş bir ekran %60'ta boş bir başlık çizer ve bunu hiçbir test yakalamaz.
+`SCHEDULE`'a `{phase:'D', pct:60}` girdi; faz sırası testleri ve e2e'deki
+çerçeve sayısı buna göre güncellendi. Fazın **her üretimde görünmediği**
+(genel CV modu, becerisiz ilan) çağrı yerlerine yorum olarak işlendi — %50'den
+%70'e atlayan bir çubuk düşmüş bir çerçeve değil.

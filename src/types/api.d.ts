@@ -93,6 +93,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/profile/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Build a profile from an uploaded CV
+         * @description Accepts PDF, DOCX, TEX, TXT and MD, up to ten megabytes. The published list is `accepted` on a `415` — read it from there rather than hardcoding one, so a format added later reaches the file picker without a release.
+         *
+         *     Answers 202 with a job to follow. Everything that can be decided about the file itself is decided before that: an unreadable format, an oversized file, an encrypted PDF, a scan with no text in it, and a document that yielded nothing are all refused synchronously, because each of them is something the person acts on at once.
+         *
+         *     Send `Idempotency-Key`. An upload is the request a flaky connection repeats most easily, and profile extraction has the smallest daily allowance in the product.
+         */
+        post: operations["importCv"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/profile/entries": {
         parameters: {
             query?: never;
@@ -213,6 +237,122 @@ export interface paths {
          *     `Idempotency-Key` is honoured: the same key from the same                     user answers with the job it already made, so a double                     click produces one CV and not two.
          */
         post: operations["generate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/generations/{generationId}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say what you thought of a generation
+         * @description A thumb, and everything after it is optional. One verdict                     per person per generation: pressing the other one changes                     your mind rather than adding a second opinion.
+         *
+         *     `contentGranted` is Bolum 48.4's consent. Ticking it lets                     the CV's own content be read for forty-eight hours to work                     out what went wrong — everything else in this product is                     diagnosed from shapes and counts, and this is the one door                     through that. The response echoes the grant back,                     including `accessedAt`, which is null until somebody                     actually looks. Sending `contentGranted: false` later                     withdraws a grant that is still open.
+         *
+         *     The comment is stored and never logged. It is not sent                     back either: you wrote it, you have it.
+         */
+        post: operations["feedback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/generations/{generationId}/cover-letter/regenerate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Write a covering letter for a generation, or another one
+         * @description Bolum 34. The letter is written from the atoms that                     reached the page, which is what makes it consistent with                     the CV that was sent — not from today's profile, and not                     from anything the model knows about the company.
+         *
+         *     Off the main generation path on purpose: it is a second                     LLM call and most people want a CV. Ask for it here, or                     set `coverLetter: true` when generating.
+         *
+         *     Three variants (`default`, `shorter`, `more_formal`),                     and each press replaces the stored letter — trying                     another draft leaves one letter, not three.
+         *
+         *     **It can refuse.** A letter has no original to fall back                     on, so a draft that claims a skill the page does not carry,                     overstates the experience, or greets the wrong company is                     thrown away twice and then reported as                     `COVER_LETTER_REJECTED`. Another press is a different                     draft.
+         */
+        post: operations["coverLetter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Redeem a sign-in link
+         * @description A POST, because the link in the email is not. Every refusal is the same refusal: expired, already used, wrong verifier and never existed are one answer, since telling them apart tells an attacker which half of a guess was right.
+         */
+        post: operations["verify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/magic-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask for a sign-in link
+         * @description Always 202, and always with no body. Whether the address has an account is exactly what this must not reveal (Bolum 40.4), so the sentence the person reads is the client's to write and is the same either way.
+         *
+         *     The two other answers it can give reveal nothing either:
+         *     `429 RATE_LIMITED`, where every layer of Bolum 40.5
+         *     counts what this caller has already done, and
+         *     `403 CHALLENGE_FAILED`, which is about the token in the
+         *     request and not about the address in it.
+         */
+        post: operations["request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign out
+         * @description Revokes the session server-side and clears the cookie. Idempotent: calling it without a session is a 204 as well, because a client whose cookie has already expired is exactly the client that calls this.
+         */
+        post: operations["logout"];
         delete?: never;
         options?: never;
         head?: never;
@@ -427,6 +567,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether anyone is signed in, and what they may do
+         * @description Answers for every caller, signed in or not — the client calls this first and decides what to render from `capabilities`. Never cached: it is the one response whose staleness shows the user a screen they are not entitled to.
+         */
+        get: operations["session"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which providers this deployment can sign people in with
+         * @description A provider with no credentials configured is absent rather than broken, so the client renders the buttons this list names and no others.
+         */
+        get: operations["providers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/oauth/{provider}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Begin signing in — redirects to the provider */
+        get: operations["start"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/oauth/{provider}/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Where the provider sends the browser back */
+        get: operations["callback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/account/usage": {
         parameters: {
             query?: never;
@@ -442,6 +656,32 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete this account and everything in it
+         * @description Immediate and irreversible. The profile, its atoms and their embeddings, every generation and its stored document, the queued jobs, the counters and the email preferences all go with the account, and every session signed into it stops working at once.
+         *
+         *     Two things deliberately survive, and neither identifies anybody afterwards. Cost history keeps its rows with the user link cut, because a month's spend is not personal data once it points at nobody. And an address that hard bounced or complained stays on the suppression list, because that record is what stops the product mailing it again — it belongs to the address, not to the account.
+         *
+         *     LLM providers may hold their own short-term logs on their side; that is on the privacy policy, and it is not something this call can reach.
+         *
+         *     Answers 204 whether or not the account was still there: a second press is the same answer as the first.
+         */
+        delete: operations["delete_1"];
         options?: never;
         head?: never;
         patch?: never;
@@ -553,7 +793,7 @@ export interface components {
              * @description Translation key: the client resolves errors.{CODE}
              * @enum {string}
              */
-            code: "INSUFFICIENT_PROFILE" | "UNPARSEABLE_JOB_DESCRIPTION" | "CONFLICTING_PREFERENCES" | "FEATURE_REQUIRES_ACCOUNT" | "QUOTA_EXCEEDED" | "ALL_PROVIDERS_UNAVAILABLE" | "COMPILATION_FAILED" | "PAGE_LIMIT_EXCEEDED" | "REWRITE_VALIDATION_FAILED" | "EMBEDDING_UNAVAILABLE" | "GENERATION_PAUSED" | "PDF_NOT_TEXT_BASED" | "PDF_ENCRYPTED" | "EXTRACTION_EMPTY" | "EXTRACTION_TIMEOUT" | "LANGUAGE_UNDETECTED" | "PROFILE_QUOTA_EXCEEDED" | "ANONYMOUS_SESSION_EXPIRED" | "ATOM_LIMIT_EXCEEDED" | "NO_ANONYMOUS_PROFILE" | "PROFILE_ALREADY_EXISTS" | "GENERATION_ARTIFACT_EXPIRED" | "CSRF_TOKEN_INVALID" | "RESOURCE_NOT_FOUND" | "VERSION_CONFLICT" | "PRECONDITION_REQUIRED" | "VALIDATION_FAILED" | "INTERNAL_ERROR" | "METHOD_NOT_ALLOWED" | "NOT_ACCEPTABLE" | "UNSUPPORTED_MEDIA_TYPE";
+            code: "INSUFFICIENT_PROFILE" | "UNPARSEABLE_JOB_DESCRIPTION" | "CONFLICTING_PREFERENCES" | "FEATURE_REQUIRES_ACCOUNT" | "QUOTA_EXCEEDED" | "ALL_PROVIDERS_UNAVAILABLE" | "COMPILATION_FAILED" | "PAGE_LIMIT_EXCEEDED" | "REWRITE_VALIDATION_FAILED" | "COVER_LETTER_REJECTED" | "EMBEDDING_UNAVAILABLE" | "GENERATION_PAUSED" | "UNSUPPORTED_DOCUMENT" | "DOCUMENT_TOO_LARGE" | "PDF_NOT_TEXT_BASED" | "PDF_ENCRYPTED" | "EXTRACTION_EMPTY" | "EXTRACTION_TIMEOUT" | "LANGUAGE_UNDETECTED" | "TRANSLATION_FAILED" | "PROFILE_QUOTA_EXCEEDED" | "ANONYMOUS_SESSION_EXPIRED" | "ATOM_LIMIT_EXCEEDED" | "NO_ANONYMOUS_PROFILE" | "PROFILE_ALREADY_EXISTS" | "GENERATION_ARTIFACT_EXPIRED" | "CSRF_TOKEN_INVALID" | "AUTHENTICATION_REQUIRED" | "OAUTH_FAILED" | "MAGIC_LINK_INVALID" | "RATE_LIMITED" | "CHALLENGE_FAILED" | "RESOURCE_NOT_FOUND" | "VERSION_CONFLICT" | "PRECONDITION_REQUIRED" | "VALIDATION_FAILED" | "INTERNAL_ERROR" | "METHOD_NOT_ALLOWED" | "NOT_ACCEPTABLE" | "UNSUPPORTED_MEDIA_TYPE";
             /**
              * @description Values the translated message interpolates. Keys and types are fixed per code; the server refuses to publish anything undeclared.
              * @example {
@@ -569,7 +809,7 @@ export interface components {
         };
         Resolution: {
             /** @enum {string} */
-            action?: "increase_page_limit" | "review_pins" | "keep_top_pinned" | "sign_up" | "paste_full_posting" | "continue_as_general_cv" | "continue_anyway" | "switch_to_manual_form" | "complete_profile" | "retry";
+            action?: "increase_page_limit" | "replace_profile" | "keep_existing_profile" | "review_pins" | "keep_top_pinned" | "sign_up" | "paste_full_posting" | "continue_as_general_cv" | "continue_anyway" | "switch_to_manual_form" | "complete_profile" | "retry";
             params?: {
                 [key: string]: unknown;
             };
@@ -637,6 +877,21 @@ export interface components {
         Reorder: {
             /** @description Every id of the collection, in the order they should appear */
             ids: string[];
+        };
+        /** @description A generation that was accepted and queued */
+        AcceptedJobResponse: {
+            /**
+             * Format: uuid
+             * @description Follow it at /api/v1/jobs/{jobId}
+             */
+            jobId?: string;
+            /** @enum {string} */
+            status?: "queued" | "running" | "completed" | "failed" | "cancelled";
+            /**
+             * @description Server-sent events for this job
+             * @example /api/v1/jobs/9b1c4e7a-.../stream
+             */
+            streamUrl?: string;
         };
         EntryCreate: {
             /** Format: uuid */
@@ -832,6 +1087,8 @@ export interface components {
             createdBy?: "user" | "llm_extract" | "llm_translate" | "llm_rewrite";
             /** @description The source has moved on; this wording needs regenerating */
             stale?: boolean;
+            /** @description The person wrote this wording themselves. With `stale`, it is the pair Bolum 32.2's warning is built from: the two have diverged and nothing will regenerate this one behind their back. */
+            userEdited?: boolean;
             /**
              * Format: int64
              * @description Send back as If-Match
@@ -882,21 +1139,90 @@ export interface components {
              * @example en
              */
             language?: string;
+            /**
+             * @description Write a covering letter alongside the CV (Bolum 34). Off by default: it is a second LLM call, and most generations do not want one. It can be asked for afterwards instead, at POST /generations/{id}/cover-letter/regenerate.
+             * @default false
+             */
+            coverLetter: boolean;
         };
-        /** @description A generation that was accepted and queued */
-        AcceptedJobResponse: {
+        /** @description A verdict on one generation */
+        FeedbackRequest: {
             /**
-             * Format: uuid
-             * @description Follow it at /api/v1/jobs/{jobId}
+             * Format: int32
+             * @description 1 for good, -1 for bad
+             * @enum {integer}
              */
-            jobId?: string;
+            rating: "1" | "-1";
+            /**
+             * @description Which part it is about
+             * @enum {string}
+             */
+            category?: "selection" | "writing" | "format" | "density" | "other";
+            /** @description Anything else worth saying. Stored, never logged. */
+            comment?: string;
+            /**
+             * @description Allow the CV's content to be read for 48 hours so the problem can be diagnosed
+             * @default false
+             */
+            contentGranted: boolean;
+        };
+        /** @description A recorded verdict */
+        FeedbackResponse: {
+            /** Format: uuid */
+            generationId?: string;
+            /** Format: int32 */
+            rating?: number;
+            category?: string;
+            /** @description The 48-hour diagnostic permission, when there is one */
+            contentGrant?: components["schemas"]["Grant"];
+        };
+        Grant: {
+            open?: boolean;
+            /** Format: date-time */
+            expiresAt?: string;
+            /** Format: date-time */
+            accessedAt?: string;
+            /** Format: date-time */
+            revokedAt?: string;
+        };
+        /** @description A covering letter for a generation that already exists */
+        CoverLetterRequest: {
+            /**
+             * @description Which of the three variants to write
+             * @default default
+             * @enum {string}
+             */
+            style: "default" | "shorter" | "more_formal";
+            /**
+             * @description What you know about this employer, in your own words. Used as given; nothing is inferred from it.
+             * @example They open-sourced their scheduler last year.
+             */
+            companyNote?: string;
+        };
+        /** @description A covering letter */
+        CoverLetterResponse: {
+            /** Format: uuid */
+            generationId?: string;
+            /** @description The letter, as plain text with blank lines between parts */
+            coverLetter?: string;
             /** @enum {string} */
-            status?: "queued" | "running" | "completed" | "failed" | "cancelled";
-            /**
-             * @description Server-sent events for this job
-             * @example /api/v1/jobs/9b1c4e7a-.../stream
-             */
-            streamUrl?: string;
+            style?: "default" | "shorter" | "more_formal";
+        };
+        /** @description Redeem a sign-in link */
+        VerifyRequest: {
+            selector: string;
+            verifier: string;
+        };
+        /** @description The outcome of signing in, beyond the cookie */
+        SignInResponse: {
+            /** @enum {string} */
+            profileUpgrade?: "upgraded" | "none" | "kept_existing" | "unavailable";
+        };
+        /** @description Ask for a sign-in link */
+        MagicLinkRequest: {
+            email: string;
+            /** @description The Turnstile widget's token. Required wherever the challenge is configured; a request without one is answered `403 CHALLENGE_FAILED`. */
+            challengeToken?: string;
         };
         SectionPatch: {
             /** @enum {string} */
@@ -958,6 +1284,8 @@ export interface components {
             tone?: "formal" | "casual" | "technical" | null;
             /** @description Make this the wording used by default */
             primary?: boolean;
+            /** @description Send `false` to hand a wording back: it stops being yours, and a stale one is queued for regeneration (Bolum 32.2's "regenerate" button). `true` is refused — a wording becomes yours by writing words, never by claiming it. */
+            userEdited?: boolean;
         };
         EntryExport: {
             entry?: components["schemas"]["Entry"];
@@ -1039,6 +1367,36 @@ export interface components {
              * @example en
              */
             postingLanguage?: string;
+            /** @description The covering letter, as plain text with blank lines between its parts */
+            coverLetter?: string;
+        };
+        /** @description What the caller may do; the server still enforces all of it */
+        CapabilitiesResponse: {
+            allowedLanguages?: string[];
+            allowedTemplates?: string[];
+            canCustomizeTemplate?: boolean;
+            canEditAtomControls?: boolean;
+            canAddAlternatives?: boolean;
+            canSaveHistory?: boolean;
+            /** Format: int32 */
+            dailyGenerationQuota?: number;
+            /** Format: int32 */
+            generationsUsedToday?: number;
+            /** Format: int32 */
+            dailyProfileQuota?: number;
+            /** Format: int32 */
+            profilesUsedToday?: number;
+            /** Format: int32 */
+            maxAtoms?: number | null;
+            /** Format: date-time */
+            quotaResetsAt?: string | null;
+            /** Format: date-time */
+            anonymousExpiresAt?: string | null;
+        };
+        /** @description Whether anyone is signed in, and what they may do */
+        SessionResponse: {
+            authenticated?: boolean;
+            capabilities?: components["schemas"]["CapabilitiesResponse"];
         };
         /** @description One metric's allowance for today */
         Usage: {
@@ -1364,6 +1722,83 @@ export interface operations {
             };
             /** @description PRECONDITION_REQUIRED */
             428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    importCv: {
+        parameters: {
+            query?: {
+                /** @description Only `replace`, and only as the answer to a 409 PROFILE_ALREADY_EXISTS: the profile that is there is discarded and this CV becomes the new one. Absent means an account that already has a profile is refused. */
+                mode?: string;
+            };
+            header?: {
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Queued; follow the Location */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AcceptedJobResponse"];
+                };
+            };
+            /** @description The account already has a profile with content in it. Resolutions: replace_profile, keep_existing_profile */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Over ten megabytes */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not a format we read */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Encrypted, scanned, or holding nothing */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description The daily allowance is spent */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1767,6 +2202,167 @@ export interface operations {
                 content: {
                     "application/problem+json": components["schemas"]["ApiError"];
                 };
+            };
+        };
+    };
+    feedback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                generationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackRequest"];
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackResponse"];
+                };
+            };
+            /** @description VALIDATION_FAILED — rating is 1 or -1 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description No such generation, or it belongs to someone else */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    coverLetter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                generationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CoverLetterRequest"];
+            };
+        };
+        responses: {
+            /** @description The letter */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverLetterResponse"];
+                };
+            };
+            /** @description No such generation, or it belongs to someone else */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description COVER_LETTER_REJECTED — nothing honest could be written */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description RATE_LIMITED — ten letters an hour */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    verify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SignInResponse"];
+                };
+            };
+        };
+    };
+    request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MagicLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -2365,6 +2961,92 @@ export interface operations {
             };
         };
     };
+    session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SessionResponse"];
+                };
+            };
+        };
+    };
+    providers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string[];
+                };
+            };
+        };
+    };
+    start: {
+        parameters: {
+            query?: {
+                next?: string;
+            };
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    callback: {
+        parameters: {
+            query?: {
+                code?: string;
+                state?: string;
+                error?: string;
+            };
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     usage: {
         parameters: {
             query?: never;
@@ -2381,6 +3063,33 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Usage"][];
+                };
+            };
+        };
+    };
+    delete_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Gone */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AUTHENTICATION_REQUIRED — no account to delete */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
                 };
             };
         };

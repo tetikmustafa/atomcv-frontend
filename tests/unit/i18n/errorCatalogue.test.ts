@@ -31,15 +31,32 @@ const PARAMS = {
     atomId: '661a39b9-41b7-4ad8-a886-1054768029a6',
     issues: ['metric lost', 'technology added'],
   },
+  // The one code the catalogue table in `spec/08b-api-contract.md` § EK D.6
+  // does not list; § 34.4.1 declares it instead, and the enum carries it.
+  // `issues` is a closed vocabulary of six machine tokens, which is why the
+  // message does not interpolate them — see `F-017`.
+  COVER_LETTER_REJECTED: { issues: ['unsupported_claim', 'cliche'] },
   EMBEDDING_UNAVAILABLE: {},
   // 503. The kill switch of § 44.3: parameterless, because there is
   // nothing in the request to change.
   GENERATION_PAUSED: {},
+  // The accepted extensions are the server's to publish, not the client's to
+  // embed: a format added server-side must correct this sentence without
+  // waiting for a frontend release (§ EK D.6).
+  UNSUPPORTED_DOCUMENT: { accepted: ['pdf', 'docx', 'tex', 'txt', 'md'] },
+  // The limit, never the size that was sent. Spring refuses an oversized
+  // multipart before anything counts its bytes, so the client's own figure is
+  // the only reliable one and it already has it.
+  DOCUMENT_TOO_LARGE: { limitBytes: 10_485_760 },
   PDF_NOT_TEXT_BASED: {},
   PDF_ENCRYPTED: {},
   EXTRACTION_EMPTY: {},
   EXTRACTION_TIMEOUT: {},
   LANGUAGE_UNDETECTED: { detectedCandidates: ['tr', 'az'] },
+  // From a background job, and the user's own screen already says the right
+  // thing — the wording stays marked stale. Parameterless because what the
+  // translation dropped was the person's own content (rule 4).
+  TRANSLATION_FAILED: {},
   PROFILE_QUOTA_EXCEEDED: { limit: 3, resetsAt: '2026-08-16T00:00:00Z' },
   ANONYMOUS_SESSION_EXPIRED: {},
   ATOM_LIMIT_EXCEEDED: { limit: 60, current: 60 },
@@ -47,6 +64,19 @@ const PARAMS = {
   PROFILE_ALREADY_EXISTS: {},
   GENERATION_ARTIFACT_EXPIRED: {},
   CSRF_TOKEN_INVALID: {},
+  // A request carrying no session at all — neither an expired anonymous one
+  // nor a feature out of reach, which is why it is its own code (§ EK D.6).
+  AUTHENTICATION_REQUIRED: {},
+  // One code, seven reasons, the shape `F-016` asked for. Covered branch by
+  // branch below, exactly as `UNPARSEABLE_JOB_DESCRIPTION` is.
+  OAUTH_FAILED: { reason: 'provider_unavailable' },
+  // Parameterless on purpose: expired, spent, wrong and never-existed are one
+  // answer, or a guesser learns which half of the guess was right (§ 40.4.1).
+  MAGIC_LINK_INVALID: {},
+  RATE_LIMITED: { resetsAt: '2026-08-16T00:00:00Z' },
+  // Missing, expired, spent and forged are one answer too, and for a simpler
+  // reason: the thing to do is the same in all four — reset the widget.
+  CHALLENGE_FAILED: {},
   RESOURCE_NOT_FOUND: {},
   VERSION_CONFLICT: {},
   PRECONDITION_REQUIRED: {},
@@ -73,6 +103,11 @@ void _everyCodeIsCovered;
 
 const RESOLUTION_PARAMS = {
   increase_page_limit: { maxPages: 3 },
+  // The two ways out of `409 PROFILE_ALREADY_EXISTS`, and there is no third:
+  // merging means atom-level deduplication, which is Stage 4 work, so
+  // offering it would name an action the server cannot perform (`B-060`).
+  replace_profile: {},
+  keep_existing_profile: {},
   review_pins: {},
   keep_top_pinned: { keep: 3 },
   sign_up: {},
@@ -187,6 +222,55 @@ describe.each(CATALOGUES)('the %s error catalogue', (locale, messages) => {
       expect(rendered).not.toContain('errors.');
     });
   });
+
+  /**
+   * The second code built the same way (§ EK D.6, Adım 3.3). Same shape, same
+   * failure mode, so the same checks — including the one that matters most
+   * here, that the branches are not eight copies of one sentence.
+   *
+   * `declined` is the reason this is worth spelling out: the person changed
+   * their mind at the provider, which is not a failure, and a catalogue that
+   * renders it with the same words as `account_disabled` tells them something
+   * false on the screen where they are least able to check it.
+   */
+  describe('the seven reasons behind OAUTH_FAILED', () => {
+    const REASONS = [
+      'state_invalid',
+      'declined',
+      'provider_disabled',
+      'provider_unavailable',
+      'email_missing',
+      'email_unverified',
+      'account_disabled',
+    ] as const;
+
+    const render = (reason: string) => t('OAUTH_FAILED', formatErrorParams({ reason }, locale));
+
+    it.each(REASONS)('says something of its own for %s', (reason) => {
+      const rendered = render(reason);
+
+      expect(rendered.length).toBeGreaterThan(0);
+      expect(rendered).not.toMatch(/[{}]/);
+      expect(rendered).not.toContain('errors.');
+    });
+
+    it('gives each reason a different sentence', () => {
+      expect(new Set(REASONS.map(render)).size).toBe(REASONS.length);
+    });
+
+    it('falls back rather than printing a key for a reason it has never seen', () => {
+      const rendered = render('a_reason_from_the_future');
+
+      expect(rendered.length).toBeGreaterThan(0);
+      expect(rendered).not.toMatch(/[{}]/);
+      expect(rendered).not.toContain('errors.');
+    });
+
+    /** Not a failure, and the copy must not read like one (`B-048`). */
+    it('does not call the user’s own change of mind an error', () => {
+      expect(render('declined').toLowerCase()).not.toMatch(/error|failed|hata|başarısız/);
+    });
+  });
 });
 
 describe('the numbers inside those sentences', () => {
@@ -266,7 +350,11 @@ describe('when a quota renews', () => {
   it.each(CATALOGUES)('says the time in %s, in the reader’s own zone', (locale, messages) => {
     const t = createTranslator({ locale, messages, namespace: 'errors' });
 
-    for (const code of ['QUOTA_EXCEEDED', 'PROFILE_QUOTA_EXCEEDED'] as const) {
+    // `RATE_LIMITED` joined them in Stage 3 and carries the same param. Its
+    // sentence names only the hour, which is the one thing `resetsAt` is for
+    // (`B-050`): the *duration* comes from `Retry-After`, and is the better
+    // source wherever the reader's own clock might be wrong.
+    for (const code of ['QUOTA_EXCEEDED', 'PROFILE_QUOTA_EXCEEDED', 'RATE_LIMITED'] as const) {
       const rendered = t(code, formatErrorParams(PARAMS[code], locale));
 
       expect(rendered).toContain(localTime(locale));

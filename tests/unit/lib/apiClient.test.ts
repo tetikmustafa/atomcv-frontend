@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { api } from '@/lib/api/client';
 import { ApiError, isApiError, isRetriable } from '@/lib/api/errors';
-import type { SessionResponse } from '@/mocks/contracts';
+import { getSession } from '@/lib/api/endpoints/auth';
 import type { components } from '@/types/api';
 
 /**
@@ -12,7 +12,7 @@ type AcceptedJob = components['schemas']['AcceptedJobResponse'];
 
 describe('api client', () => {
   it('reads the anonymous capability set', async () => {
-    const session = await api.get<SessionResponse>('/auth/session');
+    const session = await getSession();
 
     expect(session.authenticated).toBe(false);
     // The UI must gate on this object, never on assumptions about what

@@ -51,7 +51,10 @@ test.describe('mock plumbing', () => {
     // A translation key, not a sentence: the server stopped sending prose
     // when `B-038` landed, and the harness resolves nothing.
     await expect(page.getByTestId('phase').nth(1)).toContainText('generation.phase.ANALYSING');
-    await expect(page.getByTestId('phase')).toHaveCount(5);
+    // The snapshot plus five phases. Faz D joined them in Stage 3 (`B-055`);
+    // this count is safe only because it is asserted *after* `completed` is
+    // visible, when the stream is over.
+    await expect(page.getByTestId('phase')).toHaveCount(6);
     await expect(page.getByTestId('completed')).toContainText('gen-1');
   });
 

@@ -11,7 +11,28 @@
 
 ## OPEN
 
-*(şu an açık madde yok)*
+### F-017 · `COVER_LETTER_REJECTED` hata kataloğu tablosunda yok
+**Since:** frontend, Aşama 3 dilim 0 · **Spec:** `spec/08b-api-contract.md` § EK D.6
+
+**Neden:** Kod telde var (`ApiError.code` enum'ında, `gen:api` getirdi) ve
+§ 34.4.1 onu `422` + `params.issues` + `retry` diye tarif ediyor. Ama EK D.6'nın
+**kod → HTTP → params** tablosunda satırı yok — tablodaki tek eksik kod bu.
+
+Bizim için önemli olmasının sebebi tablonun bizde ne olduğu: kataloğumuzun
+tüketicilik testi `params`'ı **o tablodan** okuyup her koda karşı formatlıyor.
+Tablosuz bir kod, mesajı yanlış argümanla yazılsa da testten geçer — `B-043`'ün
+delik bulduğu yerin aynısı.
+
+**İstenen:** Tabloya bir satır: `| COVER_LETTER_REJECTED | 422 | issues: string[] |`.
+Şekil değişikliği değil, tablo eksiği; `gen:api` gerekmiyor.
+
+**Bir de soru — `issues` sözlüğü kapalı mı?** § 34.4.1 altı değer sayıyor
+(`unsupported_claim`, `number_invented`, `experience_overstated`,
+`wrong_company`, `length_out_of_range`, `cliche`). Kapalıysa altısını da ICU'da
+adlandırıp kullanıcıya okunur bir cümle olarak vereceğiz; açıksa mesaj
+sebepleri hiç saymayacak, çünkü ham `unsupported_claim` ekrana çıkamaz. Bugün
+mesajımız sebep saymıyor ve cevabınızı bekliyor — dilim 4'te (cover letter
+ekranı) bağlayacağız.
 
 <!-- Şablon:
 ### F-001 · Kısa başlık

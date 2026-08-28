@@ -103,6 +103,11 @@ describe('the progress stream', () => {
       'generation.phase.ANALYSING',
       'generation.phase.MEASURING',
       'generation.phase.SCORING',
+      // Faz D, and it is not in every generation (`B-055`): general-CV mode
+      // never runs it, and a posting naming no skills skips it. The mock
+      // always sends it, because the screen that has never met the phase is
+      // the one that draws a blank caption at 60%.
+      'generation.phase.REWRITING',
       'generation.phase.RENDERING',
     ]);
   });
@@ -122,6 +127,7 @@ describe('the progress stream', () => {
     expect(labels).toEqual([
       'generation.phase.MEASURING',
       'generation.phase.SCORING',
+      'generation.phase.REWRITING',
       'generation.phase.RENDERING',
     ]);
   });

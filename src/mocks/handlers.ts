@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import type { Capabilities, SessionResponse } from './contracts';
+import type { Capabilities, Session } from '@/lib/api/endpoints/auth';
 import { generationHandlers } from './generationHandlers';
 import { generations, QUOTA } from './generationFixture';
 import { profileHandlers } from './profileHandlers';
@@ -28,6 +28,9 @@ import { profileHandlers } from './profileHandlers';
  * read it from the same place — two sources for one limit is how a usage
  * screen ends up disagreeing with the 429 that fired it.
  */
+/** Two hours from the last activity, and this response is activity (§ 35.7). */
+const ANONYMOUS_TTL_MS = 2 * 60 * 60 * 1000;
+
 function anonymousCapabilities(): Capabilities {
   return {
     allowedLanguages: ['en'],
@@ -41,6 +44,11 @@ function anonymousCapabilities(): Capabilities {
     dailyProfileQuota: QUOTA.profile_extract,
     profilesUsedToday: generations.usage.profile_extract,
     maxAtoms: 60,
+    // Computed per request, which is the behaviour rather than the value:
+    // the TTL **slides** with activity (§ 35.7), so a client that caches this
+    // counts down to a moment that has already moved. A frozen instant would
+    // let a screen built on a stale read pass every test.
+    anonymousExpiresAt: new Date(Date.now() + ANONYMOUS_TTL_MS).toISOString(),
   };
 }
 
@@ -52,10 +60,17 @@ export const handlers = [
    * on hardcoded assumptions about what anonymous users can do.
    */
   http.get('*/api/v1/auth/session', () =>
-    HttpResponse.json<SessionResponse>({
-      authenticated: false,
-      capabilities: anonymousCapabilities(),
-    }),
+    HttpResponse.json<Session>(
+      {
+        authenticated: false,
+        capabilities: anonymousCapabilities(),
+      },
+      // The header the real endpoint sends (`B-046`). It changes nothing in
+      // MSW, which never consults a cache — it is here so the mock does not
+      // quietly describe a more cacheable endpoint than the one it stands in
+      // for.
+      { headers: { 'Cache-Control': 'no-store' } },
+    ),
   ),
 
   ...generationHandlers,
