@@ -74,8 +74,17 @@ function AtomGroup({ section, entry, atoms }: { section: Section; entry?: Entry;
   const t = useTranslations('Editor.section');
   const reorder = useReorderAtoms();
 
-  // An empty group still offers the way out of being empty. Saying "nothing
-  // here yet" and stopping is how a section becomes a dead end.
+  /*
+    An empty group still offers the way out of being empty. Saying "nothing
+    here yet" and stopping is how a section becomes a dead end.
+
+    But for an **entry** it is no longer a way out of anything: § 20.2 lets a
+    header-only line reach a generated CV, so a degree with no bullets is
+    finished rather than half-done (`B-061`). The sentence says so, and the
+    "add a bullet" control stays because it is an option — the alternative,
+    making people write a bullet for every entry, is exactly the padding this
+    product refuses.
+  */
   if (atoms.length === 0) {
     return (
       <>

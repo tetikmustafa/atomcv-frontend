@@ -244,3 +244,54 @@ describe('entries inside a section', () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 });
+
+/**
+ * § 20.2, and the reason it changed: selection used to work atom by atom, so
+ * an entry with no bullets under it was not a candidate at all — a degree
+ * could not reach a generated CV by any route. The alternative, making people
+ * write a bullet for every entry, is the padding this product exists to
+ * refuse.
+ *
+ * What that asks of the editor is that it stop treating such an entry as
+ * unfinished (`B-061`), which is mostly a matter of what it does **not** do.
+ */
+describe('an entry with no bullets under it', () => {
+  async function openEducation() {
+    const user = userEvent.setup();
+    renderSections();
+
+    await user.click(await screen.findByRole('button', { name: 'Education' }));
+    return user;
+  }
+
+  it('is drawn like any other, with its heading intact', async () => {
+    await openEducation();
+
+    expect(await screen.findByText('BSc Computer Engineering')).toBeInTheDocument();
+    expect(screen.getByText(/Yıldız Technical University/)).toBeInTheDocument();
+  });
+
+  /**
+   * Not a warning, not a nudge, and above all not "this will not appear in
+   * your CV" — which is the sentence `B-061` asks to be removed and which is
+   * now simply false.
+   */
+  it('says it is empty without saying it is unfinished', async () => {
+    await openEducation();
+
+    const note = await screen.findByText(/No bullets under this one/);
+    expect(note).toBeInTheDocument();
+    expect(note).not.toHaveAttribute('role', 'alert');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  /** An option rather than an obligation: the way in is still there. */
+  it('still offers a bullet to anyone who wants one', async () => {
+    await openEducation();
+
+    // The field, not the button: the button reads "Add" and is disabled until
+    // something is typed, which is the ordinary empty-form state rather than
+    // anything to do with this entry.
+    expect(await screen.findByLabelText('Add a bullet')).toBeInTheDocument();
+  });
+});

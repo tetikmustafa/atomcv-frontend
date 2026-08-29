@@ -13,13 +13,13 @@
 ## OPEN
 
 > **Dosya hâlâ 100 satır sınırının üstünde, ve sebebi arşivleme gecikmesi
-> değil:** dört madde açık. Sınır bir okunabilirlik kuralı; onu delen şey
+> değil:** üç madde açık. Sınır bir okunabilirlik kuralı; onu delen şey
 > burada bir belge sorunu değil, **bir koordinasyon sorunu** — ve mekanizma
 > 2026-08-29'da çalışmaya başladı: dilim 0 dördünü, dilim 1 birini, dilim 2a
-> birini, dilim 2b üçünü, dilim 3a üçünü, dilim 4 ile 5 birer tane kapattı;
-> on dördü
-> `resolved/to-frontend-2026-08.md`'ye taşındı ve dosya 496'dan 178'e indi.
-> Kalan dördü aşağıda, dilim dilim kapanacak.
+> birini, dilim 2b üçünü, dilim 3a üçünü, dilim 4, 5 ve 6 birer tane kapattı;
+> on beşi
+> `resolved/to-frontend-2026-08.md`'ye taşındı ve dosya 496'dan 145'e indi.
+> Kalan üçü aşağıda, ve üçü de kapanış dilimi.
 >
 > Gezinebilir olsun diye aşağıda bir dizin var. Gerekçelerin kalıcı olanı
 > `spec/`'e işlendi; burada yalnız *ne yapman lazım* duruyor.
@@ -31,7 +31,6 @@
 | `B-057` | Hesap silme | `DELETE /api/v1/account`. |
 | `B-058` | Geri bildirim | Bir başparmak ve 48 saatlik bir içerik izni. |
 | `B-059` | Gizlilik Politikası | Alt işleyen listesine Resend + AWS SES (Tokyo). **Yayın öncesi zorunlu.** |
-| `B-061` | Maddesiz entry | Altında madde olmayan bir entry artık CV'ye çıkabiliyor — editörde engellemeyin. |
 
 ### B-057 · Hesap silme telde — `DELETE /api/v1/account`
 **Since:** commit <sha> · Adım 3.9 · **Spec:** `spec/16-cost-legal.md` § 57.4
@@ -109,45 +108,13 @@ Yazılacak asgari şey: *e-posta teslimatı — Resend (AWS SES, Tokyo)*.
 EK C.1'in "Gizlilik Politikası yayında ve sağlayıcı listesi doğru" maddesi
 yayından önce bunu istiyor. **Bu maddeyi kapatmadan MVP yayına alınmamalı.**
 
-### B-061 · Maddesiz bir entry artık CV'ye çıkabiliyor
-**Since:** commit <sha> · kapanış denetimi dilim 5 · **Spec:** `spec/05-pipeline-a-c.md` § 20.2
-
-Bugüne kadar seçim atom atom çalışıyordu: altında hiç madde olmayan bir entry
-aday bile değildi, yani **"2019-2023, Yıldız Teknik Üniversitesi, Bilgisayar
-Mühendisliği" satırı üretilen CV'ye hiçbir yoldan giremiyordu.** Bir diplomanın
-maddesi olmaz; alternatif — her entry'ye zorunlu bir madde yazdırmak — tam da
-bu ürünün karşı durduğu şeyi, şişirmeyi yaptırırdı.
-
-**Aksiyonunuz:**
-
-1. **Profil editöründe maddesiz entry'yi engellemeyin** ve maddesiz bırakmayı
-   caydıran bir metin varsa kaldırın. "Bu entry CV'ye çıkmaz" diyen bir uyarı
-   varsa artık yanlış.
-2. **Boş bir entry, boş bir entry'dir.** Başlığı (`title`) olmayan bir satır
-   hâlâ anlamsız — o doğrulama kalsın; kalkan yalnız *madde* zorunluluğu.
-3. `minAtoms`, maddesi olan entry'ler için geçerli; maddesiz bir entry ona
-   takılmıyor. Editörde `minAtoms` kutusunu maddesiz bir entry'de göstermeye
-   gerek yok.
-
-**Telde ne değişti:** `selection_state` içinde yeni bir alan var —
-`headerOnlyEntries: UUID[]`, sayfaya maddesiz çıkan entry'lerin id'leri. Eski
-üretimlerde yok ve **boş liste olarak okunur**, yani mevcut ekranların hiçbiri
-kırılmıyor. Bir "neden bu satır çıktı" görünümü kuracaksanız bakacağınız yer
-burası: o entry `selected` listesinde **görünmez**, çünkü seçilmiş bir atomu
-yok.
-
-**Bütçe tarafı:** böyle bir entry başlığının maliyetini öder, madde listesinin
-maliyetini ödemez. Sayfa sınırı garantisi aynen duruyor.
-
----
-
 ## ACK — frontend tamamladı, backend arşivleyebilir
 
 _(`B-037`…`B-043`, dilim 0'ın kapattığı `B-044`, `B-045`, `B-047`, `B-055`,
 dilim 1'in kapattığı `B-046`, dilim 2a'nın kapattığı `B-048`, dilim 2b'nin
 kapattığı `B-049`, `B-050`, `B-054`, dilim 3a'nın kapattığı `B-051`, `B-053`,
-`B-060`, dilim 4'ün kapattığı `B-056` ve dilim 5'in kapattığı `B-052` —
-hepsi
+`B-060`, dilim 4'ün kapattığı `B-056`, dilim 5'in kapattığı `B-052` ve
+dilim 6'nın kapattığı `B-061` — hepsi
 `resolved/to-frontend-2026-08.md`'de.)_
 
 **`B-047`'de yapılacak bir şey çıkmadı:** LinkedIn hiçbir zaman giriş

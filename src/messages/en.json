@@ -209,7 +209,7 @@
     "section": {
       "loading": "Loading…",
       "empty": "Nothing in this section yet.",
-      "entryEmpty": "Nothing under this one yet.",
+      "entryEmpty": "No bullets under this one. A degree usually needs none.",
       "none": "Your profile has no sections yet. Add one to start."
     },
     "profile": {

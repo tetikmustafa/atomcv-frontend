@@ -62,7 +62,7 @@ describe('reordering sections', () => {
     expect(sent[0]!.path).toBe('/api/v1/profile/sections/reorder');
     // The server takes every id in the new order; a partial list is a 400
     // naming `ids`, measured.
-    expect(sent[0]!.body).toEqual({ ids: ['sec-skills', 'sec-experience'] });
+    expect(sent[0]!.body).toEqual({ ids: ['sec-skills', 'sec-experience', 'sec-education'] });
   });
 
   /**
@@ -80,15 +80,25 @@ describe('reordering sections', () => {
     await screen.findByRole('button', { name: 'Experience' });
 
     const before = client.getQueryData<Section[]>(profileKeys.sections());
-    expect(before?.map((section) => section.version)).toEqual([0, 0]);
+    expect(before?.map((section) => section.version)).toEqual([0, 0, 0]);
 
     await user.click(screen.getByRole('button', { name: 'Move Skills up' }));
 
     await waitFor(() => {
       const after = client.getQueryData<Section[]>(profileKeys.sections());
-      expect(after?.map((section) => section.id)).toEqual(['sec-skills', 'sec-experience']);
-      // Both moved, so both are versioned. A row that had not moved would not be.
-      expect(after?.map((section) => section.version)).toEqual([1, 1]);
+      expect(after?.map((section) => section.id)).toEqual([
+        'sec-skills',
+        'sec-experience',
+        'sec-education',
+      ]);
+      /*
+        Two moved and one did not, and the third number is the half this
+        assertion could not make before. With two sections a swap moved both,
+        so "only the rows that moved are versioned" was stated in the comment
+        and checked by nothing; the fixture's third section — added for
+        `B-061` — is what makes the claim testable.
+      */
+      expect(after?.map((section) => section.version)).toEqual([1, 1, 0]);
     });
   });
 
@@ -105,7 +115,11 @@ describe('reordering sections', () => {
     // Read synchronously after the click: the optimistic write has run, the
     // response has not landed, so the versions are still the old ones.
     const optimistic = client.getQueryData<Section[]>(profileKeys.sections());
-    expect(optimistic?.map((section) => section.id)).toEqual(['sec-skills', 'sec-experience']);
+    expect(optimistic?.map((section) => section.id)).toEqual([
+      'sec-skills',
+      'sec-experience',
+      'sec-education',
+    ]);
   });
 });
 

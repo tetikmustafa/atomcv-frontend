@@ -704,3 +704,32 @@ reddedildiği yayımlanmamış. İstemci hiç göndermiyor, ama mock'umuz reddi
 kodluyor (kabul eden bir mock istemciye çalıştığını öğretirdi) ve şekli tahmin
 ettik: `400 VALIDATION_FAILED`, `fields: ["userEdited"]`. Yanlışsa söyleyin;
 hiçbir şey ona bağlı değil.
+
+---
+
+### B-061 · Maddesiz entry — engellenecek bir şey yoktu
+**Kapatıldı:** 2026-08-29, frontend dilim 6 · **Spec:** `spec/05-pipeline-a-c.md` § 20.2
+
+Altında madde olmayan bir entry artık CV'ye çıkabiliyor; editörde
+engellenmemesi, caydırıcı metnin kaldırılması, `minAtoms` kutusunun maddesiz
+entry'de gösterilmemesi isteniyordu.
+
+**Frontend: üç maddenin ikisi zaten öyleydi.** Editör maddesiz bir entry'yi
+hiç engellemiyordu — atomlar entry'den ayrı ekleniyor ve hiçbir doğrulama
+madde istemiyor — ve **`minAtoms` diye bir kutu hiç çizilmemişti**. `B-047`
+gibi: silinmedi, hiç yoktu.
+
+**Değişen tek şey bir cümle.** Boş bir entry'nin altında "Nothing under this
+one **yet**" yazıyordu; "yet" maddenin beklendiğini ima ediyor, ve § 20.2'den
+sonra bir diplomanın maddesi olmaması bitmişliktir. Cümle artık eksiklik ima
+etmiyor. "Madde ekle" kontrolü duruyor — seçenek, yükümlülük değil.
+
+**Başlık doğrulaması duruyor**, dediğiniz gibi: başlıksız bir satır hâlâ
+anlamsız.
+
+**Bir şey söylememiz gereken yer var: `selection_state` telde yok.** Madde
+"neden bu satır çıktı" görünümü kuracaksak `headerOnlyEntries`'e bakmamızı
+söylüyor, ama şema `selection_state`'i hiç yayımlamıyor —
+`GenerationResponse` onu taşımıyor ve başka bir uç da vermiyor. Böyle bir
+görünüm kurmadığımız için **açık madde yapmadık**; kuracak olursak
+yayımlanması gerekecek. Kayıt burada dursun.

@@ -76,6 +76,27 @@ function initial(): ProfileFixture {
         verbatim: false,
         version: 0,
       },
+      /*
+        The third shape, and the one `B-061` is about: an entry with **no**
+        bullets under it. A degree has none, and until § 20.2 changed such a
+        line could not reach a generated CV by any route — the alternative,
+        making people write a bullet for every entry, is the padding this
+        product exists to refuse.
+
+        It is a fixture rather than a comment because the editor has to render
+        it without complaint, and nothing else here has that shape.
+      */
+      {
+        id: 'sec-education',
+        kind: 'education',
+        title: 'Education',
+        layout: 'entry_list',
+        displayOrder: 2,
+        active: true,
+        alwaysInclude: false,
+        verbatim: false,
+        version: 0,
+      },
     ],
 
     /*
@@ -111,6 +132,29 @@ function initial(): ProfileFixture {
         endDate: '2022-03-01',
         displayOrder: 1,
         importance: 0.7,
+        active: true,
+        alwaysInclude: false,
+        verbatim: false,
+        minAtoms: 2,
+        version: 0,
+      },
+      {
+        // The degree. No atoms anywhere in the list carry this `entryId`, and
+        // that is the point of it (`B-061`).
+        //
+        // `minAtoms` is still 2, because the server defaults it and the field
+        // does not disappear. It simply does not apply: the floor is for
+        // entries that *have* bullets, and an entry with none does not trip
+        // it.
+        id: 'entry-ytu',
+        sectionId: 'sec-education',
+        title: 'BSc Computer Engineering',
+        organization: 'Yıldız Technical University',
+        location: 'Istanbul',
+        startDate: '2019-09-01',
+        endDate: '2023-06-01',
+        displayOrder: 0,
+        importance: 0.6,
         active: true,
         alwaysInclude: false,
         verbatim: false,

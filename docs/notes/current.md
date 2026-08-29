@@ -183,6 +183,32 @@ bir seçici, komşu değişince sessizce yanlış şeyi iddia ediyor — metnine
 
 **Bütçe:** profil 252.0 → **252.2**.
 
+### Dilim 6 — maddesiz entry · 2026-08-29
+
+`B-061` kapandı, ve **kodda engellenecek bir şey yoktu** — `B-047`'nin ikinci
+örneği. Editör maddesiz bir entry'yi hiç engellemiyordu: atomlar entry'den
+ayrı ekleniyor, hiçbir doğrulama madde istemiyor, ve `minAtoms` kutusu diye bir
+şey hiç çizilmemişti. Değişen üç şey var, üçü de küçük:
+
+**Boş entry metni artık eksiklik ima etmiyor.** "Nothing under this one yet"
+maddenin beklendiğini söylüyordu; § 20.2'den sonra bir diplomanın maddesi
+olmaması **bitmişlik**. Cümle onu söylüyor, ve "madde ekle" kontrolü duruyor
+çünkü seçenek, yükümlülük değil.
+
+**Fixture'a üçüncü bir bölüm şekli girdi:** maddesiz bir entry taşıyan bir
+eğitim bölümü. Editörün şikâyetsiz çizmesi gereken şekil buydu ve başka hiçbir
+yerde yoktu.
+
+**Ve o fixture bir testi gerçekten test edilebilir hâle getirdi.** Sıralama
+testi "yalnız yeri değişen satırlar sürüm alır" diyordu ama iki bölümle bir
+takas ikisini de oynatıyordu, yani iddia yorumdaydı ve hiçbir şey onu
+denetlemiyordu. Üçüncü bölümle beklenen dizi `[1, 1, 0]` oldu.
+
+**`selection_state` telde yok.** `B-061` "neden bu satır çıktı" görünümü
+kuracaksak `headerOnlyEntries`'e bakmamızı söylüyor; şema `selection_state`'i
+hiç yayımlamıyor, yani böyle bir görünüm bugün kurulamaz. Kuracak bir şey
+yokken madde açmadık — kayıt `B-061`'in `resolved/` kaydında.
+
 ---
 
 ## Kasıtlı boşluklar — sorulmadan "düzeltilmez"
