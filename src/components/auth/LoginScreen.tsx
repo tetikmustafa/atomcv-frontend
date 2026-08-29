@@ -9,22 +9,24 @@
  * than what the reader is missing — the person who arrived here already
  * decided, and the person who did not is not reading it.
  *
+ * Two ways in, and the second is why nothing here has an "unavailable" state:
+ * a deployment can be configured with no OAuth provider at all, but the magic
+ * link is always there.
+ *
  * `next` is where they were, so signing in returns them to it instead of to
- * a home page they then have to navigate out of.
+ * a home page they then have to navigate out of. It reaches the providers
+ * only: a link that arrives by email has no idea what the reader was doing in
+ * a browser it may never open.
  */
 
 import { useTranslations } from 'next-intl';
+import { MagicLinkForm } from '@/components/auth/MagicLinkForm';
 import { ProviderButtons } from '@/components/auth/ProviderButtons';
 import { useProviders } from '@/hooks/useSession';
 
 export function LoginScreen({ next }: { next: string }) {
   const t = useTranslations('Auth');
-  const { data: providers, isPending } = useProviders();
-
-  // Only once the list has actually answered. Saying "there is no way to sign
-  // in here" while the request is still open would be a wrong sentence that
-  // then quietly turns into buttons.
-  const nothingToOffer = !isPending && !providers?.length;
+  const { data: providers } = useProviders();
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6 px-8 py-16">
@@ -35,11 +37,20 @@ export function LoginScreen({ next }: { next: string }) {
 
       <ProviderButtons next={next} />
 
-      {nothingToOffer && (
-        <p role="status" className="text-muted-foreground text-sm">
-          {t('unavailable')}
-        </p>
+      {/*
+        Drawn only when there is something on both sides of it. A rule with
+        "or" in the middle of it, above a form and below nothing, describes a
+        choice the reader does not have.
+      */}
+      {!!providers?.length && (
+        <div className="flex items-center gap-3">
+          <span className="border-border h-px flex-1 border-t" />
+          <span className="text-muted-foreground text-xs uppercase">{t('or')}</span>
+          <span className="border-border h-px flex-1 border-t" />
+        </div>
       )}
+
+      <MagicLinkForm />
     </div>
   );
 }

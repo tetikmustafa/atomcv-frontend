@@ -6,7 +6,7 @@
  */
 
 import { API_BASE_URL, api } from '../client';
-import type { Returns } from '../operations';
+import type { Accepts, Returns } from '../operations';
 
 type RawSession = Returns<'session', '*/*'>;
 type RawCapabilities = NonNullable<RawSession['capabilities']>;
@@ -110,4 +110,50 @@ export function oauthStartUrl(provider: string, next: string) {
   const query = new URLSearchParams({ next });
 
   return `${API_BASE_URL}/auth/oauth/${encodeURIComponent(provider)}/start?${query}`;
+}
+
+export type MagicLinkRequest = Accepts<'request'>;
+
+/**
+ * Asks for a sign-in link.
+ *
+ * **Always `202`, always empty** (§ 40.4.1). Whether the address has an
+ * account is precisely what must not leak, so the server writes no sentence
+ * and takes the same path either way — which means the sentence the reader
+ * sees is the client's, and is the same one in both cases. A screen that said
+ * "we've sent it" only for known addresses would publish the account list one
+ * probe at a time.
+ *
+ * Two other answers are possible and neither reveals anything either:
+ * `403 CHALLENGE_FAILED`, which is about the token in the request, and
+ * `429 RATE_LIMITED`, which is about how much this caller has already done.
+ *
+ * `challengeToken` is optional on the wire because a deployment without a
+ * Turnstile secret has the challenge switched off (`B-050`). That is a local
+ * convenience, not a contract: in production an empty field is a `403`.
+ */
+export function requestMagicLink(body: MagicLinkRequest) {
+  return api.post<void>('/auth/magic-link', body);
+}
+
+export type VerifyRequest = Accepts<'verify'>;
+
+/**
+ * Redeems a sign-in link.
+ *
+ * **A POST, and the link in the email is a GET** — that gap is the whole
+ * point (§ 40.3). Corporate mail scanners click links automatically, and a
+ * single-use token spent by a scanner is a person who can never sign in. So
+ * the link lands on a page, and the page has a button.
+ *
+ * The caller must have made a `GET` first. This is a write, so it carries the
+ * CSRF token from the `XSRF-TOKEN` cookie (`B-044`) — and somebody arriving
+ * from their email has no such cookie yet, which would make every magic-link
+ * sign-in a `403`. `/auth/session` is the read that plants it.
+ *
+ * Answers `200` with § 41.3.3's outcome, not the `204` the first draft
+ * promised (`B-054`).
+ */
+export function verifyMagicLink(body: VerifyRequest) {
+  return api.post<Returns<'verify', '*/*'>>('/auth/verify', body);
 }

@@ -1,8 +1,10 @@
 import { http, HttpResponse } from 'msw';
-import type { Session } from '@/lib/api/endpoints/auth';
+import type { MagicLinkRequest, Session, VerifyRequest } from '@/lib/api/endpoints/auth';
+import { auth, challengeRefused, overAddressLimit, retryAfter } from './authFixture';
 import { generationHandlers } from './generationHandlers';
+import { problem } from './problem';
 import { profileHandlers } from './profileHandlers';
-import { currentSession, signOut } from './sessionFixture';
+import { currentSession, signIn, signOut } from './sessionFixture';
 
 /**
  * Mock API surface. One set of handlers, shared by the browser worker, Vitest
@@ -62,6 +64,62 @@ export const handlers = [
    * same way the browser arrives.
    */
   http.get('*/api/v1/auth/providers', () => HttpResponse.json(['google', 'github'])),
+
+  /**
+   * `202`, empty, and the same for an address with an account and one
+   * without (§ 40.4.1). There is deliberately nothing here that could branch
+   * on whether the address is known — a mock that did would let a screen be
+   * written against a distinction the real endpoint refuses to make.
+   *
+   * The two refusals are real behaviour rather than fixtures: the challenge
+   * is off unless a test asks for production, and the address limiter counts
+   * to three the way § 40.5 does.
+   */
+  http.post('*/api/v1/auth/magic-link', async ({ request }) => {
+    const body = (await request.json()) as MagicLinkRequest;
+    const instance = '/api/v1/auth/magic-link';
+
+    if (challengeRefused(body.challengeToken)) {
+      return HttpResponse.json(problem(403, 'CHALLENGE_FAILED', instance), { status: 403 });
+    }
+
+    if (overAddressLimit(body.email)) {
+      const { seconds, resetsAt } = retryAfter();
+
+      return HttpResponse.json(problem(429, 'RATE_LIMITED', instance, [], { resetsAt }), {
+        status: 429,
+        // The header the sentence is actually built from (`B-050`). It is
+        // the whole reason this handler exists: MSW is the only place the
+        // client ever sees one before the backend is running.
+        headers: { 'Retry-After': String(seconds) },
+      });
+    }
+
+    return new HttpResponse(null, { status: 202 });
+  }),
+
+  /**
+   * `200` with § 41.3.3's outcome — not the `204` the first draft promised
+   * (`B-054`).
+   *
+   * Single-use, and that is the behaviour worth having: redeeming the same
+   * selector twice is the ordinary way `MAGIC_LINK_INVALID` happens, and it
+   * is also what a mail scanner would cause if the page verified on `GET`.
+   */
+  http.post('*/api/v1/auth/verify', async ({ request }) => {
+    const { selector } = (await request.json()) as VerifyRequest;
+
+    if (!selector || auth.redeemed.has(selector)) {
+      return HttpResponse.json(problem(400, 'MAGIC_LINK_INVALID', '/api/v1/auth/verify'), {
+        status: 400,
+      });
+    }
+
+    auth.redeemed.add(selector);
+    signIn();
+
+    return HttpResponse.json({ profileUpgrade: auth.upgrade });
+  }),
 
   ...generationHandlers,
 ];

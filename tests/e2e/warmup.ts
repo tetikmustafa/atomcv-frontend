@@ -24,6 +24,7 @@ const ROUTES = [
   '/en/login',
   '/en/auth/complete',
   '/en/auth/error',
+  '/en/verify',
   '/en/legal/privacy',
   '/en/legal/terms',
   '/tr',

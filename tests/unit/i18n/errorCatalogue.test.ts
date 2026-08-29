@@ -2,7 +2,7 @@ import { createTranslator } from 'next-intl';
 import { describe, expect, it } from 'vitest';
 import en from '@/messages/en.json';
 import tr from '@/messages/tr.json';
-import { formatErrorParams, type IcuValue } from '@/lib/errors/errorParams';
+import { formatErrorParams, MESSAGE_DEFAULTS, type IcuValue } from '@/lib/errors/errorParams';
 import type { ErrorCode, KnownResolutionAction } from '@/types/domain';
 
 /**
@@ -143,8 +143,22 @@ describe.each(CATALOGUES)('the %s error catalogue', (locale, messages) => {
     namespace: 'resolutions',
   }) as unknown as LooseTranslator;
 
+  /**
+   * The same merge `useErrorMessage` performs, and it has to be here for the
+   * same reason it is there: not every argument a message reads is a wire
+   * param. `retryAfterMinutes` comes from a **header**, so `PARAMS` above —
+   * which is a record of what the *body* declares — cannot honestly list it,
+   * and a message that branches on it would render as its own key path.
+   *
+   * Rendering the way production renders is the point. The cost is that a
+   * `reason` missing from `PARAMS` would be papered over by the default; the
+   * per-reason blocks further down are what cover that.
+   */
+  const renderCode = (code: string, params: Record<string, unknown>) =>
+    t(code, { ...MESSAGE_DEFAULTS, ...formatErrorParams(params, locale) });
+
   it.each(Object.entries(PARAMS))('formats %s with the params it declares', (code, params) => {
-    const rendered = t(code, formatErrorParams(params, locale));
+    const rendered = renderCode(code, params);
 
     expect(rendered.length).toBeGreaterThan(0);
     // A leftover brace means an argument the message asked for and the
@@ -271,6 +285,42 @@ describe.each(CATALOGUES)('the %s error catalogue', (locale, messages) => {
       expect(render('declined').toLowerCase()).not.toMatch(/error|failed|hata|başarısız/);
     });
   });
+
+  /**
+   * `B-050` wants the wait built from `Retry-After` rather than from the
+   * absolute `resetsAt` beside it, and the reason is a clock: a duration is
+   * right on a machine whose time is wrong, an instant is not.
+   *
+   * Which makes the zero branch the load-bearing one. It is not "no wait" —
+   * it is "no header", the case where the value cannot be derived at all, and
+   * a message that rendered it as "try again in 0 minutes" would invite a
+   * retry that is refused again.
+   */
+  describe('the wait inside RATE_LIMITED', () => {
+    const render = (retryAfterMinutes: number) =>
+      t('RATE_LIMITED', { ...MESSAGE_DEFAULTS, retryAfterMinutes });
+
+    it.each([0, 1, 15, 60])('says something whole for %i minutes', (minutes) => {
+      const rendered = render(minutes);
+
+      expect(rendered.length).toBeGreaterThan(0);
+      expect(rendered).not.toMatch(/[{}]/);
+      expect(rendered).not.toContain('errors.');
+    });
+
+    it('names no duration at all when there was no header to read', () => {
+      expect(render(0)).not.toMatch(/\d/);
+    });
+
+    it('gives the singular its own wording rather than "1 minutes"', () => {
+      expect(render(1)).not.toBe(render(15));
+      expect(render(1)).not.toMatch(/\b1\b/);
+    });
+
+    it('counts in the plural branch', () => {
+      expect(render(15)).toContain('15');
+    });
+  });
 });
 
 describe('the numbers inside those sentences', () => {
@@ -350,11 +400,12 @@ describe('when a quota renews', () => {
   it.each(CATALOGUES)('says the time in %s, in the reader’s own zone', (locale, messages) => {
     const t = createTranslator({ locale, messages, namespace: 'errors' });
 
-    // `RATE_LIMITED` joined them in Stage 3 and carries the same param. Its
-    // sentence names only the hour, which is the one thing `resetsAt` is for
-    // (`B-050`): the *duration* comes from `Retry-After`, and is the better
-    // source wherever the reader's own clock might be wrong.
-    for (const code of ['QUOTA_EXCEEDED', 'PROFILE_QUOTA_EXCEEDED', 'RATE_LIMITED'] as const) {
+    // `RATE_LIMITED` is **not** in this list, although it carries `resetsAt`
+    // too. Its sentence is built from `Retry-After` instead (`B-050`), and
+    // the difference is a clock: these two say when a daily allowance renews,
+    // which is a calendar fact worth naming as an hour; that one says how long
+    // to wait, and a duration stays right on a machine whose time is wrong.
+    for (const code of ['QUOTA_EXCEEDED', 'PROFILE_QUOTA_EXCEEDED'] as const) {
       const rendered = t(code, formatErrorParams(PARAMS[code], locale));
 
       expect(rendered).toContain(localTime(locale));

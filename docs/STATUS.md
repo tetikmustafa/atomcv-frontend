@@ -3,8 +3,8 @@
 > İki repo da bu dosyayı okur ve kendi satırlarını günceller. **Kural: 60 satırı geçmez.**
 > Ayrıntılı inşa kayıtları repo-yerel `notes/current.md`'dedir, buraya taşınmaz.
 
-**2026-08-29** · **Frontend Aşama 3 — dilim 0, 1 ve 2a (OAuth yolu) indi**
-· frontend'de açık: **on iki madde** (`B-049`–`B-054`, `B-056`–`B-061`)
+**2026-08-29** · **Frontend Aşama 3 — dilim 0, 1 ve 2 (giriş) indi**
+· frontend'de açık: **dokuz madde** (`B-051`–`B-053`, `B-056`–`B-061`)
 
 ---
 
@@ -31,18 +31,18 @@ entry (2026-08-28, § 20.2), frontend'e düşeni `B-061`.
 | Aşama / Adım | Durum |
 |---|---|
 | Aşama 0 — İskelet · 1 — Profil editörü · 2 — Üretim akışı + SSE | ✅ |
-| Aşama 3 — **dilim 0 · 1 · 2a** ✅ · dilim 2b magic link ⏳ | ⏳ |
+| Aşama 3 — **dilim 0 · 1 · 2** ✅ · dilim 3 CV yükleme ⏳ | ⏳ |
 
-**Dilim 0** `gen:api` + CSRF çift-gönderim + katalog (`B-044`, `B-045`, `B-047`,
-`B-055`) · **dilim 1** oturum, yetenek kapısı, kayan TTL (`B-046`) · **dilim 2a**
-`/login`, `/auth/complete`, `/auth/error`, çıkış düğmesi, `sign_up` (`B-048`) —
-altısı da `ACK`. `B-054`'ün OAuth yarısı indi; kalanı **dilim 2b**'de, `B-049`
-ve `B-050` ile.
+**Dilim 0** `gen:api` + CSRF + katalog · **dilim 1** oturum, yetenek kapısı,
+kayan TTL · **dilim 2** giriş: `/login`, `/verify`, `/auth/complete`,
+`/auth/error`, Turnstile, `Retry-After`'dan kurulan 429, çıkış düğmesi.
+Dokuz madde `ACK` (`B-044`-`B-050`, `B-054`, `B-055`). **Sırada dilim 3:**
+`B-051`, `B-053`, `B-060`. **OAuth ve Turnstile gerçek uca karşı denenmedi.**
 **Size bir madde: `F-017`** — `COVER_LETTER_REJECTED` EK D.6'nın kod tablosunda
 yok, ve `issues` sözlüğü kapalı mı?
 
-**Test:** 501 birim · 32 e2e · **bundle** profil 251.1 / üretim 215.5 KB
-(auth rotaları dinamik, bütçe betiği ölçmüyor — elle 205-212 KB).
+**Test:** 534 birim · 37 e2e · **bundle** profil 251.3 / üretim 215.7 KB
+(auth rotaları dinamik, bütçe betiği ölçmüyor — elle 206-213 KB).
 
 ## Açık kararlar (ikisini de ilgilendirir)
 
@@ -53,7 +53,7 @@ yok, ve `issues` sözlüğü kapalı mı?
 
 ## Sonraki senkronizasyon noktası
 
-**Frontend kalan on iki maddeyi dilim dilim kapatıyor**; backend'in MVP payı
+**Frontend kalan dokuz maddeyi dilim dilim kapatıyor**; backend'in MVP payı
 bitti, sırada 3.7 profil editörü ve bu maddeler bizde. **`B-059` yayın öncesi
 zorunlu** (gizlilik politikası, alt işleyen listesi) ve kapanış diliminde.
 Backend'den beklenen tek şey **`F-017`**.

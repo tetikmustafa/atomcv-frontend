@@ -56,7 +56,7 @@ export function ErrorPanel({ error, onResolve, canResolve, onRetry, onDismiss }:
   const describe = useErrorMessage();
   const label = useResolutionLabel();
 
-  const { code, params, resolutions } = toErrorLike(error);
+  const { code, params, resolutions, retryAfterSeconds } = toErrorLike(error);
 
   const offered = resolutions
     .filter((resolution) => canResolve?.(resolution.action) ?? true)
@@ -70,7 +70,13 @@ export function ErrorPanel({ error, onResolve, canResolve, onRetry, onDismiss }:
       role="alert"
       className="border-destructive/40 bg-destructive/5 flex flex-col gap-3 rounded-md border p-4 text-sm"
     >
-      <p>{describe({ code, params: params ?? {} })}</p>
+      <p>
+        {describe({
+          code,
+          params: params ?? {},
+          ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
+        })}
+      </p>
 
       {offered.length > 0 && (
         <div className="flex flex-wrap gap-2">

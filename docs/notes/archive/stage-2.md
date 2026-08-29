@@ -454,3 +454,94 @@ aşılıyor. İki düzeltme:
 Bunun sonucunda `openGenerate`'teki 30 saniyelik yara bandı da kalktı; sebebi
 yanlış teşhis etmiştim (derleme sanmıştım, kuyrukmuş).
 
+
+
+---
+
+## Aşama 3 sırasında kapanan Aşama 2 maddeleri
+
+Bunlar `current.md`de duruyordu; Aşama 3 dilim 2b'de oraya sığmaz oldular ve
+kapanmış oldukları için buraya taşındılar (2026-08-29).
+
+### `B-043` — bir kodun arkasındaki sekiz sebep
+
+`F-016`'nın dönüşü. Sekiz sebep tek `errors.*` anahtarında, **ICU `select`**
+ile — `Fit.level` ve `Usage.metric` ile aynı kalıp, resolver'a dokunmadan.
+
+**Ölçülen ve koda yazılan şey:** next-intl'de eksik bir `select` argümanı
+mesajı **kendi anahtar yoluna** çeviriyor (`errors.UNPARSEABLE_JOB_DESCRIPTION`
+ekranda), bilinmeyen bir *değer* ise `other` dalına düşüyor. İkisi hiç
+benzemiyor ve ilki sessiz: içinde süslü parantez olmadığı için katalog
+testinin brace kontrolü onu **kaçırıyordu**.
+
+- `useErrorMessage` artık `SELECT_DEFAULTS` ile `reason`'ı garanti ediyor.
+  Gerçek params üstüne yazıyor, hiç ezmiyor.
+- Katalog testi `rendered !== code` **ve** `errors.` içermemeyi de sınıyor.
+  Negatif kontrolü yapıldı: `reason`'ı params'tan çıkarınca iki katalog da
+  düşüyor, brace kontrolü ise geçiyor — delik tam oradaydı.
+- Ön kontrol / kapı ayrımı kopyaya işlendi: ön kontrol **kullanıcının
+  metnini** reddetti (yol göster), kapı **modelin cevabını** (metni suçlama).
+
+**Mock artık kapıyı da taşıyor.** Önceden yalnız ön kontrol vardı ve o
+senkron; kapı reddi **akıştan** geliyor ve **iki** resolution getiriyor.
+`gateRefusal()` bunu üretiyor, `failNextJob(error?)` yerleştiriyor. Hata
+**işin üstünde** taşınıyor, fixture'da değil: iş oluşturulurken alınıyor,
+akış anında okunuyor, arada gelen ikinci bir iş bunun hatasını miras almasın.
+
+**Testte ölçülen bir tuzak:** `user.type` karakter başına olay gönderiyor;
+birkaç yüz karakterlik gerçek bir ilan 5 sn sınırını aşıyor, **ve yarıda
+ölen test yarım yazılmış metni `too_short` yaptırıp geç bir POST'u bir
+sonraki testin `bodies`'ine düşürüyor**. Üç yeni test kırılırken iki eski
+test de onunla kırıldı. `user.paste`'e geçildi — ekranın kendi metni de
+zaten "yapıştır" diyor.
+
+**`gen:api` çalıştı: fark yok.** Tahmin doğruydu ama artık ölçüldü.
+
+**Gerçek uca karşı üç red görüldü** — `too_short` (422, üç resolution),
+`too_few_skills` ve `no_responsibilities` (ikisi de akıştan, iki resolution,
+`continue_anyway` yok). Sonuncusu `F-016`'nın şikâyetinin kendisi: **güven 1,
+18 beceri, yine de red.** Yükler `tests/unit/i18n/wireErrors.test.ts`'e
+alındı — katalog testi *bildirilen* params'a karşı, o dosya *gerçekten gelen*
+yüke karşı; `B-043` ikisinin ayrıştığı yerdi.
+
+**`suspicious_output` telde görülemedi — ve görülememesi doğru sonuç.**
+`gpt-4.1-nano` uzun beceri adlarını normalleştiriyor, üç ilan denendi. Backend
+cevapladı (2026-08-25): bu bir *incelik* değil **şekil** denetimi — § 18.4'ün
+uzunluk tavanları, ve tavanlar gerçek bir ilanın ürettiğinin çok üstünde
+duruyor, çünkü uzun ama gerçek bir sorumluluğu reddeden bir kapı hiç kapı
+olmamasından kötü. Kapıyı açan şey enjeksiyon; uslu bir modele ilan yazdırarak
+açılması **beklenmiyor**. Backend'de `PlausibilityGateTest` onu kurgulanmış
+analizle doğrudan sınıyor. **Açık uç değil, kapandı.**
+
+**Kapı sırayla bakıyor** — `low_confidence` → `too_few_skills` →
+`no_responsibilities` → uzunluk (§ 18.4, "Sıra önemlidir"). Sekiz dallı
+`select` için anlamı: hem zayıf hem bozuk bir ilan bize `too_few_skills` olarak
+gelir. `suspicious_output` "sayılar yerinde ama şekil bozuk" hâlinin adı — o
+dalın telde neden nadir olduğunu açıklayan şey bu. Koda dokunmuyor.
+
+### Aşama 2'ye sonradan eklenen: `B-042` — CV dilinin notu
+
+Gerçek uca karşı test ederken çıktı, ve çıkış yolu kaydedilmeye değer:
+**önce ekranda bir tuhaflık görüldü** (Türkçe maddelerin üstünde İngilizce ay
+adları), sebebi backend'de bulundu (`F-013`), backend üçüncü bir çözüm seçti
+ve alanları yayımladı, biz de cümleyi yazdık. Üç repo-turu, tek oturum.
+
+Kural artık şu: **bir belge tek dilde yazılır**, ve `auto` ilanın diline
+yalnız profil o dilde gerçekten yazılabiliyorsa çözülür. Yazılamıyorsa CV
+profilin dilinde kalır ve `contentLanguage` ile `postingLanguage` ayrışır —
+notun çizildiği tek durum bu.
+
+- **Karşılaştırma birincil alt etiket üzerinden.** `en` ile `en-GB` bir
+  dildir; ham `!==` kullanıcıya CV'sinin yanlış dilde çıktığını söylerdi.
+- **`languageNames.ts` kuralın tek sahibi.** İkinci çağrı yeri olunca
+  çıkarıldı; `VariantTabs` da oradan okuyor. Bir `Intl` kuralının ikinci
+  kopyası ikisinin ayrışma yoludur.
+- **Türkçe metin çekim eki almıyor** — "Türkçe yazıldı", "İngilizce değil".
+  Dil adı yerine geçen bir kalıpta ek, ilk başka dilde kırılır.
+- **Not, uyarı değil.** İnce profilin notuyla aynı gerekçe: bozulan bir şey
+  yok, tekrar denenecek bir şey yok.
+
+Bu geçici ve geçiciliği kasıtlı: § 21.8'in çeviren fazı indiğinde alanlar aynı
+değeri taşımaya başlar ve not kendiliğinden çizilmez olur. Bayrak arkasına
+konmadı — silinecek şey, kapatılacak şey değil.
+

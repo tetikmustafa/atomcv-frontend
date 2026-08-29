@@ -65,23 +65,30 @@ describe('the sign-in screen', () => {
     );
   });
 
-  it('says so when the deployment configured none', async () => {
+  /**
+   * A deployment can be configured with no OAuth credentials at all, and it
+   * is still a deployment people sign into: the magic link needs nothing
+   * configured on this side. So there is no "signing in is unavailable"
+   * state to get wrong.
+   */
+  it('still offers the magic link when no provider is configured', async () => {
     offering([]);
     renderLogin();
 
-    expect(await screen.findByText(en.Auth.unavailable)).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: en.Auth.sendLink })).toBeInTheDocument();
     expect(screen.queryAllByRole('link')).toHaveLength(0);
   });
 
   /**
-   * Not the same as an empty list, and the difference is a wrong sentence:
-   * "there is no way to sign in here" must not be shown for the moment the
-   * request is still open, only to be replaced by two buttons.
+   * The separator is a claim that there are two ways in. Drawn before the
+   * list lands, it would sit above the form with nothing above it.
    */
-  it('claims nothing while the list is still on its way', () => {
+  it('draws no "or" until there is something on both sides of it', async () => {
+    offering([]);
     renderLogin();
 
-    expect(screen.queryByText(en.Auth.unavailable)).not.toBeInTheDocument();
+    await screen.findByRole('button', { name: en.Auth.sendLink });
+    expect(screen.queryByText(en.Auth.or)).not.toBeInTheDocument();
   });
 
   it('has no accessibility violations', async () => {

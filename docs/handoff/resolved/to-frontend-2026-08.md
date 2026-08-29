@@ -492,3 +492,80 @@ bilerek atlıyor. Sahte bir sağlayıcı ekranı uydurmak yerine dikiş gerçek
 olduğu yere çizildi: butonun `href`'i ve `/auth/complete`'e doğrudan iniş.
 **Sizden bir şey gerekmiyor**, ama yerelde gerçek uca karşı denenmedi — Google
 ve GitHub anahtarları olan bir dağıtımda ilk kez orada görülecek.
+
+---
+
+### B-049 · Magic link indi — bir rota ve bir tuzak
+**Kapatıldı:** 2026-08-29, frontend dilim 2b · **Spec:** `spec/10-security.md` § 40.4.1
+
+`POST /auth/magic-link` her zaman `202`, gövdesiz; "kayıtlıysa gönderildi"
+cümlesini istemci yazıyor ve iki halde de aynı. `/verify?s=..&v=..` bir düğme
+gösteriyor, düğme `POST /auth/verify` yapıyor. Tuzak: sayfa önce
+`/auth/session`'ı çağırmazsa CSRF çerezi olmadığı için her giriş 403 alır.
+
+**Frontend:** Rota indi ve tuzağa düşmedi. `useSession` mount'ta koşuyor,
+düğme `session.isPending` boyunca **kapalı** duruyor.
+
+**Ölçülen ince nokta, sizi de ilgilendirebilir:** "önce GET, sonra POST"
+iddiasını sıra kontrolüyle test etmek yetmiyor — `useSession` bir hook, GET
+zaten her zaman önce görünür. Davranışı gerçekten tutan şey düğmenin kapalı
+başlaması; negatif kontrol de yalnız oradan kırılıyor.
+
+**Bir ret sonrası ikinci basış sunulmuyor.** Çift tek kullanımlık, yani hangi
+hata dönmüş olursa olsun aynı çifti yeniden göndermek çalışamaz; ekran
+"yeniden dene" yerine "yeni bağlantı iste" gösteriyor. Bu bir hata koduna göre
+dallanma değil.
+
+**`MAGIC_LINK_INVALID` tek cümle, sebep sorulmuyor** — maddenizin istediği gibi.
+
+**Bir de bağlantının yarısıyla gelen durum var ve ona kod atamadık:** posta
+uygulamaları uzun bağlantıları kırpıyor, `?s=` var `?v=` yok. Ekran bunu
+"bağlantının bir parçası eksik" diye söylüyor ve **hiçbir şey harcamıyor** —
+başarısız bir giriş değil, hiç kurulmamış bir istek.
+
+### B-050 · Turnstile + 429
+**Kapatıldı:** 2026-08-29, frontend dilim 2b · **Spec:** `spec/10-security.md` § 40.5.1
+
+Widget `POST /auth/magic-link` formunda, tokenı `challengeToken` olarak
+gidiyor. Site key `NEXT_PUBLIC_TURNSTILE_SITE_KEY`'de; boşsa widget
+**çizilmiyor**, ki bu sizin "secret'ı olmayan dağıtımda challenge kapalı"
+halinizin istemci karşılığı.
+
+**Widget her retten sonra sıfırlanıyor, yalnız `CHALLENGE_FAILED`'dan sonra
+değil.** Gerekçe doğrudan sizin cümleniz: hangi katmanın reddettiğini
+yayımlamıyorsunuz, yani tokenı harcayan bir retle harcamayanı ayırt etmenin
+yolu yok. Taze token her zaman çalışıyor; atılan iyi bir token bir saniyeye mal
+oluyor.
+
+**Cümle artık `Retry-After`'dan kuruluyor.** `ApiError` başlığı ayrı bir alanda
+taşıyor — gövdeye yazmadık, çünkü `params` sizin yazdığınız şey ve bu bir
+başlık. Dakikaya **yukarı** yuvarlanıyor (tekrar reddedilecek bir denemeyi
+davet etmemek için) ve en az bir dakika. `resetsAt` hâlâ okunuyor ama
+`RATE_LIMITED`'ın cümlesinde kullanılmıyor; iki kota kodunda kullanılmaya devam
+ediyor, çünkü onlar "ne zaman yenileniyor" diyor.
+
+**Alan gövdede yoksa hiç gönderilmiyor**, boş string olarak değil: boş bir
+değer sizin reddetmek zorunda kalacağınız bir *değer*.
+
+**Yerelde gerçek uca karşı denenmedi** — site key'i olan bir dağıtım
+gerekiyor. Bugün doğrulanan şey mock'a karşı: 403 widget'ı sıfırlatıyor, 429
+başlıktan cümle kuruyor.
+
+### B-054 · Giriş yanıtı: `profileUpgrade`
+**Kapatıldı:** 2026-08-29, frontend dilim 2a (OAuth yarısı) ve 2b (`/auth/verify`)
+**Spec:** `spec/10-security.md` § 41.3.3
+
+Dört değer, üçü cümle alıyor; `none` **hiçbir şey** göstermiyor ve doğrudan
+`next`'e gidiyor. Aynı üç cümle iki taşıyıcıda tek bir bileşenden çiziliyor —
+OAuth'ta iniş URL'inin `profile` parametresi, magic link'te `200` gövdesi.
+
+**`204` bekleyen istemci kırılmadı**, çünkü uç ilk kez burada bağlandı.
+
+**Tanımadığımız bir beşinci değer sessiz geçiyor.** İyi mi kötü mü haber
+olduğunu bilmenin yolu yok ve elimizdeki iki cümlenin ikisi de iddia taşıyor;
+çerez etkilenmediği için giriş yine tamamlanıyor.
+
+**Giriş sonrası sorgu önbelleği tamamen temizleniyor.** `upgraded`'da id'lerin
+korunduğu sözünüz doğru, ama `kept_existing` ve `unavailable`'da aynı
+anahtarların arkasındaki profil **başka bir profil** — ve yanıtta bunları
+ayırt edecek bir şey yok, o yüzden üçü de aynı muameleyi görüyor.

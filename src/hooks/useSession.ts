@@ -10,7 +10,14 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getProviders, getSession, logout, type Capabilities } from '@/lib/api/endpoints/auth';
+import {
+  getProviders,
+  getSession,
+  logout,
+  requestMagicLink,
+  verifyMagicLink,
+  type Capabilities,
+} from '@/lib/api/endpoints/auth';
 import { authKeys, sessionKeys } from '@/lib/api/queryKeys';
 
 /**
@@ -102,6 +109,40 @@ export function useLogout() {
       // does not leave the caller with nothing: the endpoint stamps a fresh
       // anonymous session, and the screen underneath is the anonymous
       // product.
+      await queryClient.refetchQueries({ queryKey: sessionKeys.all });
+    },
+  });
+}
+
+/**
+ * Asks for a sign-in link.
+ *
+ * Nothing is invalidated on success, and nothing should be: a `202` means an
+ * email may be on its way, not that anybody is signed in. The session changes
+ * when the link is redeemed, in the other browser tab or the other device.
+ */
+export function useRequestMagicLink() {
+  return useMutation({ mutationFn: requestMagicLink });
+}
+
+/**
+ * Redeems a sign-in link, then throws the cache away.
+ *
+ * `clear()` for the same reason `useLogout` does it, arrived at from the
+ * other side: everything cached was fetched as an **anonymous** caller, and
+ * the caller is now an account. § 41.3.3 does promise that an upgraded
+ * profile keeps its ids — but that promise only covers `upgraded`. In
+ * `kept_existing` and `unavailable` the profile behind those same keys is a
+ * different profile entirely, and there is nothing in the response that a
+ * cache could use to tell the cases apart.
+ */
+export function useVerifyMagicLink() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: verifyMagicLink,
+    onSuccess: async () => {
+      queryClient.clear();
       await queryClient.refetchQueries({ queryKey: sessionKeys.all });
     },
   });

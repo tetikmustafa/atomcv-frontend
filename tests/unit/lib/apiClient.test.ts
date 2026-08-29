@@ -1,7 +1,11 @@
+import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { api } from '@/lib/api/client';
 import { ApiError, isApiError, isRetriable } from '@/lib/api/errors';
-import { getSession } from '@/lib/api/endpoints/auth';
+import { getSession, requestMagicLink } from '@/lib/api/endpoints/auth';
+import { toErrorLike } from '@/lib/errors/errorLike';
+import { server } from '@/mocks/node';
+import { problem } from '@/mocks/problem';
 import type { components } from '@/types/api';
 
 /**
@@ -82,5 +86,84 @@ describe('preflight failures', () => {
    */
   it('does not retry a quota rejection', () => {
     expect(isRetriable(new ApiError({ status: 429, code: 'QUOTA_EXCEEDED' }))).toBe(false);
+  });
+});
+
+/**
+ * `B-050` wants a rate-limit sentence built from `Retry-After` rather than
+ * from the absolute `resetsAt` in the body, because a duration survives a
+ * reader whose clock is wrong. The header is the one part of an error that
+ * does not travel in the problem document, so it needs its own carriage.
+ */
+describe('the wait a 429 asks for', () => {
+  async function refused(): Promise<ApiError> {
+    // Four requests: § 40.5's address layer allows three per window.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await requestMagicLink({ email: 'someone@example.com' });
+    }
+
+    const error = await requestMagicLink({ email: 'someone@example.com' }).catch(
+      (caught: unknown) => caught,
+    );
+
+    if (!isApiError(error)) throw new Error('expected an ApiError');
+    return error;
+  }
+
+  it('carries the header through as seconds', async () => {
+    const error = await refused();
+
+    expect(error.status).toBe(429);
+    expect(error.code).toBe('RATE_LIMITED');
+    expect(error.retryAfterSeconds).toBe(900);
+  });
+
+  /**
+   * The header and the body are two different facts, and the client keeps
+   * both: `resetsAt` still arrives, it is simply not what the sentence is
+   * built from.
+   */
+  it('keeps the instant from the body beside it', async () => {
+    expect((await refused()).params.resetsAt).toEqual(expect.any(String));
+  });
+
+  it('reaches the renderer through the shared error shape', async () => {
+    expect(toErrorLike(await refused()).retryAfterSeconds).toBe(900);
+  });
+
+  /**
+   * Everything else has no header at all, and must not acquire one: a
+   * fabricated duration would be a promise about when a retry works.
+   */
+  it('is absent where the response carried none', async () => {
+    const error = await api
+      .post('/generations', { jobDescription: 'hire someone good', acknowledgePreflight: false })
+      .catch((caught: unknown) => caught);
+
+    if (!isApiError(error)) throw new Error('expected an ApiError');
+    expect(error.retryAfterSeconds).toBeUndefined();
+  });
+
+  /**
+   * RFC 7231 also allows an HTTP-date, and this deliberately does not read
+   * one. Treating it as absent puts the reader on the "shortly" branch; a
+   * half-implemented parser would put a wrong number of minutes on screen.
+   */
+  it('ignores a form it does not parse rather than guessing', async () => {
+    server.use(
+      http.post('*/api/v1/auth/magic-link', () =>
+        HttpResponse.json(problem(429, 'RATE_LIMITED', '/api/v1/auth/magic-link'), {
+          status: 429,
+          headers: { 'Retry-After': 'Wed, 21 Oct 2026 07:28:00 GMT' },
+        }),
+      ),
+    );
+
+    const error = await requestMagicLink({ email: 'someone@example.com' }).catch(
+      (caught: unknown) => caught,
+    );
+
+    if (!isApiError(error)) throw new Error('expected an ApiError');
+    expect(error.retryAfterSeconds).toBeUndefined();
   });
 });

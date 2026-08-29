@@ -101,3 +101,64 @@ test.describe('the way out', () => {
     await expect(page.getByRole('button', { name: 'Sign out' })).toHaveCount(0);
   });
 });
+
+test.describe('the sign-in link', () => {
+  /**
+   * § 40.4: the answer must not depend on whether the address has an account,
+   * so the server writes no sentence and this is the only one there is.
+   */
+  test('answers the same way whatever was typed, and says how long it lasts', async ({ page }) => {
+    await page.goto('/en/login');
+
+    await page.getByLabel('Email address').fill('someone@example.com');
+    await page.getByRole('button', { name: 'Email me a sign-in link' }).click();
+
+    await expect(page.getByRole('status')).toContainText('If that address has an account');
+    await expect(page.getByRole('button', { name: 'Email me a sign-in link' })).toHaveCount(0);
+  });
+
+  /**
+   * `B-050`'s local case, and the only environment that can show it: this
+   * deployment has no site key, so the challenge is off server-side and the
+   * widget draws nothing rather than a box nobody can solve.
+   */
+  test('draws no challenge where none is configured', async ({ page }) => {
+    await page.goto('/en/login');
+
+    await expect(page.getByTestId('turnstile')).toHaveCount(0);
+  });
+
+  /**
+   * § 40.3 in a real browser: opening the link must not spend it. The
+   * assertion is about what the page did *not* do, so it waits for the button
+   * to be usable first — otherwise it would pass against a page that had not
+   * finished loading.
+   */
+  test('waits for a press instead of redeeming on arrival', async ({ page }) => {
+    const redemptions: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().includes('/auth/verify')) redemptions.push(request.method());
+    });
+
+    await page.goto('/en/verify?s=sel-1&v=ver-1');
+    await expect(page.getByRole('button', { name: 'Sign in' })).toBeEnabled();
+
+    expect(redemptions).toEqual([]);
+  });
+
+  test('signs in on the press and lands in the product', async ({ page }) => {
+    await page.goto('/en/verify?s=sel-1&v=ver-1');
+
+    await page.getByRole('button', { name: 'Sign in' }).click();
+
+    await expect(page).toHaveURL('/en/profile');
+    await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+  });
+
+  test('says so when the link arrived in pieces', async ({ page }) => {
+    await page.goto('/en/verify?s=sel-1');
+
+    await expect(page.locator('main').getByRole('alert')).toContainText('missing part of itself');
+    await expect(page.getByRole('button', { name: 'Sign in' })).toHaveCount(0);
+  });
+});

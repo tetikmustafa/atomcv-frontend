@@ -14,8 +14,22 @@ export class ApiError extends Error {
   readonly code: string;
   readonly params: Record<string, unknown>;
   readonly resolutions: Resolution[];
+  /**
+   * `Retry-After`, in seconds, when the response carried one.
+   *
+   * A field rather than a `params` key, because `params` is what the server
+   * put in the body and this came out of a header — writing it into `params`
+   * would make the two indistinguishable to `wireErrors.test.ts`, which
+   * exists to pin what actually arrives.
+   *
+   * It is the value a rate-limit sentence should be built from (`B-050`): a
+   * duration is right even when the reader's clock is wrong, while the
+   * absolute `resetsAt` beside it is only right if the clock is. It is
+   * absent on the SSE transport, which has no headers at all.
+   */
+  readonly retryAfterSeconds?: number;
 
-  constructor(problem: ProblemDetail) {
+  constructor(problem: ProblemDetail, retryAfterSeconds?: number) {
     // `title` is for developers reading logs; users never see this string.
     super(problem.title ?? problem.code);
     this.name = 'ApiError';
@@ -23,6 +37,7 @@ export class ApiError extends Error {
     this.code = problem.code;
     this.params = problem.params ?? {};
     this.resolutions = problem.resolutions ?? [];
+    if (retryAfterSeconds !== undefined) this.retryAfterSeconds = retryAfterSeconds;
   }
 
   /** The next-intl key holding this error's user-facing message. */
@@ -61,6 +76,23 @@ function isProblemDetail(value: unknown): value is ProblemDetail {
  * error, so anything unparseable falls back to a synthetic code. Throwing
  * here instead would replace a meaningful HTTP status with a parse error.
  */
+/**
+ * `Retry-After` as a number of seconds, or nothing.
+ *
+ * Delta-seconds only. RFC 7231 also allows an HTTP-date, and this
+ * deliberately does not read one: our servers send seconds, and a
+ * half-implemented date parser that mistimes a retry is worse than a sentence
+ * that says "shortly". Anything unparseable is treated as absent, which the
+ * catalogue already has a branch for.
+ */
+function retryAfterFrom(headers: Headers): number | undefined {
+  const raw = headers.get('Retry-After')?.trim();
+  if (!raw || !/^\d+$/.test(raw)) return undefined;
+
+  const seconds = Number(raw);
+  return Number.isFinite(seconds) ? seconds : undefined;
+}
+
 export async function toApiError(response: Response): Promise<ApiError> {
   let body: unknown;
 
@@ -70,17 +102,22 @@ export async function toApiError(response: Response): Promise<ApiError> {
     body = undefined;
   }
 
+  const retryAfter = retryAfterFrom(response.headers);
+
   if (isProblemDetail(body)) {
     // Trust the HTTP status over the body's, so a mismatch cannot make the
     // client branch on a status the server did not actually send.
-    return new ApiError({ ...body, status: response.status });
+    return new ApiError({ ...body, status: response.status }, retryAfter);
   }
 
-  return new ApiError({
-    status: response.status,
-    code: 'UNEXPECTED_ERROR',
-    title: `Unexpected ${response.status} response`,
-  });
+  return new ApiError(
+    {
+      status: response.status,
+      code: 'UNEXPECTED_ERROR',
+      title: `Unexpected ${response.status} response`,
+    },
+    retryAfter,
+  );
 }
 
 /**

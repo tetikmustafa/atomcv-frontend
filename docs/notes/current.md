@@ -224,87 +224,84 @@ dosyası yok. `searchParams` okundukça da dinamik kalacaklar. Elle ölçüldü
 Ölçülen rotalar: profil 251.2 → **251.1**, üretim 215.6 → **215.5**, pazarlama
 168.3'te sabit.
 
-### `B-043` — bir kodun arkasındaki sekiz sebep
+### Dilim 2b — magic link, Turnstile, `Retry-After` · 2026-08-29
 
-`F-016`'nın dönüşü. Sekiz sebep tek `errors.*` anahtarında, **ICU `select`**
-ile — `Fit.level` ve `Usage.metric` ile aynı kalıp, resolver'a dokunmadan.
+`B-049`, `B-050` ve `B-054`'ün kalanı kapandı. Kodda duran şeyler:
 
-**Ölçülen ve koda yazılan şey:** next-intl'de eksik bir `select` argümanı
-mesajı **kendi anahtar yoluna** çeviriyor (`errors.UNPARSEABLE_JOB_DESCRIPTION`
-ekranda), bilinmeyen bir *değer* ise `other` dalına düşüyor. İkisi hiç
-benzemiyor ve ilki sessiz: içinde süslü parantez olmadığı için katalog
-testinin brace kontrolü onu **kaçırıyordu**.
+**Bir `GET` ve bir `POST` arasındaki fark bu ekranın tamamı.** `/verify` iki
+şeyi birden yapmamalı: bağlantıyı açmak (§ 40.3 — kurumsal posta tarayıcıları
+tıklıyor, tek kullanımlık token tükeniyor) ve bağlantıyı harcamak. Düğme bu
+ayrımın kendisi.
 
-- `useErrorMessage` artık `SELECT_DEFAULTS` ile `reason`'ı garanti ediyor.
-  Gerçek params üstüne yazıyor, hiç ezmiyor.
-- Katalog testi `rendered !== code` **ve** `errors.` içermemeyi de sınıyor.
-  Negatif kontrolü yapıldı: `reason`'ı params'tan çıkarınca iki katalog da
-  düşüyor, brace kontrolü ise geçiyor — delik tam oradaydı.
-- Ön kontrol / kapı ayrımı kopyaya işlendi: ön kontrol **kullanıcının
-  metnini** reddetti (yol göster), kapı **modelin cevabını** (metni suçlama).
+**Düğme ayrıca hemen basılamıyor, ve sebebi dilim 0'ın CSRF'i.** `POST
+/auth/verify` `XSRF-TOKEN` çerezini yankılıyor; e-postadan gelen tarayıcıda o
+çerez **yok**. `useSession` mount'ta koşuyor ve çerezi ekiyor; düğme
+`session.isPending` boyunca kapalı. Testte ölçülen ince nokta: **sıra iddiası
+tek başına bunu kanıtlamıyor** — `useSession` bir hook, GET zaten her zaman
+önce görünür. Kanıtlayan şey düğmenin kapalı başlaması, ve negatif kontrol de
+oradan kırılıyor.
 
-**Mock artık kapıyı da taşıyor.** Önceden yalnız ön kontrol vardı ve o
-senkron; kapı reddi **akıştan** geliyor ve **iki** resolution getiriyor.
-`gateRefusal()` bunu üretiyor, `failNextJob(error?)` yerleştiriyor. Hata
-**işin üstünde** taşınıyor, fixture'da değil: iş oluşturulurken alınıyor,
-akış anında okunuyor, arada gelen ikinci bir iş bunun hatasını miras almasın.
+**Bir ret sonrası ikinci basış yok, ve bu koda göre dallanma değil.** Çift tek
+kullanımlık; sunucu ne demiş olursa olsun aynı çifti yeniden göndermek
+çalışamaz. Kalan tek dürüst kontrol yeni bağlantı istemek.
 
-**Testte ölçülen bir tuzak:** `user.type` karakter başına olay gönderiyor;
-birkaç yüz karakterlik gerçek bir ilan 5 sn sınırını aşıyor, **ve yarıda
-ölen test yarım yazılmış metni `too_short` yaptırıp geç bir POST'u bir
-sonraki testin `bodies`'ine düşürüyor**. Üç yeni test kırılırken iki eski
-test de onunla kırıldı. `user.paste`'e geçildi — ekranın kendi metni de
-zaten "yapıştır" diyor.
+**Widget her retten sonra sıfırlanıyor, yalnız `CHALLENGE_FAILED`'dan sonra
+değil.** Turnstile tokenı tek kullanımlık ve sunucu **hangi katmanın**
+reddettiğini yayımlamıyor (`B-050`), yani tokenı harcayan bir retle harcamayanı
+ayırt etmenin yolu yok. Sıfırlama imperatif bir handle ile değil `key`
+bump'ıyla: render'la ayrı düşecek bir API yok.
 
-**`gen:api` çalıştı: fark yok.** Tahmin doğruydu ama artık ölçüldü.
+**Form kendi başarısından sağ çıkmıyor.** `202` sonrası yerini cümle alıyor;
+orada duran bir form ikinci isteği davet eder ve her istek üçte birini harcar.
+"Başka bir adres dene" bilinçli olarak bir sıfırlama, kendiliğinden bir yeniden
+gönderim değil.
 
-**Gerçek uca karşı üç red görüldü** — `too_short` (422, üç resolution),
-`too_few_skills` ve `no_responsibilities` (ikisi de akıştan, iki resolution,
-`continue_anyway` yok). Sonuncusu `F-016`'nın şikâyetinin kendisi: **güven 1,
-18 beceri, yine de red.** Yükler `tests/unit/i18n/wireErrors.test.ts`'e
-alındı — katalog testi *bildirilen* params'a karşı, o dosya *gerçekten gelen*
-yüke karşı; `B-043` ikisinin ayrıştığı yerdi.
+**Adres için istemcide tek bir kontrol var, ve gerekçesi `profileSchemas.ts`'in
+ikinci maddesi:** boşa gidecek tur. Üç istek / on beş dakika kişinin **kendi**
+hakkı; bir yazım hatası onun yirmide birini hiçbir yere giden postaya harcar.
+Kural kasten gevşek — adresin ne olduğuna sunucu karar veriyor.
 
-**`suspicious_output` telde görülemedi — ve görülememesi doğru sonuç.**
-`gpt-4.1-nano` uzun beceri adlarını normalleştiriyor, üç ilan denendi. Backend
-cevapladı (2026-08-25): bu bir *incelik* değil **şekil** denetimi — § 18.4'ün
-uzunluk tavanları, ve tavanlar gerçek bir ilanın ürettiğinin çok üstünde
-duruyor, çünkü uzun ama gerçek bir sorumluluğu reddeden bir kapı hiç kapı
-olmamasından kötü. Kapıyı açan şey enjeksiyon; uslu bir modele ilan yazdırarak
-açılması **beklenmiyor**. Backend'de `PlausibilityGateTest` onu kurgulanmış
-analizle doğrudan sınıyor. **Açık uç değil, kapandı.**
+**`Retry-After` artık okunuyor, ve `params`'a yazılmıyor.** `ApiError` bir alan
+kazandı: gövde sunucunun yazdığı şey, bu bir **başlık**, ve ikisini
+karıştırmak `wireErrors.test.ts`'in ayırt etmek için var olduğu şeyi silerdi.
+`ErrorLike` de taşıyor, çünkü tek renderer iki taşıyıcıya bakıyor ve SSE'nin
+başlığı hiç yok.
 
-**Kapı sırayla bakıyor** — `low_confidence` → `too_few_skills` →
-`no_responsibilities` → uzunluk (§ 18.4, "Sıra önemlidir"). Sekiz dallı
-`select` için anlamı: hem zayıf hem bozuk bir ilan bize `too_few_skills` olarak
-gelir. `suspicious_output` "sayılar yerinde ama şekil bozuk" hâlinin adı — o
-dalın telde neden nadir olduğunu açıklayan şey bu. Koda dokunmuyor.
+**Cümle dakikaya yuvarlanıyor, ve sıfır "başlık yoktu" demek.** Yukarı
+yuvarlama, tekrar reddedilecek bir denemeyi davet etmesin diye; en az bir,
+saniyelik bir gecikme "bilmiyoruz" dalıyla çakışmasın diye. 60 dakikada cümle
+"yaklaşık 60 dakika" diyor — "bir saat" demiyor; özel dal, yalnız bazen doğru
+olacağı için yazılmadı.
 
-### Aşama 2'ye sonradan eklenen: `B-042` — CV dilinin notu
+**`SELECT_DEFAULTS` `MESSAGE_DEFAULTS` oldu ve `errorParams.ts`'e taşındı.**
+Sebebi katalog testi: `retryAfterMinutes` bir **tel parametresi değil**, yani
+`PARAMS` onu dürüstçe listeleyemez — ve eksik bir `plural` argümanı mesajı
+kendi anahtar yoluna çevirir. Test artık üretimin render ettiği gibi render
+ediyor. Bedeli kayıtlı: `PARAMS`'tan düşen bir `reason` artık varsayılanla
+örtülür, onu kapatan şey sebep-sebep yazılmış bloklar.
 
-Gerçek uca karşı test ederken çıktı, ve çıkış yolu kaydedilmeye değer:
-**önce ekranda bir tuhaflık görüldü** (Türkçe maddelerin üstünde İngilizce ay
-adları), sebebi backend'de bulundu (`F-013`), backend üçüncü bir çözüm seçti
-ve alanları yayımladı, biz de cümleyi yazdık. Üç repo-turu, tek oturum.
+**`RATE_LIMITED` artık `resetsAt`'i kullanmıyor** ve zaman-dilimi testinden
+çıkarıldı. İki kota kodu orada kaldı: onlar günlük hakkın **ne zaman
+yenilendiğini** söylüyor, ki bu saat olarak söylenecek bir takvim olgusu; bu
+ise **ne kadar bekleneceğini** söylüyor ve saati yanlış bir makinede doğru
+kalan tek biçim süre.
 
-Kural artık şu: **bir belge tek dilde yazılır**, ve `auto` ilanın diline
-yalnız profil o dilde gerçekten yazılabiliyorsa çözülür. Yazılamıyorsa CV
-profilin dilinde kalır ve `contentLanguage` ile `postingLanguage` ayrışır —
-notun çizildiği tek durum bu.
+**Vitest artık Cloudflare'in test site key'iyle koşuyor.** Widget site key'i
+modül kapsamında okuyor ve yoksa hiçbir şey çizmiyor — dev sunucusunun ve
+e2e'nin durumu bu. Anahtar olmadan sıfırlamanın sınanacağı yer kalmıyordu;
+`1x00000000000000000000AA` Cloudflare'in her zaman geçen anahtarı, yani sır da
+kurgu da değil. jsdom uzak script yüklemiyor, widget boş kabını çiziyor.
 
-- **Karşılaştırma birincil alt etiket üzerinden.** `en` ile `en-GB` bir
-  dildir; ham `!==` kullanıcıya CV'sinin yanlış dilde çıktığını söylerdi.
-- **`languageNames.ts` kuralın tek sahibi.** İkinci çağrı yeri olunca
-  çıkarıldı; `VariantTabs` da oradan okuyor. Bir `Intl` kuralının ikinci
-  kopyası ikisinin ayrışma yoludur.
-- **Türkçe metin çekim eki almıyor** — "Türkçe yazıldı", "İngilizce değil".
-  Dil adı yerine geçen bir kalıpta ek, ilk başka dilde kırılır.
-- **Not, uyarı değil.** İnce profilin notuyla aynı gerekçe: bozulan bir şey
-  yok, tekrar denenecek bir şey yok.
+**e2e'de `MAGIC_LINK_INVALID` yok, ve sebebi kayıtlı:** mock'un "harcanmış
+selector" durumu sayfada yaşıyor, ikinci bir `page.goto` tam sayfa yüklemesi
+ve durumu sıfırlıyor. Birim testi iki render arasında ilkini `unmount` ederek
+aynı şeyi yapıyor. e2e'ye zorlamak, mock'a telde karşılığı olmayan bir sıfırlama
+ucu eklemek olurdu.
 
-Bu geçici ve geçiciliği kasıtlı: § 21.8'in çeviren fazı indiğinde alanlar aynı
-değeri taşımaya başlar ve not kendiliğinden çizilmez olur. Bayrak arkasına
-konmadı — silinecek şey, kapatılacak şey değil.
+**Bütçe:** `/en/login` 205.5 → **210.3**, `/en/verify` **212.6**,
+`/en/auth/complete` 212.1 → **212.5**, `/en/auth/error` **206.2** KB. Ölçülen
+rotalar 251.3 / 215.7, pazarlama 168.4 — üçü de bir önceki ölçümün 0.1'i
+üstünde ve tavanların altında.
 
 ---
 

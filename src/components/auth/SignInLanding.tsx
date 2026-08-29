@@ -22,8 +22,8 @@
 
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import { SignInOutcome } from '@/components/auth/SignInOutcome';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
-import { Button } from '@/components/ui/button';
 import { useSession } from '@/hooks/useSession';
 import { describableUpgrade } from '@/lib/auth/profileUpgrade';
 import { safeReturnPath } from '@/lib/auth/returnPath';
@@ -92,16 +92,7 @@ export function SignInLanding({ next, profile }: SignInLandingProps) {
         </div>
       )}
 
-      {signedIn && outcome && (
-        <div className="flex flex-col gap-4">
-          <p role="status" className="text-sm">
-            {t(`upgrade.${outcome}`)}
-          </p>
-          <Button asChild className="self-start">
-            <Link href={destination}>{t('continue')}</Link>
-          </Button>
-        </div>
-      )}
+      {signedIn && outcome && <SignInOutcome outcome={outcome} destination={destination} />}
     </div>
   );
 }

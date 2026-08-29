@@ -17,29 +17,17 @@
 
 import { useLocale, useTranslations } from 'next-intl';
 import { useCallback } from 'react';
-import { formatErrorParams, type IcuValue } from '@/lib/errors/errorParams';
-import type { ApiError } from '@/lib/api/errors';
+import {
+  formatErrorParams,
+  MESSAGE_DEFAULTS,
+  toRetryMinutes,
+  type IcuValue,
+} from '@/lib/errors/errorParams';
+import type { ErrorLike } from '@/lib/errors/errorLike';
 import type { Resolution } from '@/types/domain';
 
 /** What `toApiError` synthesises for a body it could not read. */
 const FALLBACK_CODE = 'UNEXPECTED_ERROR';
-
-/**
- * Defaults for params a message may branch on with ICU `select`.
- *
- * Measured, because the two absences behave nothing alike: an **unknown**
- * value falls to the `other` branch, while a **missing** argument renders the
- * message as its own key — `errors.UNPARSEABLE_JOB_DESCRIPTION` in front of
- * the user, which is the failure this file's header is about.
- *
- * So the discriminator is always present. `reason` is a closed vocabulary
- * (`B-043`) and today's server always sends it; this is what keeps a client
- * that meets an older one, or a code that gains a branch later, from printing
- * a key instead of a sentence. Merged under the real params, never over them.
- *
- * Harmless where it is not used: ICU ignores an argument no branch reads.
- */
-const SELECT_DEFAULTS: Record<string, IcuValue> = { reason: 'unknown' };
 
 /**
  * next-intl types `t` against the catalogue, which is exactly what cannot
@@ -57,10 +45,17 @@ export function useErrorMessage() {
   const locale = useLocale();
 
   return useCallback(
-    (error: Pick<ApiError, 'code' | 'params'>): string => {
+    (error: Pick<ErrorLike, 'code' | 'params' | 'retryAfterSeconds'>): string => {
       const key = t.has(error.code) ? error.code : FALLBACK_CODE;
+      const retryAfterMinutes = toRetryMinutes(error.retryAfterSeconds);
 
-      return t(key, { ...SELECT_DEFAULTS, ...formatErrorParams(error.params, locale) });
+      return t(key, {
+        ...MESSAGE_DEFAULTS,
+        ...formatErrorParams(error.params, locale),
+        // Last, and it cannot collide with a wire param: this one is derived
+        // from a header the body has no field for.
+        ...(retryAfterMinutes === undefined ? {} : { retryAfterMinutes }),
+      });
     },
     [t, locale],
   );

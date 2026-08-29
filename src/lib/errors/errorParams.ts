@@ -36,6 +36,45 @@ function formatList(values: readonly unknown[], locale: string): string {
 export type IcuValue = string | number | Date;
 
 /**
+ * Arguments every message is given, whether or not the server sent them.
+ *
+ * Measured, because the two absences behave nothing alike: an **unknown**
+ * value falls to a `select`'s `other` branch, while a **missing** argument
+ * makes next-intl render the message as its own key path —
+ * `errors.OAUTH_FAILED` in front of the user, which is the failure this
+ * exists to prevent. A `plural` fails the same way.
+ *
+ * - `reason` discriminates two codes with branch-per-reason messages
+ *   (`B-043`). Today's server always sends it; this is what keeps a client
+ *   that meets an older one, or a code that grows a branch later, from
+ *   printing a key.
+ * - `retryAfterMinutes` is **not a wire param at all** — it is derived from
+ *   the `Retry-After` header, which the SSE transport has no way to carry.
+ *   Zero is the "we were not told" branch, and it can only mean that: a real
+ *   header rounds up to at least one minute.
+ *
+ * Harmless where they are not used: ICU ignores an argument no branch reads.
+ * Merged **under** the real values, never over them.
+ */
+export const MESSAGE_DEFAULTS: Record<string, IcuValue> = {
+  reason: 'unknown',
+  retryAfterMinutes: 0,
+};
+
+/**
+ * The `Retry-After` delay, in whole minutes, rounded up.
+ *
+ * Rounded **up** so the sentence never invites a retry that will be refused
+ * again, and floored at one so a sub-minute delay does not collide with the
+ * "we were not told" branch above.
+ */
+export function toRetryMinutes(seconds: number | undefined): number | undefined {
+  if (seconds === undefined) return undefined;
+
+  return Math.max(1, Math.ceil(seconds / 60));
+}
+
+/**
  * The params the catalogue types as `timestamp`.
  *
  * By name, because `params` is untyped on the wire and a string that merely

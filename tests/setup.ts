@@ -7,6 +7,7 @@ import { installEventSource, resetEventSource } from './support/eventSource';
 import { resetGenerationFixture } from '@/mocks/generationFixture';
 import { resetProfileFixture } from '@/mocks/profileFixture';
 import { resetSessionFixture } from '@/mocks/sessionFixture';
+import { resetAuthFixture } from '@/mocks/authFixture';
 
 expect.extend(toHaveNoViolations);
 
@@ -56,6 +57,10 @@ afterEach(() => {
   // A test that signed in would otherwise hand the next one an account, and
   // the capability gates would pass for the wrong reason.
   resetSessionFixture();
+  // Third counter, same hazard: three magic links asked for in one test would
+  // start the next one at its rate limit, and a spent selector would make an
+  // ordinary sign-in look like an invalid link.
+  resetAuthFixture();
   resetEventSource();
   cleanup();
 });

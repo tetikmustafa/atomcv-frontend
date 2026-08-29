@@ -20,6 +20,13 @@ export type ErrorLike = {
   code: string;
   params?: Record<string, unknown>;
   resolutions: Resolution[];
+  /**
+   * From the `Retry-After` header, so only ever present on the synchronous
+   * transport. The stream has no headers, and a rate limit does not arrive
+   * over it — but the type carries the field rather than the renderer
+   * branching on where the error came from.
+   */
+  retryAfterSeconds?: number;
 };
 
 /** Ours, not the server's: there is no response to carry a code (Bölüm 44.1). */
@@ -43,7 +50,14 @@ function isStreamedFailure(value: unknown): value is Partial<ErrorLike> & { code
 
 export function toErrorLike(error: unknown): ErrorLike {
   if (isApiError(error)) {
-    return { code: error.code, params: error.params, resolutions: error.resolutions };
+    return {
+      code: error.code,
+      params: error.params,
+      resolutions: error.resolutions,
+      ...(error.retryAfterSeconds !== undefined
+        ? { retryAfterSeconds: error.retryAfterSeconds }
+        : {}),
+    };
   }
 
   if (isStreamedFailure(error)) {

@@ -13,11 +13,12 @@
 ## OPEN
 
 > **Dosya hâlâ 100 satır sınırının üstünde, ve sebebi arşivleme gecikmesi
-> değil:** on iki madde açık. Sınır bir okunabilirlik kuralı; onu delen şey
+> değil:** dokuz madde açık. Sınır bir okunabilirlik kuralı; onu delen şey
 > burada bir belge sorunu değil, **bir koordinasyon sorunu** — ve mekanizma
 > 2026-08-29'da çalışmaya başladı: dilim 0 dördünü, dilim 1 birini, dilim 2a
-> birini kapattı, altısı da `resolved/to-frontend-2026-08.md`'ye taşındı ve
-> dosya 496'dan küçüldü. Kalan on ikisi aşağıda, dilim dilim kapanacak.
+> birini, dilim 2b üçünü kapattı; dokuzu `resolved/to-frontend-2026-08.md`'ye
+> taşındı ve dosya 496'dan 340'a indi. Kalan dokuzu aşağıda, dilim dilim
+> kapanacak.
 >
 > Gezinebilir olsun diye aşağıda bir dizin var. Gerekçelerin kalıcı olanı
 > `spec/`'e işlendi; burada yalnız *ne yapman lazım* duruyor.
@@ -26,70 +27,15 @@
 
 | ID | Konu | Ne yapman lazım, tek cümlede |
 |---|---|---|
-| `B-049` | Magic link | Bir rota (`/verify`) ve bir tuzak: bağlantı GET'tir, giriş POST'tur. |
-| `B-050` | Turnstile + 429 | Link isteği bir widget tokenı istiyor ve 429 dönebiliyor. |
 | `B-051` | CV yükleme | Bir uç, beş senkron ret, bir iş — ekran kurulacak. |
 | `B-052` | Bayat varyant | Bir sözcüklemeyi düzenlemek ötekileri bayatlatıyor; uyarıyı siz gösterin. |
 | `B-053` | Anonim yükleme | Aynı uç, aynı kalıp, hesap yok. |
-| `B-054` | Yükseltme yanıtı | `/auth/verify` artık anonim profile ne olduğunu söylüyor. |
 | `B-056` | Cover letter | Bir bayrak, bir uç, ve reddedilebilir. |
 | `B-057` | Hesap silme | `DELETE /api/v1/account`. |
 | `B-058` | Geri bildirim | Bir başparmak ve 48 saatlik bir içerik izni. |
 | `B-059` | Gizlilik Politikası | Alt işleyen listesine Resend + AWS SES (Tokyo). **Yayın öncesi zorunlu.** |
 | `B-060` | İkinci CV | `409 PROFILE_ALREADY_EXISTS`, iki resolution, `?mode=replace`. |
 | `B-061` | Maddesiz entry | Altında madde olmayan bir entry artık CV'ye çıkabiliyor — editörde engellemeyin. |
-
-### B-049 · Magic link indi — bir rota ve bir tuzak
-**Since:** commit <sha> · Adım 3.3 dilim 3 · **Spec:** `spec/10-security.md` § 40.4.1
-
-`POST /auth/magic-link` `{email}` → **her zaman `202`, gövdesiz**. Hesabın var
-olup olmadığı tam da gizlenecek şey (§ 40.4); "kayıtlıysa gönderildi"
-cümlesini **siz** yazıyorsunuz ve iki halde de aynı.
-
-**Sizden bir rota: `/verify?s=..&v=..`** — bağlantı buraya iner, ve bu `GET`
-**doğrulama yapmamalı**: kurumsal posta tarayıcıları bağlantılara otomatik
-tıklıyor, tek kullanımlık tokenı tarayıcı harcarsa kullanıcı hiç giremiyor
-(§ 40.3). Sayfa bir düğme göstersin; düğme `POST /auth/verify`
-`{selector, verifier}` yapsın → `204` + oturum çerezi.
-
-**Tuzak — o sayfa önce bir `GET` yapmak zorunda.** `POST /auth/verify` CSRF
-tokenı istiyor, token `XSRF-TOKEN` çerezinden okunuyor, ve e-postadan gelen
-kullanıcının tarayıcısında o çerez **henüz yok**. Sayfa yüklenince önce
-`/auth/session`'ı çağırın, sonra POST edin — yoksa her magic link girişi 403
-alır.
-
-**Yeni kod `MAGIC_LINK_INVALID`, `params` yok — bilerek.** Süresi dolmuş,
-kullanılmış, yanlış ve hiç var olmamış **tek bir cevap**; ayırt edilebilirse
-tahmin yürüten kişi hangi yarının doğru olduğunu öğrenir. Tek bir metin yazın,
-sebep sormayın.
-
-### B-050 · Magic link isteği artık bir Turnstile tokenı istiyor, ve 429 dönebiliyor
-**Since:** commit <sha> · Adım 3.3 dilim 4 · **Spec:** `spec/10-security.md` § 40.5.1
-
-**`B-049`'un ucu değişti.** `POST /auth/magic-link` gövdesi artık
-`{email, challengeToken}`. Turnstile widget'ını o forma koyun ve ürettiği
-tokenı `challengeToken` olarak gönderin; site key sizde, secret bizde.
-
-**Alan adı `challengeToken`, `turnstileToken` değil** — kod tarafında da
-`CHALLENGE_FAILED`. `OTLP_*` kararının aynısı: bu kodu siz render edip mesaj
-kataloğunuzda saklıyorsunuz, Cloudflare'den çıkmak kullanıcıya görünen bir
-cümleyi yalana çevirmemeli.
-
-**İki yeni cevap, ikisi de `202` yerine geçebilir:**
-
-- **`403 CHALLENGE_FAILED`**, parametresiz. Eksik, süresi dolmuş, harcanmış ve
-  sahte token tek bir cevap — çünkü hepsinde yapılacak şey aynı: **widget'ı
-  sıfırlayın ve yeniden sordurun.** Token tek kullanımlık, yani başarısız bir
-  gönderimden sonra eskisini tekrar yollamak da bu hatayı verir.
-- **`429 RATE_LIMITED`**, `params.resetsAt` (mutlak an) + `Retry-After`
-  başlığı (saniye). Sınırlar: adres başına 3/15dk, IP başına 10/sa. **Cümleyi
-  `Retry-After`'dan kurun, `resetsAt`'ten değil** — kullanıcının saati yanlışsa
-  doğru olan tek şey o; `resetsAt`'i yalnız "şu saatte tekrar deneyin" yazacaksanız
-  kullanın. Hangi katmanın reddettiğini yayınlamıyoruz, tek metin yazın.
-
-**Yerelde `challengeToken` göndermeseniz de çalışır** — secret'ı olmayan bir
-dağıtımda challenge kapalı ve istek geçiyor. Bu bir kolaylık, sözleşme değil:
-üretimde alan boşsa istek `403` alır, o yüzden widget'ı en baştan takın.
 
 ### B-051 · CV yükleme telde — bir uç, beş ret, bir iş
 **Since:** commit <sha> · Adım 3.4 · **Spec:** `spec/07-subsystems.md` § 31.2, § 31.6.1
@@ -198,32 +144,6 @@ yükseltme akışı (bir sonraki dilim) inene kadar iki saat sonrası yok.
 skorlama (§ 28.4) ve ölçülmemiş tahmin (§ 20.4) ile çalışıyor — ikisi de zaten
 tarif edilmiş bozulmuş-ama-çalışan yol. Kullanıcıya bunu söylemeyin; söylenecek
 tek şey seçim tahminî olduğunda ekranın zaten gösterdiği not.
-
-### B-054 · Giriş yanıtı değişti: anonim profilin ne olduğunu söylüyor
-**Since:** commit <sha> · Adım 3.6 · **Spec:** `spec/10-security.md` § 41.3.3
-
-**`POST /api/v1/auth/verify` artık `204` değil `200`**, ve gövdesi tek alan:
-`{"profileUpgrade": "..."}`. OAuth tarafında aynı bilgi iniş adresinde:
-`/auth/complete?next=...&profile=...`. **`204` bekleyen istemci kırılır.**
-
-Dört değer, dört farklı cümle:
-
-| Değer | Ne oldu | Ne göstermeli |
-|---|---|---|
-| `none` | Kişi hiçbir şey taşımıyordu — girişlerin çoğu | **Hiçbir şey.** Bu normal giriş |
-| `upgraded` | Anonim profil artık hesabın | Kısa bir onay yeter; profil zaten orada |
-| `kept_existing` | Hesabın zaten profili vardı, anonim olan **taşınmadı** | Kişiye söyleyin: az önce yüklediği CV hesabına geçmedi, mevcut profili duruyor |
-| `unavailable` | Depo okunamadı, çalışma kayboldu | Bunu "taşınacak bir şey yoktu" gibi göstermeyin — bir aksaklık oldu deyin |
-
-**`kept_existing` ve `unavailable`'da anonim profil artık erişilemez.** Çerez
-değişti, ve anonim profil tam olarak o çerezle kapsanıyordu (§ 41.3). Yani bu
-iki durumda kişinin iki saatlik emeği gitmiş oluyor — söylenmesi gereken şey
-bu, "birleştirebilirsin" değil. **Birleştirme akışı yok ve planlanmadı**;
-ürün kararı verilmedi.
-
-**Yükseltilen profil aynı profil.** Atom ve bölüm id'leri değişmiyor, yani
-anonim ekranda tuttuğunuz seçimler ve açık/kapalı durumlar giriş sonrası hâlâ
-geçerli — id'lerle eşleştiriyorsanız yeniden yüklemeniz gerekmiyor.
 
 ### B-056 · Cover letter telde — bir bayrak, bir uç, ve reddedilebilir
 **Since:** commit <sha> · Adım 3.8 · **Spec:** `spec/07-subsystems.md` § 34
@@ -395,7 +315,8 @@ maliyetini ödemez. Sayfa sınırı garantisi aynen duruyor.
 ## ACK — frontend tamamladı, backend arşivleyebilir
 
 _(`B-037`…`B-043`, dilim 0'ın kapattığı `B-044`, `B-045`, `B-047`, `B-055`,
-dilim 1'in kapattığı `B-046` ve dilim 2a'nın kapattığı `B-048` — hepsi
+dilim 1'in kapattığı `B-046`, dilim 2a'nın kapattığı `B-048` ve dilim 2b'nin
+kapattığı `B-049`, `B-050`, `B-054` — hepsi
 `resolved/to-frontend-2026-08.md`'de.)_
 
 **`B-047`'de yapılacak bir şey çıkmadı:** LinkedIn hiçbir zaman giriş
@@ -405,10 +326,11 @@ sağlayıcısı olarak çizilmemişti. Silinmedi, hiç yoktu — madde yine de k
 yoluyla birlikte geldi — ulaşılamayan bir durumun düğmesi olmasın diye
 beklemişti.
 
-**`B-054`'ün yarısı bitti ve madde bilerek açık kaldı.** OAuth tarafı
-(`/auth/complete?...&profile=...`) dört değeri de okuyor ve üçüne cümle
-yazıyor; `POST /auth/verify`'ın `200` gövdesi magic link ekranıyla, dilim
-2b'de bağlanacak.
+**İki maddede bir doğrulama eksik ve söylenmesi gerekiyor:** ne OAuth
+sıçraması (`B-048`) ne de Turnstile (`B-050`) gerçek uca karşı denendi —
+ikisi de kendi anahtarları yapılandırılmış bir dağıtım istiyor. Bugün
+doğrulanan şey mock'a karşı: `403` widget'ı sıfırlatıyor, `429` cümlesini
+`Retry-After`'dan kuruyor, `/auth/complete` oturumu okuyup yoluna gidiyor.
 
 ---
 
