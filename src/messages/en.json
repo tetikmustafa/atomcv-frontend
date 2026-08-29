@@ -73,7 +73,8 @@
     "label": "Sections",
     "onboarding": "Import CV",
     "profile": "Profile",
-    "generate": "Generate"
+    "generate": "Generate",
+    "settings": "Settings"
   },
   "Onboarding": {
     "title": "Start from the CV you have",
@@ -436,13 +437,13 @@
       "why": "Why we collect it",
       "whyBody": "To generate resumes, manage your account, and improve the service.",
       "share": "Who we share it with",
-      "shareBody": "AI providers receive the content needed to analyse a posting and rewrite your own wording. The current list of providers, what is sent to each, and whether any free tier may use that data for model training must be stated here explicitly. Email is sent through Resend, files are stored on Cloudflare R2, and analytics are anonymous and cookie-free.",
+      "shareBody": "AI providers receive the content needed to analyse a posting and rewrite your own wording. The current list of providers, what is sent to each, and whether any free tier may use that data for model training must be stated here explicitly. They may also keep short-lived logs of those requests on their own side.\n\nThe other processors we use: email delivery — Resend, which sends through AWS SES in the ap-northeast-1 (Tokyo) region, so your address and the delivery metadata around it are processed outside the EU; file storage — Cloudflare R2; and sign-in with Google or GitHub, when you choose it. Analytics are anonymous and cookie-free.",
       "retention": "How long we keep it",
       "retentionBody": "Account data for as long as the account exists. Anonymous sessions expire two hours after your last activity. Generated PDFs are kept 14 days, or indefinitely if you archive them. Logs are kept 30 days.",
       "rights": "Your rights",
       "rightsBody": "Access, correction, deletion, and export of your data in JSON and Markdown.",
       "deletion": "How to delete everything",
-      "deletionBody": "Deleting your account removes your profile, generated documents, sessions and connected accounts. It is permanent and cannot be undone.",
+      "deletionBody": "Deleting your account removes your profile, every resume you generated and the documents they made, anything still queued, your usage counters, your email preferences, your sessions and your connected accounts. It is permanent and cannot be undone.\n\nTwo things are kept on purpose. What your generations cost us stays, with the link to you cut, so it no longer identifies anyone. And if your address ever hard-bounced or reported us as spam, that record stays — it belongs to the address rather than to the account, and deleting it would let us write to an address that told us not to.",
       "contact": "Data controller",
       "contactBody": "Contact details to be added before publication."
     },
@@ -459,5 +460,15 @@
       "noSla": "Free, with no service level",
       "noSlaBody": "The service is free and offered as a personal project. There is no uptime guarantee and no support commitment. If it is discontinued, notice will be given at least 30 days in advance, and your data will remain exportable during that period."
     }
+  },
+  "Settings": {
+    "title": "Settings",
+    "anonymous": "You are working without an account, so there is nothing here to manage. <link>Sign in</link> if you want one.",
+    "deleteTitle": "Delete your account",
+    "deleteIntro": "This removes everything you have here. It cannot be undone.",
+    "deleteAction": "Delete my account",
+    "deleteConfirmTitle": "Delete your account?",
+    "deleteConfirmBody": "This deletes your profile — {sections, plural, =1 {one section} other {# sections}} and {atoms, plural, =1 {one item} other {# items}} — along with every resume you have generated, the documents they made, anything still queued, your usage counters and your email preferences. It cannot be undone.\n\nTwo things stay. Our record of what your generations cost is kept with the link to you cut, so it no longer shows anyone. And if your address ever bounced or reported us, that record stays with the address rather than with the account — deleting it would let us write to you again after being told not to.\n\nThe AI providers may hold their own short-lived logs on their side. The privacy policy says which.",
+    "deleteConfirmAction": "Delete everything"
   }
 }

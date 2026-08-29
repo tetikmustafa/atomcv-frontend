@@ -73,7 +73,8 @@
     "label": "Bölümler",
     "onboarding": "CV yükle",
     "profile": "Profil",
-    "generate": "CV oluştur"
+    "generate": "CV oluştur",
+    "settings": "Ayarlar"
   },
   "Onboarding": {
     "title": "Elindeki CV'den başla",
@@ -436,13 +437,13 @@
       "why": "Neden topluyoruz",
       "whyBody": "CV üretmek, hesabını yönetmek ve hizmeti iyileştirmek için.",
       "share": "Kimlerle paylaşıyoruz",
-      "shareBody": "AI sağlayıcıları, bir ilanı analiz etmek ve senin kendi ifadelerini yeniden yazmak için gereken içeriği alır. Güncel sağlayıcı listesi, her birine ne gönderildiği ve herhangi bir ücretsiz katmanın bu veriyi model eğitiminde kullanıp kullanamayacağı burada açıkça belirtilmelidir. E-posta Resend üzerinden gönderilir, dosyalar Cloudflare R2'de saklanır, analitik anonim ve çerezsizdir.",
+      "shareBody": "Yapay zekâ sağlayıcıları, bir ilanı çözümlemek ve kendi ifadelerini yeniden yazmak için gereken içeriği alıyor. Güncel sağlayıcı listesi, her birine ne gönderildiği ve ücretsiz bir katmanın bu veriyi model eğitiminde kullanıp kullanamayacağı burada açıkça yazılmalı. Sağlayıcılar bu isteklerin kısa ömürlü kayıtlarını kendi taraflarında tutabiliyor.\n\nKullandığımız öteki işleyiciler: e-posta teslimatı — Resend, ki altta AWS SES’i ap-northeast-1 (Tokyo) bölgesinde kullanıyor, yani adresin ve gönderim üstverisi AB dışında işleniyor; dosya depolama — Cloudflare R2; ve tercih edersen Google ya da GitHub ile giriş. Analitik anonim ve çerezsiz.",
       "retention": "Ne kadar saklıyoruz",
       "retentionBody": "Hesap verisi, hesap var olduğu sürece. Anonim oturumlar son etkinliğinden iki saat sonra sona erer. Üretilen PDF'ler 14 gün, arşivlersen süresiz saklanır. Loglar 30 gün tutulur.",
       "rights": "Hakların",
       "rightsBody": "Verine erişme, düzeltme, silme ve JSON ile Markdown olarak dışa aktarma.",
       "deletion": "Her şey nasıl silinir",
-      "deletionBody": "Hesabını silmek profilini, üretilmiş dokümanlarını, oturumlarını ve bağlı hesaplarını kaldırır. Kalıcıdır ve geri alınamaz.",
+      "deletionBody": "Hesabını silmek profilini, ürettiğin bütün CV'leri ve onlardan çıkan belgeleri, sırada bekleyen işleri, kullanım sayaçlarını, e-posta tercihlerini, oturumlarını ve bağlı hesaplarını kaldırır. Kalıcıdır ve geri alınamaz.\n\nİki şey bilerek kalıyor. Üretimlerinin bize maliyeti, seninle bağı koparılmış olarak duruyor; artık kimseyi tanımlamıyor. Ve adresin bir kez sert biçimde geri döndüyse ya da bizi spam olarak bildirdiyse o kayıt kalıyor — hesaba değil adrese ait, ve silmek bize yazma demiş bir adrese yeniden yazmamıza izin verirdi.",
       "contact": "Veri sorumlusu",
       "contactBody": "İletişim bilgileri yayımdan önce eklenecek."
     },
@@ -459,5 +460,15 @@
       "noSla": "Ücretsiz, hizmet seviyesi taahhüdü olmadan",
       "noSlaBody": "Hizmet ücretsizdir ve kişisel bir proje olarak sunulur. Çalışma süresi garantisi ve destek taahhüdü yoktur. Sonlandırılması halinde en az 30 gün önceden bildirilir ve bu süre boyunca verini dışa aktarabilirsin."
     }
+  },
+  "Settings": {
+    "title": "Ayarlar",
+    "anonymous": "Hesapsız çalışıyorsun, yani burada yönetilecek bir şey yok. İstersen <link>giriş yap</link>.",
+    "deleteTitle": "Hesabını sil",
+    "deleteIntro": "Burada sana ait olan her şeyi siler. Geri alınamaz.",
+    "deleteAction": "Hesabımı sil",
+    "deleteConfirmTitle": "Hesabın silinsin mi?",
+    "deleteConfirmBody": "Bu, profilini — {sections, plural, =1 {bir bölüm} other {# bölüm}} ve {atoms, plural, =1 {bir madde} other {# madde}} — ürettiğin bütün CV'leri, onlardan çıkan belgeleri, sırada bekleyen işleri, kullanım sayaçlarını ve e-posta tercihlerini siler. Geri alınamaz.\n\nİki şey kalıyor. Üretimlerinin maliyet kaydı, seninle bağı koparılmış olarak duruyor; artık kimseyi göstermiyor. Ve adresin bir kez geri döndüyse ya da bizi şikâyet ettiyse, o kayıt hesaba değil **adrese** ait olduğu için kalıyor — silmek, bize yazma dememiş olan bir adrese yeniden yazmamıza izin verirdi.\n\nYapay zekâ sağlayıcıları kendi taraflarında kısa ömürlü kayıtlar tutabiliyor. Hangileri olduğu gizlilik politikasında.",
+    "deleteConfirmAction": "Her şeyi sil"
   }
 }

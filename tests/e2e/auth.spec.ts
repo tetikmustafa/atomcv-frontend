@@ -162,3 +162,34 @@ test.describe('the sign-in link', () => {
     await expect(page.getByRole('button', { name: 'Sign in' })).toHaveCount(0);
   });
 });
+
+test.describe('the way out for good', () => {
+  /**
+   * § 57.4 asks for deleting an account to be reachable and to be explained
+   * before it happens. A route only a URL reaches is neither.
+   */
+  test('is reachable, and says what it would take with it', async ({ page }) => {
+    await asAccount(page);
+    await page.goto('/en/profile');
+
+    await page.getByRole('link', { name: 'Settings' }).click();
+    await expect(page).toHaveURL('/en/settings');
+
+    await page.getByRole('button', { name: 'Delete my account' }).click();
+
+    const dialog = page.getByRole('alertdialog');
+    // Counted from this account's own profile, not described in general.
+    await expect(dialog).toContainText('3 sections');
+    await expect(dialog).toContainText('4 items');
+    // And what does not go, where somebody actually reads it.
+    await expect(dialog).toContainText('with the link to you cut');
+  });
+
+  /** Nothing is offered to somebody who has no account to delete. */
+  test('is not offered to an anonymous reader', async ({ page }) => {
+    await page.goto('/en/settings');
+
+    await expect(page.getByText('working without an account')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Delete my account' })).toHaveCount(0);
+  });
+});

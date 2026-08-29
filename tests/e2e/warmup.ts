@@ -22,6 +22,7 @@ const ROUTES = [
   '/en/generations/warmup',
   '/en/onboarding',
   '/en/onboarding/review',
+  '/en/settings',
   '/en/dev/mocks',
   '/en/login',
   '/en/auth/complete',

@@ -5,7 +5,8 @@ import { generationHandlers } from './generationHandlers';
 import { importHandlers } from './importHandlers';
 import { problem } from './problem';
 import { profileHandlers } from './profileHandlers';
-import { currentSession, signIn, signOut } from './sessionFixture';
+import { resetProfileFixture } from './profileFixture';
+import { currentSession, isAccount, signIn, signOut } from './sessionFixture';
 
 /**
  * Mock API surface. One set of handlers, shared by the browser worker, Vitest
@@ -65,6 +66,34 @@ export const handlers = [
    * same way the browser arrives.
    */
   http.get('*/api/v1/auth/providers', () => HttpResponse.json(['google', 'github'])),
+
+  /**
+   * Deleting the account (§ 57.4, `B-057`).
+   *
+   * **`204` whichever time it is pressed.** A second press is not an error —
+   * it is what a dropped connection produces — so this does not check whether
+   * there was an account to delete.
+   *
+   * What it does check is the caller: an anonymous one has no account, and the
+   * endpoint answers `401 AUTHENTICATION_REQUIRED` rather than pretending to
+   * have deleted something. The screen never reaches this, because it gates on
+   * the session — the handler encodes it so a screen that stopped gating would
+   * be caught here rather than by nothing.
+   */
+  http.delete('*/api/v1/account', () => {
+    if (!isAccount()) {
+      return HttpResponse.json(problem(401, 'AUTHENTICATION_REQUIRED', '/api/v1/account'), {
+        status: 401,
+      });
+    }
+
+    // The rows go, and so does the cookie — which is what leaves the caller
+    // anonymous rather than with nothing.
+    resetProfileFixture();
+    signOut();
+
+    return new HttpResponse(null, { status: 204 });
+  }),
 
   /**
    * `202`, empty, and the same for an address with an account and one

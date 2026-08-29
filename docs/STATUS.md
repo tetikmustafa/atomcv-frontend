@@ -30,19 +30,18 @@ entry (2026-08-28, § 20.2), frontend'e düşeni `B-061`.
 | Aşama / Adım | Durum |
 |---|---|
 | Aşama 0 — İskelet · 1 — Profil editörü · 2 — Üretim akışı + SSE | ✅ |
-| Aşama 3 — **dilim 0-7a** ✅ · kalan: hesap silme + gizlilik · 3b `F-018`'de | ⏳ |
+| Aşama 3 — **bütün dilimler** ✅ · yalnız § 31.6'nın yarısı `F-018`'i bekliyor | ⏳ |
 
-**Dilim 0** `gen:api` + CSRF + katalog · **dilim 1** oturum, yetenek kapısı,
-kayan TTL · **dilim 2** giriş: `/login`, `/verify`, `/auth/complete`,
-`/auth/error`, Turnstile, `Retry-After`'dan kurulan 429, çıkış düğmesi ·
-**dilim 3a** CV yükleme: multipart, beş senkron ret, `409` + iki resolution,
-§ 31.6'nın **atlanamaz** geçidi · **dilim 4** cover letter · **dilim 5** bayat
-sözcükleme · **dilim 6** maddesiz entry · **dilim 7a** geri bildirim. On altı
-madde `ACK`; kalan ikisi `B-057` ile `B-059`. **Gerçek uca karşı
-denenmedi:** OAuth, Turnstile, içe aktarma, cover letter, bayat sözcükleme.
+**Dilim 0** `gen:api` + CSRF + katalog · **1** oturum, yetenek kapısı, kayan
+TTL · **2** giriş (`/login`, `/verify`, `/auth/*`, Turnstile, `Retry-After`,
+çıkış) · **3a** CV yükleme (multipart, beş senkron ret, `409`, § 31.6'nın
+**atlanamaz** geçidi) · **4** cover letter · **5** bayat sözcükleme · **6**
+maddesiz entry · **7** geri bildirim, hesap silme, gizlilik politikası.
+**On sekiz maddenin on sekizi `ACK`.** **Gerçek uca karşı denenmedi:** OAuth,
+Turnstile, içe aktarma, cover letter, bayat sözcükleme, hesap silme.
 
-**Test:** 601 birim · 44 e2e · **bundle** profil 252.2 / üretim 219.4 /
-onboarding 217.0 KB (dinamik rotalar betiğin dışında — elle 210-253 KB).
+**Test:** 607 birim · 47 e2e · **bundle** profil 252.3 / üretim 219.5 /
+onboarding 217.1 / ayarlar 228.5 KB (dinamik rotalar elle, 210-253 KB).
 
 ## Açık kararlar (ikisini de ilgilendirir)
 
@@ -53,8 +52,8 @@ onboarding 217.0 KB (dinamik rotalar betiğin dışında — elle 210-253 KB).
 
 ## Sonraki senkronizasyon noktası
 
-**Frontend kalan iki maddeyi tek kapanış diliminde kapatıyor**; backend'in MVP payı
-bitti. **`B-059` yayın öncesi zorunlu** ve kapanış diliminde. Backend'den
-beklenen iki madde: **`F-017`** (katalog tablosu) ve **`F-018`** — ikincisi
-§ 31.6'nın gözden geçirme ekranının yarısını bloke ediyor, çünkü hangi
-bölümün sorunlu olduğunu söyleyen bir alan telde yok.
+**Her iki repoda da açık madde kalmadı**; sıra iki cevapta. **`F-017`**
+(katalog tablosu + `issues` sözlüğü) ve **`F-018`** — ikincisi § 31.6'nın
+gözden geçirme ekranının yarısını bloke ediyor, çünkü hangi bölümün sorunlu
+olduğunu söyleyen bir alan telde yok. **Yayın öncesi hâlâ açık:** gizlilik
+politikasının sağlayıcı listesi, model seçimini bekliyor.

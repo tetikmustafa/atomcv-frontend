@@ -18,6 +18,7 @@ import {
   verifyMagicLink,
   type Capabilities,
 } from '@/lib/api/endpoints/auth';
+import { deleteAccount } from '@/lib/api/endpoints/account';
 import { authKeys, sessionKeys } from '@/lib/api/queryKeys';
 
 /**
@@ -105,11 +106,22 @@ export function useLogout() {
     mutationFn: logout,
     onSuccess: async () => {
       queryClient.clear();
-      // Re-read straight away rather than waiting for a remount. Signing out
-      // does not leave the caller with nothing: the endpoint stamps a fresh
-      // anonymous session, and the screen underneath is the anonymous
-      // product.
-      await queryClient.refetchQueries({ queryKey: sessionKeys.all });
+      /*
+        Re-read straight away rather than waiting for a remount. Signing out
+        does not leave the caller with nothing: the endpoint stamps a fresh
+        anonymous session, and the screen underneath is the anonymous product.
+
+        **`fetchQuery`, not `refetchQueries`**, and the difference is an
+        invariant this project already knows: an invalidation with no
+        observer does nothing. `clear()` has just removed every query, so a
+        refetch finds nothing to refetch — it worked only because a mounted
+        `useSession` happened to re-render for its own reasons and re-create
+        the query. Where the caller of this hook sits *below* the component
+        reading the session, that re-render never comes and the session
+        silently stays as it was. Measured, on the settings screen.
+        `fetchQuery` creates the entry and fills it either way.
+      */
+      await queryClient.fetchQuery({ queryKey: sessionKeys.current(), queryFn: getSession });
     },
   });
 }
@@ -143,7 +155,35 @@ export function useVerifyMagicLink() {
     mutationFn: verifyMagicLink,
     onSuccess: async () => {
       queryClient.clear();
-      await queryClient.refetchQueries({ queryKey: sessionKeys.all });
+      // `fetchQuery` for the reason `useLogout` gives: after `clear()` there
+      // is no query left for a refetch to find.
+      await queryClient.fetchQuery({ queryKey: sessionKeys.current(), queryFn: getSession });
+    },
+  });
+}
+
+/**
+ * Deletes the account, then throws the cache away.
+ *
+ * `clear()` for the same reason `useLogout` does it, only more so: what was
+ * cached does not merely belong to somebody else now, it does not exist. The
+ * read that follows is what turns the screen into the anonymous product —
+ * the response cleared the cookie, so `GET /auth/session` stamps a fresh
+ * anonymous session rather than refusing (§ 57.4).
+ *
+ * **This is where `fetchQuery` was measured to matter.** The button lives a
+ * component below the one holding `useSession`, so nothing re-renders to
+ * re-create the query a refetch would need — and the settings screen went on
+ * showing an account that no longer existed.
+ */
+export function useDeleteAccount() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteAccount,
+    onSuccess: async () => {
+      queryClient.clear();
+      await queryClient.fetchQuery({ queryKey: sessionKeys.current(), queryFn: getSession });
     },
   });
 }

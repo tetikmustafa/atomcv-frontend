@@ -765,3 +765,99 @@ bakmadı" ya da "şu tarihte okundu".
    başka bir uç da vermiyor, yani sayfa yenilenince ekran hangi başparmağın
    basıldığını bilmiyor. Bugün boş başlıyor — tahmin etmektense doğrusu bu —
    ama "mevcut seçimi göster" kuralı ancak oturum boyunca tutulabiliyor.
+
+---
+
+### B-057 · Hesap silme — `DELETE /api/v1/account`
+**Kapatıldı:** 2026-08-29, frontend dilim 7b · **Spec:** `spec/16-cost-legal.md` § 57.4
+
+`204`, gövdesiz, oturum + CSRF arkasında; "emin misin" ekranı bizde ve neyin
+gittiğini saymalı. İkinci basış da `204`. Sonrasında istemci anonime düşüyor.
+
+**Frontend:** `/settings` altında, ve **nav'da bir bağlantısı var** — yalnız
+URL ile ulaşılan bir rota ulaşılabilir değil, ve § 57.4 silmenin ulaşılabilir
+olmasını istiyor.
+
+**Onay metni sayıyor**, ve **saymadığı bir şeyi uydurmuyor**: bölüm ve madde
+sayısı profilin kendisinden geliyor, ama **üretim sayısı verilmiyor** çünkü onu
+yayımlayan bir uç yok. Geri alınamayan tek yerde yanlış bir sayı, hiç sayı
+olmamasından kötü. İsterseniz `GET /generations` ya da hesapta bir toplam
+yayımlayın; bugün cümle onları saymadan adlandırıyor.
+
+**Kalan iki şey ekranda da yazıyor**, yalnız politikada değil: maliyet kaydı
+bağı koparılmış olarak, ve suppression kaydı adrese ait olduğu için. Sağlayıcı
+loglarına da bir cümle ayrıldı ve politikaya yönlendiriyor.
+
+**Kapı `capabilities` değil `authenticated`.** Anonim birinin bu özelliğin dar
+bir sürümü yok; yetenek kümesine bir bayrak eklemenizi istemiyoruz.
+
+**Mock anonim çağırana `401 AUTHENTICATION_REQUIRED` veriyor** — ekran oraya
+hiç ulaşmıyor ama kapı kalkarsa bir yerde yakalansın diye.
+
+### B-059 · Gizlilik Politikası'na alt işleyen ve bölge
+**Kapatıldı:** 2026-08-29, frontend dilim 7b · **Spec:** `spec/16-cost-legal.md`, `spec/14-build-guide.md` § 3.2
+
+**Frontend:** Yazıldı. "Veriler AB'de işlenir" diyen bir cümle **yoktu** —
+eksik olan listeydi. Şimdi e-posta teslimatı adıyla sayılıyor: **Resend, altta
+AWS SES `ap-northeast-1` (Tokyo)**, ve adresin ile gönderim üstverisinin **AB
+dışında** işlendiği açıkça yazıyor. Yanına öteki işleyiciler de girdi:
+Cloudflare R2, ve tercih edilirse Google/GitHub ile giriş.
+
+**Silme bölümü de § 57.4'ün istediğini söylüyor:** neyin gittiği, kalan iki
+şey ve nedenleri, ve LLM sağlayıcılarının kendi taraflarında kısa ömürlü kayıt
+tutabildiği.
+
+**Bir şey hâlâ eksik ve bizde değil:** sağlayıcı listesinin kendisi. Metin
+"güncel sağlayıcı listesi, her birine ne gönderildiği ve ücretsiz bir katmanın
+bu veriyi eğitimde kullanıp kullanamayacağı burada açıkça yazılmalı" diyor —
+model seçimi ürün kararı olarak beklediği için o paragraf hâlâ bir yer tutucu.
+**EK C.1'in maddesi bu haliyle kapanmaz;** model seçildiğinde bir satır
+yazılacak.
+
+---
+
+### B-057 · Hesap silme — `DELETE /api/v1/account`
+**Kapatıldı:** 2026-08-29, frontend dilim 7b · **Spec:** `spec/16-cost-legal.md` § 57.4
+
+`204`, gövdesiz, oturum + CSRF arkasında; "emin misin" ekranı bizde ve neyin
+gittiğini saymalı. İkinci basış da `204`. Sonrasında istemci anonime düşüyor.
+
+**Frontend:** `/settings` altında, ve **nav'da bir bağlantısı var** — yalnız
+URL ile ulaşılan bir rota ulaşılabilir değil, ve § 57.4 silmenin ulaşılabilir
+olmasını istiyor.
+
+**Onay metni sayıyor**, ve **saymadığı bir şeyi uydurmuyor**: bölüm ve madde
+sayısı profilin kendisinden geliyor, ama **üretim sayısı verilmiyor** çünkü onu
+yayımlayan bir uç yok. Geri alınamayan tek yerde yanlış bir sayı, hiç sayı
+olmamasından kötü. İsterseniz `GET /generations` ya da hesapta bir toplam
+yayımlayın; bugün cümle onları saymadan adlandırıyor.
+
+**Kalan iki şey ekranda da yazıyor**, yalnız politikada değil: maliyet kaydı
+bağı koparılmış olarak, ve suppression kaydı adrese ait olduğu için. Sağlayıcı
+loglarına da bir cümle ayrıldı ve politikaya yönlendiriyor.
+
+**Kapı `capabilities` değil `authenticated`.** Anonim birinin bu özelliğin dar
+bir sürümü yok; yetenek kümesine bir bayrak eklemenizi istemiyoruz.
+
+**Mock anonim çağırana `401 AUTHENTICATION_REQUIRED` veriyor** — ekran oraya
+hiç ulaşmıyor ama kapı kalkarsa bir yerde yakalansın diye.
+
+### B-059 · Gizlilik Politikası'na alt işleyen ve bölge
+**Kapatıldı:** 2026-08-29, frontend dilim 7b · **Spec:** `spec/16-cost-legal.md`, `spec/14-build-guide.md` § 3.2
+
+**Frontend:** Yazıldı. "Veriler AB'de işlenir" diyen bir cümle **yoktu** —
+eksik olan listeydi. Şimdi e-posta teslimatı adıyla sayılıyor: **Resend, altta
+AWS SES `ap-northeast-1` (Tokyo)**, ve adresin ile gönderim üstverisinin **AB
+dışında** işlendiği açıkça yazıyor. Yanına öteki işleyiciler de girdi:
+Cloudflare R2, ve tercih edilirse Google/GitHub ile giriş.
+
+**Silme bölümü de § 57.4'ün istediğini söylüyor:** neyin gittiği, kalan iki
+şey ve nedenleri, ve LLM sağlayıcılarının kendi taraflarında kısa ömürlü kayıt
+tutabildiği.
+
+**Bir şey hâlâ eksik ve bizde değil:** sağlayıcı listesinin kendisi. Metin
+"güncel sağlayıcı listesi, her birine ne gönderildiği ve ücretsiz bir katmanın
+bu veriyi eğitimde kullanıp kullanamayacağı burada açıkça yazılmalı" diyor —
+model seçimi ürün kararı olarak beklediği için o paragraf hâlâ bir yer tutucu.
+**EK C.1'in maddesi bu haliyle kapanmaz;** model seçildiğinde bir satır
+yazılacak.

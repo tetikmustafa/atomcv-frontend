@@ -21,228 +21,45 @@ editör → kapanış**. Sebebi tek cümlede: CSRF her yazma isteğinin önünde
 
 ### Kapanmış dilimlerin kaydı
 
-Dilim 0 (temel), 1 (oturum), 2a (OAuth yolu) ve 2b (magic link, Turnstile,
-`Retry-After`) kapandı; kayıtları `archive/stage-3-slices-0-2.md`'de. Bu
+Dilim 0 (temel), 1 (oturum), 2a-2b (giriş), 3a (CV yükleme + zorunlu geçit),
+4 (cover letter), 5 (bayat sözcükleme), 6 (maddesiz entry) ve 7a (geri
+bildirim) kapandı; kayıtları `archive/stage-3-slices-0-2.md`'de. Bu
 dosya 400 satırla sınırlı ve aşama sürüyor, o yüzden kapanan her dilim
 oraya taşınıyor — aynı kural, aşama yerine dilim ölçeğinde.
 
-### Dilim 3a — CV yükleme ve zorunlu geçit · 2026-08-29
+### Dilim 7b — hesap silme ve gizlilik politikası · 2026-08-29
 
-`B-051`, `B-053`, `B-060` kapandı. § 31.6'nın gözden geçirme ekranı **yarım
-indi ve yarısı inemez** — sebebi `F-018`.
+`B-057` ve `B-059` kapandı. Bununla backend'in bütün maddeleri bitti;
+kalan tek iş `F-018`'in cevabına bağlı olan § 31.6 yarısı.
 
-**`F-018` açıldı, ve iki şey soruyor.** `JobStatusResponse` yalnız
-`generationId` ile `pageCount` yayımlıyor; içe aktarma işinin terminal
-alanları (`profileId`, üç sayı, `detectedLanguage`) şemada **yok**, yani
-`GET /jobs/{id}` bir içe aktarmanın sonucunu hiç söyleyemiyor ve sayfa
-yenilenince kayboluyor. `pageCount`'ın `B-041` öncesi hâlinin aynısı. İkincisi
-daha ağır: § 31.6 "sorunlu bölümler otomatik açık" ve "kritik uyarılar
-Onayla'yı kapalı tutar" diyor, ama telde yalnız bir **sayı** var — hangi
-bölümün sorunlu olduğunu söyleyen hiçbir alan yok, ve § 31.4.1 zaten
-`warnings[]`'in frontend'e çıkmadığını söylüyor. **Uydurmadık:** bölümler
-kapalı, "şu kadar konuda emin olamadık" notu, Onayla hep aktif.
+**Onay ekranı sayıyor, ve saymadığı bir şeyi de uydurmuyor.** Bölüm ile madde
+sayısı profilin kendisinden geliyor; **üretim sayısı verilmiyor**, çünkü onu
+yayımlayan bir uç yok. Geri alınamayan tek yerde yanlış bir sayı, hiç sayı
+olmamasından kötü.
 
-**Geçit bir kilit değil ve öyle olduğunu iddia etmiyor.** Sunucu tarafında
-geçildiğini kaydeden bir şey yok — kaydedebilecek bir uç da yok. Ürünün
-borcu, sunduğu hiçbir yolun bu ekranın etrafından dolaşmaması; adres çubuğuna
-`/profile` yazan biri aynı editöre varır.
+**İki şey kaldığı ekranda söyleniyor**, yalnız politikada değil: maliyet kaydı
+bağı koparılmış olarak, ve suppression kaydı **adrese** ait olduğu için. Bunlar
+politikaya da yazıldı; okuyanın gerçekten okuduğu yer ise onay kutusu.
 
-**Gözden geçirme ekranı editörün kendisi.** § 31.6 "ayrı moda geçme yok"
-istiyor, ki `ProfileEditor` zaten o: bölümler kapalı başlıyor, alanlar kendini
-kaydediyor. Salt-okunur bir kopyası, doğru tutulacak ikinci bir şey olurdu.
+**Kapı `capabilities` değil `authenticated`.** Anonim birinin bu özelliğin dar
+bir sürümü yok — hesabı yok. Yetenek kümesi bunu söylemiyor ve söylememeli.
 
-**Dosya seçici hiçbir şeyi filtrelemiyor.** `accept` cazip ve yanlış: kabul
-listesinin tek sahibi var ve sunucu onu `415`'te yayımlıyor. Kopyayla süzen
-bir seçici, sunucu yeni bir biçim okumaya başladığı gün onu gizlemeye devam
-ederdi.
+**Ve burada gerçek bir hata ölçüldü: `clear()` + `refetchQueries` gözlemcisiz
+çalışmıyor.** Notlardaki değişmezin ta kendisi, ve bu dilime kadar
+farkedilmemişti: `useLogout` çalışıyordu **yalnızca** oturumu okuyan bileşenin
+kendi sebebiyle yeniden render olması sayesinde. Silme düğmesi oturumu okuyan
+bileşenin **altında** duruyor, o render hiç gelmiyor, ve ekran artık var
+olmayan bir hesabı göstermeye devam ediyordu. Üç hook da `fetchQuery`'ye
+geçti — o, gözlemciye ihtiyaç duymadan girdiyi kuruyor.
 
-**`useJobStream` `useGeneration`'dan çıktı.** İçinde generation'a ait hiçbir
-şey yoktu; ikinci bir iş türü gelince adı yalan oldu. `useJob.ts`'te, ve
-terminal yükü artık **bütün** olarak saklanıyor (`result`) — çünkü içe
-aktarmanın alanlarının `JobStatus`'ta yeri yok ve burada ikinci bir kopyasını
-yazmak onları iki yerde tutmak olurdu.
+**Gizlilik politikası artık e-posta yolunu adıyla sayıyor:** Resend, altta AWS
+SES `ap-northeast-1` (Tokyo), yani adres ve gönderim üstverisi **AB dışında**
+işleniyor. "AB'de işlenir" diyen bir cümle yoktu; eksik olan listeydi. Silme
+bölümü de neyin kaldığını ve sağlayıcıların kısa ömürlü kayıt tutabildiğini
+söylüyor.
 
-**Multipart'ta `Content-Type`'ı biz yazmıyoruz.** Başlık **boundary** taşıyor
-ve onu yalnız tarayıcının serileştiricisi biliyor; elle yazmak, parçaları tam
-olan bir gövdeden "eksik parça" 400'ü aldırır. Negatif kontrol yapıldı: elle
-yazınca uç uçtan uca ölüyor, on altı testin on altısı kırılıyor.
-
-**Test ortamında `FormData`, `File` ve `Blob` Node'un.** Tarayıcıda seçtiğin
-dosya ile onu yollayan `fetch` tek bir gerçeklemedir; burada iki: jsdom dosya
-API'lerini, Node `fetch`'i veriyor. Ölçülen iki ayrı arıza — jsdom'un
-`FormData.append`'i Node `Blob`'unu **reddediyor** ve Node `File`'ını sessizce
-metne çeviriyor; jsdom `File`'ı Node'un serileştirdiği bir gövdede **akışı hiç
-bitmeyen** bir istek üretiyor (`request.text()` çözülmüyor, beş saniyelik
-timeout olarak geliyor). Üçü **birlikte** değiştirildi; yarım takas ilk
-arızayı üretiyor. `FormData`'nın import edilecek bir modülü yok, `undici`'ye
-uzanmak MSW'nin bağımlılık ağacına bağlanmak olurdu — sınıf bir `Response`'a
-gövde ayrıştırtarak alınıyor.
-
-**409 kontrolü `isAccount()`'tan geçiyor, modül bayrağından değil** — ve bunu
-tarayıcı testi buldu. Handler önce `session.authenticated` okuyordu: Vitest'te
-doğru, tarayıcıda yanlış, yani `PROFILE_ALREADY_EXISTS` orada hiç
-ateşlenmiyordu. Dilim 2b'nin "depolama yarısı yalnız Playwright'ta sınanabilir"
-kaydının ikinci örneği.
-
-**`PROFILE_QUOTA_EXCEEDED` artık kime söylendiğine göre dallanıyor** (`B-053`).
-Anonim hak **adrese** göre sayılıyor, yani "hakkını doldurdun" cümlesi
-okuyucuyu aynı ofisteki bir yabancı için suçlar. Ayrımı sunucu yapamaz;
-istemci yapar. `caller` `MESSAGE_DEFAULTS`'a girdi ve `useErrorMessage`
-oturumu **önbellekten okuyor, abone olmuyor** — `useSession` `staleTime: 0`
-olduğu için her hata paneli bir oturum isteği açardı, yani cümle yazan bir
-şey sessizce istek atan bir şeye dönerdi. Bedeli üç testin sarmalayıcısına bir
-`QueryClientProvider`; üretimde zaten hep var.
-
-**İçe aktarma işi `label` göndermiyor ve mock da göndermiyor.** Yayımlanmış
-bir faz anahtarı yok; `generation.phase.EXTRACTING` uydurmak, sunucunun hiç
-göndermeyeceği bir belirteci hem tele hem kataloğa koymak olurdu. Ekran kendi
-cümlesini yazıyor — kural 8 sunucunun sahip olduğu metni yönetiyor, ekranın
-kendi hakkında söylediğini değil. `F-018`'in son sorusu bu.
-
-**`MockJob` iki iş türünü birden taşıyor ve dosyanın adı bunu yalanlıyor.**
-`generationFixture` artık her işin durumunu tutuyor, çünkü `GET /jobs/{id}`
-iki yere bakamaz. Bölmek doğru olanı ve **ertelendi**, unutulmadı.
-
-**Bütçe:** `/en/onboarding` **217.0** (statik, betiğin ölçtüğü), review
-**252.2** KB (dinamik, elle). Ölçülenler: profil 251.3 → **251.7**, üretim
-215.7 → **215.9**, pazarlama 168.4'te sabit.
-
-### Dilim 4 — cover letter · 2026-08-29
-
-`B-056` kapandı. Ekran sonuç sayfasında; üretim formuna bir anahtar eklendi.
-
-**Reddedilen taslak kırmızı panelde çizilmiyor.** `COVER_LETTER_REJECTED`
-isteğe değil **taslağa** verilmiş bir hüküm: mektubun arkasında orijinal yok,
-o yüzden aşırıya kaçan bir cümlenin yerine basılacak bir şey de yok ve taslak
-atılıyor. Okuyucu bir şey yanlış yapmadı, düzeltecek bir şey de yok. Kural 7
-delinmiyor: panelin var olma sebebi *sunucunun* ne sunulacağına karar
-vermesi, ve buradaki tek resolution `retry` — onu taşıyacak düğme zaten
-ekranda duruyor ("başka bir taslak dene"). `declined`'da (`B-048`) verilen
-kararın aynısı.
-
-**`Accepts<>` düzeltildi ve sebebi tam olarak bu uç.** Gövdesi **bütünüyle**
-opsiyonel bir uç `requestBody?` ilan ediyor (`{}` geçerli bir istek), ve eski
-koşul yalnız `requestBody:` ile eşleşiyordu — sonuç `never`, ve çağrı yerinde
-"argument of type … is not assignable to parameter of type never" diye
-görünüyordu, gövdeyle ilgisi olduğu hiç belli olmadan. `NonNullable` ile
-düzeldi; gövdesiz uçlar `requestBody?: never` ilan ettiği için etkilenmiyor.
-
-**Mektup önbelleğe yazılıyor, yeniden çekilmiyor.** Yanıt mektubun kendisini
-taşıyor ve sunucu saklananı değiştirdi. Bu, "sonuç ekranındaki düzenlemeler
-yerel durum değildir" kuralının kapsadığı durum **değil**: o kural CV'yi
-düzenlemenin Faz C'den itibaren boru hattını yeniden koşturmasıyla ilgili.
-Mektup yalnız mektubu değiştiriyor.
-
-**Bu uç `Retry-After` göndermiyor** ve mock da göndermiyor. `B-056` yalnız
-`params.resetsAt` yayımlıyor, yani `429` cümlesi süreyi kuramıyor ve dilim
-2b'de yazılan "birazdan tekrar dene" dalına düşüyor — o dalın gerçekten
-kullanıldığı tek yer burası, ve testi de burada.
-
-**`issues` hâlâ sayılmıyor** (`F-017` bekliyor). Altı değer makine belirteci;
-sözlüğün kapalı olduğu doğrulanınca ICU'da adlandırılacak.
-
-**Bütçe:** üretim 215.9 → **219.4** (Radix `Switch`), profil 251.7 →
-**252.0**. Sonuç ekranı dinamik, elle **215.8** KB.
-
-### Dilim 5 — bayat sözcükleme · 2026-08-29
-
-`B-052` kapandı, ve kasıtlı boşluklardan biri **kapandı**: "bayat sözcüklemeyi
-yeniden üretecek kontrol yok" satırı artık yanlış, çünkü hem uç hem de
-`stale`'i true yapan iş yayımlandı.
-
-**Mesaj bir çiftten kuruluyor, tek bayraktan değil** — ve ikisini birleştirmek
-§ 32.2'nin önlemeye çalıştığı hata. Düzenlenen bir sözcüklemeden türeyen her
-şey bayatlanıyor (kişi ayrıştıklarını bilmeye hak sahibi), ama yalnız kişinin
-**yazmadıkları** kuyruğa giriyor: birinin kendi cümlesini, o kişi öteki dilde
-bir yazım hatası düzeltti diye makine çevirisiyle değiştirmek ürünün onu
-sessizce ezmesidir. Üçüncü satır bu yüzden soruyor.
-
-**"Benim halimi koru" hiçbir şey göndermiyor**, ve sayfa yenilenince uyarı
-geri geliyor. Eksik değil: satır gerçekten hâlâ bayat, kapatılan şey yalnız bu
-okumaydı. Sunucuya kaydedilecek bir "reddettim" hâli de yok.
-
-**Bileşen sekme şeridinin içinde değil, alanın yanında.** Tek sözcüklemeli bir
-atomun şeridi yok — `VariantTabs` yalnız birden fazlada çiziliyor — ve orada
-kalsaydı böyle bir atom bayat olduğunu hiç söyleyemezdi.
-
-**"Yeniden yaz" ikinci uyarıya dönüşüyor, kaybolmuyor.** Sunucu bayrağı
-temizliyor ama satır **bayat kalıyor**; yenileme arka plan işi. Mock'un da
-`stale`'i temizlememesi bu yüzden önemli — temizleseydi ekranın mesajı olan tek
-durum atlanırdı, ve negatif kontrol tam olarak onu yakalıyor.
-
-**Mock `{userEdited: true}`'ü reddediyor** — istemci hiç göndermese de. Kabul
-eden bir mock, istemciye çalıştığını öğretirdi. Reddin **şekli** bizim
-okumamız (`400 VALIDATION_FAILED`), maddede yayımlanmış değil; hiçbir şey ona
-bağlı olmadığı için sorun değil, ve yorumda öyle yazıyor.
-
-**Bir test seçici yüzünden kırıldı ve düzeltmesi kayda değer.** `VariantTabs`
-testi önizlemeyi "rol taşımayan paragraf" diye seçiyordu; `StaleWording` panele
-kendi paragrafını koyunca o tarif başka bir şeyi gösterdi. Komşuluğu tarif eden
-bir seçici, komşu değişince sessizce yanlış şeyi iddia ediyor — metnine ve
-`span` seçicisine geçti.
-
-**Bütçe:** profil 252.0 → **252.2**.
-
-### Dilim 6 — maddesiz entry · 2026-08-29
-
-`B-061` kapandı, ve **kodda engellenecek bir şey yoktu** — `B-047`'nin ikinci
-örneği. Editör maddesiz bir entry'yi hiç engellemiyordu: atomlar entry'den
-ayrı ekleniyor, hiçbir doğrulama madde istemiyor, ve `minAtoms` kutusu diye bir
-şey hiç çizilmemişti. Değişen üç şey var, üçü de küçük:
-
-**Boş entry metni artık eksiklik ima etmiyor.** "Nothing under this one yet"
-maddenin beklendiğini söylüyordu; § 20.2'den sonra bir diplomanın maddesi
-olmaması **bitmişlik**. Cümle onu söylüyor, ve "madde ekle" kontrolü duruyor
-çünkü seçenek, yükümlülük değil.
-
-**Fixture'a üçüncü bir bölüm şekli girdi:** maddesiz bir entry taşıyan bir
-eğitim bölümü. Editörün şikâyetsiz çizmesi gereken şekil buydu ve başka hiçbir
-yerde yoktu.
-
-**Ve o fixture bir testi gerçekten test edilebilir hâle getirdi.** Sıralama
-testi "yalnız yeri değişen satırlar sürüm alır" diyordu ama iki bölümle bir
-takas ikisini de oynatıyordu, yani iddia yorumdaydı ve hiçbir şey onu
-denetlemiyordu. Üçüncü bölümle beklenen dizi `[1, 1, 0]` oldu.
-
-**`selection_state` telde yok.** `B-061` "neden bu satır çıktı" görünümü
-kuracaksak `headerOnlyEntries`'e bakmamızı söylüyor; şema `selection_state`'i
-hiç yayımlamıyor, yani böyle bir görünüm bugün kurulamaz. Kuracak bir şey
-yokken madde açmadık — kayıt `B-061`'in `resolved/` kaydında.
-
-### Dilim 7a — geri bildirim · 2026-08-29
-
-`B-058` kapandı.
-
-**Başparmak formun tamamı, ve sırası önemli.** Yargıyı sebebini sormadan kabul
-eden bir form daha çok ve daha iyi yargı topluyor; kategori ile yorum yalnız
-başparmak basıldıktan sonra açılıyor. Negatif kontrol bunu tutuyor: koşulu
-kaldırınca "başparmak basılmadan bir şey sormaz" testi kırılıyor.
-
-**Her istek yargının tamamını taşıyor**, çünkü `contentGranted` bir **anahtar**:
-`false` göndermek izni **geri alıyor**. İzin açıldıktan sonra basılan bir
-başparmak, alanı atlarsa pencereyi sessizce kapatırdı. Negatif kontrol: sabit
-`false` yazınca "fikrini değiştirince izin açık kalıyor" testi kırılıyor.
-
-**`accessedAt` gösteriliyor, ve sebebi bu.** Denetlenemeyen bir onay kutudan
-ibaret. Alan biri gerçekten bakana kadar `null`, yani ekranın genellikle
-yazacağı cümle "izin açık, henüz kimse bakmadı".
-
-**Kırk sekiz saat ilk evetten başlıyor** ve ikinci bir evet pencereyi ileri
-itmiyor. Bunu **ekran üzerinden gösterilemiyor** — iki isteğin `expiresAt`'ini
-karşılaştırmak gerekiyor — o yüzden uca doğrudan yazılmış iki test var.
-İlk turda bu iddiayı hiçbir şey tutmuyordu; negatif kontrol yakalamayınca
-eklendi.
-
-**`rating` üretilen tipte `"1" | "-1"`, yani metin.** Şema `format: int32`
-diyor, açıklama "1 for good, -1 for bad" diyor, ve `FeedbackResponse.rating`
-sayı olarak dönüyor — openapi-typescript'in enum'u metin literalleri olarak
-basması. `Omit` + daraltma ile **sayı** gönderiyoruz; testi de tipi değil
-gönderilen değeri denetliyor. Backend'e sorulacaklar listesinde.
-
-**Geri bildirim için `GET` yok.** Sayfa yenilenince ekran boş başlıyor —
-tahmin etmektense doğru olan bu. Bu da listede.
-
-**Bütçe:** sonuç ekranı 215.8 → **216.3** KB (dinamik, elle).
+**Bütçe:** `/en/settings` **228.5 / 60.1 KB** (yeni), profil 252.2 → **252.3**,
+üretim 219.4 → **219.5**, onboarding 217.0 → **217.1**.
 
 ---
 
@@ -272,7 +89,8 @@ taşıyor; burada yalnız **nerede olduğu** var. Aşama 1'in profil değişmezl
   `useAtom`'un `queryFn`'i kasten fırlatıyor.
 - **Invalidation gözlemcisiz çalışmaz.** Etkin gözlemcisi olmayan bir sorgu
   refetch edilmez; `setQueryData` ile seed'lenmiş bir anahtarın `queryFn`'i
-  hiç yoktur.
+  hiç yoktur. **`clear()`'dan sonra `refetchQueries` de çalışmaz** — ortada
+  sorgu kalmamıştır; oturumu geri okumak için `fetchQuery`.
 - **Akış ile `GET /jobs/{id}` tek anahtara yazar.** Geri düşüş ikinci bir
   doğruluk kaynağı değil, aynı kaynağın başka taşıyıcıyla doldurulması.
 - **Boş `label` tek bir yerde yutulur** (`toProgress`) — `F-010` orada
@@ -314,7 +132,8 @@ taşıyor; burada yalnız **nerede olduğu** var. Aşama 1'in profil değişmezl
   rotanın HTML dosyası yok, o yüzden `searchParams` okuyan her sayfa
   (`/login`, `/verify`, `/auth/*`, `/onboarding/review`) sayının dışında
   kalıyor ve elle ölçülüyor: `next start`, aynı gzip yöntemi.
-- **Bundle:** `/[locale]/profile` **251.7 / 83.3 KB**, `/[locale]/generate`
-  **215.9 / 47.5 KB**, `/[locale]/onboarding` **217.0 / 48.6 KB** (tavan
-  `bundle-budget.json`: 280 / 105). Elle ölçülenler: review 252.2, verify
-  212.5, login 210.4 KB.
+- **Bundle:** `/[locale]/profile` **252.3 / 83.9 KB**, `/[locale]/generate`
+  **219.5 / 51.1 KB**, `/[locale]/onboarding` **217.1 / 48.7 KB**,
+  `/[locale]/settings` **228.5 / 60.1 KB** (tavan `bundle-budget.json`:
+  280 / 105). Elle ölçülenler: review 252.2, sonuç 216.3, verify 212.5,
+  login 210.4 KB.

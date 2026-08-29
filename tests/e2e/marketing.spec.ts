@@ -89,3 +89,19 @@ test.describe('getting into the product', () => {
     await expect(page).toHaveURL('/en/profile');
   });
 });
+
+/**
+ * `B-059`: the sub-processor list has to name the email path and say where it
+ * runs, because that address is processed outside the EU. A policy that is
+ * silent about it is wrong before it is incomplete.
+ */
+test.describe('the privacy policy', () => {
+  test('names where email is processed, and what deletion leaves behind', async ({ page }) => {
+    await page.goto('/en/legal/privacy');
+
+    await expect(page.getByText(/Resend, which sends through AWS SES/)).toBeVisible();
+    await expect(page.getByText(/Tokyo\) region/)).toBeVisible();
+    await expect(page.getByText(/outside the EU/)).toBeVisible();
+    await expect(page.getByText(/with the link to you cut/)).toBeVisible();
+  });
+});

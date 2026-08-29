@@ -29,6 +29,9 @@ const ROUTES = [
   { href: '/onboarding', key: 'onboarding' },
   { href: '/profile', key: 'profile' },
   { href: '/generate', key: 'generate' },
+  // Last, and listed although most of it is empty: § 57.4 requires deleting
+  // an account to be reachable, and a route only a URL reaches is not.
+  { href: '/settings', key: 'settings' },
 ] as const;
 
 export function MainNav() {
