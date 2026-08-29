@@ -111,17 +111,15 @@ export function regenerateCoverLetter(generationId: string, body: CoverLetterReq
 /**
  * A verdict on one generation (§ 48.4, `B-058`).
  *
- * **`rating` is narrowed, and it is a generator artefact rather than a
- * disagreement with the contract.** The schema declares `format: int32` and
- * documents "1 for good, -1 for bad"; `FeedbackResponse.rating` comes back as
- * a `number`. openapi-typescript renders the request's enum as the string
- * literals `"1" | "-1"` anyway, and sending a string for a field the server
- * reads as an integer is the kind of thing that works until it does not.
- *
- * Derived rather than restated, so a real change to the shape still breaks
- * the build here (`Omit` plus the narrowing, as `domain.ts` does).
+ * **Nothing is narrowed here any more, and that is the point.** `rating` used
+ * to arrive as the string literals `"1" | "-1"` while the same schema said
+ * `format: int32`, so this carried an `Omit` and put the numbers back. The
+ * cause was swagger's `allowableValues` being a `String[]` regardless of the
+ * property's type; the backend changed it to a real `enum: [1, -1]`
+ * (`B-065`), the generated type now says what the wire says, and the
+ * narrowing came off. What the client sends never changed.
  */
-export type FeedbackRequest = Omit<Accepts<'feedback'>, 'rating'> & { rating: 1 | -1 };
+export type FeedbackRequest = Accepts<'feedback'>;
 
 export type Feedback = Returns<'feedback'>;
 
@@ -141,4 +139,34 @@ export type Feedback = Returns<'feedback'>;
  */
 export function submitFeedback(generationId: string, body: FeedbackRequest) {
   return api.post<Feedback>(`/generations/${generationId}/feedback`, body);
+}
+
+/* -------------------------------- history ------------------------------ */
+
+export type GenerationPage = Returns<'list'>;
+export type GenerationSummary = NonNullable<GenerationPage['items']>[number];
+
+/**
+ * The generations this account has made, newest first (`B-066`).
+ *
+ * `capabilities.canSaveHistory` says they are kept; until this landed there
+ * was nowhere to read them, which is what `F-020` was about.
+ *
+ * **Cursor, not offset.** The list grows from the top, so a second page taken
+ * after a new generation landed would repeat one row and hide another. Pass a
+ * page's `nextCursor` back as `cursor`; **its absence is the end** — an empty
+ * `items` would be one page too late to notice. The value is opaque: the
+ * server's to read and ours to echo, so nothing here parses it.
+ *
+ * **`total` counts the account, not the page**, and that is the field the
+ * deletion screen needs: a number arrived at by walking pages would be a
+ * different number by the time the walk finished.
+ */
+export function listGenerations(params: { cursor?: string; limit?: number } = {}) {
+  const query = new URLSearchParams();
+  if (params.cursor) query.set('cursor', params.cursor);
+  if (params.limit !== undefined) query.set('limit', String(params.limit));
+
+  const search = query.toString();
+  return api.get<GenerationPage>(`/generations${search ? `?${search}` : ''}`);
 }

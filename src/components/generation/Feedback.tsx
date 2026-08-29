@@ -24,8 +24,11 @@
  * can check up on is a checkbox. The sentence is built from that field:
  * granted and unread, or read at a particular time.
  *
- * There is no `GET` for any of this, so a reload starts blank rather than
- * guessing at what was said before.
+ * **And it survives a reload now** (`B-065`). This screen used to start blank
+ * because only the write answered with the record, so "show the standing
+ * selection" held for the length of a session and no longer. The window is
+ * forty-eight hours: the person who needs to see `accessedAt` is by
+ * definition the one who comes back the next day.
  */
 
 import { useState } from 'react';
@@ -36,7 +39,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useFeedback } from '@/hooks/useGeneration';
 import { announce } from '@/stores/announcerStore';
-import type { FeedbackRequest } from '@/lib/api/endpoints/generations';
+import type { Feedback as FeedbackRecord, FeedbackRequest } from '@/lib/api/endpoints/generations';
 
 /** § 48.4's five, in the schema's order. */
 const CATEGORIES = [
@@ -50,15 +53,45 @@ const CATEGORIES = [
 /** The server's ceiling, enforced here so a rejected write never happens. */
 const COMMENT_MAX = 4000;
 
-export function Feedback({ generationId }: { generationId: string }) {
+/**
+ * The verdict as a value this screen can hold.
+ *
+ * `FeedbackResponse.rating` is a plain `number` — the response half of the
+ * endpoint was always typed that way — so a value that is neither of the two
+ * reads as no verdict rather than as a third one.
+ */
+function ratingOf(recorded: FeedbackRecord | undefined): 1 | -1 | null {
+  if (recorded?.rating === 1) return 1;
+  if (recorded?.rating === -1) return -1;
+  return null;
+}
+
+export type FeedbackProps = {
+  generationId: string;
+  /** What this person already said, when they have said something. */
+  recorded: FeedbackRecord | undefined;
+};
+
+export function Feedback({ generationId, recorded }: FeedbackProps) {
   const t = useTranslations('Result');
   const format = useFormatter();
   const send = useFeedback(generationId);
 
-  const [rating, setRating] = useState<1 | -1 | null>(null);
-  const [category, setCategory] = useState<FeedbackRequest['category']>();
+  /*
+    Seeded from the record and then owned by the field, the same shape the
+    editor's text uses. Re-seeding on every render would fight the reader:
+    their own write lands back in the cache and would reset a half-made
+    choice.
+
+    The comment is **not** seeded, and cannot be: it never travels back
+    (rule 4 — the person wrote it and has it).
+  */
+  const [rating, setRating] = useState<1 | -1 | null>(() => ratingOf(recorded));
+  const [category, setCategory] = useState<FeedbackRequest['category']>(
+    recorded?.category as FeedbackRequest['category'],
+  );
   const [comment, setComment] = useState('');
-  const [granted, setGranted] = useState(false);
+  const [granted, setGranted] = useState(recorded?.contentGrant?.open === true);
 
   /**
    * Every request carries the whole verdict, because two of these fields are
@@ -81,7 +114,9 @@ export function Feedback({ generationId }: { generationId: string }) {
     );
   }
 
-  const grant = send.data?.contentGrant;
+  // The write-through keeps this current, so the record is the single place
+  // the grant is read from — the mutation result and the cache agree.
+  const grant = recorded?.contentGrant;
 
   return (
     <section className="border-border flex flex-col gap-3 rounded-md border p-4">

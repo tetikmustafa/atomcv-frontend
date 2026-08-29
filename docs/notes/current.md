@@ -61,6 +61,48 @@ söylüyor.
 **Bütçe:** `/en/settings` **228.5 / 60.1 KB** (yeni), profil 252.2 → **252.3**,
 üretim 219.4 → **219.5**, onboarding 217.0 → **217.1**.
 
+### Dilim 8 — backend'in cevapları · 2026-08-29
+
+`B-062`, `B-063`, `B-064`, `B-065`, `B-067` kapandı; `B-066`'nın yarısı
+kapandı ve sorusuna `F-022` ile cevap verildi. Beş `F-nnn`'in beşi de
+cevaplanmış olarak döndü, ve **üçünde soru backend'de bir kusur ortaya
+çıkardı** — `path`'in iki ayrı hatası, `userEdited`'ın `500`'ü, ve
+`Retry-After`'ın yayımlanmamış olması.
+
+**Dakika hesabı tek yerde.** Mektup reddi de kota kapılarıyla aynı yoldan
+geçiyor: `retryAfterFrom` başlığı okuyor (yalnız delta-saniye biçimi),
+`toRetryMinutes` dakikaya yuvarlıyor. Üç kapıda üç hesap olsaydı biri
+bayatlardı.
+
+**Kapalı sözlükler ICU'da adlandırılıyor, ama açık okunuyor.**
+`COVER_LETTER_REJECTED`'ın altı `issues` değeri `errorValues.{code}.{value}`
+altında; `nameVocabularies` tanımadığını **ham geçiriyor**. Kapalı bir enum,
+`gen:api`'nin en son çalıştığı günün fotoğrafıdır — `ResolutionAction`'da
+verilen kararın aynısı.
+
+**Terminal yükü genişleten `result` alanı silindi.** `JobStatusResponse` artık
+her iki iş türünü de tarif ediyor (`B-067`), yani `useJob`'ın `completed`
+işleyicisi yükü **yayarak** yazıyor: alan adlarını burada saymak, şemayla adım
+uydurulacak ikinci bir liste olurdu.
+
+**§ 31.6'nın iki kuralı da yerine oturdu.** Sorunlu bölümler otomatik açılıyor
+— uyarının `sectionOrder`'ı **elimizdeki** profilin `displayOrder`'ına
+çözülüyor, uç satırları adlandırmak için geri okunmuyor — ve Onayla hep aktif,
+artık § 31.6.4'ün açık kararı olarak. Fixture'ın `displayOrder`'ı dizideki
+sırayla aynı olduğu için test ikisini **ayırıyor**: bir bölümün sırası
+değiştirilip listedeki yeri bırakılıyor.
+
+**Açılma toplayıcı, atayıcı değil.** Geçit ekrana her dönüşte uyarılarını
+yeniden çözüyor; atayan bir `expandSections` elle açılmış bölümü her dönüşte
+kapatırdı. Negatif kontrolün ilk hâli bunu **yakalamadı** — tek bir mount
+içinde etki bir kez çalışıyor, yani iddia orada gözlemlenebilir değildi. Test
+mount'u yeniden kurmaya çevrildikten sonra ısırdı.
+
+**Uyarılar sayılıyor ve yerleri açılıyor, ama adlandırılmıyor:** şema
+`ImportWarning.code`'u düz `string` yayımlıyor. Altı ICU anahtarını tahminle
+yazmak `B-067`'nin faz çevirileri için verdiği gerekçenin aynısıyla yanlış
+olurdu — `F-023`.
+
 ---
 
 ## Kasıtlı boşluklar — sorulmadan "düzeltilmez"
@@ -109,8 +151,11 @@ taşıyor; burada yalnız **nerede olduğu** var. Aşama 1'in profil değişmezl
   `profileKeys.all`: o anahtar atom başına anahtarların da öneki ve onların
   arkasında uç yok. İki çağıranı var, aynı anlamda — cascade silme ve içe
   aktarma.
-- **Terminal yük bütün olarak saklanıyor** (`useJob`'ın `result`'ı). İki iş
-  türü iki farklı şey söylüyor ve `JobStatus` yalnız birini tarif ediyor.
+- **Terminal yük yayılarak saklanıyor**, alan adları sayılarak değil: `B-067`
+  sonrası `JobStatus` iki iş türünü de tarif ediyor, ve burada isim saymak
+  şemayla adım uydurulacak ikinci bir liste olurdu.
+- **Uyarının yeri `displayOrder`'dır, id değil**, ve elimizdeki profile karşı
+  çözülür — `ReviewGate` bunun için satır okumaya geri gitmiyor.
 - **Multipart'ta `Content-Type`'a dokunulmaz.** Boundary'yi tarayıcı yazar.
 - **Mock'ta "hesap mı" sorusu `isAccount()`'a sorulur.** Modül bayrağı
   tarayıcıda yanlış cevap verir.

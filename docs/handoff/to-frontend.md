@@ -12,39 +12,65 @@
 
 ## OPEN
 
-> **Açık madde kalmadı.** Backend'in yazdığı on sekiz maddenin on sekizi de
-> kapandı ve `resolved/to-frontend-2026-08.md`'ye taşındı; dosya 496 satırdan
-> buraya indi. Sıradaki madde geldiğinde bu bölüm yeniden dolar.
+> Altısı `F-017`-`F-021`'in cevaplarından çıkmıştı. **Beşi kapandı ve
+> `resolved/`'a indi** (2026-08-29); kalan tek madde `B-066`, ve yarısı
+> kapalı: sorusuna **`F-022`** ile cevap verildi, geçmiş ekranı ondan sonra.
+
+### B-066 · `GET /api/v1/generations` indi — ve satırda başlık yok, kasten
+**Since:** commit `b776047` · `F-020` · **Spec:** `spec/08-api.md` § 35.3, EK D.8.7
+
+**Aksiyon:** `gen:api`, geçmiş ekranını kurun; **ve aşağıdaki soruya cevap
+verin** — satırı neyle etiketleyeceğiz.
+
+`capabilities.canSaveHistory` artık karşılıksız değil. Gövde
+`{ items, nextCursor, total }`:
+
+- **Cursor, offset değil.** `nextCursor`'ı `cursor` olarak geri verin;
+  **yokluğu geçmişin sonu** (boş bir `items` bir sayfa geç kalmış olurdu).
+  Opak — bizim okuyacağımız, sizin yankılayacağınız bir değer; parçalamayın,
+  sıralama bizim değiştirebileceğimiz bir şey. `limit` varsayılan 20, tavan
+  100, ve **aşan istek kırpılıyor, reddedilmiyor.**
+- **`total` sayfanın değil hesabın sayısı.** İstediğiniz ikinci şey buydu:
+  **hesap silme onayındaki sayıyı buradan alın** (`GET /generations?limit=1`
+  yeter). Sayfaları yürüyerek sayılan bir sayı, yürüyüş bitene kadar başka bir
+  sayı olurdu.
+- **Satır:** `generationId`, `status`, `createdAt`, `pageCount`, `matchLevel`,
+  `contentLanguage`, `hasCoverLetter`. **İlan yok, mektup metni yok.**
+- **Bozuk cursor `400 VALIDATION_FAILED`**, `fields: ["cursor"]`.
+
+**Soru — satırı neyle etiketleyeceğiz?** Bugün bir satır "1 sayfa · 29 Ağustos
+· strong" diyor ve **başka hiçbir şey demiyor**; on üretimi olan biri için bu
+liste neredeyse okunmaz. Bir geçmiş ekranının isteyeceği etiket — rol adı,
+şirket — **ilandan** okunuyor, ve `GenerationResponse` ilanı baştan beri geri
+döndürmüyor (mutlak kural 4). Buraya `jdAnalysis.role.title` koymak o kuralın
+sınırını **kazara** çizmek olurdu, o yüzden koymadık.
+
+Cevabınıza göre üçünden biri olacak: (a) etiket gerekmiyor, tarih yeter;
+(b) rol/şirket yayımlansın — o zaman bunu § 57'de açık bir karar olarak
+yazarız; (c) kullanıcının kendi verdiği bir ad. **Bir `F-nnn` ile söyleyin**,
+biz spec sorusu olarak kapatalım.
 
 ## ACK — frontend tamamladı, backend arşivleyebilir
 
-_(`B-037`…`B-043`, dilim 0'ın kapattığı `B-044`, `B-045`, `B-047`, `B-055`,
-dilim 1'in kapattığı `B-046`, dilim 2a'nın kapattığı `B-048`, dilim 2b'nin
-kapattığı `B-049`, `B-050`, `B-054`, dilim 3a'nın kapattığı `B-051`, `B-053`,
-`B-060`, dilim 4'ün kapattığı `B-056`, dilim 5'in kapattığı `B-052` ve
-dilim 6'nın kapattığı `B-061`, dilim 7a'nın kapattığı `B-058` ve dilim 7b'nin
-kapattığı `B-057` ile `B-059` — hepsi
-`resolved/to-frontend-2026-08.md`'de.)_
+_(`B-037`…`B-065` ile `B-067` kapandı ve `resolved/to-frontend-2026-08.md`'de
+— hangi dilimin hangisini kapattığı orada. Aşağıdakiler **hâlâ canlı olan**
+kayıtlar; gerisi arşive indi.)_
 
-**`B-047`'de yapılacak bir şey çıkmadı:** LinkedIn hiçbir zaman giriş
-sağlayıcısı olarak çizilmemişti. Silinmedi, hiç yoktu — madde yine de kapalı.
+**`B-062`, `B-063`, `B-064`, `B-065` ve `B-067` kapandı** (2026-08-29).
+Notları arşivde; ikisinde söylenecek bir şey kaldı:
 
-**`B-046`'nın ertelenen yarısı indi:** çıkış düğmesi artık çizili, ve giriş
-yoluyla birlikte geldi — ulaşılamayan bir durumun düğmesi olmasın diye
-beklemişti.
+- **`B-064`'te gerçekten yapacak bir şey yoktu** — mock'un ürettiği `400` ile
+  `fields: ["userEdited"]` telden gelenle aynı çıktı. Madde yine de kapalı.
+- **`B-067` uygulandı ama uyarılar adlandırılmıyor.** Geçit artık uyarıların
+  bölümlerini açıyor ve sayıyor; hangi uyarı olduğunu **söylemiyor**, çünkü
+  şema `ImportWarning.code`'u düz `string` olarak yayımlıyor ve
+  `ExtractionWarningCode`'un altı değeri buradan bilinmiyor. **`F-023`**.
 
 **İki maddede bir doğrulama eksik ve söylenmesi gerekiyor:** ne OAuth
 sıçraması (`B-048`) ne de Turnstile (`B-050`) gerçek uca karşı denendi —
 ikisi de kendi anahtarları yapılandırılmış bir dağıtım istiyor. Bugün
 doğrulanan şey mock'a karşı: `403` widget'ı sıfırlatıyor, `429` cümlesini
 `Retry-After`'dan kuruyor, `/auth/complete` oturumu okuyup yoluna gidiyor.
-
-**`B-051` kapandı ama § 31.6'nın gözden geçirme ekranı yarım.** "Sorunlu
-bölümler otomatik açık" ve "kritik uyarılar Onayla'yı kapalı tutar"
-uygulanamadı, çünkü telde hangi bölümün sorunlu olduğunu söyleyen bir alan
-yok — yalnız bir sayı var. Uydurmadık; ne yapılabildiği ve ne istediğimiz
-**`F-018`**'de. O maddeye kadar geçit "şu kadar konuda emin olamadık" notuyla
-duruyor.
 
 **`B-059` kapandı ama EK C.1'in maddesi kapanmadı.** Alt işleyen listesi artık
 doğru — e-posta yolu adıyla ve bölgesiyle yazılı. Eksik olan şey **sağlayıcı

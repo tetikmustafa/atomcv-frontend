@@ -41,6 +41,36 @@ test.describe('bringing a CV', () => {
   });
 
   /**
+   * § 31.6's second design rule (`B-067`): sections start closed, and the ones
+   * the import could not settle open themselves.
+   *
+   * The mock sends two warnings — one placed in Experience, one document-level
+   * — so the note has to say both things and exactly one section has to be
+   * open. Here rather than only in jsdom because the whole path is real: the
+   * terminal SSE payload, the cache it lands in, and the editor underneath.
+   */
+  test('opens the section the import was unsure about', async ({ page }) => {
+    await page.goto('/en/onboarding');
+
+    await choose(page, 'cv.pdf');
+    await page.getByRole('button', { name: 'Read my CV' }).click();
+
+    const note = page.getByTestId('review-warnings');
+    await expect(note).toContainText('unsure about 2 things');
+    await expect(note).toContainText('nowhere in particular');
+
+    // Exact: the row also carries 'Move Experience up' and its siblings.
+    await expect(page.getByRole('button', { name: 'Experience', exact: true })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    await expect(page.getByRole('button', { name: 'Skills', exact: true })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+  });
+
+  /**
    * § 31.6: the step exists because extraction is never perfectly accurate,
    * and a mistake nobody looked at propagates into every CV afterwards. The
    * only way on is the button.

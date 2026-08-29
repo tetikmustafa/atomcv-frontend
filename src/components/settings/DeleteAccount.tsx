@@ -26,6 +26,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DeleteDialog } from '@/components/profile/DeleteDialog';
 import { Button } from '@/components/ui/button';
+import { useGenerationCount } from '@/hooks/useGeneration';
 import { useAtoms, useSections } from '@/hooks/useProfile';
 import { useDeleteAccount } from '@/hooks/useSession';
 import { useRouter } from '@/lib/i18n/navigation';
@@ -40,13 +41,15 @@ export function DeleteAccount() {
     Counted from what the profile screen already loads, so the sentence is
     about this account rather than about accounts in general.
 
-    Generations are **not** counted, and not guessed at either: nothing
-    publishes a list or a total of them. The sentence names them without a
-    number rather than inventing one — a wrong count in the one place that
-    cannot be undone is worse than no count.
+    Generations used to be named without a number, because nothing published
+    one. `GET /generations` does now (`B-066`), and `total` is the account's
+    count rather than a page's — which is the only kind of number this screen
+    could honestly use: one arrived at by walking pages would be a different
+    number by the time the walk finished.
   */
   const { data: sections } = useSections();
   const { data: atoms } = useAtoms();
+  const { data: generations } = useGenerationCount();
 
   return (
     <div className="flex flex-col gap-3">
@@ -71,6 +74,7 @@ export function DeleteAccount() {
           description={t('deleteConfirmBody', {
             sections: sections?.length ?? 0,
             atoms: atoms?.length ?? 0,
+            generations: generations ?? 0,
           })}
           confirmLabel={t('deleteConfirmAction')}
           isPending={remove.isPending}

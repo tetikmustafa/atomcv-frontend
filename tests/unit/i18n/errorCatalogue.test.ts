@@ -31,10 +31,10 @@ const PARAMS = {
     atomId: '661a39b9-41b7-4ad8-a886-1054768029a6',
     issues: ['metric lost', 'technology added'],
   },
-  // The one code the catalogue table in `spec/08b-api-contract.md` § EK D.6
-  // does not list; § 34.4.1 declares it instead, and the enum carries it.
-  // `issues` is a closed vocabulary of six machine tokens, which is why the
-  // message does not interpolate them — see `F-017`.
+  // `issues` is a **closed** vocabulary of six (`B-063` confirmed it), so the
+  // message names them — see the block at the bottom of this file. The values
+  // here stay raw because this is the wire payload; `useErrorMessage` turns
+  // them into words on the way through.
   COVER_LETTER_REJECTED: { issues: ['unsupported_claim', 'cliche'] },
   EMBEDDING_UNAVAILABLE: {},
   // 503. The kill switch of § 44.3: parameterless, because there is
@@ -485,5 +485,45 @@ describe('PAGE_LIMIT_EXCEEDED', () => {
     const rendered = t('PAGE_LIMIT_EXCEEDED', PARAMS.PAGE_LIMIT_EXCEEDED).toLowerCase();
 
     expect(rendered).not.toMatch(/try again|tekrar dene|yeniden dene/);
+  });
+});
+
+/**
+ * `B-063`: `CoverLetterIssue` is a closed enum with exactly six values, so
+ * they can be said in words. Until it was confirmed closed the message named
+ * none of them, because `Intl.ListFormat` joins whatever it is handed and
+ * `unsupported_claim and cliche` is not a sentence.
+ *
+ * The other `issues` in the catalogue — `REWRITE_VALIDATION_FAILED`'s — are
+ * free text a validator wrote, which is why the vocabulary table is keyed by
+ * **code** rather than by param name.
+ */
+describe.each(CATALOGUES)('the six reasons a letter is refused (%s)', (locale, messages) => {
+  const ISSUES = [
+    'unsupported_claim',
+    'number_invented',
+    'experience_overstated',
+    'wrong_company',
+    'length_out_of_range',
+    'cliche',
+  ] as const;
+
+  const name = createTranslator({
+    locale,
+    messages,
+    namespace: 'errorValues.COVER_LETTER_REJECTED',
+  }) as unknown as LooseTranslator;
+
+  it.each(ISSUES)('names %s', (issue) => {
+    const rendered = name(issue);
+
+    expect(rendered.length).toBeGreaterThan(0);
+    expect(rendered).not.toContain('errorValues');
+    // The name, not the token dressed up as one.
+    expect(rendered).not.toContain(issue);
+  });
+
+  it('gives each one a sentence of its own', () => {
+    expect(new Set(ISSUES.map((issue) => name(issue))).size).toBe(ISSUES.length);
   });
 });

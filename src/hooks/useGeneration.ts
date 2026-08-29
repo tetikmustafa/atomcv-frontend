@@ -13,6 +13,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   downloadGeneration,
   getGeneration,
+  listGenerations,
   regenerateCoverLetter,
   startGeneration,
   submitFeedback,
@@ -121,14 +122,45 @@ export function useCoverLetter(generationId: string) {
 /**
  * The thumb, and anything the reader chose to add to it.
  *
- * Kept out of the generation's cache entry on purpose: the verdict is not
- * part of the generation, and `GET /generations/{id}` does not carry it — so
- * a reload starts with no selection shown, which is the honest state rather
- * than a guess. The mutation's own result is what the screen reads while it
- * is open.
+ * **Written into the generation's cache entry**, because that is where it
+ * lives now: `GET /generations/{id}` carries `feedback` (`B-065`), so the
+ * screen reads the standing verdict from the generation rather than from
+ * whatever this session happened to send. A reload shows the thumb that was
+ * pressed — and, the half that actually matters, the forty-eight hour grant
+ * stays visible the day after it was given, which is when anybody would look
+ * at `accessedAt`.
+ *
+ * Write-through rather than a refetch: the response **is** the record, and
+ * the field it goes into is the same `FeedbackResponse`.
  */
 export function useFeedback(generationId: string) {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (body: FeedbackRequest) => submitFeedback(generationId, body),
+    onSuccess: (recorded) => {
+      queryClient.setQueryData<Generation>(generationKeys.detail(generationId), (current) =>
+        current ? { ...current, feedback: recorded } : current,
+      );
+    },
+  });
+}
+
+/**
+ * How many generations this account has, in total.
+ *
+ * `limit: 1` because the number is the only thing wanted: `total` counts the
+ * account rather than the page (`B-066`), so one row is enough to carry it and
+ * asking for twenty would be twenty rows nobody reads.
+ *
+ * It exists for the deletion confirmation, which has to say what goes. A
+ * figure arrived at by walking pages would be a different figure by the time
+ * the walk finished — which is exactly why the server counts it.
+ */
+export function useGenerationCount() {
+  return useQuery({
+    queryKey: generationKeys.count(),
+    queryFn: () => listGenerations({ limit: 1 }),
+    select: (page) => page.total ?? 0,
   });
 }

@@ -20,6 +20,7 @@ import { useCallback } from 'react';
 import {
   formatErrorParams,
   MESSAGE_DEFAULTS,
+  nameVocabularies,
   toRetryMinutes,
   type IcuValue,
 } from '@/lib/errors/errorParams';
@@ -45,6 +46,10 @@ type LooseTranslator = ((key: string, values?: Record<string, IcuValue>) => stri
 
 export function useErrorMessage() {
   const t = useTranslations('errors') as unknown as LooseTranslator;
+  // The names behind the closed vocabularies a code may carry. Its own
+  // namespace rather than a corner of `errors`: these are values, not codes,
+  // and one message's argument is not another's key.
+  const values = useTranslations('errorValues') as unknown as LooseTranslator;
   const locale = useLocale();
   const queryClient = useQueryClient();
 
@@ -73,7 +78,15 @@ export function useErrorMessage() {
 
       return t(key, {
         ...MESSAGE_DEFAULTS,
-        ...formatErrorParams(error.params, locale),
+        // Named before formatted: `Intl.ListFormat` joins whatever it is
+        // given, so a closed vocabulary has to become words while it is still
+        // a list (`B-063`).
+        ...formatErrorParams(
+          nameVocabularies(error.code, error.params, (path) =>
+            values.has(path) ? values(path) : null,
+          ),
+          locale,
+        ),
         // Last, and neither can collide with a wire param: one is derived
         // from a header the body has no field for, the other from a session
         // the server cannot see the far side of.
@@ -81,7 +94,7 @@ export function useErrorMessage() {
         caller,
       });
     },
-    [t, locale, caller],
+    [t, values, locale, caller],
   );
 }
 

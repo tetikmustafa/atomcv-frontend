@@ -24,7 +24,7 @@
  * payloads are the exception and `contracts.ts` says why.
  */
 
-import type { FailedEvent, ImportCompletedEvent } from './contracts';
+import type { FailedEvent } from './contracts';
 import type { components } from '@/types/api';
 
 type Schemas = components['schemas'];
@@ -51,8 +51,18 @@ export type MockJob = {
    */
   kind: 'generation' | 'import';
   generationId: string;
-  /** Present on an import job, and only there. */
-  imported?: ImportCompletedEvent;
+  /**
+   * What the import wrote, and what it could not settle. Present on an import
+   * job and only there.
+   *
+   * Bound to the schema now (`B-067`): these fields live on
+   * `JobStatusResponse` alongside the generation ones, so `GET /jobs/{id}`
+   * answers with them and a reload after extraction is no longer blind.
+   */
+  imported?: Pick<
+    Schemas['JobStatusResponse'],
+    'profileId' | 'sectionCount' | 'atomCount' | 'warningCount' | 'detectedLanguage' | 'warnings'
+  >;
   /** Absent in general mode, exactly as the server omits it. */
   fitReport?: MockFitReport;
   /**

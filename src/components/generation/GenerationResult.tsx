@@ -127,7 +127,7 @@ export function GenerationResult({ generationId }: { generationId: string }) {
         Last, and after the letter: the verdict is about what the reader has
         by then actually looked at.
       */}
-      <Feedback generationId={generationId} />
+      <Feedback generationId={generationId} recorded={data.feedback} />
     </div>
   );
 }

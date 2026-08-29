@@ -54,6 +54,15 @@ export const jobKeys = {
  */
 export const generationKeys = {
   all: ['generations'] as const,
+
+  /**
+   * The account's total, which is not a page of anything.
+   *
+   * Its own key rather than a corner of a list key: the list is paged and the
+   * count is not, and a screen that wants the number must not be made to
+   * fetch rows to get it.
+   */
+  count: () => [...generationKeys.all, 'count'] as const,
   detail: (generationId: string) => [...generationKeys.all, generationId] as const,
 };
 

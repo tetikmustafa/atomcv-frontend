@@ -14,7 +14,6 @@
  */
 
 import { http, HttpResponse } from 'msw';
-import type { ImportCompletedEvent } from './contracts';
 import { generations, type MockJob } from './generationFixture';
 import { accepted, resetsAt } from './generationHandlers';
 import { problem } from './problem';
@@ -50,15 +49,35 @@ function extensionOf(name: string) {
  * it then shows cannot disagree — a screen saying "24 items" above a list of
  * four is a bug this fixture would otherwise create.
  */
-function importResult(): ImportCompletedEvent {
+function importResult(): NonNullable<MockJob['imported']> {
+  /*
+    Two warnings, and the pair is the point (`B-067`): one that names a place
+    and one that names none. The review screen has to open a section for the
+    first and count the second without opening anything, and a fixture with
+    only the located kind would let the second half go unbuilt.
+
+    Both carry `AMBIGUOUS_DATE` because it is the one code the spec writes
+    down (§ 31.4's own example). `ExtractionWarningCode` is closed and has
+    six values, but the schema publishes `code` as a plain string, so five of
+    them are not knowable from here — asked as `F-023`, and the screen is
+    written not to need them.
+
+    The located one is § 31.6.4's own example resolved against this fixture:
+    `sectionOrder: 0` is Experience, `entryOrder: 1` its second job.
+  */
+  const warnings: NonNullable<MockJob['imported']>['warnings'] = [
+    { code: 'AMBIGUOUS_DATE', sectionOrder: 0, entryOrder: 1 },
+    { code: 'AMBIGUOUS_DATE' },
+  ];
+
   return {
     profileId: 'profile-1',
     sectionCount: fixture.sections.length,
     atomCount: fixture.atoms.length,
-    // One, so the screen that has to say something about warnings is exercised
-    // rather than always taking the "nothing to report" branch.
-    warningCount: 1,
+    // The server's own promise: the same number as `warnings.length`.
+    warningCount: warnings.length,
     detectedLanguage: fixture.profile.sourceLanguage,
+    warnings,
   };
 }
 

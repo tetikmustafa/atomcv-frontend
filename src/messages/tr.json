@@ -12,7 +12,7 @@
     "COMPILATION_FAILED": "Belge oluşturulamadı. {detail}",
     "PAGE_LIMIT_EXCEEDED": "İçeriğin {actual, plural, =1 {bir sayfa} other {# sayfa}} tuttu, sınır ise {limit, plural, =1 {bir} other {#}}. İçerik gidebildiği kadar kısaltıldı.",
     "REWRITE_VALIDATION_FAILED": "Bir yeniden yazım dokunmaması gereken bir şeyi değiştirdi; o yüzden atıldı ve senin ifaden korundu.",
-    "COVER_LETTER_REJECTED": "Bu taslak kendi denetimimizden geçmedi, o yüzden saklanmadı. Tekrar istemek genellikle geçen bir mektup üretiyor.",
+    "COVER_LETTER_REJECTED": "Bu taslak kendi denetimimizden geçmedi, o yüzden saklanmadı: {issues}. Tekrar istemek genellikle geçen bir mektup üretiyor.",
     "EMBEDDING_UNAVAILABLE": "Yetkinlik eşleştirme şu anda kullanılamıyor.",
     "GENERATION_PAUSED": "Üretim şimdilik duraklatıldı. Başka bir şey etkilenmedi — profilini okumaya, düzenlemeye ve dışa aktarmaya devam edebilirsin.",
     "UNSUPPORTED_DOCUMENT": "Bu dosyayı okuyamıyoruz. Bunun yerine şunlardan birini yükle: {accepted}.",
@@ -91,7 +91,9 @@
     "chooseAnother": "Başka bir dosya seç",
     "reviewTitle": "Çıkanı kontrol et",
     "reviewBody": "CV'ni bu şekilde anladık. Yanlış çıkan bir şey varsa düzelt — ürettiğin her CV bundan yapılıyor, yani buradaki bir hata hepsine taşınır.",
-    "reviewWarnings": "Okurken {count, plural, =1 {bir konuda} other {# konuda}} emin olamadık. Devam etmeden önce bölümlere bir göz at.",
+    "reviewWarnings": "Okurken {count, plural, =1 {bir konuda} other {# konuda}} emin olamadık.",
+    "reviewWarningsOpened": "İşaret ettikleri bölümleri aşağıda açık bıraktık.",
+    "reviewWarningsElsewhere": "Bunlardan {count, plural, =1 {biri} other {# tanesi}} belirli bir yeri işaret etmiyordu, o yüzden kalanına da göz at.",
     "confirm": "Doğru görünüyor — devam et"
   },
   "Session": {
@@ -468,7 +470,17 @@
     "deleteIntro": "Burada sana ait olan her şeyi siler. Geri alınamaz.",
     "deleteAction": "Hesabımı sil",
     "deleteConfirmTitle": "Hesabın silinsin mi?",
-    "deleteConfirmBody": "Bu, profilini — {sections, plural, =1 {bir bölüm} other {# bölüm}} ve {atoms, plural, =1 {bir madde} other {# madde}} — ürettiğin bütün CV'leri, onlardan çıkan belgeleri, sırada bekleyen işleri, kullanım sayaçlarını ve e-posta tercihlerini siler. Geri alınamaz.\n\nİki şey kalıyor. Üretimlerinin maliyet kaydı, seninle bağı koparılmış olarak duruyor; artık kimseyi göstermiyor. Ve adresin bir kez geri döndüyse ya da bizi şikâyet ettiyse, o kayıt hesaba değil **adrese** ait olduğu için kalıyor — silmek, bize yazma dememiş olan bir adrese yeniden yazmamıza izin verirdi.\n\nYapay zekâ sağlayıcıları kendi taraflarında kısa ömürlü kayıtlar tutabiliyor. Hangileri olduğu gizlilik politikasında.",
+    "deleteConfirmBody": "Bu, profilini — {sections, plural, =1 {bir bölüm} other {# bölüm}} ve {atoms, plural, =1 {bir madde} other {# madde}} — {generations, plural, =0 {ürettiğin bütün CV'leri} =1 {ürettiğin tek CV'yi} other {ürettiğin # CV'nin hepsini}} ve onlardan çıkan belgeleri, sırada bekleyen işleri, kullanım sayaçlarını ve e-posta tercihlerini siler. Geri alınamaz.\n\nİki şey kalıyor. Üretimlerinin maliyet kaydı, seninle bağı koparılmış olarak duruyor; artık kimseyi göstermiyor. Ve adresin bir kez geri döndüyse ya da bizi şikâyet ettiyse, o kayıt hesaba değil **adrese** ait olduğu için kalıyor — silmek, bize yazma dememiş olan bir adrese yeniden yazmamıza izin verirdi.\n\nYapay zekâ sağlayıcıları kendi taraflarında kısa ömürlü kayıtlar tutabiliyor. Hangileri olduğu gizlilik politikasında.",
     "deleteConfirmAction": "Her şeyi sil"
+  },
+  "errorValues": {
+    "COVER_LETTER_REJECTED": {
+      "unsupported_claim": "CV'nin desteklemediği bir iddia",
+      "number_invented": "CV'nde geçmeyen bir sayı",
+      "experience_overstated": "deneyimini olduğundan büyük gösteren bir cümle",
+      "wrong_company": "yanlış şirket adı",
+      "length_out_of_range": "epeyce şaşmış bir uzunluk",
+      "cliche": "klişe bir ifade"
+    }
   }
 }

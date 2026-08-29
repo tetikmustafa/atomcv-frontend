@@ -226,7 +226,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * The generations this account has made, newest first
+         * @description `capabilities.canSaveHistory` says these are kept; this is                     where they are read (F-020).
+         *
+         *     Cursor pagination, not offset: the list grows from the top,                     and a page two taken after a new generation lands would                     repeat one row and hide another. Pass the `nextCursor` of                     a page back as `cursor` to get the one after it; its                     absence is the end of the history.
+         *
+         *     `total` counts the whole account rather than the page.                     The one screen that needs it cannot page — deleting an                     account has to say what goes, and a number that meant "at                     least this many" would be worse there than none.
+         *
+         *     A row carries no posting and no letter, only whether                     there is a letter to open. The posting stays on the row                     (absolute rule 4).
+         */
+        get: operations["list"];
         put?: never;
         /**
          * Generate a CV against a job posting
@@ -535,6 +545,8 @@ export interface paths {
          *     **Counts, never a percentage.** Bolum 23.3 forbids one by                     name — the measurement compares skill names, and a figure                     to the decimal place invites the reader to treat it as a                     hiring probability.
          *
          *     The report is measured on the atoms that reached the page,                     not on everything that was ranked, so it never credits a                     skill the document does not claim. A general-mode                     generation has no report at all: there was no posting to                     be relevant to.
+         *
+         *     Carries `feedback` when this person has judged it, so a                     reload shows the thumb they pressed rather than asking                     again, and so Bolum 48.4's 48-hour grant stays visible                     the day after it was given. Absent when they have not                     judged it; the comment never travels.
          */
         get: operations["read"];
         put?: never;
@@ -1152,7 +1164,7 @@ export interface components {
              * @description 1 for good, -1 for bad
              * @enum {integer}
              */
-            rating: "1" | "-1";
+            rating: 1 | -1;
             /**
              * @description Which part it is about
              * @enum {string}
@@ -1307,6 +1319,14 @@ export interface components {
             /** @description Atoms hanging straight off the section */
             atoms?: components["schemas"]["Atom"][];
         };
+        /** @description Something the import could not settle */
+        ImportWarning: {
+            code?: string;
+            /** Format: int32 */
+            sectionOrder?: number;
+            /** Format: int32 */
+            entryOrder?: number;
+        };
         /** @description A job's progress or its outcome */
         JobStatusResponse: {
             /** Format: uuid */
@@ -1322,9 +1342,70 @@ export interface components {
             generationId?: string;
             /** Format: int32 */
             pageCount?: number;
+            /**
+             * Format: uuid
+             * @description An import's profile, when one completed
+             */
+            profileId?: string;
+            /**
+             * Format: int32
+             * @description How many sections the import wrote
+             */
+            sectionCount?: number;
+            /**
+             * Format: int32
+             * @description How many atoms the import wrote
+             */
+            atomCount?: number;
+            /**
+             * Format: int32
+             * @description How many things could not be settled; the same number as `warnings.length`
+             */
+            warningCount?: number;
+            /** @description The language the CV was read as, ISO 639-1 */
+            detectedLanguage?: string;
+            /** @description What could not be settled, and where. Absent for a job that is not an import. */
+            warnings?: components["schemas"]["ImportWarning"][];
             error?: {
                 [key: string]: unknown;
             };
+        };
+        /** @description A page of a user's generations, newest first */
+        GenerationPage: {
+            items?: components["schemas"]["GenerationSummary"][];
+            /** @description Pass back as `cursor` for the next page. Opaque: it is this server's to read and the client's to echo. */
+            nextCursor?: string;
+            /**
+             * Format: int64
+             * @description How many generations this account has in total, not how many are on this page
+             */
+            total?: number;
+        };
+        /** @description One generation, as a row of the history */
+        GenerationSummary: {
+            /** Format: uuid */
+            generationId?: string;
+            /** @enum {string} */
+            status?: "completed" | "failed" | "superseded";
+            /** Format: date-time */
+            createdAt?: string;
+            /**
+             * Format: int32
+             * @description How many pages the compiled document came to; absent while it is unfinished or failed
+             */
+            pageCount?: number;
+            /**
+             * @description The heading over Faz F's counts, absent in general mode
+             * @enum {string}
+             */
+            matchLevel?: "WEAK" | "MODERATE" | "GOOD" | "STRONG";
+            /**
+             * @description The language the document was written in, as a BCP 47 tag
+             * @example tr
+             */
+            contentLanguage?: string;
+            /** @description Whether a covering letter was written for it */
+            hasCoverLetter?: boolean;
         };
         /** @description How much of the posting's vocabulary the CV actually says. Counts, never a percentage — Bolum 23.3. */
         FitReport: {
@@ -1369,6 +1450,8 @@ export interface components {
             postingLanguage?: string;
             /** @description The covering letter, as plain text with blank lines between its parts */
             coverLetter?: string;
+            /** @description What this person already said about it, and the 48-hour diagnostic permission if they opened one. Absent when they have not judged it. */
+            feedback?: components["schemas"]["FeedbackResponse"];
         };
         /** @description What the caller may do; the server still enforces all of it */
         CapabilitiesResponse: {
@@ -2170,6 +2253,38 @@ export interface operations {
             };
         };
     };
+    list: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of history */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenerationPage"];
+                };
+            };
+            /** @description VALIDATION_FAILED — the cursor was not one of ours */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     generate: {
         parameters: {
             query?: never;
@@ -2197,6 +2312,17 @@ export interface operations {
             /** @description UNPARSEABLE_JOB_DESCRIPTION or INSUFFICIENT_PROFILE */
             422: {
                 headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description QUOTA_EXCEEDED — the day's generations are spent */
+            429: {
+                headers: {
+                    /** @description Seconds to wait, rounded up and never zero. The same moment as `params.resetsAt`, as a duration: it is the one of the two that is still right when the client's own clock is wrong. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2294,6 +2420,8 @@ export interface operations {
             /** @description RATE_LIMITED — ten letters an hour */
             429: {
                 headers: {
+                    /** @description Seconds to wait, rounded up and never zero. The same moment as `params.resetsAt`, as a duration: it is the one of the two that is still right when the client's own clock is wrong. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
                 content: {

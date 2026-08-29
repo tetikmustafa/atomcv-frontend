@@ -327,12 +327,17 @@ describe('the covering letter', () => {
   });
 
   /**
-   * The hourly allowance is its own limit, and `B-056` publishes only
-   * `resetsAt` for it — no `Retry-After`. That is the branch the sentence has
-   * for a wait it was not told the length of, and this is the only place
-   * anything reaches it.
+   * The hourly allowance is its own limit, and its `429` carries
+   * `Retry-After` like the two quota gates — which this screen used to say it
+   * did not.
+   *
+   * The header was never missing (`B-062`): the advice derives it from any
+   * 429 whose `resetsAt` is an instant. What was missing was the schema
+   * publishing it and a test on the far side seeing it, and the absence of
+   * those two reads exactly like the absence of the header. The mock and
+   * this assertion both believed the reading.
    */
-  it('names no duration for a rate limit that sent no header', async () => {
+  it('names the wait from the header the endpoint does send', async () => {
     const generationId = await generate();
     generations.coverLetterAttempts = 10;
     render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
@@ -341,7 +346,7 @@ describe('the covering letter', () => {
 
     const panel = await screen.findByRole('alert');
     expect(panel).toHaveTextContent('too many attempts');
-    expect(panel).toHaveTextContent('try again shortly');
+    expect(panel).toHaveTextContent('about 60 minutes');
   });
 });
 
@@ -483,5 +488,70 @@ describe('the diagnostic window', () => {
     const revoked = await submitFeedback(generationId, { rating: -1, contentGranted: false });
 
     expect(revoked.contentGrant).toBeUndefined();
+  });
+});
+
+/**
+ * `B-063`: `CoverLetterIssue` is an enum with exactly six values, so the
+ * reasons a draft was thrown away can be said in words. Before this they
+ * reached the reader as `unsupported_claim and cliche` — `Intl.ListFormat`
+ * joins whatever it is handed.
+ */
+describe('why a draft was refused', () => {
+  it('names the reasons instead of printing their tokens', async () => {
+    const generationId = await generate();
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    rejectNextCoverLetter();
+    await userEvent.click(await screen.findByRole('button', { name: en.Result.coverLetterAsk }));
+
+    const note = await screen.findByTestId('cover-letter-rejected');
+    expect(note).toHaveTextContent("a claim your CV doesn't back up");
+    expect(note).not.toHaveTextContent('unsupported_claim');
+  });
+});
+
+/**
+ * `B-065`: the verdict lives on the generation now, so a reload shows the
+ * thumb that was pressed — and, the half that matters, the forty-eight hour
+ * grant stays visible on the day somebody would actually check `accessedAt`.
+ */
+describe('a verdict given earlier', () => {
+  it('comes back on a fresh render of the screen', async () => {
+    const generationId = await generate();
+    await submitFeedback(generationId, { rating: -1, contentGranted: true });
+
+    // A new client with nothing in it: this is the reload, not the tab that
+    // pressed the button.
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    const no = await screen.findByRole('button', { name: en.Result.feedbackBad });
+    expect(no).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: en.Result.feedbackGood })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
+
+  it('still shows the permission, and that nobody has used it', async () => {
+    const generationId = await generate();
+    await submitFeedback(generationId, { rating: 1, contentGranted: true });
+
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    await userEvent.click(await screen.findByText(en.Result.feedbackMore));
+    expect(screen.getByRole('checkbox')).toBeChecked();
+    expect(screen.getByTestId('grant-status')).toHaveTextContent('Nobody has looked yet');
+  });
+
+  /** Nothing is claimed about a generation nobody has judged. */
+  it('says nothing when there is no verdict', async () => {
+    const generationId = await generate();
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    const yes = await screen.findByRole('button', { name: en.Result.feedbackGood });
+    expect(yes).toHaveAttribute('aria-pressed', 'false');
   });
 });

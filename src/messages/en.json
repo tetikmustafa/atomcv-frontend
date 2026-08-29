@@ -12,7 +12,7 @@
     "COMPILATION_FAILED": "The document didn't come out. {detail}",
     "PAGE_LIMIT_EXCEEDED": "Your content came to {actual, plural, =1 {one page} other {# pages}} and the limit is {limit, plural, =1 {one} other {#}}. It was already shortened as far as it goes.",
     "REWRITE_VALIDATION_FAILED": "A rewrite changed something it shouldn't have, so it was thrown away and your own wording kept.",
-    "COVER_LETTER_REJECTED": "That draft didn't pass our own check, so we didn't keep it. Asking again usually produces one that does.",
+    "COVER_LETTER_REJECTED": "That draft didn't pass our own check, so we didn't keep it: {issues}. Asking again usually produces one that does.",
     "EMBEDDING_UNAVAILABLE": "Skill matching is unavailable right now.",
     "GENERATION_PAUSED": "Generation is paused for now. Nothing else is affected — your profile stays open to read, edit and export.",
     "UNSUPPORTED_DOCUMENT": "We can't read that file. Upload one of these instead: {accepted}.",
@@ -91,7 +91,9 @@
     "chooseAnother": "Choose another file",
     "reviewTitle": "Check what we read",
     "reviewBody": "This is your CV as we understood it. Fix anything that came out wrong — every resume you build is made from this, so a mistake here follows you into all of them.",
-    "reviewWarnings": "We were unsure about {count, plural, =1 {one thing} other {# things}} while reading. Have a look through the sections before you carry on.",
+    "reviewWarnings": "We were unsure about {count, plural, =1 {one thing} other {# things}} while reading.",
+    "reviewWarningsOpened": "The sections they point at are open below.",
+    "reviewWarningsElsewhere": "{count, plural, =1 {One of them pointed} other {# of them pointed}} nowhere in particular, so look through the rest as well.",
     "confirm": "Looks right — continue"
   },
   "Session": {
@@ -468,7 +470,17 @@
     "deleteIntro": "This removes everything you have here. It cannot be undone.",
     "deleteAction": "Delete my account",
     "deleteConfirmTitle": "Delete your account?",
-    "deleteConfirmBody": "This deletes your profile — {sections, plural, =1 {one section} other {# sections}} and {atoms, plural, =1 {one item} other {# items}} — along with every resume you have generated, the documents they made, anything still queued, your usage counters and your email preferences. It cannot be undone.\n\nTwo things stay. Our record of what your generations cost is kept with the link to you cut, so it no longer shows anyone. And if your address ever bounced or reported us, that record stays with the address rather than with the account — deleting it would let us write to you again after being told not to.\n\nThe AI providers may hold their own short-lived logs on their side. The privacy policy says which.",
+    "deleteConfirmBody": "This deletes your profile — {sections, plural, =1 {one section} other {# sections}} and {atoms, plural, =1 {one item} other {# items}} — along with {generations, plural, =0 {every resume you generate} =1 {the one resume you have generated} other {all # resumes you have generated}} and the documents they made, anything still queued, your usage counters and your email preferences. It cannot be undone.\n\nTwo things stay. Our record of what your generations cost is kept with the link to you cut, so it no longer shows anyone. And if your address ever bounced or reported us, that record stays with the address rather than with the account — deleting it would let us write to you again after being told not to.\n\nThe AI providers may hold their own short-lived logs on their side. The privacy policy says which.",
     "deleteConfirmAction": "Delete everything"
+  },
+  "errorValues": {
+    "COVER_LETTER_REJECTED": {
+      "unsupported_claim": "a claim your CV doesn't back up",
+      "number_invented": "a figure that isn't in your CV",
+      "experience_overstated": "your experience made to sound bigger than it is",
+      "wrong_company": "the wrong company named",
+      "length_out_of_range": "a length that was well off",
+      "cliche": "a worn-out phrase"
+    }
   }
 }

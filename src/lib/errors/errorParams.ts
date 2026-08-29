@@ -82,6 +82,58 @@ export function toRetryMinutes(seconds: number | undefined): number | undefined 
 }
 
 /**
+ * Params whose values are a **closed vocabulary** rather than free text.
+ *
+ * `Intl.ListFormat` joins whatever it is given, so an array of machine tokens
+ * reaches the reader as "unsupported_claim and cliche". Naming them needs the
+ * catalogue, which means it cannot happen here — but *which* params are
+ * nameable is contract knowledge and belongs beside the other param rules.
+ *
+ * **Keyed by code, not by param name, and that is the whole reason it is a
+ * table.** Two codes carry `issues` and they mean different things:
+ * `COVER_LETTER_REJECTED`'s six are an enum the server guards
+ * (`CoverLetterIssue`, `B-063`), while `REWRITE_VALIDATION_FAILED`'s are
+ * sentences a validator wrote. Translating the second would put a lookup
+ * miss where a description used to be.
+ *
+ * The catalogue key is derived rather than configured: `errorValues.{code}.{value}`.
+ */
+export const VOCABULARIES: Record<string, readonly string[]> = {
+  COVER_LETTER_REJECTED: ['issues'],
+};
+
+/**
+ * Replaces the tokens of a closed vocabulary with their names.
+ *
+ * An unrecognised value is left **as it is** rather than dropped. The
+ * vocabulary is closed and the server guards it with an enum and a spec test,
+ * so a seventh value can only arrive with a document change — and on that day
+ * a raw `some_new_reason` on screen is ugly, while silently shortening the
+ * list would tell the reader their draft failed for fewer reasons than it did.
+ */
+export function nameVocabularies(
+  code: string,
+  params: Record<string, unknown> | undefined,
+  name: (key: string) => string | null,
+): Record<string, unknown> | undefined {
+  const closed = VOCABULARIES[code];
+  if (!params || !closed) return params;
+
+  const named = { ...params };
+
+  for (const param of closed) {
+    const values = named[param];
+    if (!Array.isArray(values)) continue;
+
+    named[param] = values.map((value) =>
+      typeof value === 'string' ? (name(`${code}.${value}`) ?? value) : value,
+    );
+  }
+
+  return named;
+}
+
+/**
  * The params the catalogue types as `timestamp`.
  *
  * By name, because `params` is untyped on the wire and a string that merely

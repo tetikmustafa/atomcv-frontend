@@ -19,20 +19,16 @@ import { getJob, isTerminal, jobStreamUrl, type JobStatus } from '@/lib/api/endp
 import { accountKeys, jobKeys } from '@/lib/api/queryKeys';
 
 /**
- * What the cache holds for a job.
+ * What the cache holds for a job. Nothing widens it any more.
  *
- * Widened again, and for a reason the schema itself gives: `JobStatusResponse`
- * describes a **generation** job — `generationId` and `pageCount` — while an
- * import job's terminal event carries `profileId`, three counts and a detected
- * language (`B-051`), none of which the schema publishes. Rather than name
- * those fields here, where a second copy of them would drift, the whole
- * terminal payload is kept and each caller reads what its own job promised.
- *
- * That the schema does not carry them is not a modelling choice to agree with
- * — it is `pageCount` before `B-041` all over again, and it means a reload
- * after extraction loses them. Raised as `F-018`.
+ * It carried a loose `result` for a while, because `JobStatusResponse`
+ * described only a generation's outcome and an import job's fields had
+ * nowhere to go. `B-067` published them — `profileId`, three counts, a
+ * detected language and `warnings[]` — so the schema now says what the job
+ * says, and the widening came off with the hand-written type in
+ * `contracts.ts`.
  */
-type CachedJob = JobStatus & { result?: Record<string, unknown> };
+type CachedJob = JobStatus;
 
 type Transport = 'stream' | 'poll' | 'done';
 
@@ -48,11 +44,6 @@ export type JobProgress = {
   generationId: string | null;
   /** `null` when the stream was not the transport that delivered the result. */
   pageCount: number | null;
-  /**
-   * The whole terminal payload, for the fields a given job kind promises and
-   * the schema does not publish. Empty until the job completes.
-   */
-  result: Record<string, unknown>;
   /** The `failed` payload, in the shape `toErrorLike` reads. */
   failure: unknown | null;
   /** True once the job has stopped moving, either way. */
@@ -130,11 +121,10 @@ export function useJobStream(jobId: string, streamUrl?: string): JobProgress {
         jobId,
         status: 'completed',
         pct: 100,
-        // Read out for the two the schema does declare, kept whole for the
-        // rest: an import job's terminal fields have no home in `JobStatus`.
-        generationId: payload.generationId as string | undefined,
-        pageCount: payload.pageCount as number | undefined,
-        result: payload,
+        // Spread rather than picked: every field a terminal event carries is
+        // declared on `JobStatus` now, for both kinds of job, so naming them
+        // here would be a second list to keep in step with the schema.
+        ...(payload as JobStatus),
       }));
 
       setTransport({ jobId, mode: 'done' });
@@ -188,7 +178,6 @@ function toProgress(job: CachedJob | undefined): JobProgress {
     detail: job?.detail ? job.detail : null,
     generationId: job?.generationId ?? null,
     pageCount: job?.pageCount ?? null,
-    result: job?.result ?? {},
     failure: job?.error ?? null,
     done: status === 'completed' || status === 'failed' || status === 'cancelled',
   };

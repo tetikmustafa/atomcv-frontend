@@ -19,7 +19,7 @@
 
 import { http, HttpResponse } from 'msw';
 import type { components } from '@/types/api';
-import type { CompletedEvent, FailedEvent, ImportCompletedEvent, PhaseEvent } from './contracts';
+import type { CompletedEvent, FailedEvent, PhaseEvent } from './contracts';
 import { problem } from './problem';
 import { fixture } from './profileFixture';
 import {
@@ -150,8 +150,54 @@ function onePagePdf(): Uint8Array {
   return new TextEncoder().encode(body);
 }
 
+/**
+ * A row's place in the history, as an opaque string.
+ *
+ * The **whole** sort key, not just the instant: two generations made in the
+ * same millisecond are ordered by id, and a cursor carrying only the time
+ * would either skip the rest of that group or hand it out twice. Base64 so
+ * nothing is tempted to read it — the client's job is to echo it back.
+ */
+function historyCursor(job: MockJob): string {
+  return btoa(`${job.startedAt}|${job.generationId}`);
+}
+
 /** § 48.4: the diagnostic window, from the first yes. */
 const GRANT_HOURS = 48;
+
+/**
+ * The verdict as the API returns it, built in one place.
+ *
+ * Two endpoints hand back this same object — the write answers with it, and
+ * `GET /generations/{id}` carries it in `feedback` (`B-065`) — and the second
+ * one is what makes the grant visible the day after it was given. Building it
+ * twice would be two chances for the read to disagree with the write about a
+ * permission somebody is checking up on.
+ *
+ * `undefined` when nobody has judged it: the field is then **absent** from the
+ * generation rather than present and empty, because an empty verdict is not a
+ * neutral one.
+ */
+function feedbackBody(generationId: string): Schemas['FeedbackResponse'] | undefined {
+  const record = generations.feedback[generationId];
+  if (!record) return undefined;
+
+  return {
+    generationId,
+    rating: record.rating,
+    ...(record.category ? { category: record.category } : {}),
+    ...(record.grantedAt
+      ? {
+          contentGrant: {
+            open: true,
+            expiresAt: new Date(record.grantedAt + GRANT_HOURS * 60 * 60 * 1000).toISOString(),
+          },
+        }
+      : {}),
+    // The comment is never echoed (rule 4's reason: the person wrote it and
+    // has it). Nothing here stores it either.
+  };
+}
 
 /** An hour from now — § 34 counts letters by the hour, not by the day. */
 function inAnHour(): string {
@@ -318,17 +364,18 @@ export const generationHandlers = [
       // No `phase`, no `label`: a bar reading 70% next to the word
       // "completed" is worse than no bar at all (`B-038`).
       //
-      // A completed **import** answers with neither `generationId` nor
-      // `pageCount` and nothing in their place, because `JobStatusResponse`
-      // publishes no field an import outcome could go in. That is the shape
-      // `F-018` is about, and the mock reproduces it rather than papering
-      // over it: a client reloading after extraction really does learn
-      // nothing here.
+      // A completed **import** answers with its own outcome now (`B-067`) —
+      // the profile it wrote, three counts, the language it read and the
+      // warnings with their places. This is what a reload after extraction
+      // gets, and the review screen is built on it rather than on the memory
+      // of the tab that watched the stream.
       return HttpResponse.json<Schemas['JobStatusResponse']>({
         jobId: job.jobId,
         status: 'completed',
         pct: 100,
-        ...(job.kind === 'generation' ? { generationId: job.generationId, pageCount: 1 } : {}),
+        ...(job.kind === 'generation'
+          ? { generationId: job.generationId, pageCount: 1 }
+          : job.imported),
       });
     }
 
@@ -395,7 +442,7 @@ export const generationHandlers = [
         id += 1;
 
         if (job.outcome === 'completed') {
-          const payload: CompletedEvent | ImportCompletedEvent =
+          const payload: CompletedEvent | NonNullable<MockJob['imported']> =
             job.kind === 'import'
               ? job.imported!
               : {
@@ -433,6 +480,65 @@ export const generationHandlers = [
    * `fitReport` is absent in general mode rather than zeroed — there was no
    * posting to be relevant to, and a row of zeroes reads as a bad match.
    */
+  /**
+   * The history (`B-066`), newest first.
+   *
+   * Three behaviours worth having, and the first is the reason it is a cursor
+   * at all: the list **grows from the top**, so an offset page taken after a
+   * new generation landed would repeat one row and hide another. The cursor
+   * carries the whole sort key — the instant *and* the id — because rows that
+   * share a timestamp are ordered by id, and a cursor holding only the time
+   * either skips the rest of that group or serves it twice.
+   *
+   * `total` is the account's count rather than the page's, which is what the
+   * deletion screen reads. `limit` is **clamped, not refused**: a caller
+   * asking for a thousand rows gets a hundred, because there is nothing wrong
+   * with the request.
+   */
+  http.get('*/api/v1/generations', ({ request }) => {
+    const url = new URL(request.url);
+    const limit = Math.min(Math.max(Number(url.searchParams.get('limit') ?? 20) || 20, 1), 100);
+    const cursor = url.searchParams.get('cursor');
+
+    // Newest first, and only the generations: an import job has no row here.
+    const rows = generations.jobs
+      .filter((job) => job.kind === 'generation')
+      .sort((a, b) => b.startedAt - a.startedAt || b.generationId.localeCompare(a.generationId));
+
+    let start = 0;
+
+    if (cursor) {
+      const at = rows.findIndex((job) => historyCursor(job) === cursor);
+      if (at < 0) {
+        return HttpResponse.json(
+          problem(400, 'VALIDATION_FAILED', GENERATIONS, [], { fields: ['cursor'] }),
+          { status: 400 },
+        );
+      }
+      start = at + 1;
+    }
+
+    const page = rows.slice(start, start + limit);
+    const last = page[page.length - 1];
+    const more = start + limit < rows.length;
+
+    return HttpResponse.json<Schemas['GenerationPage']>({
+      items: page.map((job) => ({
+        generationId: job.generationId,
+        status: job.outcome === 'completed' ? 'completed' : 'failed',
+        createdAt: new Date(job.startedAt).toISOString(),
+        ...(job.outcome === 'completed' ? { pageCount: 1 } : {}),
+        ...(job.fitReport?.level ? { matchLevel: job.fitReport.level } : {}),
+        ...(job.contentLanguage ? { contentLanguage: job.contentLanguage } : {}),
+        hasCoverLetter: Boolean(generations.coverLetters[job.generationId]),
+      })),
+      // Absent at the end of the history. An empty `items` on the next call
+      // would be one page too late to say so.
+      ...(more && last ? { nextCursor: historyCursor(last) } : {}),
+      total: rows.length,
+    });
+  }),
+
   http.get('*/api/v1/generations/:generationId', ({ params }) => {
     const id = String(params.generationId);
     const job = generations.jobs.find((candidate) => candidate.generationId === id);
@@ -452,6 +558,9 @@ export const generationHandlers = [
       // rather than an error: a letter that could not be written does not
       // fail the generation (`B-056`).
       ...(generations.coverLetters[id] ? { coverLetter: generations.coverLetters[id].text } : {}),
+      // Absent until somebody judges it (`B-065`). This is the half that
+      // makes `accessedAt` readable the day after the permission was given.
+      ...(feedbackBody(id) ? { feedback: feedbackBody(id) } : {}),
     });
   }),
 
@@ -502,21 +611,7 @@ export const generationHandlers = [
 
     generations.feedback[id] = record;
 
-    return HttpResponse.json<Schemas['FeedbackResponse']>({
-      generationId: id,
-      rating: record.rating,
-      ...(record.category ? { category: record.category } : {}),
-      ...(record.grantedAt
-        ? {
-            contentGrant: {
-              open: true,
-              expiresAt: new Date(record.grantedAt + GRANT_HOURS * 60 * 60 * 1000).toISOString(),
-            },
-          }
-        : {}),
-      // The comment is never echoed (rule 4's reason: the person wrote it and
-      // has it). Nothing here stores it either.
-    });
+    return HttpResponse.json<Schemas['FeedbackResponse']>(feedbackBody(id)!);
   }),
 
   /**
@@ -537,14 +632,21 @@ export const generationHandlers = [
       if (!job) return notFound(instance);
 
       if (generations.coverLetterAttempts >= COVER_LETTER_LIMIT) {
-        return HttpResponse.json(
-          problem(429, 'RATE_LIMITED', instance, [], { resetsAt: inAnHour() }),
-          // **No `Retry-After` here**, unlike the quota gates. `B-056` publishes
-          // only `resetsAt` for this one, so the client meets a `429` with no
-          // header to build a duration from — which is the branch its sentence
-          // has for exactly this, and the only place anything exercises it.
-          { status: 429 },
-        );
+        const at = inAnHour();
+
+        return HttpResponse.json(problem(429, 'RATE_LIMITED', instance, [], { resetsAt: at }), {
+          status: 429,
+          /*
+            The header was there all along (`B-062`). `ProblemDetailAdvice`
+            derives it from **any** 429 whose `params.resetsAt` is an instant,
+            and this endpoint goes through the same advice — what was missing
+            was an `@ApiResponse` publishing it and a test saying it had been
+            seen on the wire, and the absence of those two is
+            indistinguishable from the absence of the header. This mock read
+            it as absent and was wrong, which is a thing a mock can be.
+          */
+          headers: { 'Retry-After': String(Math.ceil((Date.parse(at) - Date.now()) / 1000)) },
+        });
       }
 
       generations.coverLetterAttempts += 1;

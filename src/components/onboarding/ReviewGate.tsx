@@ -19,21 +19,28 @@
  * closed by default, opened one at a time, each field saving itself.
  * Rebuilding a read-only version of it would be a second thing to keep true.
  *
- * **Two of § 31.6's design rules are not implemented, and cannot be today.**
- * Problematic sections should start open and critical warnings should hold
- * the confirm button closed; both need to know *which* sections are
- * problematic, and the wire carries only a count (`F-018`). What is drawn
- * instead says what is true: how many things extraction was unsure about,
- * without pointing at any of them.
+ * **Confirm is always enabled, and that is a decision rather than a gap**
+ * (§ 31.6.4). The design rule that held it closed until "critical warnings"
+ * were resolved was removed: `ExtractionWarningCode` is closed, and all six
+ * of its values describe a field the reader can fix right here. A blocking
+ * class of warning never existed.
+ *
+ * **Problematic sections open themselves**, which is the other half of that
+ * decision (`B-067`). The wire used to carry a count and nothing else, so
+ * the screen could say how many things were unsure without pointing at any
+ * of them; `warnings[]` carries places now.
  */
 
 import { useTranslations } from 'next-intl';
-import { useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { ProfileEditor } from '@/components/profile/ProfileEditor';
+import { getJob, type JobStatus } from '@/lib/api/endpoints/jobs';
 import { jobKeys } from '@/lib/api/queryKeys';
 import { useRouter } from '@/lib/i18n/navigation';
+import { useSections } from '@/hooks/useProfile';
+import { useEditorUiStore } from '@/stores/editorUiStore';
 
 export type ReviewGateProps = {
   /** The import job, when the reader arrived straight from it. */
@@ -43,31 +50,69 @@ export type ReviewGateProps = {
 export function ReviewGate({ jobId }: ReviewGateProps) {
   const t = useTranslations('Onboarding');
   const router = useRouter();
-  const queryClient = useQueryClient();
+  const expandSections = useEditorUiStore((state) => state.expandSections);
 
   /**
-   * Read once, at mount, and never again.
+   * The job, read from the same cache entry the stream filled.
    *
-   * The job is terminal by the time this screen exists, so there is nothing
-   * to subscribe to — and the entry is garbage collected once the progress
-   * screen's observer goes, which is a reason to take the value rather than
-   * to keep asking for it.
-   *
-   * It is **empty after a reload**, and that is not a bug in this component:
-   * `GET /jobs/{id}` publishes no field an import outcome fits in, so the
-   * count exists only in the memory of the tab that watched the job finish
-   * (`F-018`). The screen is written to be correct without it.
+   * It survives a reload now: `GET /jobs/{id}` answers a completed import
+   * with what it wrote and what it could not settle (`B-067`), so this is a
+   * fetch when the tab is new and a cache hit when it is the tab that watched
+   * the job finish. `staleTime: Infinity` because a terminal job has nothing
+   * left to say — without it, every mount of this screen would re-ask for an
+   * answer that cannot change.
    */
-  const [warnings] = useState(() => {
-    if (!jobId) return 0;
-
-    const cached = queryClient.getQueryData<{ result?: Record<string, unknown> }>(
-      jobKeys.status(jobId),
-    );
-    const count = cached?.result?.warningCount;
-
-    return typeof count === 'number' ? count : 0;
+  const { data: job } = useQuery<JobStatus>({
+    queryKey: jobKeys.status(jobId ?? ''),
+    queryFn: () => getJob(jobId!),
+    enabled: Boolean(jobId),
+    staleTime: Infinity,
   });
+
+  const { data: sections } = useSections();
+
+  /**
+   * Warnings resolved against the profile in hand.
+   *
+   * `sectionOrder` is a `displayOrder`, not an id — the field `GET /profile`
+   * already publishes — so this endpoint never has to read rows back to name
+   * them. A warning that names no section is **document-level** and is
+   * counted without opening anything: the model dropped something it could
+   * not place, which is worth saying and not worth pointing at.
+   */
+  const { placedSectionIds, unplaced } = useMemo(() => {
+    const warnings = job?.warnings ?? [];
+    const ids = new Set<string>();
+    let loose = 0;
+
+    for (const warning of warnings) {
+      const section = sections?.find(
+        (candidate) => candidate.displayOrder === warning.sectionOrder,
+      );
+
+      // A `sectionOrder` pointing at a section this profile does not have is
+      // treated as placeless rather than dropped: the count stays honest even
+      // when the two sides disagree about the profile.
+      if (warning.sectionOrder === undefined || !section?.id) loose += 1;
+      else ids.add(section.id);
+    }
+
+    return { placedSectionIds: [...ids], unplaced: loose };
+  }, [job?.warnings, sections]);
+
+  // Joined rather than passed as the array: the array is rebuilt on every
+  // render of a memo whose inputs are objects, and the effect would then
+  // re-open sections the reader had just closed.
+  const openKey = placedSectionIds.join(',');
+
+  useEffect(() => {
+    if (openKey) expandSections(openKey.split(','));
+  }, [openKey, expandSections]);
+
+  // The server's own count, which it promises equals `warnings.length`. Read
+  // from the field rather than from the array so a body that carried the
+  // number without the list would still say something true.
+  const total = job?.warningCount ?? job?.warnings?.length ?? 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -75,7 +120,7 @@ export function ReviewGate({ jobId }: ReviewGateProps) {
         <h1 className="text-xl font-semibold">{t('reviewTitle')}</h1>
         <p className="text-muted-foreground text-sm">{t('reviewBody')}</p>
 
-        {warnings > 0 && (
+        {total > 0 && (
           // A note, not a warning: nothing is broken and there is nothing to
           // retry. The same distinction the thin-profile note is drawn on.
           <p
@@ -83,7 +128,14 @@ export function ReviewGate({ jobId }: ReviewGateProps) {
             data-testid="review-warnings"
             className="border-border bg-muted/50 rounded-md border px-3 py-2 text-sm"
           >
-            {t('reviewWarnings', { count: warnings })}
+            {t('reviewWarnings', { count: total })}
+            {placedSectionIds.length > 0 && ` ${t('reviewWarningsOpened')}`}
+            {/*
+              Said separately because the two kinds are separate: opening the
+              sections answers the placed ones, and a reader told only that
+              would think everything had been pointed at.
+            */}
+            {unplaced > 0 && ` ${t('reviewWarningsElsewhere', { count: unplaced })}`}
           </p>
         )}
       </header>

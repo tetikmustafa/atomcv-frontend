@@ -5,6 +5,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SettingsScreen } from '@/components/settings/SettingsScreen';
+import { api } from '@/lib/api/client';
 import { profileKeys, sessionKeys } from '@/lib/api/queryKeys';
 import { server } from '@/mocks/node';
 import { signIn } from '@/mocks/sessionFixture';
@@ -38,13 +39,19 @@ function renderSettings() {
 
 /** Every account request, so "sent nothing" and "sent once" are assertable. */
 let calls: string[] = [];
+/** And every history read, so the count can be shown to cost one row. */
+let history: string[] = [];
 
 function record({ request }: { request: Request }) {
   if (request.url.endsWith('/api/v1/account')) calls.push(request.method);
+  if (request.method === 'GET' && request.url.includes('/api/v1/generations?')) {
+    history.push(request.url);
+  }
 }
 
 beforeEach(() => {
   calls = [];
+  history = [];
   replace.mockClear();
   server.events.on('request:start', record);
 });
@@ -142,5 +149,39 @@ describe('deleting an account', () => {
     );
     // Everything cached described an account that no longer exists.
     expect(client.getQueryData(profileKeys.head())).toBeUndefined();
+  });
+});
+
+/**
+ * `B-066`: the count used to be named without a number, because nothing
+ * published one. `GET /generations` does now, and `total` is the account's
+ * count rather than a page's — the only kind this screen could honestly use.
+ */
+describe('what the confirmation counts', () => {
+  it('names how many resumes go with the account', async () => {
+    signIn();
+    // Two generations, so the number is not the one a bug would produce.
+    await api.post('/generations', { acknowledgePreflight: false, coverLetter: false });
+    await api.post('/generations', { acknowledgePreflight: false, coverLetter: false });
+
+    renderSettings();
+    await userEvent.click(await screen.findByRole('button', { name: en.Settings.deleteAction }));
+
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('all 2 resumes');
+  });
+
+  /**
+   * Asked for with `limit: 1`: the number is the only thing wanted, and
+   * `total` counts the account rather than the page.
+   */
+  it('asks for the number without asking for the rows', async () => {
+    signIn();
+    await api.post('/generations', { acknowledgePreflight: false, coverLetter: false });
+
+    renderSettings();
+    await screen.findByRole('button', { name: en.Settings.deleteAction });
+
+    await waitFor(() => expect(history).toHaveLength(1));
+    expect(new URL(history[0]!).searchParams.get('limit')).toBe('1');
   });
 });
