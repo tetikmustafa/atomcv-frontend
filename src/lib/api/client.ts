@@ -87,7 +87,17 @@ async function send(
   assertBrowser(path);
 
   const headers = new Headers({ Accept: options.accept ?? 'application/json' });
-  if (body !== undefined) {
+
+  /*
+    A multipart body sets its own header, and it must: the `Content-Type` for
+    `multipart/form-data` carries the **boundary**, a random token only the
+    browser's serialiser knows. Setting the header by hand names the media
+    type and omits the boundary, and the server then reads a body it cannot
+    split — a `400` about a missing part, from a request whose parts are all
+    there. `fetch` fills it in when nothing is set.
+  */
+  const multipart = body instanceof FormData;
+  if (body !== undefined && !multipart) {
     headers.set('Content-Type', options.contentType ?? 'application/json');
   }
   // Key presence, not value. A caller that names `version` means to send an
@@ -115,7 +125,7 @@ async function send(
     response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined || multipart ? (body as BodyInit | undefined) : JSON.stringify(body),
       // The session cookie is HttpOnly, so it is never read in JavaScript.
       // This is the only thing that attaches it (Bölüm 40.1).
       credentials: 'include',

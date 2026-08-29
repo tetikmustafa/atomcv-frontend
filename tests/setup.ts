@@ -1,3 +1,4 @@
+import { Blob as NodeBlob, File as NodeFile } from 'node:buffer';
 import { afterAll, afterEach, beforeAll, expect } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
@@ -27,6 +28,35 @@ globalThis.ResizeObserver ??= class {
   unobserve() {}
   disconnect() {}
 };
+
+/**
+ * `FormData`, `File` and `Blob` come from Node, not from jsdom.
+ *
+ * In a browser the file you pick and the `fetch` that uploads it are one
+ * implementation. Here they are two — jsdom supplies the file APIs, Node
+ * supplies `fetch` — and the seam is not cosmetic. Measured, in this order:
+ *
+ * - jsdom's `FormData.append` **refuses** a Node `Blob` outright, and
+ *   silently stringifies a Node `File` given two arguments. The part then
+ *   arrives at the handler as the text `[object File]`.
+ * - a jsdom `File` inside a body Node has to serialise produces a request
+ *   whose stream never ends. `request.text()` does not resolve, so the
+ *   failure shows up as a test timeout with nothing to point at.
+ *
+ * So all three are replaced together: a half-swap is what produces the first
+ * failure. `FormData` has no module to import it from, and reaching into
+ * `undici` — a transitive dependency of MSW — would tie the suite to
+ * somebody else's dependency tree. Asking a `Response` to parse a body is the
+ * same class by construction, from the implementation that will actually
+ * parse the upload.
+ */
+const nodeFormData = await new Response('a=b', {
+  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+}).formData();
+
+globalThis.FormData = nodeFormData.constructor as typeof globalThis.FormData;
+globalThis.Blob = NodeBlob as unknown as typeof globalThis.Blob;
+globalThis.File = NodeFile as unknown as typeof globalThis.File;
 
 /**
  * jsdom ships no `EventSource` either, and § 36.4 specifies it for progress.

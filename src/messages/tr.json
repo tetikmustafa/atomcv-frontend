@@ -23,7 +23,7 @@
     "EXTRACTION_TIMEOUT": "Bu dosyayı okumak çok uzun sürdü ve durduruldu.",
     "LANGUAGE_UNDETECTED": "Bunun hangi dilde yazıldığını anlayamadık. En yakın tahminler: {detectedCandidates}.",
     "TRANSLATION_FAILED": "Bu sözcükleme yeniden üretilemedi, o yüzden bayat işaretli kalıyor. Başka bir şey değişmedi.",
-    "PROFILE_QUOTA_EXCEEDED": "Bugünkü {limit, plural, =1 {bir profil} other {# profil}} sınırına ulaştın. {resetsAt, date, short} {resetsAt, time, short}’te yenilenir.",
+    "PROFILE_QUOTA_EXCEEDED": "{caller, select,\n  account {Bugünkü {limit, plural, =1 {bir profil} other {# profil}} sınırına ulaştın.}\n  anonymous {Şu an bu ağdan daha fazla CV okunamıyor. Hesap olmadan hak ağ başına sayılıyor, yani onu harcayan sen olmayabilirsin.}\n  other {Şu an daha fazla CV okunamıyor — bugünkü {limit, plural, =1 {bir profil} other {# profil}} sınırına ulaşıldı.}\n} {resetsAt, date, short} {resetsAt, time, short}’te yenilenir.",
     "ANONYMOUS_SESSION_EXPIRED": "Bu oturum, buradaki son işleminden iki saat sonra sona erdi.",
     "ATOM_LIMIT_EXCEEDED": "Sınır {limit, plural, =1 {bir madde} other {# madde}}; şu anda {current, number} tane var.",
     "NO_ANONYMOUS_PROFILE": "Sahiplenilecek kaydedilmemiş bir profil yok.",
@@ -71,8 +71,27 @@
   },
   "Nav": {
     "label": "Bölümler",
+    "onboarding": "CV yükle",
     "profile": "Profil",
     "generate": "CV oluştur"
+  },
+  "Onboarding": {
+    "title": "Elindeki CV'den başla",
+    "intro": "Yükle, deneyimini, becerilerini ve eğitimini çıkaralım. Çıkanı, üzerine bir şey inşa edilmeden önce sen kontrol ediyorsun.",
+    "fileLabel": "CV'n",
+    "fileHint": "PDF, Word, LaTeX, Markdown ya da düz metin.",
+    "upload": "CV'mi oku",
+    "uploading": "Yükleniyor…",
+    "reading": "CV'n okunuyor",
+    "progressLabel": "İçe aktarma ilerlemesi",
+    "announceProgress": "CV'n okunuyor, yüzde {pct}",
+    "announceDone": "CV'n okundu. Çıkanı kontrol et.",
+    "announceFailed": "CV'n okunamadı.",
+    "chooseAnother": "Başka bir dosya seç",
+    "reviewTitle": "Çıkanı kontrol et",
+    "reviewBody": "CV'ni bu şekilde anladık. Yanlış çıkan bir şey varsa düzelt — ürettiğin her CV bundan yapılıyor, yani buradaki bir hata hepsine taşınır.",
+    "reviewWarnings": "Okurken {count, plural, =1 {bir konuda} other {# konuda}} emin olamadık. Devam etmeden önce bölümlere bir göz at.",
+    "confirm": "Doğru görünüyor — devam et"
   },
   "Session": {
     "expiring": "Bu oturum {at, time, short} itibarıyla sona eriyor — buradaki son işleminden iki saat sonra, yani çalışmaya devam etmek bu süreyi ileri atıyor. Henüz bir hesaba kaydedilmiş bir şey yok."

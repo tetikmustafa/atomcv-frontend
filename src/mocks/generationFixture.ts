@@ -1,5 +1,13 @@
 /**
- * Mutable state for the generation endpoints.
+ * Mutable state for the generation endpoints — and for **every** job, which
+ * is no longer the same thing.
+ *
+ * Profile import queues jobs too (`B-051`), on the same endpoints, with the
+ * same stream. They live in the list below rather than in a second one,
+ * because `GET /jobs/{id}` cannot look in two places. What is still
+ * generation-shaped here is everything else: the fit report, the pause
+ * switch, the phase schedule. Splitting the file would be the tidier answer
+ * and is deferred rather than forgotten.
  *
  * Stateful for the same reason `profileFixture.ts` is: the behaviour worth
  * mocking is not a payload. A job moves through phases on its own clock, a
@@ -16,7 +24,7 @@
  * payloads are the exception and `contracts.ts` says why.
  */
 
-import type { FailedEvent } from './contracts';
+import type { FailedEvent, ImportCompletedEvent } from './contracts';
 import type { components } from '@/types/api';
 
 type Schemas = components['schemas'];
@@ -36,7 +44,15 @@ export type MockFitReport = NonNullable<Schemas['GenerationResponse']['fitReport
 
 export type MockJob = {
   jobId: string;
+  /**
+   * Which kind of work this is. It decides three things a job cannot be read
+   * without: the terminal payload, which allowance is charged, and which
+   * schedule the phases come from.
+   */
+  kind: 'generation' | 'import';
   generationId: string;
+  /** Present on an import job, and only there. */
+  imported?: ImportCompletedEvent;
   /** Absent in general mode, exactly as the server omits it. */
   fitReport?: MockFitReport;
   /**
@@ -122,8 +138,42 @@ export const SCHEDULE = [
   { at: 1600, phase: 'C', label: 'generation.phase.RENDERING', pct: 70 },
 ] as const satisfies readonly { at: number; phase?: string; label?: string; pct: number }[];
 
+/**
+ * The import job's progression, and it is deliberately thinner.
+ *
+ * **No `label`, because none is published.** § 31 names three stages — read,
+ * structure, normalise — but nothing says what translation keys the import
+ * job sends, and inventing `generation.phase.EXTRACTING` would put a token on
+ * the wire the server may never send and the catalogue would then have to
+ * carry. A frame with a `pct` and no key is a shape the client already
+ * handles: `usePhaseLabel` renders no caption, and the screen says what it is
+ * doing in its own words. Asked as part of `F-018`.
+ *
+ * `running` stands in for the `phase` field the generation schedule uses to
+ * mean "this job has started". Without it a job with no phases would report
+ * `queued` for its whole life.
+ */
+export const IMPORT_SCHEDULE = [
+  { at: 0, pct: 0 },
+  { at: 300, pct: 20, running: true },
+  { at: 800, pct: 55, running: true },
+  { at: 1400, pct: 85, running: true },
+] as const satisfies readonly { at: number; pct: number; running?: true }[];
+
 /** When the terminal event lands. Nothing is emitted between it and the last phase. */
 export const TERMINAL_AT = 2000;
+
+type Step = { at: number; phase?: string; label?: string; pct: number; running?: true };
+
+/** The frames this kind of job sends. */
+export function scheduleFor(job: MockJob): readonly Step[] {
+  return job.kind === 'import' ? IMPORT_SCHEDULE : SCHEDULE;
+}
+
+/** Which allowance this kind of job spends (§ 44.1). */
+export function metricFor(job: MockJob): 'generation' | 'profile_extract' {
+  return job.kind === 'import' ? 'profile_extract' : 'generation';
+}
 
 function initial(): GenerationFixture {
   return {
@@ -244,25 +294,27 @@ export type JobSnapshot = {
  */
 export function jobSnapshot(job: MockJob, now = Date.now()): JobSnapshot {
   const elapsed = now - job.startedAt;
+  const schedule = scheduleFor(job);
 
   if (elapsed >= TERMINAL_AT) {
     // A failed job keeps where it stopped: `pct` is the most useful thing
     // known about it, and a bar that jumps to 100 to say "failed" is a lie
     // (`B-038`). A completed one reports 100 and sends no phase at all.
-    const last = SCHEDULE[SCHEDULE.length - 1]!;
+    const last = schedule[schedule.length - 1]!;
 
     return job.outcome === 'completed'
       ? { status: 'completed', pct: 100, terminal: true }
       : { ...last, status: 'failed', terminal: true };
   }
 
-  const reached = SCHEDULE.filter((step) => elapsed >= step.at);
-  const current = reached[reached.length - 1] ?? SCHEDULE[0];
+  const reached = schedule.filter((step) => elapsed >= step.at);
+  const current = reached[reached.length - 1] ?? schedule[0]!;
+  const started = 'phase' in current || 'running' in current;
 
-  return { ...current, status: 'phase' in current ? 'running' : 'queued', terminal: false };
+  return { ...current, status: started ? 'running' : 'queued', terminal: false };
 }
 
 /** The frames a subscriber that connects `at` has not seen yet. */
 export function phasesAfter(job: MockJob, at: number) {
-  return SCHEDULE.filter((step) => job.startedAt + step.at > at);
+  return scheduleFor(job).filter((step) => job.startedAt + step.at > at);
 }

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NextIntlClientProvider } from 'next-intl';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -15,7 +16,7 @@ function renderNotice(props: { code?: string; reason?: string }) {
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <NextIntlClientProvider locale="en" messages={en}>
-        {children}
+        <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
       </NextIntlClientProvider>
     );
   }

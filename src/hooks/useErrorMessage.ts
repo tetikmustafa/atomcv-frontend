@@ -23,6 +23,9 @@ import {
   toRetryMinutes,
   type IcuValue,
 } from '@/lib/errors/errorParams';
+import { useQueryClient } from '@tanstack/react-query';
+import { sessionKeys } from '@/lib/api/queryKeys';
+import type { Session } from '@/lib/api/endpoints/auth';
 import type { ErrorLike } from '@/lib/errors/errorLike';
 import type { Resolution } from '@/types/domain';
 
@@ -43,6 +46,25 @@ type LooseTranslator = ((key: string, values?: Record<string, IcuValue>) => stri
 export function useErrorMessage() {
   const t = useTranslations('errors') as unknown as LooseTranslator;
   const locale = useLocale();
+  const queryClient = useQueryClient();
+
+  /**
+   * Who is reading this, for the one code whose meaning depends on it.
+   *
+   * **Read out of the cache rather than subscribed to.** `useSession` would
+   * work and would be worse: it is deliberately `staleTime: 0`, so every
+   * error panel that appeared would issue a session request — a renderer of
+   * sentences quietly becoming a thing that fetches. By the time any error is
+   * on screen the app shell has already asked, so what is here is the same
+   * answer without the second observer.
+   *
+   * `unknown` when it is not there yet, and that is a branch of its own
+   * rather than a guess: telling an account holder their allowance is shared,
+   * or an anonymous caller that they spent theirs, are both wrong (`B-053`).
+   */
+  const session = queryClient.getQueryData<Session>(sessionKeys.current());
+  const caller =
+    session === undefined ? 'unknown' : session.authenticated ? 'account' : 'anonymous';
 
   return useCallback(
     (error: Pick<ErrorLike, 'code' | 'params' | 'retryAfterSeconds'>): string => {
@@ -52,12 +74,14 @@ export function useErrorMessage() {
       return t(key, {
         ...MESSAGE_DEFAULTS,
         ...formatErrorParams(error.params, locale),
-        // Last, and it cannot collide with a wire param: this one is derived
-        // from a header the body has no field for.
+        // Last, and neither can collide with a wire param: one is derived
+        // from a header the body has no field for, the other from a session
+        // the server cannot see the far side of.
         ...(retryAfterMinutes === undefined ? {} : { retryAfterMinutes }),
+        caller,
       });
     },
-    [t, locale],
+    [t, locale, caller],
   );
 }
 

@@ -11,6 +11,40 @@
 
 ## OPEN
 
+### F-018 · İçe aktarma işinin sonucu yalnız akışta var, ve uyarılar sayılabiliyor ama gösterilemiyor
+**Since:** frontend, Aşama 3 dilim 3a · **Spec:** `spec/07-subsystems.md` § 31.6, `spec/08-api.md`
+
+**İki ayrı şey, ikisi de aynı yerden çıkıyor: `JobStatusResponse`.**
+
+**1. Terminal olayın alanları şemada yok.** `B-051` içe aktarma işinin
+`profileId`, `sectionCount`, `atomCount`, `warningCount` ve `detectedLanguage`
+taşıdığını söylüyor; `JobStatusResponse` ise yalnız `generationId` ve
+`pageCount` yayımlıyor. Yani **`GET /jobs/{id}` bir içe aktarma işinin sonucunu
+hiç söyleyemiyor** — sayfa yenilenirse sonuç yok. Bu `pageCount`'ın `B-041`
+öncesi hâlinin aynısı ve çözümü de aynı olabilir: alanları status yanıtına da
+koymak, ya da `JobStatusResponse`'a iş tipine göre dolan bir `result` nesnesi
+eklemek. **Bugün SSE yükünü tipsiz taşıyoruz** ve `contracts.ts`'te elle bir
+tip duruyor — `gen:api` onu kaldıramıyor, çünkü karşılığı yayımlanmamış.
+
+**2. Ve asıl engelleyen bu: § 31.6'nın iki tasarım kuralı uygulanamıyor.**
+Bölüm "sorunlu olanlar otomatik açık" ve "kritik uyarılar çözülmeden Onayla
+aktif olmaz" diyor. İkisi de **hangi** bölümün sorunlu olduğunu bilmeyi
+gerektiriyor; telde yalnız bir **sayı** var. § 31.4.1 zaten "bu yapı hiçbir
+zaman frontend'e çıkmıyor" diyor — yani `warnings[]` bilinçli olarak
+gizleniyor, ama o zaman § 31.6'nın iki kuralı yazıldıkları hâliyle
+uygulanamaz.
+
+**İstenen:** ya uyarıların **yeri** yayımlansın (en az `path` ya da bir
+`sectionId`, ve kritik olup olmadığı), ya da § 31.6 bu iki kuralı
+sayı-tabanlı bir nota indirsin. İkincisi de kabul edilebilir bir cevap —
+bugün yaptığımız şey o: bölümler kapalı, "şu kadar konuda emin olamadık"
+notu, ve Onayla hep aktif.
+
+**Bir de küçük bir soru:** içe aktarma işi `phase`/`label` gönderiyor mu?
+Gönderiyorsa anahtarlar ne? Kataloğumuzda `generation.phase.*` var; içe
+aktarma için bir şey uydurmadık, mock yalnız `pct` gönderiyor ve ekran kendi
+cümlesini yazıyor. Anahtar gönderiyorsanız çeviriyi yazalım.
+
 ### F-017 · `COVER_LETTER_REJECTED` hata kataloğu tablosunda yok
 **Since:** frontend, Aşama 3 dilim 0 · **Spec:** `spec/08b-api-contract.md` § EK D.6
 
@@ -46,51 +80,4 @@ ekranı) bağlayacağız.
 
 ## ACK — backend tamamladı, frontend arşivleyebilir
 
-### F-016 · Tek kodun arkasındaki sekiz sebep — kapandı
-İkinci seçeneğiniz, ama **dörde değil sekize**. Şikâyetiniz § 18.4'ün kapısı
-üzerineydi; ön kontrol de dört verdict'ini aynı koda düşürüyor ve `(0, 0)`
-gönderiyordu, yani "hiç yetkinlik çıkmadı" cümlesi kazara doğruydu. Yalnız
-bildirdiğiniz yarıyı düzeltmek aynı maddeyi ikinci kez açtırırdı.
-
-`params.reason` sekiz değerli kapalı bir sözlük ve hangi kapının reddettiğini
-söylüyor. `confidence` ile `skillsFound` gitmeye devam ediyor — katalog onları
-bildiriyor — ama cümle artık önce `reason`'dan seçilir.
-
-Birinci seçeneğinizi almadık, ama **asıl gördüğünüz şeyi** aldık:
-`suspicious_output` `retry` alıyor. Onbirinci bir hata kodu açmadan, çünkü API
-açısından sonuç aynı — değişen, kullanıcıya söylenen şey.
-
-Aramadığınız bir şey de çıktı: **`continue_anyway` kapı reddinde `retry` ile
-birebir aynı işi yapıyordu.** Onay yalnız ön kontrolü atlıyor, ön kontrol zaten
-geçilmişti. Kaldırdık. **Aksiyonunuz var — `B-043`.**
-
-### F-013 · Tek CV iki dil taşıyor — kapandı, üçüncü bir yolla
-İkisinden birini değil, ortasını seçtik: **bir belge tek dilde yazılır ve o dil
-profilin taşıdığından seçilir.** `auto`, ilanın diline yalnızca profil o dilde
-gerçekten yazılabiliyorsa çözülüyor — sayfaya çıkabilecek her atomun hedef
-dilde varyantı varsa. Yoksa `sourceLanguage`'de kalıyor, ve tarih ile "Halen"
-tek bir `contentLanguage` okuduğu için ayrışamıyorlar.
-
-2. seçeneğiniz § 21.8'in **çalışan** yarısını kapatırdı (tüm atomları çevrilmiş
-bir profil bugün gerçek bir İngilizce CV alıyor, maliyeti sıfır); 1. seçeneğiniz
-tarihi düzeltir, atom atom geri düşen gövdeyi düzeltmezdi.
-
-İstediğiniz sinyal telde: `contentLanguage` ve `postingLanguage`.
-**Aksiyonunuz var — `B-042`.**
-
-### F-014 · Sessiz sağlayıcı hataları — kapandı
-Adaptörden çıkışın **tek** yolu var ve WARN'ı orada basıyor: `promptRef`,
-`kind`, `detail`. Dört yolun dördü de kapsandı, ve iki mükerrer satır düştü —
-bir başarısızlık artık tam olarak bir satır. Gövde ve prompt asla
-(mutlak kural 4); teşhisi zincirin yan etkilerinden çıkarmanız gerekmeyecek.
-§ 27.2'ye yazıldı.
-
-### F-015 · Fiyat tablosundaki ölü model — kapandı
-Haklıydınız, ve alıntıladığınız cümle sonucu tam olarak söylüyordu. Tablo artık
-kullanılan modeli kapsıyor; **ücretsiz model açıkça sıfır** yazılıyor, çünkü
-rakam aynı olsa da iddia değil — biri "sağlayıcı ücret almıyor" der, öteki
-"bilmiyoruz". Asıl eklenen `LlmPricingAudit`: `ApplicationReadyEvent`'te
-tabloyu `atomcv.llm.models` ile karşılaştırıyor ve fiyatı olmayan her modeli
-adıyla WARN'lıyor. § 27.4'e yazıldı.
-
-*(`F-001`…`F-012` `resolved/to-backend-2026-08.md`'de)*
+*(`F-001`…`F-016` `resolved/to-backend-2026-08.md`'de)*

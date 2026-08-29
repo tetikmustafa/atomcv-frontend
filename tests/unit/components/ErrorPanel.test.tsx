@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NextIntlClientProvider } from 'next-intl';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -11,7 +12,7 @@ import en from '@/messages/en.json';
 function wrapper({ children }: { children: ReactNode }) {
   return (
     <NextIntlClientProvider locale="en" messages={en}>
-      {children}
+      <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
     </NextIntlClientProvider>
   );
 }

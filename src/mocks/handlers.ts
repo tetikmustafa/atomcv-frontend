@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw';
 import type { MagicLinkRequest, Session, VerifyRequest } from '@/lib/api/endpoints/auth';
 import { auth, challengeRefused, overAddressLimit, retryAfter } from './authFixture';
 import { generationHandlers } from './generationHandlers';
+import { importHandlers } from './importHandlers';
 import { problem } from './problem';
 import { profileHandlers } from './profileHandlers';
 import { currentSession, signIn, signOut } from './sessionFixture';
@@ -121,5 +122,6 @@ export const handlers = [
     return HttpResponse.json({ profileUpgrade: auth.upgrade });
   }),
 
+  ...importHandlers,
   ...generationHandlers,
 ];

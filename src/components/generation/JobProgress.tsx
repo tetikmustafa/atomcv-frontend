@@ -13,8 +13,9 @@ import { useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/lib/i18n/navigation';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
+import { ProgressBar } from '@/components/feedback/ProgressBar';
 import { usePhaseLabel } from '@/hooks/useErrorMessage';
-import { useJobStream } from '@/hooks/useGeneration';
+import { useJobStream } from '@/hooks/useJob';
 import { announce } from '@/stores/announcerStore';
 import type { Resolution } from '@/types/domain';
 
@@ -87,23 +88,7 @@ export function JobProgress({
 
   return (
     <div className="flex flex-col gap-3">
-      <div
-        role="progressbar"
-        aria-label={t('progressLabel')}
-        aria-valuenow={progress.pct}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        // The caption is the accessible description rather than a second
-        // announcement: the live region already says it, and a screen reader
-        // that read both would say every phase twice.
-        aria-valuetext={caption}
-        className="bg-muted h-2 w-full overflow-hidden rounded-full"
-      >
-        <div
-          className="bg-primary h-full transition-[width] duration-300"
-          style={{ width: `${progress.pct}%` }}
-        />
-      </div>
+      <ProgressBar pct={progress.pct} label={t('progressLabel')} valueText={caption} />
 
       <p data-testid="phase-caption" className="text-muted-foreground text-sm">
         {caption}

@@ -23,7 +23,7 @@
     "EXTRACTION_TIMEOUT": "Reading that file took too long and was stopped.",
     "LANGUAGE_UNDETECTED": "We couldn't tell what language that's written in. Closest guesses: {detectedCandidates}.",
     "TRANSLATION_FAILED": "That wording couldn't be regenerated, so it stays marked out of date. Nothing else changed.",
-    "PROFILE_QUOTA_EXCEEDED": "You've reached today's limit of {limit, plural, =1 {one profile} other {# profiles}}. It renews {resetsAt, date, short} at {resetsAt, time, short}.",
+    "PROFILE_QUOTA_EXCEEDED": "{caller, select,\n  account {You've reached today's limit of {limit, plural, =1 {one profile} other {# profiles}}.}\n  anonymous {No more CVs can be read from this network right now. Without an account the allowance is counted per network, so it may not have been you who used it.}\n  other {No more CVs can be read right now — today's limit of {limit, plural, =1 {one profile} other {# profiles}} has been reached.}\n} It renews {resetsAt, date, short} at {resetsAt, time, short}.",
     "ANONYMOUS_SESSION_EXPIRED": "This session ended, two hours after your last activity here.",
     "ATOM_LIMIT_EXCEEDED": "You're at {current, number} of {limit, plural, =1 {one item} other {# items}}.",
     "NO_ANONYMOUS_PROFILE": "There's no unsaved profile to claim.",
@@ -71,8 +71,27 @@
   },
   "Nav": {
     "label": "Sections",
+    "onboarding": "Import CV",
     "profile": "Profile",
     "generate": "Generate"
+  },
+  "Onboarding": {
+    "title": "Start from the CV you have",
+    "intro": "Upload it and we'll pull out your experience, skills and education. You check what came out before anything is built from it.",
+    "fileLabel": "Your CV",
+    "fileHint": "PDF, Word, LaTeX, Markdown or plain text.",
+    "upload": "Read my CV",
+    "uploading": "Uploading…",
+    "reading": "Reading your CV",
+    "progressLabel": "Import progress",
+    "announceProgress": "Reading your CV, {pct} percent",
+    "announceDone": "Your CV has been read. Check what came out.",
+    "announceFailed": "Your CV could not be read.",
+    "chooseAnother": "Choose another file",
+    "reviewTitle": "Check what we read",
+    "reviewBody": "This is your CV as we understood it. Fix anything that came out wrong — every resume you build is made from this, so a mistake here follows you into all of them.",
+    "reviewWarnings": "We were unsure about {count, plural, =1 {one thing} other {# things}} while reading. Have a look through the sections before you carry on.",
+    "confirm": "Looks right — continue"
   },
   "Session": {
     "expiring": "This session ends at {at, time, short} — two hours after your last activity here, so carrying on pushes it back. Nothing is saved to an account yet."

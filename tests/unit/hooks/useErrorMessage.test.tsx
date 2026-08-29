@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NextIntlClientProvider } from 'next-intl';
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
@@ -9,7 +10,7 @@ import en from '@/messages/en.json';
 function wrapper({ children }: { children: ReactNode }) {
   return (
     <NextIntlClientProvider locale="en" messages={en}>
-      {children}
+      <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
     </NextIntlClientProvider>
   );
 }

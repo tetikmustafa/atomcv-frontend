@@ -1,0 +1,295 @@
+# Aşama 3 — dilim dilim inşa kaydı (frontend)
+
+> `current.md` 400 satırla sınırlı ve aşama daha kapanmadı, o yüzden
+> **kapanmış dilimlerin kaydı** buraya taşınıyor. Aynı mekanizma, aşama
+> yerine dilim ölçeğinde. Aktif dosyada kalan şey değişmezler ve kasıtlı
+> boşluklar; burada duran şey bir dilimde neyin neden öyle yapıldığı.
+>
+> Madde kayıtları (`B-nnn`) burada değil, `handoff/resolved/`'da.
+
+---
+
+### Dilim 0 — temel · 2026-08-29
+
+`B-044` · `B-045` · `B-047` · `B-055` kapandı; kayıtları
+`handoff/resolved/to-frontend-2026-08.md`'de. Burada duran şey **koda dair
+olan**, madde metni değil.
+
+**`gen:api` çalıştı ve 728 satır getirdi — hiçbir şey kalkmadan.** Aşama 3'ün
+tamamı yayımlanmış: on bir yeni operasyon (`session`, `logout`, `request`,
+`verify`, `providers`, `start`, `callback`, `importCv`, `coverLetter`,
+`feedback`, `delete_1`), dokuz yeni hata kodu, iki yeni resolution.
+
+**Typecheck'in verdiği on hatanın onu da tasarlanmış alarmdı.** Kataloğun
+tüketicilik kapısı (`Uncovered extends never`) dokuz kodu ve iki action'ı tek
+tek saydı. Aşama 2'de yazılan kapının ilk gerçek işi buydu ve çalıştı: yeni bir
+kod, kimsenin yazmadığı bir mesaj olarak değil, **derlemeyen bir dosya** olarak
+geldi.
+
+**`coverLetter` üretilen tipte zorunlu çıkıyor** — şemada `required` dizisi
+yok, ama openapi-typescript `default`'u olan alanı zorunlu sayıyor;
+`acknowledgePreflight` de aynı sebeple zaten öyleydi. Gövdeye `false` yazıldı,
+opsiyonele çevrilmedi: `generations.ts`'in kendi yorumunun `acknowledgePreflight`
+için verdiği gerekçe burada da geçerli — istemediğini **söyleyen** gövde
+sürüklenemez.
+
+**CSRF çerezi her istekte yeniden okunuyor, önbelleğe alınmıyor.** Sunucu
+tokenı döndürürse önbellekli kopya tek reddi kalıcı redde çevirir; `B-044`'ün
+"tekrar deneme, yeniden oku" cümlesinin koddaki karşılığı bu. Üç tuzak teste
+yazıldı: yüzde-kodlanmış değer (`+`, `=` taşıyan base64 token ham gönderilirse
+hiç eşleşmez), çerez yokken **başlığın hiç gönderilmemesi**, ve isim
+karşılaştırmasının tam olması — `other=XSRF-TOKEN` diye bir çerez kavanozda
+duruyorsa önek eşleşmesi onu bulur.
+
+**Negatif kontrol yapıldı:** başlığı kuran üç satır kaldırılınca altı testin
+dördü kırılıyor. Geçen ikisi *yokluk* iddiaları (GET'te başlık yok, çerezsizken
+başlık yok) ve doğru davranışları bu — kırılmamaları beklenen sonuç.
+**MSW başlığı hiç denetlemiyor**, yani bu davranış sessizce kaybolabilirdi;
+testlerin var olma sebebi tam olarak bu.
+
+**`contracts.ts` iki tip daha eksildi.** `Capabilities` ve `SessionResponse`
+artık şemada; `lib/api/endpoints/auth.ts` ikisini de **türetiyor**. Türetme
+düz `Required<>` değil: § 35.7 dört bayrağı, iki kotayı ve iki sayacı her iki
+oturum türü için de garanti ediyor, o yüzden onlar zorunlu — bir yetenek kapısı
+üç değerli olursa `undefined` sessizce "yapamaz" dalına düşer ve kullanıcının
+sahip olduğu özelliği gizler. Gerçekten değişen üçü (`maxAtoms`,
+`quotaResetsAt`, `anonymousExpiresAt`) opsiyonel kaldı: `B-046` hesapta
+**JSON'da hiç yok** diyor, şema `nullable` diyor, ve ikisi de okunabiliyor.
+
+**Mock artık `anonymousExpiresAt` gönderiyor ve her istekte yeniden hesaplıyor.**
+Donmuş bir an, TTL'in kaydığını (§ 35.7) göremeyen bir ekranı da geçirirdi.
+
+**`REWRITING` yalnız katalog anahtarı değildi.** Anahtarı eklemek `B-055`'in
+istediği şeydi, ama fazı hiç görmemiş bir ekran %60'ta boş bir başlık çizer ve
+bunu hiçbir test yakalamaz — o yüzden `SCHEDULE`'a da girdi. Bedeli iki birim
+testi ve bir e2e sayısı; ödenmeye değer, çünkü ikisi de fazın **gerçekten**
+aktığını doğruluyor.
+
+**`COVER_LETTER_REJECTED`'ın mesajı `issues`'ı saymıyor, ve bu geçici.** Altı
+değer makine belirteci (`unsupported_claim`, `cliche`…); ham basılırsa ekrana
+`unsupported_claim ve cliche` çıkar. Aynı gerekçe `REWRITE_VALIDATION_FAILED`'da
+da uygulanmıştı. Sözlüğün kapalı olup olmadığı `F-017` ile soruldu; cevap
+gelince dilim 4'te (cover letter ekranı) altısı da adlandırılacak.
+
+**`RATE_LIMITED` bugün `resetsAt`'ten kuruluyor, `Retry-After`'dan değil.**
+`B-050` süreyi başlıktan kurmayı istiyor ve haklı — kullanıcının saati
+yanlışsa doğru olan tek şey o. Ama `Retry-After` bir **başlık**, ve `toApiError`
+bugün gövdeden başka bir şey okumuyor. Cümle o yüzden maddenin "yalnız şu
+saatte tekrar deneyin yazacaksanız kullanın" dediği biçimde yazıldı; başlığı
+okuyan hâli, onu ilk gerçekten gösterecek ekranla (dilim 2, magic link formu)
+birlikte iniyor.
+
+### Dilim 1 — oturum · 2026-08-29
+
+`B-046` kapandı; madde kaydı `resolved/`'da. Kodda kalan şeyler:
+
+**`useSession` iki varsayılanı geçiyor ve ikisi de gerekçeli.** `staleTime: 0`
+— 30 sn'lik varsayılan editörün yüzlerce atom anahtarı için var ve içinde saat
+olan bir değer için tam olarak yanlış. `refetchOnWindowFocus: true` — genelde
+kapalı, çünkü autosave sekme değişimiyle kavga etmemeli; burada **tam da olay
+bu**, doksan dakika sonra sekmeye dönen kişi süre bildiriminin yazıldığı kişi.
+
+**Bildirim `Date.now()` okumuyor, `dataUpdatedAt` okuyor** — ve bunu lint
+buldu (`react-hooks/purity`). Kural saflık için var ama asıl kazanç başka:
+render sırasında saati okuyan bileşen, kimsenin planlamadığı bir render'da
+saatin ne dediğini gösterir, yani bildirim geç, erken ya da hiç çıkmaz.
+`dataUpdatedAt` pencereye tek bir anlam veriyor — **sunucunun söylediği anda
+ne kadar kaldığını söylediği** — ve yeni cevap indiğinde yeniden
+değerlendiriliyor. Yanılma yönü de güvenli: kişi çalışırken istekleri TTL'i
+ileri kaydırıyor, bu sayı geride kalıyor, bildirim erken çıkıyor.
+
+**Eşik on beş dakika, ve sebebi çıkış yolunun süresi.** Bildirimin işi girişe
+yönlendirmek; giriş bir e-posta beklemek ve bir bağlantıya tıklamak demek.
+Çaresinden kısa süre tanıyan bir uyarı yalnızca kaybın duyurusudur. Daha uzunu
+iki saat boyunca duran, dolayısıyla okunmayan bir şerit olurdu.
+
+**Kapı gizliyor, kilitlemiyor.** İki yüz atomun her birinin yanında tekrarlanan
+kilitli bir kontrol, kişinin kendi çalışmasının ortasına konmuş bir satış
+konuşmasıdır; § 9 **daha dar** bir ürün vaat ediyor, dırdır eden bir ürün
+değil. Ve elle kontrol zaten isteğe bağlı — varsayılan çıktı iki halde de aynı.
+Oturum yüklenirken kapı kapalı (`=== true`): görünüp kaybolan bir kaydırıcı
+arada sürüklenebilir ve yazma reddedilir.
+
+**`useCapabilities` atom başına çağrılıyor, prop olarak geçirilmiyor.** İki yüz
+gözlemci tek bir cache girdisine bağlanıyor; takas bilinçli. Alternatif
+capabilities'i bölüm listesinden her entry başlığına kadar taşımaktı, ve iletmeyi
+unutan ilk bileşen sessizce kullanılamayacak bir kontrol çizerdi.
+
+**Mock'un tarayıcı kanalı bir bayrak, sahte bir uç değil.** Playwright kendi
+sürecinde koşuyor ve MSW handler'ları sayfada; modül durumuna erişemiyor.
+`localStorage`'daki `atomcv-mock-session`'ı `addInitScript` yazıyor. Gerçek
+backend'de olmayan bir "sahte giriş" ucu uydurmak, handler'lara telde karşılığı
+olmayan bir şekil koymak olurdu — bu mock'ların yapmaması gereken tek şey.
+
+**İki e2e testi hesaba taşındı, biri anonim olarak eklendi.** Kaydırıcı ve
+toggle testleri hesabın kontrollerini deniyordu; artık `asAccount` ile
+koşuyorlar. Yeni test anonim kapının **iki yarısını** da sınıyor: kontroller
+yok, **sözcükleme duruyor**. Yokluk iddiası oturum yanıtı beklendikten sonra
+yapılıyor — beklemeden yazılsaydı kapı silinse bile geçerdi.
+
+**Negatif kontroller yapıldı:** kapı `true` yapılınca anonim testi kırılıyor,
+eşik kaldırılınca "vakit varken bir şey söylemiyor" testi kırılıyor.
+
+**Bundle:** profil 250.6 → **251.2**, üretim 214.8 → **215.6** KB. Pazarlama
+rotaları 168.3'te sabit — `SessionNotice` yalnız `(app)` altında.
+
+### Dilim 2a — OAuth yolu · 2026-08-29
+
+`B-048` kapandı; madde kaydı `resolved/`'da. `B-054`'ün **yalnız OAuth yarısı**
+indi (`?profile=` iniş parametresi); `POST /auth/verify`'ın gövdesi dilim
+2b'de, o yüzden madde açık kaldı. Kodda duran şeyler:
+
+**Bu sayfanın var olma sebebi iki çerezin farkı.** Oturum çerezi
+`SameSite=Strict`, ve tarayıcı Strict çerezi zinciri başka sitede başlamış bir
+isteğe göndermiyor — zincir Google'da başladı. `/profile`'a doğrudan inmek ilk
+ekranı **çıkışlı** çizerdi. `NEXT_LOCALE` ise `Lax`, ve Lax çerezler üst düzey
+gezinmede **gidiyor** — yani aynı yönlendirme dili doğru taşıyor, oturumu
+taşımıyor. Sayfa tam olarak bu asimetriyi kapatıyor: aynı-origin `fetch` ile
+`/auth/session` sorulur, sonra yola devam edilir.
+
+**`next` locale öneki taşımıyor.** Bağlantıyı biz kuruyoruz, öneki next-intl
+router'ı ekliyor, yani dil tek yerde karara bağlanıyor. `safeReturnPath` yine
+de baştaki bir locale segmentini **atıyor**: adres çubuğundan kopyalanmış bir
+`next` iki kez öneklenip başarılı bir girişin sonunda 404 olurdu.
+
+**Açık yönlendirme kontrolü üç aileyi ayrı ayrı yakalıyor**, ve testte hangi
+kontrolün hangisini tuttuğu ölçüldü. Baştaki eğik çizgi şeması reddediyor
+(`javascript:`, `https://`); `URL` ayrıştırıcısı + origin karşılaştırması
+protokol-göreliyi (`//evil.example`) ve tarayıcının normalleştirdiği ters eğik
+çizgiyi (`/\evil.example`) reddediyor. Origin kontrolü kaldırılınca bu ikisi
+kırılıyor, ötekiler kırılmıyor — kalıp eşleşmesiyle yazılsaydı ilk ikisi
+sessizce geçerdi.
+
+**OAuth sıçraması mock'lanamıyor, ve mock'lanmamalı.** Buton bir üst düzey
+gezinme ve MSW worker'ı `request.mode === 'navigate'` olan istekleri **bilerek
+atlıyor** (`public/mockServiceWorker.js`). Sahte bir sağlayıcı ekranı uydurmak
+mock'ların yapmaması gereken tek şeydi; dikiş gerçek olduğu yere çizildi —
+bir yanda butonun `href`'i, öbür yanda `/auth/complete`'e tarayıcının indiği
+gibi doğrudan inmek.
+
+**Oturum anonim dönerse sayfa duruyor.** Sunucu bir şey bozulduğunu söylemedi,
+o yüzden uydurulmuş bir hata kodu yok — istemcinin kendi cümlesi. Yola devam
+etmek, girişi yeni bitirmiş birine anonim bir oturum verip sonraki her ekranı
+sebebi yazılı olmayan biçimde yanlış çizerdi.
+
+**Tanınmayan bir `profileUpgrade` sessiz geçiyor.** Beşinci bir değer, iyi mi
+kötü mü haber olduğu bilinmeden gelir; elimizdeki iki cümlenin ikisi de iddia
+taşıyor (biri çalışmanın taşındığını, öteki kaybolduğunu söylüyor). Çerez
+etkilenmiyor, yani giriş yine tamamlanıyor.
+
+**`declined` kırmızı panel değil.** Rıza ekranında vazgeçmek ürünün sorduğu
+soruya verilmiş bir cevap; `role="alert"` taşıyan bir panel hiçbir şey
+bozulmamışken bozulmuş derdi. Kural 7'ye aykırı değil: yasak olan **hata
+koduna göre UI dallanması**, bilinçli bir seçimi arıza gibi göstermek zorunda
+olmak değil.
+
+**`sign_up` resolution'ı açıldı.** `GenerateScreen` onu düşürüyordu çünkü
+gidecek yer yoktu; `FEATURE_REQUIRES_ACCOUNT` tam da "yol hesaptan geçiyor"
+diyen kod, ve istemcinin cevabı bugüne kadar hiçbir şey dememekti.
+
+**Vitest'in jsdom'unda `localStorage` verilen değeri tutmuyor** — ölçüldü, üç
+satırlık bir sonda ile. Mock'un depolama yarısı orada **hiç koşmuyor**; bu
+yüzden dilim 1'in tarayıcı bayrağı yalnız Playwright'ta sınanabiliyor, ve
+`SessionControl` biriminin "anonim dönüyor" testi yalnız modül bayrağını
+kanıtlıyor. Test yorumu bunu söylüyor; söylemeseydi geçen bir test yanlış
+şeyin kanıtı sayılırdı.
+
+**`signOut()` artık depolama bayrağını da yazıyor.** Yazmazsa çıkıştan sonraki
+ilk `/auth/session` az önce çıkılan hesabı döndürüyor — düğme bozuk görünürken
+arkasındaki istek çalışıyor. Negatif kontrol e2e'de yapıldı: satır kaldırılınca
+"çıkışta kalıyor" testi kırılıyor. Playwright yardımcısı da **tohumluyor,
+atamıyor** (`addInitScript` her gezinmede koşuyor); koşulsuz yazımla aynı test
+kırılıyor, ve düğme suçsuzken kırılıyor.
+
+**`role="alert"` tuzağının tarayıcı ikizi var:** Next kendi route announcer'ını
+`<body>`'ye `role="alert"` ile ekliyor, yani kapsamsız bir yokluk iddiası
+sayfayla ilgisi olmayan bir canlı bölge yüzünden düşüyor. e2e'de `<main>`'e
+kapsandı.
+
+**Bütçe: auth rotaları dinamik, ve `check-bundle-size.mjs` onları hiç
+ölçmüyor** — betik prerender edilmiş HTML okuyor, dinamik rotanın öyle bir
+dosyası yok. `searchParams` okundukça da dinamik kalacaklar. Elle ölçüldü
+(`next start`, aynı gzip yöntemi): `/en/login` **205.5**, `/en/auth/complete`
+**212.1**, `/en/auth/error` **206.1** KB — app sınıfı tavanı 280'in altında.
+Ölçülen rotalar: profil 251.2 → **251.1**, üretim 215.6 → **215.5**, pazarlama
+168.3'te sabit.
+
+### Dilim 2b — magic link, Turnstile, `Retry-After` · 2026-08-29
+
+`B-049`, `B-050` ve `B-054`'ün kalanı kapandı. Kodda duran şeyler:
+
+**Bir `GET` ve bir `POST` arasındaki fark bu ekranın tamamı.** `/verify` iki
+şeyi birden yapmamalı: bağlantıyı açmak (§ 40.3 — kurumsal posta tarayıcıları
+tıklıyor, tek kullanımlık token tükeniyor) ve bağlantıyı harcamak. Düğme bu
+ayrımın kendisi.
+
+**Düğme ayrıca hemen basılamıyor, ve sebebi dilim 0'ın CSRF'i.** `POST
+/auth/verify` `XSRF-TOKEN` çerezini yankılıyor; e-postadan gelen tarayıcıda o
+çerez **yok**. `useSession` mount'ta koşuyor ve çerezi ekiyor; düğme
+`session.isPending` boyunca kapalı. Testte ölçülen ince nokta: **sıra iddiası
+tek başına bunu kanıtlamıyor** — `useSession` bir hook, GET zaten her zaman
+önce görünür. Kanıtlayan şey düğmenin kapalı başlaması, ve negatif kontrol de
+oradan kırılıyor.
+
+**Bir ret sonrası ikinci basış yok, ve bu koda göre dallanma değil.** Çift tek
+kullanımlık; sunucu ne demiş olursa olsun aynı çifti yeniden göndermek
+çalışamaz. Kalan tek dürüst kontrol yeni bağlantı istemek.
+
+**Widget her retten sonra sıfırlanıyor, yalnız `CHALLENGE_FAILED`'dan sonra
+değil.** Turnstile tokenı tek kullanımlık ve sunucu **hangi katmanın**
+reddettiğini yayımlamıyor (`B-050`), yani tokenı harcayan bir retle harcamayanı
+ayırt etmenin yolu yok. Sıfırlama imperatif bir handle ile değil `key`
+bump'ıyla: render'la ayrı düşecek bir API yok.
+
+**Form kendi başarısından sağ çıkmıyor.** `202` sonrası yerini cümle alıyor;
+orada duran bir form ikinci isteği davet eder ve her istek üçte birini harcar.
+"Başka bir adres dene" bilinçli olarak bir sıfırlama, kendiliğinden bir yeniden
+gönderim değil.
+
+**Adres için istemcide tek bir kontrol var, ve gerekçesi `profileSchemas.ts`'in
+ikinci maddesi:** boşa gidecek tur. Üç istek / on beş dakika kişinin **kendi**
+hakkı; bir yazım hatası onun yirmide birini hiçbir yere giden postaya harcar.
+Kural kasten gevşek — adresin ne olduğuna sunucu karar veriyor.
+
+**`Retry-After` artık okunuyor, ve `params`'a yazılmıyor.** `ApiError` bir alan
+kazandı: gövde sunucunun yazdığı şey, bu bir **başlık**, ve ikisini
+karıştırmak `wireErrors.test.ts`'in ayırt etmek için var olduğu şeyi silerdi.
+`ErrorLike` de taşıyor, çünkü tek renderer iki taşıyıcıya bakıyor ve SSE'nin
+başlığı hiç yok.
+
+**Cümle dakikaya yuvarlanıyor, ve sıfır "başlık yoktu" demek.** Yukarı
+yuvarlama, tekrar reddedilecek bir denemeyi davet etmesin diye; en az bir,
+saniyelik bir gecikme "bilmiyoruz" dalıyla çakışmasın diye. 60 dakikada cümle
+"yaklaşık 60 dakika" diyor — "bir saat" demiyor; özel dal, yalnız bazen doğru
+olacağı için yazılmadı.
+
+**`SELECT_DEFAULTS` `MESSAGE_DEFAULTS` oldu ve `errorParams.ts`'e taşındı.**
+Sebebi katalog testi: `retryAfterMinutes` bir **tel parametresi değil**, yani
+`PARAMS` onu dürüstçe listeleyemez — ve eksik bir `plural` argümanı mesajı
+kendi anahtar yoluna çevirir. Test artık üretimin render ettiği gibi render
+ediyor. Bedeli kayıtlı: `PARAMS`'tan düşen bir `reason` artık varsayılanla
+örtülür, onu kapatan şey sebep-sebep yazılmış bloklar.
+
+**`RATE_LIMITED` artık `resetsAt`'i kullanmıyor** ve zaman-dilimi testinden
+çıkarıldı. İki kota kodu orada kaldı: onlar günlük hakkın **ne zaman
+yenilendiğini** söylüyor, ki bu saat olarak söylenecek bir takvim olgusu; bu
+ise **ne kadar bekleneceğini** söylüyor ve saati yanlış bir makinede doğru
+kalan tek biçim süre.
+
+**Vitest artık Cloudflare'in test site key'iyle koşuyor.** Widget site key'i
+modül kapsamında okuyor ve yoksa hiçbir şey çizmiyor — dev sunucusunun ve
+e2e'nin durumu bu. Anahtar olmadan sıfırlamanın sınanacağı yer kalmıyordu;
+`1x00000000000000000000AA` Cloudflare'in her zaman geçen anahtarı, yani sır da
+kurgu da değil. jsdom uzak script yüklemiyor, widget boş kabını çiziyor.
+
+**e2e'de `MAGIC_LINK_INVALID` yok, ve sebebi kayıtlı:** mock'un "harcanmış
+selector" durumu sayfada yaşıyor, ikinci bir `page.goto` tam sayfa yüklemesi
+ve durumu sıfırlıyor. Birim testi iki render arasında ilkini `unmount` ederek
+aynı şeyi yapıyor. e2e'ye zorlamak, mock'a telde karşılığı olmayan bir sıfırlama
+ucu eklemek olurdu.
+
+**Bütçe:** `/en/login` 205.5 → **210.3**, `/en/verify` **212.6**,
+`/en/auth/complete` 212.1 → **212.5**, `/en/auth/error` **206.2** KB. Ölçülen
+rotalar 251.3 / 215.7, pazarlama 168.4 — üçü de bir önceki ölçümün 0.1'i
+üstünde ve tavanların altında.
+

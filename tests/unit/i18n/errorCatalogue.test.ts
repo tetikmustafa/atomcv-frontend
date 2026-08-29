@@ -321,6 +321,45 @@ describe.each(CATALOGUES)('the %s error catalogue', (locale, messages) => {
       expect(render(15)).toContain('15');
     });
   });
+
+  /**
+   * One code, two meanings, and the server cannot tell them apart (`B-053`).
+   *
+   * An anonymous allowance is counted **per address** (§ 44.1), so somebody
+   * in the same office can have spent it. "You have used yours up" is then a
+   * sentence that blames the reader for a stranger — which is why the client
+   * supplies who is asking and the catalogue branches on it.
+   */
+  describe('who PROFILE_QUOTA_EXCEEDED is talking to', () => {
+    const render = (caller: string) =>
+      t('PROFILE_QUOTA_EXCEEDED', {
+        ...MESSAGE_DEFAULTS,
+        ...formatErrorParams(PARAMS.PROFILE_QUOTA_EXCEEDED, locale),
+        caller,
+      });
+
+    it.each(['account', 'anonymous', 'unknown'])('says something whole to %s', (caller) => {
+      const rendered = render(caller);
+
+      expect(rendered.length).toBeGreaterThan(0);
+      expect(rendered).not.toMatch(/[{}]/);
+      expect(rendered).not.toContain('errors.');
+    });
+
+    it('does not tell an anonymous reader it was their allowance', () => {
+      expect(render('anonymous')).not.toBe(render('account'));
+    });
+
+    /**
+     * The session is a request too, and it can still be in flight when this
+     * error arrives. Neither of the two real sentences is safe to guess with,
+     * so the third branch says only what is true either way.
+     */
+    it('claims nothing while it does not yet know', () => {
+      expect(render('unknown')).not.toBe(render('account'));
+      expect(render('unknown')).not.toBe(render('anonymous'));
+    });
+  });
 });
 
 describe('the numbers inside those sentences', () => {
@@ -406,7 +445,9 @@ describe('when a quota renews', () => {
     // which is a calendar fact worth naming as an hour; that one says how long
     // to wait, and a duration stays right on a machine whose time is wrong.
     for (const code of ['QUOTA_EXCEEDED', 'PROFILE_QUOTA_EXCEEDED'] as const) {
-      const rendered = t(code, formatErrorParams(PARAMS[code], locale));
+      // Through the defaults, like production: `PROFILE_QUOTA_EXCEEDED` now
+      // branches on `caller`, which is not a wire param (`B-053`).
+      const rendered = t(code, { ...MESSAGE_DEFAULTS, ...formatErrorParams(PARAMS[code], locale) });
 
       expect(rendered).toContain(localTime(locale));
       expect(rendered).not.toContain('2026-08-16T00:00:00Z');

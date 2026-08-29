@@ -16,7 +16,17 @@ import { useTranslations } from 'next-intl';
 import { SessionControl } from '@/components/auth/SessionControl';
 import { Link, usePathname } from '@/lib/i18n/navigation';
 
+/**
+ * In the order the product is used: bring a CV, check what came out of it,
+ * build something from it.
+ *
+ * `/onboarding` is listed although § 36.1 calls it a wizard. A route reachable
+ * only by typing its URL is not reachable — the same thing this file was
+ * written to fix for the editor — and re-importing is a real thing people do,
+ * which is why `409 PROFILE_ALREADY_EXISTS` exists at all (`B-060`).
+ */
 const ROUTES = [
+  { href: '/onboarding', key: 'onboarding' },
   { href: '/profile', key: 'profile' },
   { href: '/generate', key: 'generate' },
 ] as const;

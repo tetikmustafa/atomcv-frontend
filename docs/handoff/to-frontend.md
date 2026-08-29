@@ -13,12 +13,12 @@
 ## OPEN
 
 > **Dosya hâlâ 100 satır sınırının üstünde, ve sebebi arşivleme gecikmesi
-> değil:** dokuz madde açık. Sınır bir okunabilirlik kuralı; onu delen şey
+> değil:** altı madde açık. Sınır bir okunabilirlik kuralı; onu delen şey
 > burada bir belge sorunu değil, **bir koordinasyon sorunu** — ve mekanizma
 > 2026-08-29'da çalışmaya başladı: dilim 0 dördünü, dilim 1 birini, dilim 2a
-> birini, dilim 2b üçünü kapattı; dokuzu `resolved/to-frontend-2026-08.md`'ye
-> taşındı ve dosya 496'dan 340'a indi. Kalan dokuzu aşağıda, dilim dilim
-> kapanacak.
+> birini, dilim 2b üçünü, dilim 3a üçünü kapattı; on ikisi
+> `resolved/to-frontend-2026-08.md`'ye taşındı ve dosya 496'dan 244'e indi.
+> Kalan altısı aşağıda, dilim dilim kapanacak.
 >
 > Gezinebilir olsun diye aşağıda bir dizin var. Gerekçelerin kalıcı olanı
 > `spec/`'e işlendi; burada yalnız *ne yapman lazım* duruyor.
@@ -27,58 +27,12 @@
 
 | ID | Konu | Ne yapman lazım, tek cümlede |
 |---|---|---|
-| `B-051` | CV yükleme | Bir uç, beş senkron ret, bir iş — ekran kurulacak. |
 | `B-052` | Bayat varyant | Bir sözcüklemeyi düzenlemek ötekileri bayatlatıyor; uyarıyı siz gösterin. |
-| `B-053` | Anonim yükleme | Aynı uç, aynı kalıp, hesap yok. |
 | `B-056` | Cover letter | Bir bayrak, bir uç, ve reddedilebilir. |
 | `B-057` | Hesap silme | `DELETE /api/v1/account`. |
 | `B-058` | Geri bildirim | Bir başparmak ve 48 saatlik bir içerik izni. |
 | `B-059` | Gizlilik Politikası | Alt işleyen listesine Resend + AWS SES (Tokyo). **Yayın öncesi zorunlu.** |
-| `B-060` | İkinci CV | `409 PROFILE_ALREADY_EXISTS`, iki resolution, `?mode=replace`. |
 | `B-061` | Maddesiz entry | Altında madde olmayan bir entry artık CV'ye çıkabiliyor — editörde engellemeyin. |
-
-### B-051 · CV yükleme telde — bir uç, beş ret, bir iş
-**Since:** commit <sha> · Adım 3.4 · **Spec:** `spec/07-subsystems.md` § 31.2, § 31.6.1
-
-**`POST /api/v1/profile/import`**, `multipart/form-data`, tek parça: `file`.
-Cevap **`202` + `Location: /api/v1/jobs/{id}`** ve gövdede `jobId` — üretimle
-**birebir aynı kalıp**, yani `AcceptedJobResponse` ve SSE akışı sizde zaten var.
-
-**`Idempotency-Key` gönderin.** Yükleme, kötü bir bağlantının en kolay
-tekrarlattığı istek, ve profil çıkarımının günlük hakkı üründeki **en küçük**
-hak. Aynı anahtarla ikinci istek aynı işi döndürüyor ve ikinci birim
-harcanmıyor.
-
-**Beş ret, hepsi senkron** — dosya hakkında karar verilebilecek her şey 202'den
-önce veriliyor, sekiz saniye sonra düşen bir işle değil:
-
-| Kod | HTTP | Ne yapmalı |
-|---|---|---|
-| `UNSUPPORTED_DOCUMENT` | 415 | **`params.accepted`'ı okuyun** — kabul edilen uzantı listesi orada |
-| `DOCUMENT_TOO_LARGE` | 413 | `params.limitBytes` |
-| `PDF_ENCRYPTED` | 422 | "açık bir kopya yükleyin" |
-| `PDF_NOT_TEXT_BASED` | 422 | "taranmış görsel olabilir; metin tabanlı PDF ya da elle giriş" |
-| `EXTRACTION_EMPTY` | 422 | "bilgi çıkaramadık" → manuel form |
-| `PROFILE_QUOTA_EXCEEDED` | 429 | `params.limit` + `resetsAt`, ve `Retry-After` başlığı |
-
-**Dosya seçicinin `accept` listesini gömmeyin.** `415`'in `params.accepted`'ı
-kabul edilen uzantıları yayınlıyor (`pdf`, `docx`, `tex`, `txt`, `md`); tek
-sahibi sunucu, ve bir biçim eklendiğinde mesajınız sizin sürümünüzü beklemiyor.
-
-**İşin terminal olayı** şunları taşıyor: `profileId`, `sectionCount`,
-`atomCount`, `warningCount`, `detectedLanguage`. `warningCount` orada, çünkü
-§ 31.6'nın gözden geçirme ekranı **sorunlu bölümleri açık** başlatmalı ve bunu
-profili çekmeden önce bilmeniz gerekiyor.
-
-**İş de başarısız olabilir**, ve üçü sizin: `LANGUAGE_UNDETECTED` (422,
-`params.detectedCandidates` — en fazla tek elemanlı; kullanıcıya dili sorun),
-`EXTRACTION_EMPTY` (422 → manuel form), `ALL_PROVIDERS_UNAVAILABLE` (503 →
-tekrar dene; bu **tekrar edilebilir** olan tek ret).
-
-**İki şey henüz yok, ikisi de sizde bir şey değiştirmiyor:** arka plandaki
-embedding ve ölçüm tetiklemesi (§ 31.6'nın `t=25s` kutusu) bir sonraki dilimde;
-`local-fake` için gerçek bir fixture da orada. Bugün yerel geliştirmede çıkan
-profil şema şeklinde ama anlamsız — **ucun sözleşmesi doğru, içeriği değil.**
 
 ### B-052 · Bir sözcüklemeyi düzenlemek ötekileri bayatlatıyor — ekranı siz kuruyorsunuz
 **Since:** commit <sha> · Adım 3.5 · **Spec:** `spec/07-subsystems.md` § 32.2, § 32.2.1
@@ -113,37 +67,6 @@ satır bayat kalır. Bu doğru davranış, eksik değil.
 **Yenileme başarısız olabilir** ve bu da sessiz: iş `TRANSLATION_FAILED` (422,
 parametresiz) ile düşerse sözcükleme **bayat kalır**. Ekranınız zaten doğru
 şeyi gösteriyor olur; ayrıca bir hata bildirimi göstermeyin.
-
-### B-053 · Anonim kullanıcı artık CV yükleyebiliyor — aynı uç, aynı kalıp
-**Since:** commit <sha> · Adım 3.6 · **Spec:** `spec/07-subsystems.md` § 31.6.3
-
-`POST /api/v1/profile/import` **hesap istemiyor**. `GET /api/v1/session` ile
-alınan anonim oturum çerezi yeterli; `B-051`'in her satırı aynen geçerli —
-`202`, `Location`, `Idempotency-Key`, beş senkron ret, aynı terminal olay.
-**Ayrı bir uç, ayrı bir akış yok**; hesabı olan ve olmayan için tek kod yolu
-yazın.
-
-**İşin `jobId`'sini anonim çağıran da izleyebiliyor.** `GET /api/v1/jobs/{id}`
-ve SSE akışı oturumla yetkilendiriliyor — çerez giderse iş de erişilemez olur,
-ki § 41.3'ün bilinçli tercihi bu.
-
-**Üç fark, üçü de sizde bir şey değiştirebilir:**
-
-| Ne | Anonimde | Hesapta |
-|---|---|---|
-| Günlük hak | **adrese** göre sayılıyor, oturuma göre değil (§ 44.1) | kullanıcıya göre |
-| `PROFILE_QUOTA_EXCEEDED` | aynı ofisten başkası harcamış olabilir — mesaj "hakkınız doldu" demesin, "şu an bu ağdan daha fazla deneme yapılamıyor" desin | kişiye ait |
-| Profilin ömrü | oturumun TTL'i (etkinlikle kayan iki saat) | kalıcı |
-
-**Anonim profil hiçbir tabloda satır değil** — Redis'te tek bir belge. Bunun
-sizin için tek pratik sonucu: **profil ekranında "kaydedildi" demeyin.** § 9'un
-sözü tam olarak bu; kaydolmadan çalışan kişi arkasında bir şey bırakmıyor, ve
-yükseltme akışı (bir sonraki dilim) inene kadar iki saat sonrası yok.
-
-**Anonim içe aktarımda embedding ve ölçüm koşmuyor.** İlk üretim vektörsüz
-skorlama (§ 28.4) ve ölçülmemiş tahmin (§ 20.4) ile çalışıyor — ikisi de zaten
-tarif edilmiş bozulmuş-ama-çalışan yol. Kullanıcıya bunu söylemeyin; söylenecek
-tek şey seçim tahminî olduğunda ekranın zaten gösterdiği not.
 
 ### B-056 · Cover letter telde — bir bayrak, bir uç, ve reddedilebilir
 **Since:** commit <sha> · Adım 3.8 · **Spec:** `spec/07-subsystems.md` § 34
@@ -253,33 +176,6 @@ Yazılacak asgari şey: *e-posta teslimatı — Resend (AWS SES, Tokyo)*.
 EK C.1'in "Gizlilik Politikası yayında ve sağlayıcı listesi doğru" maddesi
 yayından önce bunu istiyor. **Bu maddeyi kapatmadan MVP yayına alınmamalı.**
 
-### B-060 · İkinci CV artık 409 dönüyor — iki yeni resolution, bir query parametresi
-**Since:** Adım 3.4 · **Spec:** `spec/08b-api-contract.md` (409 satırı), `spec/07-subsystems.md` § 31.6.2
-**Action:** `POST /api/v1/profile/import` yeni bir senkron ret üretiyor ve
-**resolution sözlüğü ikiye büyüdü** — ICU mesajı olmayan bir action ham anahtar
-olarak ekrana düşer.
-
-Hesabın **içeriği olan** bir profili varken yükleme **`409
-PROFILE_ALREADY_EXISTS`** alıyor. Gövdedeki `resolutions`:
-
-| action | ne yapmalı |
-|---|---|
-| `replace_profile` | Aynı isteği `?mode=replace` ile tekrar gönderin. Mevcut profil silinir, CV yenisi olur. |
-| `keep_existing_profile` | İsteği bırakın. Profil olduğu gibi kalır. |
-
-**Üçüncü bir seçenek yok ve olmayacak — birleştirme sunmayın.** Atom düzeyinde
-tekilleştirme demek (Bölüm 7) ve Aşama 4 işi; şimdi sunmak ya yapamayacağınız
-bir eylemi adlandırır ya da içeriği sessizce çoğaltır (P8).
-
-**"Profil var mı" değil, "içinde bir şey var mı".** Bir kez giriş yapıp
-uygulamayı açan herkeste boş bir profil satırı oluşuyor; boş satır 409
-üretmiyor, ilk yükleme sorunsuz geçiyor.
-
-**`mode` yalnız `replace` değerini tanıyor**; başka her şey yokmuş gibi
-okunuyor — bir yazım hatası onay yerine geçmesin diye.
-
----
-
 ### B-061 · Maddesiz bir entry artık CV'ye çıkabiliyor
 **Since:** commit <sha> · kapanış denetimi dilim 5 · **Spec:** `spec/05-pipeline-a-c.md` § 20.2
 
@@ -315,9 +211,9 @@ maliyetini ödemez. Sayfa sınırı garantisi aynen duruyor.
 ## ACK — frontend tamamladı, backend arşivleyebilir
 
 _(`B-037`…`B-043`, dilim 0'ın kapattığı `B-044`, `B-045`, `B-047`, `B-055`,
-dilim 1'in kapattığı `B-046`, dilim 2a'nın kapattığı `B-048` ve dilim 2b'nin
-kapattığı `B-049`, `B-050`, `B-054` — hepsi
-`resolved/to-frontend-2026-08.md`'de.)_
+dilim 1'in kapattığı `B-046`, dilim 2a'nın kapattığı `B-048`, dilim 2b'nin
+kapattığı `B-049`, `B-050`, `B-054` ve dilim 3a'nın kapattığı `B-051`,
+`B-053`, `B-060` — hepsi `resolved/to-frontend-2026-08.md`'de.)_
 
 **`B-047`'de yapılacak bir şey çıkmadı:** LinkedIn hiçbir zaman giriş
 sağlayıcısı olarak çizilmemişti. Silinmedi, hiç yoktu — madde yine de kapalı.
@@ -331,6 +227,13 @@ sıçraması (`B-048`) ne de Turnstile (`B-050`) gerçek uca karşı denendi —
 ikisi de kendi anahtarları yapılandırılmış bir dağıtım istiyor. Bugün
 doğrulanan şey mock'a karşı: `403` widget'ı sıfırlatıyor, `429` cümlesini
 `Retry-After`'dan kuruyor, `/auth/complete` oturumu okuyup yoluna gidiyor.
+
+**`B-051` kapandı ama § 31.6'nın gözden geçirme ekranı yarım.** "Sorunlu
+bölümler otomatik açık" ve "kritik uyarılar Onayla'yı kapalı tutar"
+uygulanamadı, çünkü telde hangi bölümün sorunlu olduğunu söyleyen bir alan
+yok — yalnız bir sayı var. Uydurmadık; ne yapılabildiği ve ne istediğimiz
+**`F-018`**'de. O maddeye kadar geçit "şu kadar konuda emin olamadık" notuyla
+duruyor.
 
 ---
 

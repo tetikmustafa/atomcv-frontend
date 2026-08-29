@@ -56,6 +56,30 @@ export type CompletedEvent = {
 };
 
 /**
+ * What an import job says when it finishes (`B-051`).
+ *
+ * Belongs here for the same reason the three above do — it is an SSE payload,
+ * and there is nothing generated to bind to. The difference is that this one
+ * has a **published sibling that does not carry it**:
+ * `JobStatusResponse` describes only a generation's outcome, so a reload
+ * after extraction reaches `GET /jobs/{id}` and learns none of this. Asked as
+ * `F-018`; until it is answered, this type is the only description there is.
+ */
+export type ImportCompletedEvent = {
+  profileId: string;
+  sectionCount: number;
+  atomCount: number;
+  /**
+   * How many things the extraction was unsure about. A **count**, and that
+   * is the whole difficulty: § 31.6 wants the problematic sections opened and
+   * critical warnings to block "Confirm", and neither can be done from a
+   * number. Also `F-018`.
+   */
+  warningCount: number;
+  detectedLanguage: string;
+};
+
+/**
  * The in-flight half of "the same error over two transports". It borrows the
  * envelope's own vocabulary rather than restating it with `string`, so a mock
  * cannot emit a code or an action the error renderer would not recognise.

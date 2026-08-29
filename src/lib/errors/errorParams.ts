@@ -52,6 +52,12 @@ export type IcuValue = string | number | Date;
  *   the `Retry-After` header, which the SSE transport has no way to carry.
  *   Zero is the "we were not told" branch, and it can only mean that: a real
  *   header rounds up to at least one minute.
+ * - `caller` is not on the wire either, and cannot be: one code means two
+ *   different things depending on who is asking. An anonymous allowance is
+ *   counted **per address** (§ 44.1), so "you have used yours up" is a
+ *   sentence that blames the reader for a stranger in the same office
+ *   (`B-053`). The server does not know which sentence to write; the client
+ *   does, from the session it already holds.
  *
  * Harmless where they are not used: ICU ignores an argument no branch reads.
  * Merged **under** the real values, never over them.
@@ -59,6 +65,7 @@ export type IcuValue = string | number | Date;
 export const MESSAGE_DEFAULTS: Record<string, IcuValue> = {
   reason: 'unknown',
   retryAfterMinutes: 0,
+  caller: 'unknown',
 };
 
 /**

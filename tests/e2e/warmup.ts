@@ -20,6 +20,8 @@ const ROUTES = [
   '/en/generate',
   // Any id will do — what is being compiled is the route, not the page.
   '/en/generations/warmup',
+  '/en/onboarding',
+  '/en/onboarding/review',
   '/en/dev/mocks',
   '/en/login',
   '/en/auth/complete',

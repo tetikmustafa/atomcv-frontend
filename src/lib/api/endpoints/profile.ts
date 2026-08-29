@@ -268,3 +268,44 @@ export function exportProfileAsJson() {
 export function exportProfileAsMarkdown() {
   return api.getText(`/profile/export${query({ format: 'markdown' })}`);
 }
+
+/* -------------------------------- import ------------------------------- */
+
+/**
+ * How a profile usually starts: a CV, read by the extraction pipeline
+ * (§ 31.2, `B-051`).
+ *
+ * **`202` and a job**, the same shape a generation answers with, so the
+ * stream and the fallback poll are the ones already in hand. Everything a
+ * file can be refused for arrives *before* that, synchronously: § 31.10's
+ * first three steps are things the reader acts on immediately, and finding
+ * out eight seconds later that the PDF was encrypted is a worse version of
+ * the same answer.
+ *
+ * **The part name is `file` and there is exactly one.** `FormData` sets its
+ * own `Content-Type` with the boundary in it — see the client.
+ *
+ * **`Idempotency-Key` matters more here than anywhere else.** An upload is
+ * the request a bad connection retries most readily, and profile extraction
+ * is the smallest allowance in the product (§ 44.1): three a day anonymously.
+ * The same key returns the job already made rather than spending a second
+ * unit.
+ *
+ * **`mode` is only ever `replace`, and only as the answer to a `409`**
+ * (`B-060`). The server reads anything else as absent, so a typo cannot stand
+ * in for consent — and nothing here sends it unless the reader pressed the
+ * resolution the server offered.
+ */
+export function importCv(
+  file: File,
+  { idempotencyKey, replace = false }: { idempotencyKey: string; replace?: boolean },
+) {
+  const form = new FormData();
+  form.append('file', file);
+
+  return api.post<Returns<'importCv', '*/*'>>(
+    `/profile/import${query({ mode: replace ? 'replace' : undefined })}`,
+    form,
+    { idempotencyKey },
+  );
+}

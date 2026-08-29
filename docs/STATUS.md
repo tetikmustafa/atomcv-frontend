@@ -3,8 +3,8 @@
 > İki repo da bu dosyayı okur ve kendi satırlarını günceller. **Kural: 60 satırı geçmez.**
 > Ayrıntılı inşa kayıtları repo-yerel `notes/current.md`'dedir, buraya taşınmaz.
 
-**2026-08-29** · **Frontend Aşama 3 — dilim 0, 1 ve 2 (giriş) indi**
-· frontend'de açık: **dokuz madde** (`B-051`–`B-053`, `B-056`–`B-061`)
+**2026-08-29** · **Frontend Aşama 3 — dilim 0, 1, 2 (giriş) ve 3a (yükleme) indi**
+· frontend'de açık: **altı madde** (`B-052`, `B-056`–`B-059`, `B-061`)
 
 ---
 
@@ -31,18 +31,17 @@ entry (2026-08-28, § 20.2), frontend'e düşeni `B-061`.
 | Aşama / Adım | Durum |
 |---|---|
 | Aşama 0 — İskelet · 1 — Profil editörü · 2 — Üretim akışı + SSE | ✅ |
-| Aşama 3 — **dilim 0 · 1 · 2** ✅ · dilim 3 CV yükleme ⏳ | ⏳ |
+| Aşama 3 — **dilim 0 · 1 · 2 · 3a** ✅ · 3b gözden geçirme `F-018`'i bekliyor | ⏳ |
 
 **Dilim 0** `gen:api` + CSRF + katalog · **dilim 1** oturum, yetenek kapısı,
 kayan TTL · **dilim 2** giriş: `/login`, `/verify`, `/auth/complete`,
-`/auth/error`, Turnstile, `Retry-After`'dan kurulan 429, çıkış düğmesi.
-Dokuz madde `ACK` (`B-044`-`B-050`, `B-054`, `B-055`). **Sırada dilim 3:**
-`B-051`, `B-053`, `B-060`. **OAuth ve Turnstile gerçek uca karşı denenmedi.**
-**Size bir madde: `F-017`** — `COVER_LETTER_REJECTED` EK D.6'nın kod tablosunda
-yok, ve `issues` sözlüğü kapalı mı?
+`/auth/error`, Turnstile, `Retry-After`'dan kurulan 429, çıkış düğmesi ·
+**dilim 3a** CV yükleme: multipart, beş senkron ret, `409` + iki resolution,
+§ 31.6'nın **atlanamaz** geçidi. On iki madde `ACK`; sırada **dilim 4**
+(`B-056`). **OAuth, Turnstile ve içe aktarma gerçek uca karşı denenmedi.**
 
-**Test:** 534 birim · 37 e2e · **bundle** profil 251.3 / üretim 215.7 KB
-(auth rotaları dinamik, bütçe betiği ölçmüyor — elle 206-213 KB).
+**Test:** 576 birim · 42 e2e · **bundle** profil 251.7 / üretim 215.9 /
+onboarding 217.0 KB (dinamik rotalar betiğin dışında — elle 210-252 KB).
 
 ## Açık kararlar (ikisini de ilgilendirir)
 
@@ -53,7 +52,8 @@ yok, ve `issues` sözlüğü kapalı mı?
 
 ## Sonraki senkronizasyon noktası
 
-**Frontend kalan dokuz maddeyi dilim dilim kapatıyor**; backend'in MVP payı
-bitti, sırada 3.7 profil editörü ve bu maddeler bizde. **`B-059` yayın öncesi
-zorunlu** (gizlilik politikası, alt işleyen listesi) ve kapanış diliminde.
-Backend'den beklenen tek şey **`F-017`**.
+**Frontend kalan altı maddeyi dilim dilim kapatıyor**; backend'in MVP payı
+bitti. **`B-059` yayın öncesi zorunlu** ve kapanış diliminde. Backend'den
+beklenen iki madde: **`F-017`** (katalog tablosu) ve **`F-018`** — ikincisi
+§ 31.6'nın gözden geçirme ekranının yarısını bloke ediyor, çünkü hangi
+bölümün sorunlu olduğunu söyleyen bir alan telde yok.

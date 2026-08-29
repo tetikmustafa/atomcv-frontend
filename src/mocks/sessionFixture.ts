@@ -66,7 +66,16 @@ const storedSession = {
   },
 };
 
-function isAuthenticated(): boolean {
+/**
+ * Whether the caller is an account, from wherever this process can see it.
+ *
+ * Exported because a handler that asks the module flag directly is wrong in a
+ * browser: Playwright can only speak through `localStorage`, and the import
+ * handler read `session.authenticated` at first — which was true under Vitest
+ * and false in the browser, so `409 PROFILE_ALREADY_EXISTS` never fired
+ * there. Everything that needs the answer goes through here.
+ */
+export function isAccount(): boolean {
   // The flag wins where it is set, because the browser has no other way to
   // say who it is. Absent means "ask the module", which is the Node path.
   const flag = storedSession.read();
@@ -108,7 +117,7 @@ export function signOut() {
  * worse than no capability screen (§ 35.7).
  */
 export function currentQuota() {
-  return isAuthenticated() ? ACCOUNT_QUOTA : QUOTA;
+  return isAccount() ? ACCOUNT_QUOTA : QUOTA;
 }
 
 export function currentCapabilities(): Capabilities {
@@ -122,7 +131,7 @@ export function currentCapabilities(): Capabilities {
     profilesUsedToday: generations.usage.profile_extract,
   };
 
-  if (isAuthenticated()) {
+  if (isAccount()) {
     return {
       ...shared,
       allowedLanguages: ['en', 'tr'],
@@ -156,7 +165,7 @@ export function currentCapabilities(): Capabilities {
 }
 
 export function currentSession(): Session {
-  return { authenticated: isAuthenticated(), capabilities: currentCapabilities() };
+  return { authenticated: isAccount(), capabilities: currentCapabilities() };
 }
 
 /** The quota day turns at UTC midnight (`F-007`), not at the reader's. */

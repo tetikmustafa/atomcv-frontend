@@ -569,3 +569,74 @@ olduğunu bilmenin yolu yok ve elimizdeki iki cümlenin ikisi de iddia taşıyor
 korunduğu sözünüz doğru, ama `kept_existing` ve `unavailable`'da aynı
 anahtarların arkasındaki profil **başka bir profil** — ve yanıtta bunları
 ayırt edecek bir şey yok, o yüzden üçü de aynı muameleyi görüyor.
+
+---
+
+### B-051 · CV yükleme telde — bir uç, beş ret, bir iş
+**Kapatıldı:** 2026-08-29, frontend dilim 3a · **Spec:** `spec/07-subsystems.md` § 31.2, § 31.6.1
+
+`POST /api/v1/profile/import`, multipart, tek parça `file`, `202` + iş.
+`Idempotency-Key`, beş senkron ret, terminal olayda beş alan.
+
+**Frontend:** Uç, ekran ve iş takibi indi. `/onboarding` yükleme, ilerleme ve
+retleri; `/onboarding/review` § 31.6'nın geçidi.
+
+**`Content-Type`'ı biz yazmıyoruz** ve bunun bir testi var. Multipart başlığı
+**boundary** taşıyor; elle yazmak, parçaları tam olan bir gövdeden "eksik
+parça" 400'ü aldırırdı. Negatif kontrol: elle yazınca on altı testin on altısı
+kırılıyor.
+
+**`accept` listesi hiçbir yerde gömülü değil.** Dosya seçici **hiçbir şeyi
+filtrelemiyor**; kabul edilen biçimleri yalnız sizin `415`'iniz söylüyor. Yeni
+bir biçim eklediğinizde bizim sürümümüzü beklemiyor — istediğiniz düzen bu ve
+uygulandı.
+
+**Retler sizin sıranızda deneniyor ve o sıra testte sabitlendi:** on iki
+megabaytlık bir PNG **415** alıyor, **413** değil. Ters sıra kullanıcıyı hiç
+okumayacağımız bir dosyayı küçültmeye yollardı.
+
+**İşin `label` göndermediğini varsaydık.** Yayımlanmış bir faz anahtarı yok,
+biz de uydurmadık: mock yalnız `pct` gönderiyor, ekran kendi cümlesini yazıyor.
+Anahtar gönderiyorsanız `F-018`'de sorduk.
+
+**`F-018` açıldı ve bir kısmı bu maddeden çıkıyor:** terminal olayın beş alanı
+`JobStatusResponse`'ta yok, yani `GET /jobs/{id}` bir içe aktarmanın sonucunu
+söyleyemiyor ve sayfa yenilenince kayboluyor. `pageCount`'ın `B-041` öncesi
+hâli.
+
+### B-053 · Anonim kullanıcı da yükleyebiliyor
+**Kapatıldı:** 2026-08-29, frontend dilim 3a · **Spec:** `spec/07-subsystems.md` § 31.6.3
+
+Aynı uç, aynı kalıp, hesap yok. Üç fark: hak adrese göre, kota mesajı farklı,
+profilin ömrü oturumun.
+
+**Frontend:** Tek kod yolu yazıldı; ekran kimin yüklediğini hiç sormuyor.
+
+**Kota cümlesi ikiye ayrıldı ve ayrımı istemci yapıyor.** Sizin
+`PROFILE_QUOTA_EXCEEDED`'iniz iki farklı şey demek ve gövdede bunu ayıracak bir
+alan yok — olmasını da istemiyoruz, çünkü sunucu kimin okuduğunu bilmiyor.
+İstemci oturumdan biliyor: `caller` diye bir argüman ICU'ya veriliyor ve mesaj
+üç dala ayrılıyor — hesap ("bugünkü sınırına ulaştın"), anonim ("şu an bu ağdan
+daha fazla CV okunamıyor; hak ağ başına sayılıyor"), ve **oturum henüz
+bilinmiyorken** ikisinden de kaçınan üçüncü bir cümle.
+
+**"Kaydedildi" demiyoruz** — § 9'un sözü. Profil ekranı zaten böyleydi, bu
+dilim bir şey eklemedi.
+
+### B-060 · İkinci CV — `409` ve iki resolution
+**Kapatıldı:** 2026-08-29, frontend dilim 3a · **Spec:** `spec/08b-api-contract.md`, `spec/07-subsystems.md` § 31.6.2
+
+`409 PROFILE_ALREADY_EXISTS`, `replace_profile` + `keep_existing_profile`,
+`?mode=replace`.
+
+**Frontend:** İki düğme de bağlı, üçüncüsü yok ve olmayacak.
+`replace_profile` **aynı isteği** `?mode=replace` ile tekrar gönderiyor;
+`keep_existing_profile` **hiçbir şey göndermiyor** ve kişiyi profiline
+götürüyor — az önce vazgeçtiği yükleme formunda bırakmak yanlış yer olurdu.
+
+**`Idempotency-Key` iki istekte de aynı**, ve bu bilinçli: bir reddi
+yanıtlamak aynı dosyaya yapılan aynı denemenin bir soru sonrası hâli, ve
+reddin arkasında çarpışacak bir iş yok. Test bunu sabitliyor.
+
+**`mode` başka hiçbir yerde gönderilmiyor** — yalnız sizin sunduğunuz düğmeye
+basıldığında. Rıza, varsayılan değil.

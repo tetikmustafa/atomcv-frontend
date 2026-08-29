@@ -19,13 +19,14 @@
 
 import { http, HttpResponse } from 'msw';
 import type { components } from '@/types/api';
-import type { CompletedEvent, FailedEvent, PhaseEvent } from './contracts';
+import type { CompletedEvent, FailedEvent, ImportCompletedEvent, PhaseEvent } from './contracts';
 import { problem } from './problem';
 import { fixture } from './profileFixture';
 import {
   FIT_REPORT,
   generations,
   jobSnapshot,
+  metricFor,
   phasesAfter,
   TERMINAL_AT,
   type MockJob,
@@ -145,8 +146,13 @@ function onePagePdf(): Uint8Array {
   return new TextEncoder().encode(body);
 }
 
-/** The next UTC midnight, which is 03:00 in Turkey (`F-007`). */
-function resetsAt(): string {
+/**
+ * The next UTC midnight, which is 03:00 in Turkey (`F-007`).
+ *
+ * Exported for the import handler, which quotes the same instant for the same
+ * reason — one renewal time, not two that drift apart by a millisecond.
+ */
+export function resetsAt(): string {
   const tomorrow = new Date();
   tomorrow.setUTCHours(0, 0, 0, 0);
   tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
@@ -238,6 +244,7 @@ export const generationHandlers = [
 
     const job: MockJob = {
       jobId: `job-${generations.jobs.length + 1}`,
+      kind: 'generation',
       generationId: `gen-${generations.jobs.length + 1}`,
       // No posting, no report: § 23.3's counts are counts *against a posting*
       // (`B-041`).
@@ -284,12 +291,18 @@ export const generationHandlers = [
     if (snapshot.status === 'completed') {
       // No `phase`, no `label`: a bar reading 70% next to the word
       // "completed" is worse than no bar at all (`B-038`).
+      //
+      // A completed **import** answers with neither `generationId` nor
+      // `pageCount` and nothing in their place, because `JobStatusResponse`
+      // publishes no field an import outcome could go in. That is the shape
+      // `F-018` is about, and the mock reproduces it rather than papering
+      // over it: a client reloading after extraction really does learn
+      // nothing here.
       return HttpResponse.json<Schemas['JobStatusResponse']>({
         jobId: job.jobId,
         status: 'completed',
         pct: 100,
-        generationId: job.generationId,
-        pageCount: 1,
+        ...(job.kind === 'generation' ? { generationId: job.generationId, pageCount: 1 } : {}),
       });
     }
 
@@ -356,22 +369,21 @@ export const generationHandlers = [
         id += 1;
 
         if (job.outcome === 'completed') {
-          controller.enqueue(
-            encoder.encode(
-              sseFrame(
-                'completed',
-                {
+          const payload: CompletedEvent | ImportCompletedEvent =
+            job.kind === 'import'
+              ? job.imported!
+              : {
                   generationId: job.generationId,
                   pageCount: 1,
                   matchLevel: job.fitReport?.level ?? 'STRONG',
-                } satisfies CompletedEvent,
-                id,
-              ),
-            ),
-          );
+                };
+
+          controller.enqueue(encoder.encode(sseFrame('completed', payload, id)));
         } else {
-          // The quota is given back on every failed job (`B-039`).
-          generations.usage.generation = Math.max(0, generations.usage.generation - 1);
+          // The quota is given back on every failed job (`B-039`) — the one
+          // this job actually spent, which is not always the same counter.
+          const spent = metricFor(job);
+          generations.usage[spent] = Math.max(0, generations.usage[spent] - 1);
           controller.enqueue(encoder.encode(sseFrame('failed', failure(job), id)));
         }
 
@@ -474,7 +486,8 @@ function metric(name: string, attempted: number, limit: number): Schemas['Usage'
   return { metric: name, used, attempted, limit, remaining: limit - used, resetsAt: resetsAt() };
 }
 
-function accepted(job: MockJob) {
+/** The `202` every job-queueing endpoint answers with (§ 35.3). */
+export function accepted(job: MockJob) {
   return HttpResponse.json<Schemas['AcceptedJobResponse']>(
     { jobId: job.jobId, status: 'queued', streamUrl: `/api/v1/jobs/${job.jobId}/stream` },
     { status: 202, headers: { Location: `/api/v1/jobs/${job.jobId}` } },

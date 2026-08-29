@@ -708,7 +708,9 @@ function versionInList(client: QueryClient, key: readonly unknown[], id: string)
 }
 
 /**
- * What every delete invalidates.
+ * What every delete invalidates — and, since Stage 3, what a CV import does
+ * too. Both replace more of the profile than any one key describes: a cascade
+ * takes a section and everything under it, an import takes the lot (`B-051`).
  *
  * **The head is in here although nothing was measured moving it.** Adding a
  * section with an atom left `completeness` at 80, so the obvious conclusion is
@@ -731,7 +733,7 @@ function versionInList(client: QueryClient, key: readonly unknown[], id: string)
  * mounted until the collection refetch drops it from the list. With no
  * observer left, they are garbage collected on their own.
  */
-function invalidateAfterDelete(client: QueryClient) {
+export function invalidateWholeProfile(client: QueryClient) {
   void client.invalidateQueries({ queryKey: profileKeys.sections() });
   void client.invalidateQueries({ queryKey: profileKeys.entries() });
   void client.invalidateQueries({ queryKey: ATOM_COLLECTIONS });
@@ -760,7 +762,7 @@ export function useDeleteSection() {
   return useMutation({
     mutationFn: (id: string) =>
       deleteSection(id, versionInList(client, profileKeys.sections(), id)),
-    onSuccess: () => invalidateAfterDelete(client),
+    onSuccess: () => invalidateWholeProfile(client),
   });
 }
 
@@ -770,7 +772,7 @@ export function useDeleteEntry() {
 
   return useMutation({
     mutationFn: (id: string) => deleteEntry(id, versionInList(client, profileKeys.entries(), id)),
-    onSuccess: () => invalidateAfterDelete(client),
+    onSuccess: () => invalidateWholeProfile(client),
   });
 }
 
@@ -783,6 +785,6 @@ export function useDeleteAtom() {
 
   return useMutation({
     mutationFn: (id: string) => deleteAtom(id, versionOf(client, id)),
-    onSuccess: () => invalidateAfterDelete(client),
+    onSuccess: () => invalidateWholeProfile(client),
   });
 }
