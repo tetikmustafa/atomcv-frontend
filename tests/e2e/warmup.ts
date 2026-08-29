@@ -21,6 +21,9 @@ const ROUTES = [
   // Any id will do — what is being compiled is the route, not the page.
   '/en/generations/warmup',
   '/en/dev/mocks',
+  '/en/login',
+  '/en/auth/complete',
+  '/en/auth/error',
   '/en/legal/privacy',
   '/en/legal/terms',
   '/tr',

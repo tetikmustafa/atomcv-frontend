@@ -48,5 +48,20 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
+  /**
+   * What a fully configured deployment offers (§ 40.6.1). Two, because the
+   * screen has to survive more than one — a list rendered as "the first one"
+   * looks right until the day it is wrong.
+   *
+   * **The hop itself is not mocked, and cannot be.** `/auth/oauth/{p}/start`
+   * answers `302` to Google, and the button that reaches it is a top-level
+   * navigation — which the MSW worker bypasses by design (`request.mode ===
+   * 'navigate'`). Standing in for it would mean inventing a fake provider
+   * screen, so the seam is drawn where it is real: the button's `href` is
+   * asserted, and `/auth/complete` is exercised by going there directly, the
+   * same way the browser arrives.
+   */
+  http.get('*/api/v1/auth/providers', () => HttpResponse.json(['google', 'github'])),
+
   ...generationHandlers,
 ];

@@ -30,10 +30,16 @@ import type { Resolution } from '@/types/domain';
  * What this screen can actually do about each way out the server offers.
  *
  * Everything reachable from `POST /generations` and from a failed job is
- * here. The rest is dropped rather than drawn: `sign_up` has no route until
- * Stage 3, `keep_top_pinned` needs a request field the schema does not
- * publish, and `switch_to_manual_form` belongs to extraction. A button that
- * does nothing is worse than one that was never offered.
+ * here. The rest is dropped rather than drawn: `keep_top_pinned` needs a
+ * request field the schema does not publish, and `switch_to_manual_form`
+ * belongs to extraction. A button that does nothing is worse than one that
+ * was never offered.
+ *
+ * `sign_up` used to be on that list and no longer is. It was dropped because
+ * there was nowhere for it to go, which was true of the whole product until
+ * this slice: `FEATURE_REQUIRES_ACCOUNT` is the server telling an anonymous
+ * caller that the way forward is an account, and until now the client's
+ * answer was to say nothing at all.
  */
 const HANDLED = [
   'continue_anyway',
@@ -42,6 +48,7 @@ const HANDLED = [
   'complete_profile',
   'review_pins',
   'increase_page_limit',
+  'sign_up',
   'retry',
 ] as const;
 
@@ -122,6 +129,13 @@ export function GenerateScreen() {
         // Both mean the same thing here: what has to change is in the
         // profile, and this screen cannot change it.
         return router.push('/profile');
+
+      case 'sign_up':
+        // `next` back to this screen. The pasted posting does not survive the
+        // trip — nothing here persists it — but landing on the page they were
+        // sent away from is the difference between one paste and a hunt
+        // through the navigation for where they were.
+        return router.push('/login?next=%2Fgenerate');
 
       default:
         // Unreachable: `canResolve` decides what is drawn, and the panel

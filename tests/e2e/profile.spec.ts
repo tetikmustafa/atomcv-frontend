@@ -1,20 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
-import { MOCK_SESSION_KEY } from '../../src/mocks/sessionFixture';
-
-/**
- * Signs the browser in before the first navigation.
- *
- * The atom controls are `canEditAtomControls`, which is false anonymously
- * (§ 35.7), so the two tests that touch them describe an account. There is no
- * sign-in endpoint to call yet and the mock deliberately does not invent one —
- * the page carries the answer instead.
- */
-async function asAccount(page: Page) {
-  await page.addInitScript(
-    ([key]) => window.localStorage.setItem(key!, 'account'),
-    [MOCK_SESSION_KEY],
-  );
-}
+import { expect, test } from '@playwright/test';
+import { asAccount } from './support/session';
 
 /**
  * The profile editor in a real browser.

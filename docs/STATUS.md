@@ -3,8 +3,8 @@
 > İki repo da bu dosyayı okur ve kendi satırlarını günceller. **Kural: 60 satırı geçmez.**
 > Ayrıntılı inşa kayıtları repo-yerel `notes/current.md`'dedir, buraya taşınmaz.
 
-**2026-08-29** · **Frontend Aşama 3 — dilim 0 (temel) ve dilim 1 (oturum) indi**
-· frontend'de açık: **on üç madde** (`B-048`–`B-054`, `B-056`–`B-061`)
+**2026-08-29** · **Frontend Aşama 3 — dilim 0, 1 ve 2a (OAuth yolu) indi**
+· frontend'de açık: **on iki madde** (`B-049`–`B-054`, `B-056`–`B-061`)
 
 ---
 
@@ -31,18 +31,18 @@ entry (2026-08-28, § 20.2), frontend'e düşeni `B-061`.
 | Aşama / Adım | Durum |
 |---|---|
 | Aşama 0 — İskelet · 1 — Profil editörü · 2 — Üretim akışı + SSE | ✅ |
-| Aşama 3 — **dilim 0 temel** ✅ · **dilim 1 oturum** ✅ · dilim 2 giriş ⏳ | ⏳ |
+| Aşama 3 — **dilim 0 · 1 · 2a** ✅ · dilim 2b magic link ⏳ | ⏳ |
 
-**Dilim 0:** `gen:api` (Aşama 3'ün tamamı telde), CSRF çift-gönderim (`B-044`),
-dokuz hata kodu + iki resolution katalogda (`B-045`), `REWRITING` (`B-055`),
-`B-047` incelemeyle. **Dilim 1:** `/auth/session` + `/auth/logout`, iki yetenek
-kümesi, `canEditAtomControls` kapısı ve kayan TTL bildirimi (`B-046`). **Beşi
-de `ACK`**, `resolved/`'a taşındı. Çıkış **düğmesi** dilim 2'de — bugün kimse
-giriş yapamıyor. **Sırada dilim 2:** `B-048`-`B-050`, `B-054`.
+**Dilim 0** `gen:api` + CSRF çift-gönderim + katalog (`B-044`, `B-045`, `B-047`,
+`B-055`) · **dilim 1** oturum, yetenek kapısı, kayan TTL (`B-046`) · **dilim 2a**
+`/login`, `/auth/complete`, `/auth/error`, çıkış düğmesi, `sign_up` (`B-048`) —
+altısı da `ACK`. `B-054`'ün OAuth yarısı indi; kalanı **dilim 2b**'de, `B-049`
+ve `B-050` ile.
 **Size bir madde: `F-017`** — `COVER_LETTER_REJECTED` EK D.6'nın kod tablosunda
 yok, ve `issues` sözlüğü kapalı mı?
 
-**Test:** 464 birim · 26 e2e · **bundle** profil 251.2 / üretim 215.6 KB.
+**Test:** 501 birim · 32 e2e · **bundle** profil 251.1 / üretim 215.5 KB
+(auth rotaları dinamik, bütçe betiği ölçmüyor — elle 205-212 KB).
 
 ## Açık kararlar (ikisini de ilgilendirir)
 
@@ -53,7 +53,7 @@ yok, ve `issues` sözlüğü kapalı mı?
 
 ## Sonraki senkronizasyon noktası
 
-**Frontend kalan on dört maddeyi dilim dilim kapatıyor**; backend'in MVP payı
+**Frontend kalan on iki maddeyi dilim dilim kapatıyor**; backend'in MVP payı
 bitti, sırada 3.7 profil editörü ve bu maddeler bizde. **`B-059` yayın öncesi
 zorunlu** (gizlilik politikası, alt işleyen listesi) ve kapanış diliminde.
 Backend'den beklenen tek şey **`F-017`**.

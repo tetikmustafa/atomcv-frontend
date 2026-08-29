@@ -13,6 +13,7 @@
  */
 
 import { useTranslations } from 'next-intl';
+import { SessionControl } from '@/components/auth/SessionControl';
 import { Link, usePathname } from '@/lib/i18n/navigation';
 
 const ROUTES = [
@@ -25,7 +26,10 @@ export function MainNav() {
   const pathname = usePathname();
 
   return (
-    <nav aria-label={t('label')} className="mx-auto flex max-w-3xl gap-6 px-8 py-4 text-sm">
+    <nav
+      aria-label={t('label')}
+      className="mx-auto flex max-w-3xl items-center gap-6 px-8 py-4 text-sm"
+    >
       {ROUTES.map(({ href, key }) => {
         const current = pathname === href || pathname.startsWith(`${href}/`);
 
@@ -42,6 +46,14 @@ export function MainNav() {
           </Link>
         );
       })}
+
+      {/*
+        Pushed to the end and set apart from the routes: it is not a place to
+        go, and `aria-current` has nothing to say about it.
+      */}
+      <div className="ml-auto">
+        <SessionControl />
+      </div>
     </nav>
   );
 }

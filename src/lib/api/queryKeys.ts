@@ -74,3 +74,18 @@ export const sessionKeys = {
   all: ['session'] as const,
   current: () => [...sessionKeys.all] as const,
 };
+
+/**
+ * Configuration rather than data, which is why it is not under `sessionKeys`.
+ *
+ * The provider list belongs to the deployment (§ 40.6.1), not to whoever is
+ * asking: it is the same answer before and after signing in. Nesting it under
+ * the session would make "re-read who is here" also re-read a list that
+ * cannot have changed. (`useLogout` still drops it, because it clears the
+ * whole cache rather than invalidating a subtree — that is a different
+ * decision, and the right one there.)
+ */
+export const authKeys = {
+  all: ['auth'] as const,
+  providers: () => [...authKeys.all, 'providers'] as const,
+};

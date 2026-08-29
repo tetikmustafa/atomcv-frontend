@@ -143,6 +143,87 @@ eşik kaldırılınca "vakit varken bir şey söylemiyor" testi kırılıyor.
 **Bundle:** profil 250.6 → **251.2**, üretim 214.8 → **215.6** KB. Pazarlama
 rotaları 168.3'te sabit — `SessionNotice` yalnız `(app)` altında.
 
+### Dilim 2a — OAuth yolu · 2026-08-29
+
+`B-048` kapandı; madde kaydı `resolved/`'da. `B-054`'ün **yalnız OAuth yarısı**
+indi (`?profile=` iniş parametresi); `POST /auth/verify`'ın gövdesi dilim
+2b'de, o yüzden madde açık kaldı. Kodda duran şeyler:
+
+**Bu sayfanın var olma sebebi iki çerezin farkı.** Oturum çerezi
+`SameSite=Strict`, ve tarayıcı Strict çerezi zinciri başka sitede başlamış bir
+isteğe göndermiyor — zincir Google'da başladı. `/profile`'a doğrudan inmek ilk
+ekranı **çıkışlı** çizerdi. `NEXT_LOCALE` ise `Lax`, ve Lax çerezler üst düzey
+gezinmede **gidiyor** — yani aynı yönlendirme dili doğru taşıyor, oturumu
+taşımıyor. Sayfa tam olarak bu asimetriyi kapatıyor: aynı-origin `fetch` ile
+`/auth/session` sorulur, sonra yola devam edilir.
+
+**`next` locale öneki taşımıyor.** Bağlantıyı biz kuruyoruz, öneki next-intl
+router'ı ekliyor, yani dil tek yerde karara bağlanıyor. `safeReturnPath` yine
+de baştaki bir locale segmentini **atıyor**: adres çubuğundan kopyalanmış bir
+`next` iki kez öneklenip başarılı bir girişin sonunda 404 olurdu.
+
+**Açık yönlendirme kontrolü üç aileyi ayrı ayrı yakalıyor**, ve testte hangi
+kontrolün hangisini tuttuğu ölçüldü. Baştaki eğik çizgi şeması reddediyor
+(`javascript:`, `https://`); `URL` ayrıştırıcısı + origin karşılaştırması
+protokol-göreliyi (`//evil.example`) ve tarayıcının normalleştirdiği ters eğik
+çizgiyi (`/\evil.example`) reddediyor. Origin kontrolü kaldırılınca bu ikisi
+kırılıyor, ötekiler kırılmıyor — kalıp eşleşmesiyle yazılsaydı ilk ikisi
+sessizce geçerdi.
+
+**OAuth sıçraması mock'lanamıyor, ve mock'lanmamalı.** Buton bir üst düzey
+gezinme ve MSW worker'ı `request.mode === 'navigate'` olan istekleri **bilerek
+atlıyor** (`public/mockServiceWorker.js`). Sahte bir sağlayıcı ekranı uydurmak
+mock'ların yapmaması gereken tek şeydi; dikiş gerçek olduğu yere çizildi —
+bir yanda butonun `href`'i, öbür yanda `/auth/complete`'e tarayıcının indiği
+gibi doğrudan inmek.
+
+**Oturum anonim dönerse sayfa duruyor.** Sunucu bir şey bozulduğunu söylemedi,
+o yüzden uydurulmuş bir hata kodu yok — istemcinin kendi cümlesi. Yola devam
+etmek, girişi yeni bitirmiş birine anonim bir oturum verip sonraki her ekranı
+sebebi yazılı olmayan biçimde yanlış çizerdi.
+
+**Tanınmayan bir `profileUpgrade` sessiz geçiyor.** Beşinci bir değer, iyi mi
+kötü mü haber olduğu bilinmeden gelir; elimizdeki iki cümlenin ikisi de iddia
+taşıyor (biri çalışmanın taşındığını, öteki kaybolduğunu söylüyor). Çerez
+etkilenmiyor, yani giriş yine tamamlanıyor.
+
+**`declined` kırmızı panel değil.** Rıza ekranında vazgeçmek ürünün sorduğu
+soruya verilmiş bir cevap; `role="alert"` taşıyan bir panel hiçbir şey
+bozulmamışken bozulmuş derdi. Kural 7'ye aykırı değil: yasak olan **hata
+koduna göre UI dallanması**, bilinçli bir seçimi arıza gibi göstermek zorunda
+olmak değil.
+
+**`sign_up` resolution'ı açıldı.** `GenerateScreen` onu düşürüyordu çünkü
+gidecek yer yoktu; `FEATURE_REQUIRES_ACCOUNT` tam da "yol hesaptan geçiyor"
+diyen kod, ve istemcinin cevabı bugüne kadar hiçbir şey dememekti.
+
+**Vitest'in jsdom'unda `localStorage` verilen değeri tutmuyor** — ölçüldü, üç
+satırlık bir sonda ile. Mock'un depolama yarısı orada **hiç koşmuyor**; bu
+yüzden dilim 1'in tarayıcı bayrağı yalnız Playwright'ta sınanabiliyor, ve
+`SessionControl` biriminin "anonim dönüyor" testi yalnız modül bayrağını
+kanıtlıyor. Test yorumu bunu söylüyor; söylemeseydi geçen bir test yanlış
+şeyin kanıtı sayılırdı.
+
+**`signOut()` artık depolama bayrağını da yazıyor.** Yazmazsa çıkıştan sonraki
+ilk `/auth/session` az önce çıkılan hesabı döndürüyor — düğme bozuk görünürken
+arkasındaki istek çalışıyor. Negatif kontrol e2e'de yapıldı: satır kaldırılınca
+"çıkışta kalıyor" testi kırılıyor. Playwright yardımcısı da **tohumluyor,
+atamıyor** (`addInitScript` her gezinmede koşuyor); koşulsuz yazımla aynı test
+kırılıyor, ve düğme suçsuzken kırılıyor.
+
+**`role="alert"` tuzağının tarayıcı ikizi var:** Next kendi route announcer'ını
+`<body>`'ye `role="alert"` ile ekliyor, yani kapsamsız bir yokluk iddiası
+sayfayla ilgisi olmayan bir canlı bölge yüzünden düşüyor. e2e'de `<main>`'e
+kapsandı.
+
+**Bütçe: auth rotaları dinamik, ve `check-bundle-size.mjs` onları hiç
+ölçmüyor** — betik prerender edilmiş HTML okuyor, dinamik rotanın öyle bir
+dosyası yok. `searchParams` okundukça da dinamik kalacaklar. Elle ölçüldü
+(`next start`, aynı gzip yöntemi): `/en/login` **205.5**, `/en/auth/complete`
+**212.1**, `/en/auth/error` **206.1** KB — app sınıfı tavanı 280'in altında.
+Ölçülen rotalar: profil 251.2 → **251.1**, üretim 215.6 → **215.5**, pazarlama
+168.3'te sabit.
+
 ### `B-043` — bir kodun arkasındaki sekiz sebep
 
 `F-016`'nın dönüşü. Sekiz sebep tek `errors.*` anahtarında, **ICU `select`**

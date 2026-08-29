@@ -449,3 +449,46 @@ kontrol edilemez. `useLogout` önbelleği **temizliyor**, invalidate etmiyor:
 her şey **biri olarak** çekildi ve sıradaki başka biri; invalidate eski
 profili her sorgu yeniden çekene kadar ekranda bırakır, ki ortak bir
 makinede bu bir kişinin CV'sini sonrakine göstermektir.
+
+---
+
+### B-048 · OAuth indi — sizden iki rota
+**Kapatıldı:** 2026-08-29, frontend dilim 2a · **Spec:** `spec/10-security.md` § 40.6.1
+
+`GET /auth/providers` → yapılandırılmış sağlayıcılar (anahtarı olmayan sessizce
+yok). `GET /auth/oauth/{provider}/start?next=/profile` → 302 sağlayıcıya.
+`/auth/complete?next=...` başarılı girişin, `/auth/error?code=...&reason=...`
+başarısızın indiği yer. `OAUTH_FAILED` tek kod, yedi sebep; **`declined`
+kullanıcının vazgeçmesi, hata değil.**
+
+**Frontend:** İki rota da indi, üçüncüsüyle birlikte — `/login`, sağlayıcı
+listesini sunucudan okuyor ve yalnız onun saydıklarını çiziyor.
+
+**İniş sayfasının var olma sebebi kodda iki çerezin farkı olarak duruyor.**
+Oturum çerezi `SameSite=Strict` — zinciri Google'da başlamış bir isteğe
+gitmiyor, o yüzden sayfa `/auth/session`'ı aynı-origin `fetch` ile soruyor ve
+ancak ondan sonra yola devam ediyor. next-intl'in `NEXT_LOCALE` çerezi ise
+`Lax`, yani üst düzey gezinmede **gidiyor**: locale öneksiz yönlendirdiğiniz
+`/auth/complete` okuyucunun zaten kullandığı dile düşüyor. Sizden bir şey
+istemiyor, ama bilmeye değer — `next`'i biz locale öneksiz gönderiyoruz ve
+öneki istemci ekliyor.
+
+**Oturum anonim dönerse sayfa duruyor ve söylüyor.** Uydurulmuş bir hata kodu
+yok; sunucu bir şeyin bozulduğunu söylemedi, bu istemcinin kendi cümlesi.
+
+**`declined` kırmızı panelle çizilmiyor** — `role="alert"` taşımayan nötr bir
+satır. Kalan altı sebep ve tanımadığımız bir yedincisi normal hata paneline
+gidiyor; sekizinci bir sebep eklerseniz ICU `other` dalına düşer, ekrana
+anahtar basılmaz.
+
+**`next` istemcide bir kez daha doğrulanıyor.** Sizinki yönlendirmeyi koruyor,
+bizimki iniş sayfasının yaptığı gezinmeyi — elle kurulmuş bir
+`/auth/complete?next=…` sunucudan hiç geçmiyor. Protokol-göreli (`//host`),
+ters eğik çizgili (`/\host`) ve şemalı adresler reddediliyor, gerisi `/`.
+
+**OAuth sıçraması mock'lanamıyor ve mock'lanmadı.** Buton bir üst düzey
+gezinme; MSW service worker'ı `request.mode === 'navigate'` olan istekleri
+bilerek atlıyor. Sahte bir sağlayıcı ekranı uydurmak yerine dikiş gerçek
+olduğu yere çizildi: butonun `href`'i ve `/auth/complete`'e doğrudan iniş.
+**Sizden bir şey gerekmiyor**, ama yerelde gerçek uca karşı denenmedi — Google
+ve GitHub anahtarları olan bir dağıtımda ilk kez orada görülecek.

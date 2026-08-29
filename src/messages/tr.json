@@ -77,6 +77,24 @@
   "Session": {
     "expiring": "Bu oturum {at, time, short} itibarıyla sona eriyor — buradaki son işleminden iki saat sonra, yani çalışmaya devam etmek bu süreyi ileri atıyor. Henüz bir hesaba kaydedilmiş bir şey yok."
   },
+  "Auth": {
+    "title": "Giriş yap",
+    "accountIsFor": "Hesap, profilini ve ondan ürettiğin CV'leri saklar. Hesapsız da her şey çalışır — İngilizce, hazır şablonla, ve oturum bitince arkanda bir şey kalmadan.",
+    "continueWith": "{provider} ile devam et",
+    "unavailable": "Burada henüz giriş yapmanın bir yolu yok.",
+    "signIn": "Giriş yap",
+    "signOut": "Çıkış yap",
+    "completing": "Girişin tamamlanıyor…",
+    "notSignedIn": "Sağlayıcıdan geri döndün ama oturum açılmadı. Yeniden giriş denemek genellikle çözüyor.",
+    "backToSignIn": "Giriş sayfasına dön",
+    "continue": "Devam et",
+    "errorTitle": "Giriş tamamlanmadı",
+    "upgrade": {
+      "upgraded": "Giriş yaptın, ve üzerinde çalıştığın profil artık hesabına ait.",
+      "kept_existing": "Giriş yaptın. Hesabında zaten bir profil vardı, o yüzden az önce üzerinde çalıştığın profil hesabına taşınmadı — ve artık ona erişilemiyor. Hesabındaki profil olduğu gibi duruyor.",
+      "unavailable": "Giriş yaptın, ama üzerinde çalıştığın profil taşınamadı. Bizim tarafımızda bir aksaklık oldu; hesabında bir sorun yok."
+    }
+  },
   "ErrorPanel": {
     "dismiss": "Kapat",
     "retry": "Tekrar dene"

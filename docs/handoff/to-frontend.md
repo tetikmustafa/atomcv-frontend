@@ -13,11 +13,11 @@
 ## OPEN
 
 > **Dosya hâlâ 100 satır sınırının üstünde, ve sebebi arşivleme gecikmesi
-> değil:** on üç madde açık. Sınır bir okunabilirlik kuralı; onu delen şey
+> değil:** on iki madde açık. Sınır bir okunabilirlik kuralı; onu delen şey
 > burada bir belge sorunu değil, **bir koordinasyon sorunu** — ve mekanizma
-> 2026-08-29'da çalışmaya başladı: dilim 0 dördünü, dilim 1 birini kapattı,
-> beşi de `resolved/to-frontend-2026-08.md`'ye taşındı ve dosya 496'dan
-> küçüldü. Kalan on üçü aşağıda, dilim dilim kapanacak.
+> 2026-08-29'da çalışmaya başladı: dilim 0 dördünü, dilim 1 birini, dilim 2a
+> birini kapattı, altısı da `resolved/to-frontend-2026-08.md`'ye taşındı ve
+> dosya 496'dan küçüldü. Kalan on ikisi aşağıda, dilim dilim kapanacak.
 >
 > Gezinebilir olsun diye aşağıda bir dizin var. Gerekçelerin kalıcı olanı
 > `spec/`'e işlendi; burada yalnız *ne yapman lazım* duruyor.
@@ -26,7 +26,6 @@
 
 | ID | Konu | Ne yapman lazım, tek cümlede |
 |---|---|---|
-| `B-048` | OAuth | İki rota: `/auth/complete` ve `/auth/error`. |
 | `B-049` | Magic link | Bir rota (`/verify`) ve bir tuzak: bağlantı GET'tir, giriş POST'tur. |
 | `B-050` | Turnstile + 429 | Link isteği bir widget tokenı istiyor ve 429 dönebiliyor. |
 | `B-051` | CV yükleme | Bir uç, beş senkron ret, bir iş — ekran kurulacak. |
@@ -39,24 +38,6 @@
 | `B-059` | Gizlilik Politikası | Alt işleyen listesine Resend + AWS SES (Tokyo). **Yayın öncesi zorunlu.** |
 | `B-060` | İkinci CV | `409 PROFILE_ALREADY_EXISTS`, iki resolution, `?mode=replace`. |
 | `B-061` | Maddesiz entry | Altında madde olmayan bir entry artık CV'ye çıkabiliyor — editörde engellemeyin. |
-
-### B-048 · OAuth indi — sizden iki rota
-**Since:** commit <sha> · Adım 3.3 dilim 2 · **Spec:** `spec/10-security.md` § 40.6.1
-
-`GET /auth/providers` → yapılandırılmış sağlayıcılar (anahtarı olmayan sessizce
-yok). `GET /auth/oauth/{provider}/start?next=/profile` → 302 sağlayıcıya.
-
-**`/auth/complete?next=...`** — başarılı girişin indiği yer. Doğrudan hedefe
-yönlendirmiyoruz: `SameSite=Strict` çerezi, zinciri başka bir sitede başlamış
-bir isteğe **gönderilmez** — zincir Google'da başladı, ve ilk sayfa çıkışlı
-görünürdü. Bu sayfa `/auth/session`'ı **aynı-origin fetch** ile sorsun, sonra
-`next`'e gitsin.
-
-**`/auth/error?code=OAUTH_FAILED&reason=...`** — hata burada iniyor.
-`OAUTH_FAILED` tek kod, yedi sebep (`F-016`'nın şekli): `state_invalid`,
-`declined`, `provider_disabled`, `provider_unavailable`, `email_missing`,
-`email_unverified`, `account_disabled`. **`declined` kullanıcının vazgeçmesi,
-hata değil.** `next` sunucuda doğrulanıyor: yalnız düz bir yol, gerisi `/`.
 
 ### B-049 · Magic link indi — bir rota ve bir tuzak
 **Since:** commit <sha> · Adım 3.3 dilim 3 · **Spec:** `spec/10-security.md` § 40.4.1
@@ -413,16 +394,21 @@ maliyetini ödemez. Sayfa sınırı garantisi aynen duruyor.
 
 ## ACK — frontend tamamladı, backend arşivleyebilir
 
-_(`B-037`…`B-043`, dilim 0'ın kapattığı `B-044`, `B-045`, `B-047`, `B-055` ve
-dilim 1'in kapattığı `B-046` — hepsi `resolved/to-frontend-2026-08.md`'de.)_
+_(`B-037`…`B-043`, dilim 0'ın kapattığı `B-044`, `B-045`, `B-047`, `B-055`,
+dilim 1'in kapattığı `B-046` ve dilim 2a'nın kapattığı `B-048` — hepsi
+`resolved/to-frontend-2026-08.md`'de.)_
 
 **`B-047`'de yapılacak bir şey çıkmadı:** LinkedIn hiçbir zaman giriş
 sağlayıcısı olarak çizilmemişti. Silinmedi, hiç yoktu — madde yine de kapalı.
 
-**`B-046`'da bir şey ertelendi ve sebebi kayıtlı:** `/auth/logout` bağlı ve
-test edildi, ama **çıkış düğmesi çizilmedi** — bugün kimse giriş yapamıyor,
-yani ulaşılamayan bir durumun düğmesi olurdu. Düğme dilim 2'de giriş yoluyla
-birlikte iniyor.
+**`B-046`'nın ertelenen yarısı indi:** çıkış düğmesi artık çizili, ve giriş
+yoluyla birlikte geldi — ulaşılamayan bir durumun düğmesi olmasın diye
+beklemişti.
+
+**`B-054`'ün yarısı bitti ve madde bilerek açık kaldı.** OAuth tarafı
+(`/auth/complete?...&profile=...`) dört değeri de okuyor ve üçüne cümle
+yazıyor; `POST /auth/verify`'ın `200` gövdesi magic link ekranıyla, dilim
+2b'de bağlanacak.
 
 ---
 

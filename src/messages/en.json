@@ -77,6 +77,24 @@
   "Session": {
     "expiring": "This session ends at {at, time, short} — two hours after your last activity here, so carrying on pushes it back. Nothing is saved to an account yet."
   },
+  "Auth": {
+    "title": "Sign in",
+    "accountIsFor": "An account keeps your profile and the resumes you make from it. Without one everything still works — in English, with the built-in template, and nothing kept once the session ends.",
+    "continueWith": "Continue with {provider}",
+    "unavailable": "There is no way to sign in here yet.",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "completing": "Signing you in…",
+    "notSignedIn": "You came back from the provider, but the session didn't take. Signing in again usually settles it.",
+    "backToSignIn": "Back to sign in",
+    "continue": "Continue",
+    "errorTitle": "Sign-in didn't finish",
+    "upgrade": {
+      "upgraded": "You're signed in, and the profile you were working on is now part of your account.",
+      "kept_existing": "You're signed in. Your account already had a profile, so the one you were just working on wasn't moved into it — and it can't be reached any more. The profile on your account is untouched.",
+      "unavailable": "You're signed in, but the profile you were working on couldn't be carried over. Something went wrong on our side; your account itself is fine."
+    }
+  },
   "ErrorPanel": {
     "dismiss": "Dismiss",
     "retry": "Try again"

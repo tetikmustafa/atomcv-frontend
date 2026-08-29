@@ -10,8 +10,8 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getSession, logout, type Capabilities } from '@/lib/api/endpoints/auth';
-import { sessionKeys } from '@/lib/api/queryKeys';
+import { getProviders, getSession, logout, type Capabilities } from '@/lib/api/endpoints/auth';
+import { authKeys, sessionKeys } from '@/lib/api/queryKeys';
 
 /**
  * Under this much left, the anonymous notice appears.
@@ -59,6 +59,27 @@ export function useSession() {
  */
 export function useCapabilities(): Capabilities | undefined {
   return useSession().data?.capabilities;
+}
+
+/**
+ * The sign-in providers this deployment has credentials for (§ 40.6.1).
+ *
+ * The opposite of `useSession` in every way that matters, which is why the
+ * two overrides above are inverted here: this answer changes when the
+ * deployment is reconfigured and at no other time, so re-reading it on a tab
+ * switch would ask a question nobody has a new answer to.
+ *
+ * It fails quietly on purpose. The sign-in page has a second way in — the
+ * magic link — so a provider list that did not arrive costs the reader some
+ * buttons, not the page. The caller reads an empty list the same way it reads
+ * an unconfigured deployment: there is nothing to draw.
+ */
+export function useProviders() {
+  return useQuery({
+    queryKey: authKeys.providers(),
+    queryFn: getProviders,
+    staleTime: Infinity,
+  });
 }
 
 /**
