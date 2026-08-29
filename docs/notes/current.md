@@ -141,6 +141,37 @@ yakalamayacağı bir fark.
 birlikte kıpırdadı: profil 252.5, üretim 220.3, onboarding 217.3, ayarlar
 229.8, paylaşılan 168.4.
 
+### Dilim 10 — gerçek uca karşı doğrulama · 2026-08-30
+
+Backend ayakta (`make record`), MSW yok, `curl` ile. `npm run gen:api` **fark
+üretmedi** — telde duran şema, commit'lediğimizle aynı.
+
+**İçe aktarmanın kapı sırası ölçüldü, ve yazdığımız sıra yanlıştı.** Bizde
+415 → 413 → 409 vardı; telde **413 → 409 → 415/422**. Sebep "hangisi ucuz"
+değil, **hangisi nerede yaşıyor**: 413 Spring'in kendi multipart sınırı ve
+controller'a girilmeden ateşliyor, 409'u da controller dosyaya bakmadan önce
+soruyor. Mock düzeltildi. **Bunu iddia eden bir test vardı ve geçiyordu** —
+§ 31.2'nin okuma sırasını doğru varsayıp sabitlemişti; şimdi ölçülen sırayı
+sabitliyor ve gerekçesi testin içinde duruyor.
+
+**Telde doğrulananlar:** `{"userEdited": true}` → `400` + `fields`
+(`B-064`); `405`, `406`, `415` (`B-063`) ve dördünün de katalogda mesajı var;
+`rating: 0` → `400`, `rating: 1` → `200`, ve `GET /generations/{id}` gövdesinde
+`feedback` (`B-065`); cursor'lu ikinci sayfa, bozuk cursor'ın
+`400 fields:["cursor"]`'ı, `limit` kırpması ve hesabın `total`'i (`B-066`);
+CSRF'siz yazma `403 CSRF_TOKEN_INVALID` (`B-044`, ilk kez telde); mektup
+ucunun `400 fields:["style"]` ve `404 RESOURCE_NOT_FOUND` redleri.
+
+**Bir kusur çıktı:** `file` parçası olmayan içe aktarma isteği `500`
+dönüyor — `B-064`'ün aynısı, başka bir istisnayla. Arayüzümüzden ulaşılmıyor;
+`F-024`.
+
+**Üçü hâlâ ölçülmedi, ve sebepleri farklı:** OAuth ile Turnstile kendi
+anahtarlarıyla yapılandırılmış bir dağıtım istiyor; **hesap silme ile mektup
+üretimi ise kasten çalıştırılmadı** — biri geliştiricinin yerel hesabını
+gerçekten siler, öteki bir LLM çağrısı harcar. İkisinin de reddedilen yolları
+ölçüldü, başarı yolları ölçülmedi.
+
 ---
 
 ## Kasıtlı boşluklar — sorulmadan "düzeltilmez"

@@ -132,18 +132,22 @@ export const importHandlers = [
     }
 
     /*
-      § 31.2's order, and nothing below charges the allowance: § 31.6.1 takes
-      a unit at the gate and gives it back when nothing came out, and a file
-      refused here produced nothing. Not charging at all is the same arithmetic
-      with one fewer moving part.
-    */
-    if (!ACCEPTED.includes(extensionOf(file.name))) {
-      return HttpResponse.json(
-        problem(415, 'UNSUPPORTED_DOCUMENT', IMPORT, [], { accepted: ACCEPTED }),
-        { status: 415 },
-      );
-    }
+      **This order was measured, not derived** (2026-08-30, against the running
+      backend). It is not the order § 31.2 reads in, and the difference is
+      where each gate lives rather than what it costs:
 
+        413 — Spring's own multipart limit, which fires before the controller
+              is entered at all, so it beats every rule written inside one;
+        409 — the profile check, which the controller reaches before it has
+              looked at the file;
+        415 and the 422s — the file's own gates.
+
+      A mock keeping the tidier order would answer "unsupported format" to a
+      12 MB PNG that production answers "too large" to, and the reader would
+      shrink the wrong thing. Nothing below charges the allowance: § 31.6.1
+      takes a unit at the gate and gives it back when nothing came out, and a
+      file refused here produced nothing.
+    */
     if (file.size > LIMIT_BYTES) {
       // The limit, never the size that was sent: Spring refuses an oversized
       // multipart before anything counts its bytes (`B-051`).
@@ -151,23 +155,6 @@ export const importHandlers = [
         problem(413, 'DOCUMENT_TOO_LARGE', IMPORT, [], { limitBytes: LIMIT_BYTES }),
         { status: 413 },
       );
-    }
-
-    const name = file.name.toLowerCase();
-
-    if (name.includes('encrypted')) {
-      return HttpResponse.json(problem(422, 'PDF_ENCRYPTED', IMPORT), { status: 422 });
-    }
-
-    // § 31.10 separates these two here and only here, and the difference is
-    // the sentence the reader gets: "this may be a scan" is what stops them
-    // uploading the same file again.
-    if (name.includes('scanned')) {
-      return HttpResponse.json(problem(422, 'PDF_NOT_TEXT_BASED', IMPORT), { status: 422 });
-    }
-
-    if (file.size === 0) {
-      return HttpResponse.json(problem(422, 'EXTRACTION_EMPTY', IMPORT), { status: 422 });
     }
 
     /*
@@ -190,6 +177,30 @@ export const importHandlers = [
         ]),
         { status: 409 },
       );
+    }
+
+    if (!ACCEPTED.includes(extensionOf(file.name))) {
+      return HttpResponse.json(
+        problem(415, 'UNSUPPORTED_DOCUMENT', IMPORT, [], { accepted: ACCEPTED }),
+        { status: 415 },
+      );
+    }
+
+    const name = file.name.toLowerCase();
+
+    if (name.includes('encrypted')) {
+      return HttpResponse.json(problem(422, 'PDF_ENCRYPTED', IMPORT), { status: 422 });
+    }
+
+    // § 31.10 separates these two here and only here, and the difference is
+    // the sentence the reader gets: "this may be a scan" is what stops them
+    // uploading the same file again.
+    if (name.includes('scanned')) {
+      return HttpResponse.json(problem(422, 'PDF_NOT_TEXT_BASED', IMPORT), { status: 422 });
+    }
+
+    if (file.size === 0) {
+      return HttpResponse.json(problem(422, 'EXTRACTION_EMPTY', IMPORT), { status: 422 });
     }
 
     const job: MockJob = {

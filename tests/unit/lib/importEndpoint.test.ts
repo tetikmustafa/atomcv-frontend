@@ -90,16 +90,24 @@ describe('what a file can be refused for', () => {
   }
 
   /**
-   * § 31.2 runs the checks cheapest first, and the order is not cosmetic: a
-   * twelve-megabyte PNG refused for being too large sends the reader off to
-   * shrink a file we were never going to read.
+   * **The size gate wins, and this test used to say the opposite.**
+   *
+   * It asserted § 31.2's reading order — format before weight, so that a
+   * twelve-megabyte PNG is not refused for a size we were never going to
+   * measure. That is the better sentence and it is not what happens: the
+   * limit is Spring's own multipart limit, which refuses the request before
+   * the controller is entered, so no rule written inside one can run first.
+   * Measured against the running backend on 2026-08-30.
+   *
+   * Kept as an assertion rather than deleted, because the mock is now the
+   * only place this order is written down.
    */
-  it('refuses the format before it weighs anything', async () => {
+  it('weighs the file before it looks at what it is', async () => {
     const huge = new File(['x'.repeat(11 * 1024 * 1024)], 'photo.png');
     const error = await refused(huge);
 
-    expect(error.status).toBe(415);
-    expect(error.code).toBe('UNSUPPORTED_DOCUMENT');
+    expect(error.status).toBe(413);
+    expect(error.code).toBe('DOCUMENT_TOO_LARGE');
   });
 
   /**
@@ -154,6 +162,21 @@ describe('what a file can be refused for', () => {
       'replace_profile',
       'keep_existing_profile',
     ]);
+  });
+
+  /**
+   * And it wins over the file's own gates, which is the second half of the
+   * order measured on 2026-08-30: the controller reaches the profile check
+   * before it has looked at what was uploaded. So an account with a profile
+   * gets the same 409 for a PNG as for a PDF — the thing wrong with the
+   * request is not the file.
+   */
+  it('asks about the existing profile before it judges the file', async () => {
+    signIn();
+    const error = await refused(new File(['x'], 'photo.png'));
+
+    expect(error.status).toBe(409);
+    expect(error.code).toBe('PROFILE_ALREADY_EXISTS');
   });
 
   it('accepts the same upload once the reader has agreed to replace', async () => {

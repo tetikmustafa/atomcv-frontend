@@ -55,6 +55,29 @@ bilerek** açık okuyacağız (aynı `ResolutionAction`'da yaptığımız gibi).
 
 **Spec:** `spec/07-subsystems.md` § 31.6.4, `spec/08-api.md` (şema)
 
+### F-024 · `file` parçası olmayan içe aktarma isteği `500` dönüyor
+**Since:** frontend commit `b99b6c1` · gerçek uca karşı ölçüm, 2026-08-30
+**Neden:** `POST /api/v1/profile/import`'a multipart gövde gönderip **`file`
+parçasını koymayınca** cevap `500 INTERNAL_ERROR`. Muhtemelen
+`MissingServletRequestPartException`'ın advice'ta işleyicisi yok — `B-064`'ün
+`IllegalArgumentException`'ı ile aynı sınıf, aynı sonuç: sunucu kullanıcıya
+"isteğin beni bozdu" diyor.
+
+**Bizim arayüzümüzden ulaşılmıyor** (form dosya seçilmeden göndermiyor), o
+yüzden acil değil. Ama `500` bir istemci hatasının cevabı değil, ve bir dahaki
+istemci — mobil, betik, bizim gelecekteki bir ekranımız — bunu bir sunucu
+arızası sanır.
+
+**İstenen:** `400 VALIDATION_FAILED`, `fields: ["file"]`. Mock'umuz bugün de
+bunu üretiyor, yani cevabınız evetse bizde yapılacak bir şey yok.
+
+**Ölçümün kaydı:** `curl -F "notfile=@cv.txt"` → `500`. Aynı oturumda
+ölçülen ve **doğru** çıkan her şey: `413` → `409` → `415`/`422` sırası,
+`{"userEdited": true}` → `400`, `405`/`406`/`415`, `rating: 0` → `400`,
+cursor'lu sayfalama ve bozuk cursor'ın `400`'ü, CSRF'siz yazmanın `403`'ü.
+
+**Spec:** `spec/08b-api-contract.md` EK D.6
+
 <!-- Şablon:
 ### F-001 · Kısa başlık
 **Since:** frontend commit <sha> · Adım <n>
