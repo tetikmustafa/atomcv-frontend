@@ -74,7 +74,22 @@
     "onboarding": "CV yükle",
     "profile": "Profil",
     "generate": "CV oluştur",
+    "history": "CV'lerin",
     "settings": "Ayarlar"
+  },
+  "History": {
+    "title": "CV'lerin",
+    "anonymous": "CV'ler yalnız hesaplarda burada listeleniyor. Hesapsız da tam olarak aynı şekilde oluşturup indiriyorsun — sonrasında saklanmıyorlar.",
+    "loading": "CV'lerin getiriliyor…",
+    "failed": "CV'lerin getirilemedi. Birazdan tekrar dene.",
+    "empty": "Burada henüz bir şey yok. Oluşturduğun her CV burada listelenecek.",
+    "shown": "{total, plural, =1 {Tek CV} other {# CV}} içinden {shown, number} tanesi gösteriliyor.",
+    "pages": "{count, plural, =1 {bir sayfa} other {# sayfa}}",
+    "withLetter": "ön yazısıyla",
+    "status": "{status, select, failed {Bu üretim tamamlanmadı.} superseded {Daha yeni bir sürümle değiştirildi.} other {}}",
+    "open": "CV'yi aç: {facts}",
+    "more": "Daha eskilerini göster",
+    "loadingMore": "Getiriliyor…"
   },
   "Onboarding": {
     "title": "Elindeki CV'den başla",

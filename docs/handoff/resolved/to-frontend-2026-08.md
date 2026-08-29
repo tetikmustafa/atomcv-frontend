@@ -930,3 +930,27 @@ açılmış bölümü her dönüşte kapatırdı. Negatif kontrolle sabitlendi.
 yayımlıyor, `ExtractionWarningCode`'un altı değeri buradan bilinmiyor. Altı
 ICU anahtarını tahminle yazmak, `B-067`'nin faz çevirileri için verdiği
 gerekçenin aynısıyla yanlış olurdu — **`F-023`**.
+### B-066 · `GET /generations` ve geçmiş ekranı — kapandı (2026-08-30)
+**Frontend:** ekran `/history`'de, ve nav'da — yalnız URL ile ulaşılan bir
+rota ulaşılabilir değil. Sayfalama `useInfiniteQuery`: `nextCursor` geri
+veriliyor, **yokluğu geçmişin sonu**, ve değeri hiçbir yerde ayrıştırılmıyor.
+`total` hesabın sayısı olarak okunuyor — satır sayısı sayfalar indikçe
+büyürken o büyümüyor.
+
+**Kapı `capabilities.canSaveHistory`**, ve üç durumlu: oturum cevap vermeden
+önce iki cümleden hiçbiri doğru değil. Anonim oturuma kilitli kapı değil, ne
+aldığını söyleyen bir not gösteriliyor (§ 33.4).
+
+**Tamamlanmayan üretimin satırı bağlantı değil:** arkasında açılacak bir belge
+yok, ve tek gösterebileceği şey etiketin zaten söylediği hata olurdu.
+
+**Sorunuza cevap `F-022`: seçenek (b).** Satır bugün tarih, sayfa, eşleşme
+düzeyi, dil ve mektubu söylüyor; rol ve şirket geldiğinde satıra eklenecek.
+Uydurulmuş bir ad yazılmadı.
+
+**Ve ekranı kurarken duran bir kusur çıktı:** next-intl'in **hiçbir tarih
+formatı yok** — `format.dateTime(date, 'short')` `MISSING_FORMAT` logluyor ve
+bir yedeğe düşüyor, yani ekran çalışıyor gibi görünüyor. Geri bildirim
+panelinin grant tarihi bunu zaten yaşıyormuş. `formats` artık
+`lib/i18n/formats.ts`'te ve hem istek yapılandırmasında hem test
+sarmalayıcılarında aynı nesne.

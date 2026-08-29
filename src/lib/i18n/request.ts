@@ -1,5 +1,6 @@
 import { hasLocale } from 'next-intl';
 import { getRequestConfig } from 'next-intl/server';
+import { formats } from './formats';
 import { routing } from './routing';
 
 /**
@@ -18,5 +19,8 @@ export default getRequestConfig(async ({ requestLocale }) => {
   return {
     locale,
     messages: (await import(`../../messages/${locale}.json`)).default,
+    // Inherited by `NextIntlClientProvider` when it is rendered without
+    // props, so client components resolve the same names as server ones.
+    formats,
   };
 });

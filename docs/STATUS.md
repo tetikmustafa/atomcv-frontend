@@ -3,8 +3,8 @@
 > İki repo da bu dosyayı okur ve kendi satırlarını günceller. **Kural: 60 satırı geçmez.**
 > Ayrıntılı inşa kayıtları repo-yerel `notes/current.md`'dedir, buraya taşınmaz.
 
-**2026-08-29** · **Backend'in altı maddesinin beşi frontend'de kapandı** ·
-açık `B-nnn`: **`B-066`** (geçmiş ekranı) · açık `F-nnn`: **`F-022`**, **`F-023`**
+**2026-08-30** · **Backend'in altı maddesinin altısı da frontend'de kapandı** ·
+açık `B-nnn` yok · açık `F-nnn`: **`F-022`**, **`F-023`**
 
 ---
 
@@ -32,15 +32,15 @@ model seçilince fiyat tablosu (o güne kadar bütçe freni çalışmaz), VPS ku
 | Aşama / Adım | Durum |
 |---|---|
 | Aşama 0 — İskelet · 1 — Profil editörü · 2 — Üretim akışı + SSE | ✅ |
-| Aşama 3 — **bütün dilimler** ✅ · yalnız geçmiş ekranı `F-022`'yi bekliyor | ⏳ |
+| Aşama 3 — **bütün dilimler** ✅ · açık `B-nnn` kalmadı | ✅ |
 
-Dokuz dilim (dökümü kendi `notes/`'larında). **Açık kalan tek madde `B-066`;**
-§ 31.6'nın gözden geçirme ekranı `B-067` ile tamamlandı — sorunlu bölümler
-otomatik açık, Onayla hep aktif. **Gerçek uca karşı denenmedi:** OAuth,
-Turnstile, içe aktarma, cover letter, bayat sözcükleme, hesap silme.
+Dokuz dilim (dökümü kendi `notes/`'larında). § 31.6'nın geçidi ve geçmiş
+ekranı indi; **geçmiş satırı etiketsiz** ve rol/şirket `F-022`'yi bekliyor.
+**Gerçek uca karşı denenmedi:** OAuth, Turnstile, içe aktarma, cover letter,
+bayat sözcükleme, hesap silme.
 
-**Test:** 633 birim · 48 e2e · **bundle** profil 252.3 / üretim 219.5 /
-onboarding 217.1 / ayarlar 228.5 KB (dinamik rotalar elle, 210-253 KB).
+**Test:** 643 birim · 51 e2e · **bundle** profil 252.5 / üretim 220.3 /
+geçmiş 213.8 / onboarding 217.3 / ayarlar 229.8 KB (dinamik rotalar elle).
 
 ## Açık kararlar (ikisini de ilgilendirir)
 
@@ -55,6 +55,6 @@ onboarding 217.1 / ayarlar 228.5 KB (dinamik rotalar elle, 210-253 KB).
 seçenek **(b)**, satır rol ve şirketle etiketlensin, ve mutlak kural 4'ün
 sınırı § 57'de açıkça çizilsin. `F-023` `ImportWarning.code`'un düz `string`
 olarak yayımlanmasını sorun ediyor: kapalı sözlük yayımlanmadan altı uyarı
-mesajı yazılamaz. **Geçmiş ekranı `F-022`'nin cevabından sonra kurulacak** —
-satır bugün kurulsa etiketsiz kurulurdu. **Yayın öncesi açık:** gizlilik
-politikasının sağlayıcı listesi, model seçimini bekliyor.
+mesajı yazılamaz. İkisi de **duran bir ekranın eksiğini** tarif ediyor, hiçbir
+şeyi bloke etmiyor. **Yayın öncesi açık:** gizlilik politikasının sağlayıcı
+listesi, model seçimini bekliyor.

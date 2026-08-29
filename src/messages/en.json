@@ -74,7 +74,22 @@
     "onboarding": "Import CV",
     "profile": "Profile",
     "generate": "Generate",
+    "history": "Your resumes",
     "settings": "Settings"
+  },
+  "History": {
+    "title": "Your resumes",
+    "anonymous": "Resumes are only listed here for accounts. Without one you build and download them exactly the same way — they just are not kept afterwards.",
+    "loading": "Fetching your resumes…",
+    "failed": "Your resumes could not be fetched. Try again in a moment.",
+    "empty": "Nothing here yet. Every resume you build will be listed here.",
+    "shown": "Showing {shown, number} of {total, plural, =1 {one resume} other {# resumes}}.",
+    "pages": "{count, plural, =1 {one page} other {# pages}}",
+    "withLetter": "with a covering letter",
+    "status": "{status, select, failed {This one did not finish.} superseded {Replaced by a later version.} other {}}",
+    "open": "Open the resume: {facts}",
+    "more": "Show older",
+    "loadingMore": "Fetching…"
   },
   "Onboarding": {
     "title": "Start from the CV you have",

@@ -63,6 +63,13 @@ export const generationKeys = {
    * fetch rows to get it.
    */
   count: () => [...generationKeys.all, 'count'] as const,
+
+  /**
+   * The paged history. One key for the whole list rather than one per page:
+   * the pages are a single infinite query, and a cursor in the key would make
+   * every page its own cache entry with nothing to hold them in order.
+   */
+  history: () => [...generationKeys.all, 'history'] as const,
   detail: (generationId: string) => [...generationKeys.all, generationId] as const,
 };
 

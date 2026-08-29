@@ -29,6 +29,11 @@ const ROUTES = [
   { href: '/onboarding', key: 'onboarding' },
   { href: '/profile', key: 'profile' },
   { href: '/generate', key: 'generate' },
+  // After generating, because that is when there is something to look back
+  // at. Listed for everyone rather than only for accounts: the screen says
+  // what an anonymous session gets instead, and a link that appears the
+  // moment somebody signs in is a feature they never learn exists.
+  { href: '/history', key: 'history' },
   // Last, and listed although most of it is empty: § 57.4 requires deleting
   // an account to be reachable, and a route only a URL reaches is not.
   { href: '/settings', key: 'settings' },

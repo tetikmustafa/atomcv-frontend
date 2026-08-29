@@ -103,6 +103,44 @@ mount'u yeniden kurmaya çevrildikten sonra ısırdı.
 yazmak `B-067`'nin faz çevirileri için verdiği gerekçenin aynısıyla yanlış
 olurdu — `F-023`.
 
+### Dilim 9 — geçmiş ekranı · 2026-08-30
+
+`B-066` kapandı; bununla backend'in bütün maddeleri bitti. `/history`
+listeliyor, nav'da duruyor (yalnız URL ile ulaşılan bir rota ulaşılabilir
+değil), ve `useInfiniteQuery` ile sayfalanıyor.
+
+**Cursor'ın yokluğu geçmişin sonu.** Boş bir `items` beklemek bir istek geç
+kalmak olurdu: okuyan kişi, yükleyecek şeyi kalmamış bir "daha göster"
+düğmesi görürdü. Değer opak ve hiçbir yerde ayrıştırılmıyor.
+
+**`total` hesabın sayısı, satır sayısı değil.** Testi 21 satırla kuruldu —
+üçle kurulsaydı iki sayı eşit olur ve "sayfadan sayan" bir hata geçerdi.
+
+**Anonim oturuma kilitli kapı yok**, ne aldığını söyleyen bir not var; ve kapı
+üç durumlu, çünkü oturum cevap vermeden önce iki cümlenin de yanlış olduğu bir
+an var.
+
+**Tamamlanmayan üretimin satırı bağlantı değil.** Arkasında açılacak belge
+yok; götüreceği tek ekran, etiketin zaten söylediği hatayı gösterirdi.
+
+**Satır etiketsiz, ve uydurulmadı.** Rol ve şirket `F-022`'de; geldiklerinde
+satıra eklenecekler. Bugün satırı adlandıran şey kendi olguları — bağlantının
+erişilebilir adı da o, çünkü ekran okuyucuya "aç, aç, aç" diye üç satır
+okumak bir liste değildir.
+
+**Ve duran bir kusur çıktı: next-intl'in hiçbir tarih formatı yok.**
+`format.dateTime(date, 'short')` `MISSING_FORMAT` logluyor ve bir yedeğe
+düşüyor — yani ekran çalışıyor **görünüyor** ve yalnız sunucu günlüğü itiraz
+ediyor. Geri bildirim panelinin grant tarihi bunu zaten yaşıyormuş, ve e2e
+çalıştırmasının çıktısı olmasa görülmezdi. `formats` artık
+`lib/i18n/formats.ts`'te, ve test sarmalayıcıları da aynı nesneyi geçiyor:
+testte bir türlü, tarayıcıda başka türlü biçimlenen bir tarih hiçbir şeyin
+yakalamayacağı bir fark.
+
+**Bütçe:** `/en/history` **213.8 / 45.5 KB** (yeni). Ötekiler formats ile
+birlikte kıpırdadı: profil 252.5, üretim 220.3, onboarding 217.3, ayarlar
+229.8, paylaşılan 168.4.
+
 ---
 
 ## Kasıtlı boşluklar — sorulmadan "düzeltilmez"
@@ -147,6 +185,8 @@ taşıyor; burada yalnız **nerede olduğu** var. Aşama 1'in profil değişmezl
   bu yüzden `*/*` gönderiyor, ve mock artık aynı reddi üretiyor.
 - **Türkçe metni shell argümanından geçirme.** Sondaları dosyaya yazıp `node`
   ile çalıştır.
+- **Adlandırılmış tarih formatları `lib/i18n/formats.ts`'te.** next-intl'in
+  yerleşiği yok; tanımsız bir ad hata vermiyor, logluyor ve yedeğe düşüyor.
 - **Profilin tamamı değiştiğinde `invalidateWholeProfile`**, asla
   `profileKeys.all`: o anahtar atom başına anahtarların da öneki ve onların
   arkasında uç yok. İki çağıranı var, aynı anlamda — cascade silme ve içe

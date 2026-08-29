@@ -9,7 +9,7 @@
  */
 
 import { useCallback, useRef } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   downloadGeneration,
   getGeneration,
@@ -162,5 +162,30 @@ export function useGenerationCount() {
     queryKey: generationKeys.count(),
     queryFn: () => listGenerations({ limit: 1 }),
     select: (page) => page.total ?? 0,
+  });
+}
+
+/**
+ * The history, page by page (`B-066`).
+ *
+ * An infinite query rather than a list of pages the screen stitches: the
+ * cursor belongs to the page it came with, and keeping the two together is
+ * what makes "ask for the next one" a single call with nothing to track.
+ *
+ * **The absence of `nextCursor` is the end of the history.** Waiting for an
+ * empty `items` would be one request too late — the reader would see a "load
+ * more" button that had nothing left to load. The value is opaque and nothing
+ * here reads it.
+ *
+ * Not gated on `canSaveHistory`: the screen decides whether to mount this,
+ * because an anonymous caller is owed a sentence rather than a request that
+ * comes back empty.
+ */
+export function useGenerationHistory() {
+  return useInfiniteQuery({
+    queryKey: generationKeys.history(),
+    queryFn: ({ pageParam }) => listGenerations(pageParam ? { cursor: pageParam } : {}),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
   });
 }

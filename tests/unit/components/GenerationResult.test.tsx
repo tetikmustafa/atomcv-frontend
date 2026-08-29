@@ -10,6 +10,7 @@ import { api } from '@/lib/api/client';
 import { submitFeedback } from '@/lib/api/endpoints/generations';
 import { FIT_REPORT, generations, rejectNextCoverLetter } from '@/mocks/generationFixture';
 import { server } from '@/mocks/node';
+import { formats } from '@/lib/i18n/formats';
 import en from '@/messages/en.json';
 import tr from '@/messages/tr.json';
 import type { components } from '@/types/api';
@@ -27,7 +28,11 @@ let client: QueryClient;
 function wrapperFor(locale: 'en' | 'tr') {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <NextIntlClientProvider locale={locale} messages={locale === 'en' ? en : tr}>
+      <NextIntlClientProvider
+        locale={locale}
+        messages={locale === 'en' ? en : tr}
+        formats={formats}
+      >
         <QueryClientProvider client={client}>{children}</QueryClientProvider>
       </NextIntlClientProvider>
     );
