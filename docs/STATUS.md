@@ -52,8 +52,7 @@ onboarding 217.1 / ayarlar 228.5 KB (dinamik rotalar elle, 210-253 KB).
 
 ## Sonraki senkronizasyon noktası
 
-**Her iki repoda da açık madde kalmadı**; sıra iki cevapta. **`F-017`**
-(katalog tablosu + `issues` sözlüğü) ve **`F-018`** — ikincisi § 31.6'nın
-gözden geçirme ekranının yarısını bloke ediyor, çünkü hangi bölümün sorunlu
-olduğunu söyleyen bir alan telde yok. **Yayın öncesi hâlâ açık:** gizlilik
-politikasının sağlayıcı listesi, model seçimini bekliyor.
+**Frontend'de açık `B-nnn` kalmadı**; sıra **beş `F-nnn` cevabında**
+(`F-017`-`F-021`). Aciliyet: `F-018` § 31.6'nın yarısını bloke ediyor,
+`F-020` `canSaveHistory`'yi karşılıksız bırakıyor. **Yayın öncesi hâlâ
+açık:** gizlilik politikasının sağlayıcı listesi, model seçimini bekliyor.

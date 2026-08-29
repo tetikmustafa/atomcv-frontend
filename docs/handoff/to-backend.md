@@ -11,6 +11,76 @@
 
 ## OPEN
 
+> **Dosya 100 satırın üstünde ve arşivlenecek bir şey yok:** `ACK` bölümü
+> zaten boş, beş madde de açık. Hepsi Aşama 3'ün kapanışında, kod yazılırken
+> çıktı — frontend'in bütün `B-nnn` maddeleri bitti ve sıra bu cevaplarda.
+>
+> Aciliyet sırası: **`F-018`** § 31.6'nın yarısını bloke ediyor, **`F-020`**
+> yayımlanmış bir yeteneği karşılıksız bırakıyor, **`F-019`** iki küçük
+> düzeltme, **`F-017`** bir tablo satırı, **`F-021`** üç soru.
+
+### F-021 · Üç küçük soru — hiçbiri bir şeyi bloke etmiyor
+**Since:** frontend, Aşama 3 dilim 4-6
+
+Sırasıyla cover letter, bayat varyant ve maddesiz entry dilimlerinde çıktı.
+Üçü de bugün çalışan bir şeyi bozmuyor; cevap gelirse bir satır düzeliyor.
+
+1. **`POST …/cover-letter/regenerate`'in `429`'u `Retry-After` göndermiyor.**
+   İki kota kapınız hem `resetsAt` hem başlık gönderiyor, bu uç yalnız
+   `resetsAt`. Dilim 2b'de `RATE_LIMITED` cümlesini başlıktan kurmaya geçtik,
+   o yüzden burada "birazdan tekrar dene" dalına düşüyor — doğru cümle.
+   Başlığı eklerseniz süre kendiliğinden yazılmaya başlar.
+2. **`PATCH …/variants/{id}` gövdesinde `{"userEdited": true}` hangi kodla
+   reddediliyor?** `B-052` reddedildiğini söylüyor, kodunu söylemiyor.
+   İstemci hiç göndermiyor; mock'umuz reddi kodluyor (kabul eden bir mock
+   istemciye çalıştığını öğretirdi) ve şekli tahmin ettik:
+   `400 VALIDATION_FAILED`, `fields: ["userEdited"]`.
+3. **`selection_state` telde yok.** `B-061` "neden bu satır çıktı" görünümü
+   için `headerOnlyEntries`'e bakmamızı söylüyor, ama `selection_state` hiçbir
+   yanıtta yayımlanmıyor. Öyle bir görünüm kurmadık; kuracak olursak
+   gerekecek.
+
+### F-020 · `canSaveHistory` var, geçmişi okuyacak uç yok
+**Since:** frontend, Aşama 3 dilim 7 · **Spec:** `spec/08-api.md` § 35.7
+
+**Neden:** `capabilities.canSaveHistory` yayımlanmış bir yetenek ve hesapta
+`true` — yani ürün kullanıcıya üretimlerinin saklandığını söylüyor. Ama
+`GET /api/v1/generations` yok: tekil `GET /generations/{id}` var, liste yok,
+sayı yok. Kullanıcı kendi geçmişine hiçbir yoldan bakamıyor, ve biz de
+yeteneği doğrulayan bir ekran çizemiyoruz.
+
+**Somut olarak nerede ısırdı:** hesap silme onayı (`B-057`) "neyin gittiğini
+saymalı" diyor. Bölüm ve madde sayısını profilden alıyoruz; **üretim sayısını
+veremiyoruz** ve tahmin de etmiyoruz — geri alınamayan tek yerde yanlış bir
+sayı, hiç sayı olmamasından kötü. Bugün cümle onları saymadan adlandırıyor.
+
+**İstenen:** `GET /api/v1/generations` (sayfalı olabilir), ya da en azından
+hesapta bir toplam. İlki `canSaveHistory`'yi anlamlı kılar; ikincisi yalnız
+silme ekranını doğrular.
+
+### F-019 · Geri bildirim: `rating` metin geliyor, ve geri okunamıyor
+**Since:** frontend, Aşama 3 dilim 7a · **Spec:** `spec/11-operations.md` § 48.4
+
+**İki şey, aynı uç.**
+
+**1. `FeedbackRequest.rating` üretilen tipte `"1" | "-1"` — metin.** Aynı
+şemada `format: int32` yazıyor, açıklama "1 for good, -1 for bad" diyor, ve
+`FeedbackResponse.rating` `number` olarak dönüyor. openapi-typescript bir
+tam sayı enum'unu ancak değerler şemada tırnaklıysa böyle basar. Biz **sayı**
+gönderiyoruz ve tipi `Omit` ile daraltıyoruz; bugün bir şey bozulmuyor, ama
+daraltma tam olarak "şemayı düzeltmeyi bekleyen kod" ve öyle işaretli.
+**İstenen:** `enum` değerleri tırnaksız olsun — `[1, -1]`.
+
+**2. Verilmiş bir yargı geri okunamıyor.** `GET /generations/{id}` geri
+bildirimi taşımıyor ve başka bir uç da vermiyor. Maddeniz "geri bildirimini
+gönderdin yerine **mevcut seçimi** göstermek doğru davranış" diyor — bunu
+yalnız oturum boyunca yapabiliyoruz; sayfa yenilenince ekran hangi başparmağın
+basıldığını bilmiyor ve boş başlıyor. Aynı şey `contentGrant` için de geçerli,
+ve orası daha önemli: **`accessedAt` gösterilmeli** diyorsunuz, ama izni
+verdikten bir gün sonra dönen kullanıcı ona bakamıyor.
+**İstenen:** `GET /generations/{id}` gövdesinde `feedback` (rating, category,
+`contentGrant`) — yorum hariç, o zaten geri yollanmıyor.
+
 ### F-018 · İçe aktarma işinin sonucu yalnız akışta var, ve uyarılar sayılabiliyor ama gösterilemiyor
 **Since:** frontend, Aşama 3 dilim 3a · **Spec:** `spec/07-subsystems.md` § 31.6, `spec/08-api.md`
 
