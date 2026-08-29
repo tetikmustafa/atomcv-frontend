@@ -15,7 +15,9 @@ import {
   getGeneration,
   regenerateCoverLetter,
   startGeneration,
+  submitFeedback,
   type CoverLetterRequest,
+  type FeedbackRequest,
   type Generation,
   type GenerationRequest,
 } from '@/lib/api/endpoints/generations';
@@ -113,5 +115,20 @@ export function useCoverLetter(generationId: string) {
         current ? { ...current, coverLetter: letter.coverLetter } : current,
       );
     },
+  });
+}
+
+/**
+ * The thumb, and anything the reader chose to add to it.
+ *
+ * Kept out of the generation's cache entry on purpose: the verdict is not
+ * part of the generation, and `GET /generations/{id}` does not carry it — so
+ * a reload starts with no selection shown, which is the honest state rather
+ * than a guess. The mutation's own result is what the screen reads while it
+ * is open.
+ */
+export function useFeedback(generationId: string) {
+  return useMutation({
+    mutationFn: (body: FeedbackRequest) => submitFeedback(generationId, body),
   });
 }

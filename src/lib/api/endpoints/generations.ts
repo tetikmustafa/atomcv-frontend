@@ -105,3 +105,40 @@ export function regenerateCoverLetter(generationId: string, body: CoverLetterReq
     body,
   );
 }
+
+/* ------------------------------- feedback ------------------------------ */
+
+/**
+ * A verdict on one generation (§ 48.4, `B-058`).
+ *
+ * **`rating` is narrowed, and it is a generator artefact rather than a
+ * disagreement with the contract.** The schema declares `format: int32` and
+ * documents "1 for good, -1 for bad"; `FeedbackResponse.rating` comes back as
+ * a `number`. openapi-typescript renders the request's enum as the string
+ * literals `"1" | "-1"` anyway, and sending a string for a field the server
+ * reads as an integer is the kind of thing that works until it does not.
+ *
+ * Derived rather than restated, so a real change to the shape still breaks
+ * the build here (`Omit` plus the narrowing, as `domain.ts` does).
+ */
+export type FeedbackRequest = Omit<Accepts<'feedback'>, 'rating'> & { rating: 1 | -1 };
+
+export type Feedback = Returns<'feedback'>;
+
+/**
+ * Records it, or changes it.
+ *
+ * **One verdict per generation.** Pressing the other thumb is changing your
+ * mind: no second row opens, the existing one is updated. So the screen shows
+ * the **current selection** rather than thanking anyone for having sent
+ * something — the reader can see what they said and say otherwise.
+ *
+ * `contentGranted` is § 48.4's consent and the one thing here that needs
+ * care: everything else in this product is diagnosed from shapes — character
+ * counts, line counts, render cost — and this is the single door to the
+ * content itself. Ticking it opens 48 hours; sending `false` **revokes**,
+ * which is why every call states it rather than leaving it out.
+ */
+export function submitFeedback(generationId: string, body: FeedbackRequest) {
+  return api.post<Feedback>(`/generations/${generationId}/feedback`, body);
+}

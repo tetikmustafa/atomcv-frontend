@@ -209,6 +209,41 @@ kuracaksak `headerOnlyEntries`'e bakmamızı söylüyor; şema `selection_state`
 hiç yayımlamıyor, yani böyle bir görünüm bugün kurulamaz. Kuracak bir şey
 yokken madde açmadık — kayıt `B-061`'in `resolved/` kaydında.
 
+### Dilim 7a — geri bildirim · 2026-08-29
+
+`B-058` kapandı.
+
+**Başparmak formun tamamı, ve sırası önemli.** Yargıyı sebebini sormadan kabul
+eden bir form daha çok ve daha iyi yargı topluyor; kategori ile yorum yalnız
+başparmak basıldıktan sonra açılıyor. Negatif kontrol bunu tutuyor: koşulu
+kaldırınca "başparmak basılmadan bir şey sormaz" testi kırılıyor.
+
+**Her istek yargının tamamını taşıyor**, çünkü `contentGranted` bir **anahtar**:
+`false` göndermek izni **geri alıyor**. İzin açıldıktan sonra basılan bir
+başparmak, alanı atlarsa pencereyi sessizce kapatırdı. Negatif kontrol: sabit
+`false` yazınca "fikrini değiştirince izin açık kalıyor" testi kırılıyor.
+
+**`accessedAt` gösteriliyor, ve sebebi bu.** Denetlenemeyen bir onay kutudan
+ibaret. Alan biri gerçekten bakana kadar `null`, yani ekranın genellikle
+yazacağı cümle "izin açık, henüz kimse bakmadı".
+
+**Kırk sekiz saat ilk evetten başlıyor** ve ikinci bir evet pencereyi ileri
+itmiyor. Bunu **ekran üzerinden gösterilemiyor** — iki isteğin `expiresAt`'ini
+karşılaştırmak gerekiyor — o yüzden uca doğrudan yazılmış iki test var.
+İlk turda bu iddiayı hiçbir şey tutmuyordu; negatif kontrol yakalamayınca
+eklendi.
+
+**`rating` üretilen tipte `"1" | "-1"`, yani metin.** Şema `format: int32`
+diyor, açıklama "1 for good, -1 for bad" diyor, ve `FeedbackResponse.rating`
+sayı olarak dönüyor — openapi-typescript'in enum'u metin literalleri olarak
+basması. `Omit` + daraltma ile **sayı** gönderiyoruz; testi de tipi değil
+gönderilen değeri denetliyor. Backend'e sorulacaklar listesinde.
+
+**Geri bildirim için `GET` yok.** Sayfa yenilenince ekran boş başlıyor —
+tahmin etmektense doğru olan bu. Bu da listede.
+
+**Bütçe:** sonuç ekranı 215.8 → **216.3** KB (dinamik, elle).
+
 ---
 
 ## Kasıtlı boşluklar — sorulmadan "düzeltilmez"

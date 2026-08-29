@@ -16,6 +16,7 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { CoverLetter } from '@/components/generation/CoverLetter';
+import { Feedback } from '@/components/generation/Feedback';
 import { FitReport } from '@/components/generation/FitReport';
 import { Button } from '@/components/ui/button';
 import { Link } from '@/lib/i18n/navigation';
@@ -121,6 +122,12 @@ export function GenerationResult({ generationId }: { generationId: string }) {
         the reader can act on rather than an error to report.
       */}
       <CoverLetter generationId={generationId} letter={data.coverLetter} />
+
+      {/*
+        Last, and after the letter: the verdict is about what the reader has
+        by then actually looked at.
+      */}
+      <Feedback generationId={generationId} />
     </div>
   );
 }

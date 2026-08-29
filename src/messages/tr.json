@@ -381,7 +381,28 @@
     },
     "coverLetterNote": "Bu işveren hakkında bildiklerin",
     "coverLetterNotePlaceholder": "Geçen yıl zamanlayıcılarını açık kaynak yaptılar.",
-    "coverLetterNoteHint": "Yazdığın gibi kullanılıyor. Ondan bir şey çıkarılmıyor, hiçbir yerde aranmıyor."
+    "coverLetterNoteHint": "Yazdığın gibi kullanılıyor. Ondan bir şey çıkarılmıyor, hiçbir yerde aranmıyor.",
+    "feedbackTitle": "Bu işine yaradı mı?",
+    "feedbackGood": "Evet",
+    "feedbackBad": "Pek değil",
+    "feedbackRecorded": "Cevabın kaydedildi.",
+    "feedbackMore": "Daha fazlasını söyle",
+    "feedbackCategory": "Konu neydi?",
+    "feedbackCategoryNone": "Belirli bir kısım değil",
+    "feedbackCategories": {
+      "selection": "Neyin seçildiği",
+      "writing": "İfadeler",
+      "format": "Sayfa düzeni",
+      "density": "Sayfaya ne kadarının sığdığı",
+      "other": "Başka bir şey"
+    },
+    "feedbackComment": "Söylenecek başka bir şey",
+    "feedbackCommentHint": "Saklanıyor ve hiçbir kayda yazılmıyor. Burada sana geri gösterilmiyor, çünkü zaten sende.",
+    "feedbackGrant": "Neyin ters gittiğini görebilmemiz için bu CV'yi 48 saat boyunca okumamıza izin ver. Baktığımız başka her şey sayı ve ölçüm, senin kelimelerin değil.",
+    "feedbackGrantUnread": "{until} tarihine kadar izinli. Henüz kimse bakmadı.",
+    "feedbackGrantRead": "{at, date, short} {at, time, short} itibarıyla okundu.",
+    "feedbackSend": "Gönder",
+    "feedbackSending": "Gönderiliyor…"
   },
   "Fit": {
     "heading": "İlanla ne kadar örtüşüyor",

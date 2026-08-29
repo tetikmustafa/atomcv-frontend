@@ -381,7 +381,28 @@
     },
     "coverLetterNote": "Anything you know about this employer",
     "coverLetterNotePlaceholder": "They open-sourced their scheduler last year.",
-    "coverLetterNoteHint": "Used as you wrote it. Nothing is inferred from it, and nothing is looked up."
+    "coverLetterNoteHint": "Used as you wrote it. Nothing is inferred from it, and nothing is looked up.",
+    "feedbackTitle": "Was this any good?",
+    "feedbackGood": "Yes",
+    "feedbackBad": "Not really",
+    "feedbackRecorded": "Your answer was recorded.",
+    "feedbackMore": "Say more",
+    "feedbackCategory": "What was it about?",
+    "feedbackCategoryNone": "No particular part",
+    "feedbackCategories": {
+      "selection": "What was picked",
+      "writing": "The wording",
+      "format": "The layout",
+      "density": "How much fit on the page",
+      "other": "Something else"
+    },
+    "feedbackComment": "Anything else worth saying",
+    "feedbackCommentHint": "Kept and never written to a log. It is not read back to you here because you already have it.",
+    "feedbackGrant": "Let us read this resume for 48 hours so we can see what went wrong. Everything else we look at is counts and measurements, never your words.",
+    "feedbackGrantUnread": "Allowed until {until}. Nobody has looked yet.",
+    "feedbackGrantRead": "Read on {at, date, short} at {at, time, short}.",
+    "feedbackSend": "Send",
+    "feedbackSending": "Sending…"
   },
   "Fit": {
     "heading": "How this matches the posting",

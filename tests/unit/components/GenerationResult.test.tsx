@@ -7,6 +7,7 @@ import { axe } from 'jest-axe';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GenerationResult } from '@/components/generation/GenerationResult';
 import { api } from '@/lib/api/client';
+import { submitFeedback } from '@/lib/api/endpoints/generations';
 import { FIT_REPORT, generations, rejectNextCoverLetter } from '@/mocks/generationFixture';
 import { server } from '@/mocks/node';
 import en from '@/messages/en.json';
@@ -341,5 +342,146 @@ describe('the covering letter', () => {
     const panel = await screen.findByRole('alert');
     expect(panel).toHaveTextContent('too many attempts');
     expect(panel).toHaveTextContent('try again shortly');
+  });
+});
+
+describe('the verdict on a generation', () => {
+  /**
+   * § 48.4: a form that accepts the judgement before asking why collects more
+   * of it and better of it. So the thumb is the whole required form, and the
+   * rest appears only once it has been given.
+   */
+  it('asks nothing until the thumb has been pressed', async () => {
+    const generationId = await generate();
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    expect(await screen.findByRole('button', { name: en.Result.feedbackGood })).toBeInTheDocument();
+    expect(screen.queryByText(en.Result.feedbackMore)).not.toBeInTheDocument();
+  });
+
+  /**
+   * One verdict per generation: the other thumb is a change of mind, not a
+   * second row. So what is drawn is the current **selection**, which somebody
+   * can look at and disagree with — not a thank-you.
+   */
+  it('shows which answer is standing, and lets it be changed', async () => {
+    const generationId = await generate();
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    const yes = await screen.findByRole('button', { name: en.Result.feedbackGood });
+    await userEvent.click(yes);
+
+    await waitFor(() => expect(yes).toHaveAttribute('aria-pressed', 'true'));
+
+    const no = screen.getByRole('button', { name: en.Result.feedbackBad });
+    await userEvent.click(no);
+
+    await waitFor(() => expect(no).toHaveAttribute('aria-pressed', 'true'));
+    expect(yes).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  /**
+   * `contentGranted` is the one door to the content itself, and it is a
+   * **switch**: `false` revokes. So every request states it, and a thumb
+   * pressed after the window was opened must not close it by omission.
+   */
+  it('keeps the permission open when the verdict changes afterwards', async () => {
+    const bodies: Promise<string>[] = [];
+    const capture = ({ request }: { request: Request }) => {
+      if (request.url.endsWith('/feedback')) bodies.push(request.clone().text());
+    };
+    server.events.on('request:start', capture);
+
+    try {
+      const generationId = await generate();
+      render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+      await userEvent.click(await screen.findByRole('button', { name: en.Result.feedbackBad }));
+      await userEvent.click(screen.getByText(en.Result.feedbackMore));
+      await userEvent.click(screen.getByRole('checkbox'));
+
+      await waitFor(() => expect(bodies).toHaveLength(2));
+
+      await userEvent.click(screen.getByRole('button', { name: en.Result.feedbackGood }));
+      await waitFor(() => expect(bodies).toHaveLength(3));
+
+      expect(JSON.parse(await bodies[0]!)).toEqual({ rating: -1, contentGranted: false });
+      expect(JSON.parse(await bodies[1]!)).toEqual({ rating: -1, contentGranted: true });
+      // The third is the changed verdict, and the permission rides along.
+      expect(JSON.parse(await bodies[2]!)).toEqual({ rating: 1, contentGranted: true });
+    } finally {
+      server.events.removeListener('request:start', capture);
+    }
+  });
+
+  /**
+   * A permission nobody can check up on is a checkbox. `accessedAt` is what
+   * makes it something else, and it is `null` until somebody actually looks —
+   * which is the state the sentence usually has to describe.
+   */
+  it('says the permission is open and that nobody has used it', async () => {
+    const generationId = await generate();
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    await userEvent.click(await screen.findByRole('button', { name: en.Result.feedbackGood }));
+    await userEvent.click(screen.getByText(en.Result.feedbackMore));
+    await userEvent.click(screen.getByRole('checkbox'));
+
+    expect(await screen.findByTestId('grant-status')).toHaveTextContent('Nobody has looked yet');
+  });
+
+  /**
+   * `rating` is `1 | -1` as a **number**. The generated request type renders
+   * the enum as the string literals `"1" | "-1"`, and a string reaching a
+   * field the server reads as an integer is the kind of thing that works
+   * until it does not.
+   */
+  it('sends the rating as a number', async () => {
+    const bodies: Promise<string>[] = [];
+    const capture = ({ request }: { request: Request }) => {
+      if (request.url.endsWith('/feedback')) bodies.push(request.clone().text());
+    };
+    server.events.on('request:start', capture);
+
+    try {
+      const generationId = await generate();
+      render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+      await userEvent.click(await screen.findByRole('button', { name: en.Result.feedbackGood }));
+      await waitFor(() => expect(bodies).toHaveLength(1));
+
+      expect(typeof (JSON.parse(await bodies[0]!) as { rating: unknown }).rating).toBe('number');
+    } finally {
+      server.events.removeListener('request:start', capture);
+    }
+  });
+});
+
+/**
+ * § 48.4: forty-eight hours **from the first yes**. A second yes does not push
+ * the window along, which is the half of the rule that only a second request
+ * can show — and the reason the endpoint is tested here rather than only
+ * through the screen.
+ */
+describe('the diagnostic window', () => {
+  it('runs from the first consent, not from the latest one', async () => {
+    const generationId = await generate();
+
+    const first = await submitFeedback(generationId, { rating: -1, contentGranted: true });
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const second = await submitFeedback(generationId, { rating: 1, contentGranted: true });
+
+    expect(first.contentGrant?.expiresAt).toBeTruthy();
+    expect(second.contentGrant?.expiresAt).toBe(first.contentGrant?.expiresAt);
+  });
+
+  /** And `false` closes it outright rather than leaving it to lapse. */
+  it('closes when the permission is taken back', async () => {
+    const generationId = await generate();
+
+    await submitFeedback(generationId, { rating: -1, contentGranted: true });
+    const revoked = await submitFeedback(generationId, { rating: -1, contentGranted: false });
+
+    expect(revoked.contentGrant).toBeUndefined();
   });
 });

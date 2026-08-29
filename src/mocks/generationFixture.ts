@@ -96,6 +96,17 @@ export type GenerationFixture = {
   coverLetters: Record<string, { text: string; style: string }>;
   /** § 34: ten letters an hour, counted across all generations. */
   coverLetterAttempts: number;
+  /**
+   * The one verdict each generation has (§ 48.4).
+   *
+   * Keyed by generation and **overwritten**, because that is the rule: the
+   * other thumb is a change of mind, not a second row. `grantedAt` is when the
+   * window opened, and it does not move when consent is given twice.
+   */
+  feedback: Record<
+    string,
+    { rating: number; category?: string; grantedAt?: number; accessedAt?: number }
+  >;
   /** Makes the next letter come back refused. Reset once claimed. */
   rejectCoverLetter: boolean;
   /**
@@ -197,6 +208,7 @@ function initial(): GenerationFixture {
     nextFailure: undefined,
     coverLetters: {},
     coverLetterAttempts: 0,
+    feedback: {},
     rejectCoverLetter: false,
     usage: { generation: 0, profile_extract: 0 },
   };

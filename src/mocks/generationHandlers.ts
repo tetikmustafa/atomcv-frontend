@@ -150,6 +150,9 @@ function onePagePdf(): Uint8Array {
   return new TextEncoder().encode(body);
 }
 
+/** § 48.4: the diagnostic window, from the first yes. */
+const GRANT_HOURS = 48;
+
 /** An hour from now — § 34 counts letters by the hour, not by the day. */
 function inAnHour(): string {
   return new Date(Date.now() + 60 * 60 * 1000).toISOString();
@@ -449,6 +452,70 @@ export const generationHandlers = [
       // rather than an error: a letter that could not be written does not
       // fail the generation (`B-056`).
       ...(generations.coverLetters[id] ? { coverLetter: generations.coverLetters[id].text } : {}),
+    });
+  }),
+
+  /**
+   * One verdict per generation (§ 48.4, `B-058`).
+   *
+   * Three behaviours, and none of them is a payload: the other thumb
+   * **overwrites** rather than opening a second row, `contentGranted: false`
+   * **revokes**, and a second yes does not push the window along — the
+   * forty-eight hours run from the first one.
+   *
+   * `accessedAt` stays `null`, because nobody has looked. That is the field
+   * the screen's sentence is built from, and a mock that filled it in would
+   * hide the only state it usually has.
+   */
+  http.post('*/api/v1/generations/:generationId/feedback', async ({ params, request }) => {
+    const id = String(params.generationId);
+    const instance = `/api/v1/generations/${id}/feedback`;
+
+    if (!generations.jobs.some((job) => job.generationId === id)) return notFound(instance);
+
+    const body = (await request.json()) as {
+      rating?: unknown;
+      category?: string;
+      contentGranted?: boolean;
+    };
+
+    // 1 or -1, and nothing else. The generated request type says `"1" | "-1"`
+    // — a string — which is why this checks the number the endpoint documents
+    // rather than trusting either.
+    if (body.rating !== 1 && body.rating !== -1) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['rating'] }),
+        { status: 400 },
+      );
+    }
+
+    const existing = generations.feedback[id];
+    const granted = body.contentGranted === true;
+
+    const record = {
+      rating: body.rating,
+      ...(body.category ? { category: body.category } : {}),
+      // Kept from the first yes. A second one does not move the window, and
+      // `false` closes it outright.
+      ...(granted ? { grantedAt: existing?.grantedAt ?? Date.now() } : {}),
+    };
+
+    generations.feedback[id] = record;
+
+    return HttpResponse.json<Schemas['FeedbackResponse']>({
+      generationId: id,
+      rating: record.rating,
+      ...(record.category ? { category: record.category } : {}),
+      ...(record.grantedAt
+        ? {
+            contentGrant: {
+              open: true,
+              expiresAt: new Date(record.grantedAt + GRANT_HOURS * 60 * 60 * 1000).toISOString(),
+            },
+          }
+        : {}),
+      // The comment is never echoed (rule 4's reason: the person wrote it and
+      // has it). Nothing here stores it either.
     });
   }),
 
