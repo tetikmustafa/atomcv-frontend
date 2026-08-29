@@ -733,3 +733,35 @@ söylüyor, ama şema `selection_state`'i hiç yayımlamıyor —
 `GenerationResponse` onu taşımıyor ve başka bir uç da vermiyor. Böyle bir
 görünüm kurmadığımız için **açık madde yapmadık**; kuracak olursak
 yayımlanması gerekecek. Kayıt burada dursun.
+
+---
+
+### B-058 · Geri bildirim — bir başparmak, ve 48 saatlik bir izin
+**Kapatıldı:** 2026-08-29, frontend dilim 7a · **Spec:** `spec/11-operations.md` § 48.4
+
+Başparmak zorunlu, kategori/yorum/`contentGranted` opsiyonel; üretim başına tek
+yargı; `contentGrant` yanıtta dönüyor ve `accessedAt` gösterilmeli.
+
+**Frontend:** Sonuç ekranının altında. **Sıra sizin dediğiniz gibi:** kategori,
+yorum ve izin kutusu ancak başparmağa basıldıktan sonra açılıyor. Ekran
+"gönderdin" demiyor, **duran seçimi** gösteriyor (`aria-pressed`), ve öbür
+başparmak onu değiştiriyor.
+
+**Her istek yargının tamamını taşıyor**, çünkü `contentGranted` bir anahtar:
+izin açıldıktan sonra basılan bir başparmak alanı atlarsa pencereyi sessizce
+kapatırdı.
+
+**`accessedAt` çizili.** Cümle o alandan kuruluyor: "izin açık, henüz kimse
+bakmadı" ya da "şu tarihte okundu".
+
+**İki şey soracağız, ikisi de kırıcı değil:**
+
+1. **`rating` şemada metin literalleri olarak geliyor.** `FeedbackRequest.rating`
+   üretilen tipte `"1" | "-1"`; `format: int32` ve açıklama tam sayı diyor, ve
+   `FeedbackResponse.rating` zaten `number`. Biz **sayı** gönderiyoruz ve tipi
+   türetip daraltıyoruz. Şemadaki `enum` değerleri tırnaklıysa düzeltilmesi
+   bizde bir satır tasarruf ettirir; bugün bir şey bozmuyor.
+2. **Geri bildirim okunamıyor.** `GET /generations/{id}` yargıyı taşımıyor ve
+   başka bir uç da vermiyor, yani sayfa yenilenince ekran hangi başparmağın
+   basıldığını bilmiyor. Bugün boş başlıyor — tahmin etmektense doğrusu bu —
+   ama "mevcut seçimi göster" kuralı ancak oturum boyunca tutulabiliyor.
