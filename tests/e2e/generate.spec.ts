@@ -159,3 +159,36 @@ test.describe('generating a resume', () => {
     expect((await download).suggestedFilename()).toMatch(/\.pdf$/);
   });
 });
+
+test.describe('the covering letter', () => {
+  /**
+   * § 34 keeps it off the main path — a second LLM call, and most people want
+   * a resume — so it is a control on the form rather than something that
+   * happens anyway.
+   */
+  test('is written alongside the resume when it is asked for', async ({ page }) => {
+    await openGenerate(page);
+
+    await page.getByLabel('Job posting').fill(REAL_POSTING);
+    await page.getByRole('switch', { name: 'Write a covering letter too' }).click();
+    await page.getByRole('button', { name: 'Generate', exact: true }).click();
+
+    await expect(page).toHaveURL(/\/en\/generations\/gen-1$/, { timeout: 15_000 });
+    await expect(page.getByTestId('cover-letter')).toContainText('Dear hiring team');
+  });
+
+  test('can be asked for afterwards, and replaced by another draft', async ({ page }) => {
+    await openGenerate(page);
+
+    await page.getByRole('button', { name: 'Generate', exact: true }).click();
+    await expect(page).toHaveURL(/\/en\/generations\/gen-1$/, { timeout: 15_000 });
+
+    await expect(page.getByText('No letter has been written')).toBeVisible();
+    await page.getByRole('button', { name: 'Write one' }).click();
+    await expect(page.getByTestId('cover-letter')).toBeVisible();
+
+    // Each press replaces the stored letter (§ 34) — one letter, not three.
+    await page.getByRole('button', { name: 'Try another draft' }).click();
+    await expect(page.getByTestId('cover-letter')).toHaveCount(1);
+  });
+});

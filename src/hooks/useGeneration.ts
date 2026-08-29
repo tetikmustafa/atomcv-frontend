@@ -13,7 +13,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   downloadGeneration,
   getGeneration,
+  regenerateCoverLetter,
   startGeneration,
+  type CoverLetterRequest,
   type Generation,
   type GenerationRequest,
 } from '@/lib/api/endpoints/generations';
@@ -87,5 +89,29 @@ export function useGenerationResult(generationId: string) {
   return useQuery<Generation>({
     queryKey: generationKeys.detail(generationId),
     queryFn: () => getGeneration(generationId),
+  });
+}
+
+/**
+ * Asks for a covering letter, or for another draft of one.
+ *
+ * **Written into the cache rather than refetched.** The response carries the
+ * letter itself and the server replaced the stored one, so a refetch would
+ * ask for something already in hand.
+ *
+ * This is not the case the "edits on the result screen are not local state"
+ * rule is about: that rule exists because editing the CV re-runs the pipeline
+ * from Phase C and changes the whole result. A letter changes the letter.
+ */
+export function useCoverLetter(generationId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: CoverLetterRequest) => regenerateCoverLetter(generationId, body),
+    onSuccess: (letter) => {
+      queryClient.setQueryData<Generation>(generationKeys.detail(generationId), (current) =>
+        current ? { ...current, coverLetter: letter.coverLetter } : current,
+      );
+    },
   });
 }

@@ -79,3 +79,29 @@ export function getGeneration(generationId: string) {
 export function downloadGeneration(generationId: string) {
   return api.getFile(`/generations/${generationId}/download`);
 }
+
+/**
+ * The covering letter for a generation that already exists (§ 34, `B-056`).
+ *
+ * **Off the main path on purpose.** It is a second LLM call and most people
+ * want a CV, so `POST /generations` defaults `coverLetter` to `false` and
+ * this is how it is asked for afterwards — or asked for again.
+ *
+ * **Each press replaces the stored letter.** Trying another draft leaves one
+ * letter, not three; the screen has nothing to reconcile and there is no
+ * history to render.
+ *
+ * **It can refuse, and that refusal is not a fault.** A letter has no
+ * original to fall back on — in the CV, a rejected sentence is replaced by
+ * the person's own wording, and here there is nothing to print instead — so a
+ * draft that overstates is thrown away and reported as
+ * `422 COVER_LETTER_REJECTED`. Another press is a different draft.
+ */
+export type CoverLetterRequest = Accepts<'coverLetter'>;
+
+export function regenerateCoverLetter(generationId: string, body: CoverLetterRequest) {
+  return api.post<Returns<'coverLetter'>>(
+    `/generations/${generationId}/cover-letter/regenerate`,
+    body,
+  );
+}

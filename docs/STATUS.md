@@ -3,8 +3,7 @@
 > İki repo da bu dosyayı okur ve kendi satırlarını günceller. **Kural: 60 satırı geçmez.**
 > Ayrıntılı inşa kayıtları repo-yerel `notes/current.md`'dedir, buraya taşınmaz.
 
-**2026-08-29** · **Frontend Aşama 3 — dilim 0, 1, 2 (giriş) ve 3a (yükleme) indi**
-· frontend'de açık: **altı madde** (`B-052`, `B-056`–`B-059`, `B-061`)
+**2026-08-29** · **Frontend Aşama 3 — dilim 0-4 indi** · açık: **beş madde**
 
 ---
 
@@ -31,17 +30,19 @@ entry (2026-08-28, § 20.2), frontend'e düşeni `B-061`.
 | Aşama / Adım | Durum |
 |---|---|
 | Aşama 0 — İskelet · 1 — Profil editörü · 2 — Üretim akışı + SSE | ✅ |
-| Aşama 3 — **dilim 0 · 1 · 2 · 3a** ✅ · 3b gözden geçirme `F-018`'i bekliyor | ⏳ |
+| Aşama 3 — **dilim 0 · 1 · 2 · 3a · 4** ✅ · 3b gözden geçirme `F-018`'i bekliyor | ⏳ |
 
 **Dilim 0** `gen:api` + CSRF + katalog · **dilim 1** oturum, yetenek kapısı,
 kayan TTL · **dilim 2** giriş: `/login`, `/verify`, `/auth/complete`,
 `/auth/error`, Turnstile, `Retry-After`'dan kurulan 429, çıkış düğmesi ·
 **dilim 3a** CV yükleme: multipart, beş senkron ret, `409` + iki resolution,
-§ 31.6'nın **atlanamaz** geçidi. On iki madde `ACK`; sırada **dilim 4**
-(`B-056`). **OAuth, Turnstile ve içe aktarma gerçek uca karşı denenmedi.**
+§ 31.6'nın **atlanamaz** geçidi · **dilim 4** cover letter: bir anahtar, üslup
+seçimi, ve hata gibi çizilmeyen bir ret. On üç madde `ACK`; kalan beşi
+`B-052`, `B-057`-`B-059`, `B-061`. **Gerçek uca karşı denenmedi:** OAuth,
+Turnstile, içe aktarma, cover letter.
 
-**Test:** 576 birim · 42 e2e · **bundle** profil 251.7 / üretim 215.9 /
-onboarding 217.0 KB (dinamik rotalar betiğin dışında — elle 210-252 KB).
+**Test:** 586 birim · 44 e2e · **bundle** profil 252.0 / üretim 219.4 /
+onboarding 217.0 KB (dinamik rotalar betiğin dışında — elle 210-253 KB).
 
 ## Açık kararlar (ikisini de ilgilendirir)
 
@@ -52,7 +53,7 @@ onboarding 217.0 KB (dinamik rotalar betiğin dışında — elle 210-252 KB).
 
 ## Sonraki senkronizasyon noktası
 
-**Frontend kalan altı maddeyi dilim dilim kapatıyor**; backend'in MVP payı
+**Frontend kalan beş maddeyi dilim dilim kapatıyor**; backend'in MVP payı
 bitti. **`B-059` yayın öncesi zorunlu** ve kapanış diliminde. Backend'den
 beklenen iki madde: **`F-017`** (katalog tablosu) ve **`F-018`** — ikincisi
 § 31.6'nın gözden geçirme ekranının yarısını bloke ediyor, çünkü hangi

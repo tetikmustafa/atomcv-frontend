@@ -13,12 +13,12 @@
 ## OPEN
 
 > **Dosya hâlâ 100 satır sınırının üstünde, ve sebebi arşivleme gecikmesi
-> değil:** altı madde açık. Sınır bir okunabilirlik kuralı; onu delen şey
+> değil:** beş madde açık. Sınır bir okunabilirlik kuralı; onu delen şey
 > burada bir belge sorunu değil, **bir koordinasyon sorunu** — ve mekanizma
 > 2026-08-29'da çalışmaya başladı: dilim 0 dördünü, dilim 1 birini, dilim 2a
-> birini, dilim 2b üçünü, dilim 3a üçünü kapattı; on ikisi
-> `resolved/to-frontend-2026-08.md`'ye taşındı ve dosya 496'dan 244'e indi.
-> Kalan altısı aşağıda, dilim dilim kapanacak.
+> birini, dilim 2b üçünü, dilim 3a üçünü, dilim 4 birini kapattı; on üçü
+> `resolved/to-frontend-2026-08.md`'ye taşındı ve dosya 496'dan 212'ye indi.
+> Kalan beşi aşağıda, dilim dilim kapanacak.
 >
 > Gezinebilir olsun diye aşağıda bir dizin var. Gerekçelerin kalıcı olanı
 > `spec/`'e işlendi; burada yalnız *ne yapman lazım* duruyor.
@@ -28,7 +28,6 @@
 | ID | Konu | Ne yapman lazım, tek cümlede |
 |---|---|---|
 | `B-052` | Bayat varyant | Bir sözcüklemeyi düzenlemek ötekileri bayatlatıyor; uyarıyı siz gösterin. |
-| `B-056` | Cover letter | Bir bayrak, bir uç, ve reddedilebilir. |
 | `B-057` | Hesap silme | `DELETE /api/v1/account`. |
 | `B-058` | Geri bildirim | Bir başparmak ve 48 saatlik bir içerik izni. |
 | `B-059` | Gizlilik Politikası | Alt işleyen listesine Resend + AWS SES (Tokyo). **Yayın öncesi zorunlu.** |
@@ -67,38 +66,6 @@ satır bayat kalır. Bu doğru davranış, eksik değil.
 **Yenileme başarısız olabilir** ve bu da sessiz: iş `TRANSLATION_FAILED` (422,
 parametresiz) ile düşerse sözcükleme **bayat kalır**. Ekranınız zaten doğru
 şeyi gösteriyor olur; ayrıca bir hata bildirimi göstermeyin.
-
-### B-056 · Cover letter telde — bir bayrak, bir uç, ve reddedilebilir
-**Since:** commit <sha> · Adım 3.8 · **Spec:** `spec/07-subsystems.md` § 34
-
-**İki yol var ve ikisi de sizde.**
-
-1. `POST /api/v1/generations` gövdesine **`"coverLetter": true`** — CV ile
-   birlikte yazılır. **Varsayılan `false`**, çünkü ikinci bir LLM çağrısı.
-2. **`POST /api/v1/generations/{id}/cover-letter/regenerate`** — sonradan, ya da
-   yeniden. Gövde tamamen opsiyonel:
-   `{"style": "default|shorter|more_formal", "companyNote": "..."}`.
-   Boş gövde (`{}`) geçerli bir istek.
-
-Yanıt: `{"generationId", "coverLetter", "style"}`. `GET /generations/{id}` de
-artık **`coverLetter`** alanı taşıyor (yazılmadıysa alan yok). **Düz metin**,
-paragraflar arası boş satırla — § 34.7 belge üretmiyor, çünkü mektup bir forma
-ya da e-postaya yapıştırılıyor.
-
-**Yeni ve önemli: bu uç reddedebilir.** `422 COVER_LETTER_REJECTED`,
-`params.issues` bir dizi (`unsupported_claim`, `number_invented`,
-`experience_overstated`, `wrong_company`, `length_out_of_range`, `cliche`),
-çözüm eylemi `retry`. Sebebi: mektubun arkasında **orijinal yok** — CV'de
-reddedilen bir cümlenin yerine kişinin kendi cümlesi basılıyor, mektupta
-basılacak bir şey yok. **Bunu bir hata ekranı gibi göstermeyin**; "bu taslak
-denetimden geçmedi, tekrar dene" doğru cümle. `issues` kullanıcıya ne olduğunu
-söylemek için orada.
-
-`429 RATE_LIMITED` da mümkün: saatte on mektup. `params.resetsAt` var.
-
-**Üretim sırasında istenen mektup CV'yi düşürmez.** `coverLetter: true` ile
-üretilen bir CV'de mektup yazılamadıysa iş yine `completed` oluyor ve
-`GET /generations/{id}` mektup alanını taşımıyor — düğmeyle tekrar istenebilir.
 
 ### B-057 · Hesap silme telde — `DELETE /api/v1/account`
 **Since:** commit <sha> · Adım 3.9 · **Spec:** `spec/16-cost-legal.md` § 57.4
@@ -212,8 +179,9 @@ maliyetini ödemez. Sayfa sınırı garantisi aynen duruyor.
 
 _(`B-037`…`B-043`, dilim 0'ın kapattığı `B-044`, `B-045`, `B-047`, `B-055`,
 dilim 1'in kapattığı `B-046`, dilim 2a'nın kapattığı `B-048`, dilim 2b'nin
-kapattığı `B-049`, `B-050`, `B-054` ve dilim 3a'nın kapattığı `B-051`,
-`B-053`, `B-060` — hepsi `resolved/to-frontend-2026-08.md`'de.)_
+kapattığı `B-049`, `B-050`, `B-054`, dilim 3a'nın kapattığı `B-051`, `B-053`,
+`B-060` ve dilim 4'ün kapattığı `B-056` — hepsi
+`resolved/to-frontend-2026-08.md`'de.)_
 
 **`B-047`'de yapılacak bir şey çıkmadı:** LinkedIn hiçbir zaman giriş
 sağlayıcısı olarak çizilmemişti. Silinmedi, hiç yoktu — madde yine de kapalı.

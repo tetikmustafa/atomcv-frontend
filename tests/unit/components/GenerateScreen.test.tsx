@@ -271,6 +271,31 @@ describe('the two ways the server says not now', () => {
   });
 });
 
+describe('the covering letter', () => {
+  /**
+   * Off by default, like the server's own default (`B-056`): a second LLM
+   * call, and most people want a resume. Stated in the body either way, so a
+   * request that did not ask for one says so.
+   */
+  it('is not asked for unless the reader asks', async () => {
+    await submitPosting();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(await sent(0)).toMatchObject({ coverLetter: false });
+  });
+
+  it('is asked for when the control is on', async () => {
+    const user = userEvent.setup();
+    render(<GenerateScreen />, { wrapper });
+
+    await user.click(screen.getByRole('switch', { name: 'Write a covering letter too' }));
+    await user.click(screen.getByRole('button', { name: 'Generate' }));
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(await sent(0)).toMatchObject({ coverLetter: true });
+  });
+});
+
 describe('accessibility', () => {
   it('has no violations, as a form or as a running job', async () => {
     const { axe } = await import('jest-axe');

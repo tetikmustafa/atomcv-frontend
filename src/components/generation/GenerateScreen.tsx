@@ -20,6 +20,7 @@ import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { JobProgress } from '@/components/generation/JobProgress';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useStartGeneration } from '@/hooks/useGeneration';
 import { useRouter } from '@/lib/i18n/navigation';
@@ -61,6 +62,15 @@ export function GenerateScreen() {
   const router = useRouter();
 
   const [posting, setPosting] = useState('');
+  /**
+   * Off, like the server's own default (`B-056`).
+   *
+   * A second LLM call, and most people want a resume — so it is offered
+   * rather than assumed. "Manual control is optional" cuts the other way for
+   * once: the default output is the CV alone, and this is the one control on
+   * this screen that adds to it.
+   */
+  const [coverLetter, setCoverLetter] = useState(false);
   const [job, setJob] = useState<{ jobId: string; streamUrl?: string } | null>(null);
 
   const start = useStartGeneration();
@@ -70,12 +80,11 @@ export function GenerateScreen() {
 
     const body: GenerationRequest = {
       acknowledgePreflight: false,
-      // Explicitly off rather than omitted, for the reason the endpoint's own
-      // comment gives about `acknowledgePreflight`: the generator makes both
-      // required because the server defaults them, and a body that states
-      // what it did not ask for is the one that cannot drift. The control
-      // that turns it on lands with the letter itself (`B-056`).
-      coverLetter: false,
+      // Always stated, never left to the default, for the reason the
+      // endpoint's own comment gives about `acknowledgePreflight`: the
+      // generator makes both required because the server defaults them, and a
+      // body that states what it asked for is the one that cannot drift.
+      coverLetter,
       ...(trimmed === '' ? {} : { jobDescription: trimmed }),
       ...overrides,
     };
@@ -177,6 +186,13 @@ export function GenerateScreen() {
           placeholder={t('postingPlaceholder')}
           onChange={(event) => setPosting(event.target.value)}
         />
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Switch id="cover-letter" checked={coverLetter} onCheckedChange={setCoverLetter} />
+        <Label htmlFor="cover-letter" className="font-normal">
+          {t('coverLetter')}
+        </Label>
       </div>
 
       {start.error && (

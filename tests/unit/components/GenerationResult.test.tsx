@@ -2,11 +2,13 @@ import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NextIntlClientProvider } from 'next-intl';
 import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GenerationResult } from '@/components/generation/GenerationResult';
 import { api } from '@/lib/api/client';
-import { FIT_REPORT, generations } from '@/mocks/generationFixture';
+import { FIT_REPORT, generations, rejectNextCoverLetter } from '@/mocks/generationFixture';
+import { server } from '@/mocks/node';
 import en from '@/messages/en.json';
 import tr from '@/messages/tr.json';
 import type { components } from '@/types/api';
@@ -202,5 +204,142 @@ describe('a finished generation', () => {
 
     await screen.findByRole('region', { name: /matches the posting/i });
     expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+describe('the covering letter', () => {
+  /**
+   * § 34 keeps it off the main path: a second LLM call, and most people want
+   * a resume. So a generation that did not ask for one arrives without a
+   * letter, and the absence is a state with a control rather than an error.
+   */
+  it('offers to write one when none was asked for', async () => {
+    const generationId = await generate();
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    expect(await screen.findByText(en.Result.coverLetterAbsent)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: en.Result.coverLetterAsk })).toBeInTheDocument();
+  });
+
+  it('writes one on request, and keeps the blank lines it came with', async () => {
+    const generationId = await generate();
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    await userEvent.click(await screen.findByRole('button', { name: en.Result.coverLetterAsk }));
+
+    const letter = await screen.findByTestId('cover-letter');
+    // The blank line between parts is the letter's only structure (§ 34.7).
+    expect(letter.textContent).toContain('\n\n');
+    expect(letter).toHaveTextContent('Dear hiring team');
+  });
+
+  it('arrives with the resume when it was asked for up front', async () => {
+    const generationId = await generate({ acknowledgePreflight: false, coverLetter: true });
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    expect(await screen.findByTestId('cover-letter')).toBeInTheDocument();
+  });
+
+  /**
+   * `B-056`: a letter that could not be written **does not fail the job**. So
+   * this state is a completed resume with no letter and a button — not an
+   * error panel about a generation that succeeded.
+   */
+  it('leaves a resume whole when its letter could not be written', async () => {
+    rejectNextCoverLetter();
+    const generationId = await generate({ acknowledgePreflight: false, coverLetter: true });
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    expect(await screen.findByText(/One page/)).toBeInTheDocument();
+    expect(screen.getByText(en.Result.coverLetterAbsent)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('sends the style the reader picked, and the note only when there is one', async () => {
+    const bodies: Promise<string>[] = [];
+    const capture = ({ request }: { request: Request }) => {
+      if (request.url.includes('cover-letter')) bodies.push(request.clone().text());
+    };
+    server.events.on('request:start', capture);
+
+    try {
+      const generationId = await generate();
+      render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+      await userEvent.click(await screen.findByRole('button', { name: en.Result.coverLetterAsk }));
+      await screen.findByTestId('cover-letter');
+
+      await userEvent.click(
+        screen.getByRole('radio', { name: en.Result.coverLetterStyles.shorter }),
+      );
+      await userEvent.type(
+        screen.getByLabelText(en.Result.coverLetterNote),
+        'They ship on Fridays.',
+      );
+      await userEvent.click(screen.getByRole('button', { name: en.Result.coverLetterAnother }));
+
+      await waitFor(() => expect(bodies).toHaveLength(2));
+      expect(JSON.parse(await bodies[0]!)).toEqual({ style: 'default' });
+      expect(JSON.parse(await bodies[1]!)).toEqual({
+        style: 'shorter',
+        companyNote: 'They ship on Fridays.',
+      });
+    } finally {
+      server.events.removeListener('request:start', capture);
+    }
+  });
+
+  /**
+   * Each press replaces the stored letter (§ 34), so trying another draft
+   * leaves one letter rather than three.
+   */
+  it('replaces the letter rather than adding to a list', async () => {
+    const generationId = await generate();
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    await userEvent.click(await screen.findByRole('button', { name: en.Result.coverLetterAsk }));
+    await screen.findByTestId('cover-letter');
+    await userEvent.click(screen.getByRole('button', { name: en.Result.coverLetterAnother }));
+
+    await waitFor(() => expect(screen.getAllByTestId('cover-letter')).toHaveLength(1));
+  });
+
+  /**
+   * `B-056` in one assertion. A letter has no original to fall back on, so a
+   * draft that overstates is thrown away — the reader did nothing wrong and
+   * there is nothing to fix. "This draft did not pass, try again" is the
+   * sentence; a red panel is not.
+   */
+  it('does not dress a refused draft up as a fault', async () => {
+    const generationId = await generate();
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    rejectNextCoverLetter();
+    await userEvent.click(await screen.findByRole('button', { name: en.Result.coverLetterAsk }));
+
+    expect(await screen.findByTestId('cover-letter-rejected')).toHaveTextContent(
+      "That draft didn't pass our own check",
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    // And the way forward is the button that was already there.
+    expect(screen.getByRole('button', { name: en.Result.coverLetterAsk })).toBeInTheDocument();
+  });
+
+  /**
+   * The hourly allowance is its own limit, and `B-056` publishes only
+   * `resetsAt` for it — no `Retry-After`. That is the branch the sentence has
+   * for a wait it was not told the length of, and this is the only place
+   * anything reaches it.
+   */
+  it('names no duration for a rate limit that sent no header', async () => {
+    const generationId = await generate();
+    generations.coverLetterAttempts = 10;
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    await userEvent.click(await screen.findByRole('button', { name: en.Result.coverLetterAsk }));
+
+    const panel = await screen.findByRole('alert');
+    expect(panel).toHaveTextContent('too many attempts');
+    expect(panel).toHaveTextContent('try again shortly');
   });
 });

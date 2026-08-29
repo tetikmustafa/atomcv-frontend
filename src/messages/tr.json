@@ -348,7 +348,8 @@
     "announceProgress": "{phase}, yüzde {pct}",
     "announceDone": "CV’n hazır",
     "announceFailed": "Üretim başarısız oldu",
-    "startOver": "Yeniden başla"
+    "startOver": "Yeniden başla",
+    "coverLetter": "Ön yazı da yaz"
   },
   "Result": {
     "title": "CV’n",
@@ -360,7 +361,24 @@
     "announceDownloaded": "İndirme başladı",
     "loading": "CV’n getiriliyor…",
     "generalNote": "İlan verilmedi, yani karşılaştırılacak bir şey yok.",
-    "languageNote": "{content} yazıldı, {posting} değil. Bir CV tek dilde yazılır ve profilinde bu sayfaya girecek her şeyin {posting} sözcüklemesi henüz yok."
+    "languageNote": "{content} yazıldı, {posting} değil. Bir CV tek dilde yazılır ve profilinde bu sayfaya girecek her şeyin {posting} sözcüklemesi henüz yok.",
+    "coverLetterTitle": "Ön yazı",
+    "coverLetterAbsent": "Bu CV için henüz bir ön yazı yazılmadı.",
+    "coverLetterAsk": "Bir tane yaz",
+    "coverLetterAnother": "Başka bir taslak dene",
+    "coverLetterWriting": "Yazılıyor…",
+    "coverLetterCopy": "Mektubu kopyala",
+    "coverLetterCopied": "Kopyalandı",
+    "coverLetterOptions": "Seçenekler",
+    "coverLetterStyle": "Üslup",
+    "coverLetterStyles": {
+      "default": "Olduğu gibi",
+      "shorter": "Daha kısa",
+      "more_formal": "Daha resmî"
+    },
+    "coverLetterNote": "Bu işveren hakkında bildiklerin",
+    "coverLetterNotePlaceholder": "Geçen yıl zamanlayıcılarını açık kaynak yaptılar.",
+    "coverLetterNoteHint": "Yazdığın gibi kullanılıyor. Ondan bir şey çıkarılmıyor, hiçbir yerde aranmıyor."
   },
   "Fit": {
     "heading": "İlanla ne kadar örtüşüyor",

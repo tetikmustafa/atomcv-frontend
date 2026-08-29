@@ -86,6 +86,19 @@ export type GenerationFixture = {
   /** The error the next failing job reports. Absent means the default one. */
   nextFailure?: FailedEvent;
   /**
+   * The letter each generation currently has, if any.
+   *
+   * Keyed by generation and overwritten in place, because that is the rule:
+   * each press **replaces** the stored letter (§ 34), so trying another draft
+   * leaves one letter rather than three and the screen has no history to
+   * render.
+   */
+  coverLetters: Record<string, { text: string; style: string }>;
+  /** § 34: ten letters an hour, counted across all generations. */
+  coverLetterAttempts: number;
+  /** Makes the next letter come back refused. Reset once claimed. */
+  rejectCoverLetter: boolean;
+  /**
    * Attempts, not spend. A refused request takes a unit too — otherwise a
    * user past their limit could hammer the endpoint for free (`B-040`) — so
    * this is what `attempted` reports, and `used` is it capped at the limit.
@@ -182,6 +195,9 @@ function initial(): GenerationFixture {
     paused: false,
     nextOutcome: 'completed',
     nextFailure: undefined,
+    coverLetters: {},
+    coverLetterAttempts: 0,
+    rejectCoverLetter: false,
     usage: { generation: 0, profile_extract: 0 },
   };
 }
@@ -317,4 +333,42 @@ export function jobSnapshot(job: MockJob, now = Date.now()): JobSnapshot {
 /** The frames a subscriber that connects `at` has not seen yet. */
 export function phasesAfter(job: MockJob, at: number) {
   return scheduleFor(job).filter((step) => job.startedAt + step.at > at);
+}
+
+/** § 34's hourly allowance for letters, which is not a daily quota. */
+export const COVER_LETTER_LIMIT = 10;
+
+/**
+ * The letter a mock can write.
+ *
+ * Two parts with a blank line between them, because that spacing **is** the
+ * letter's only structure (§ 34.7) and a single-paragraph fixture would let a
+ * screen that collapses it pass. The style is named in the text so that
+ * asking for another draft visibly produces another draft.
+ */
+export function coverLetterText(style: string) {
+  return [
+    'Dear hiring team,',
+    `I am writing about the role you advertised. (${style} draft)`,
+    'Yours sincerely,',
+  ].join('\n\n');
+}
+
+/**
+ * Makes the next letter be refused (`COVER_LETTER_REJECTED`).
+ *
+ * A switch rather than a trigger in the request, for the same reason
+ * `failNextJob` is one: what makes a draft fail is the draft, and there is
+ * nothing the caller can send that decides it. Encoding one would teach
+ * product code a string the real server ignores.
+ */
+export function rejectNextCoverLetter() {
+  generations.rejectCoverLetter = true;
+}
+
+/** Claims the switch, so the next request after this one is not affected. */
+export function claimCoverLetterRejection() {
+  const rejecting = generations.rejectCoverLetter;
+  generations.rejectCoverLetter = false;
+  return rejecting;
 }

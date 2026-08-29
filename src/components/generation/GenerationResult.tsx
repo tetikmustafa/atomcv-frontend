@@ -15,6 +15,7 @@
 
 import { useLocale, useTranslations } from 'next-intl';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
+import { CoverLetter } from '@/components/generation/CoverLetter';
 import { FitReport } from '@/components/generation/FitReport';
 import { Button } from '@/components/ui/button';
 import { Link } from '@/lib/i18n/navigation';
@@ -112,6 +113,14 @@ export function GenerationResult({ generationId }: { generationId: string }) {
       ) : (
         <p className="text-muted-foreground text-sm">{t('generalNote')}</p>
       )}
+
+      {/*
+        Always drawn, letter or not. `coverLetter: true` at generation time is
+        allowed to produce a resume with no letter — a letter that could not
+        be written does not fail the job (`B-056`) — so the absence is a state
+        the reader can act on rather than an error to report.
+      */}
+      <CoverLetter generationId={generationId} letter={data.coverLetter} />
     </div>
   );
 }

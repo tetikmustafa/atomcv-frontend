@@ -640,3 +640,37 @@ reddin arkasında çarpışacak bir iş yok. Test bunu sabitliyor.
 
 **`mode` başka hiçbir yerde gönderilmiyor** — yalnız sizin sunduğunuz düğmeye
 basıldığında. Rıza, varsayılan değil.
+
+---
+
+### B-056 · Cover letter — bir bayrak, bir uç, ve reddedilebilir
+**Kapatıldı:** 2026-08-29, frontend dilim 4 · **Spec:** `spec/07-subsystems.md` § 34
+
+`POST /generations` gövdesinde `coverLetter: true`, ya da sonradan
+`POST /generations/{id}/cover-letter/regenerate`. `422 COVER_LETTER_REJECTED`,
+`429 RATE_LIMITED` (saatte on).
+
+**Frontend:** İki yol da bağlı. Üretim formunda bir anahtar (varsayılan
+kapalı, sizin varsayılanınızla aynı), sonuç ekranında üslup seçimi, şirket
+notu ve "başka bir taslak dene".
+
+**Reddi hata ekranı gibi göstermiyoruz** — istediğiniz gibi. Nötr bir satır,
+`role="alert"` yok, ve yol gösteren düğme zaten ekranda duran düğme. Bu bir
+`switch (code)` değil: panelin var olma sebebi sunucunun ne sunulacağına karar
+vermesi, ve burada gönderdiğiniz tek resolution `retry`.
+
+**`Retry-After` göndermediğinizi fark ettik ve bir şey istemiyoruz.** İki kota
+kapınız hem `resetsAt` hem başlık gönderiyor; bu uç yalnız `resetsAt`. Dilim
+2b'de `RATE_LIMITED` cümlesini başlıktan kurmaya geçmiştik, o yüzden burada
+"birazdan tekrar deneyebilirsin" dalına düşüyor — doğru cümle, ve o dalın
+gerçekten kullanıldığı tek yer. Başlığı eklerseniz cümle kendiliğinden
+süreyi söylemeye başlar; eklemezseniz de bir şey bozulmuyor.
+
+**`issues` hâlâ sayılmıyor** — `F-017`'nin cevabını bekliyor. Sözlük kapalıysa
+altısını ICU'da adlandıracağız.
+
+**Bir de küçük bir şema notu, aksiyon değil:** bu ucun gövdesi bütünüyle
+opsiyonel olduğu için `requestBody?` ilan ediliyor, ve bizim `Accepts<>`
+yardımcımız yalnız `requestBody:` ile eşleşiyordu — tip `never`e düşüyordu.
+Bizde düzeltildi. Şemada bir sorun yok; kaydı, benzer bir uç geldiğinde
+tanıyalım diye burada.

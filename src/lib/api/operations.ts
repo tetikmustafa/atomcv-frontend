@@ -42,9 +42,24 @@ export type Returns<Op extends keyof operations, Media extends string = 'applica
       : never
     : void;
 
-/** What a call sends. */
-export type Accepts<Op extends keyof operations> = operations[Op] extends {
-  requestBody: { content: { 'application/json': infer Body } };
-}
-  ? Body
-  : never;
+/**
+ * What a call sends.
+ *
+ * `NonNullable` because an endpoint whose body is **entirely** optional
+ * declares `requestBody?` — `POST …/cover-letter/regenerate` accepts `{}`
+ * (`B-056`), and the generator marks the whole property optional to say so.
+ * Matching on `requestBody:` alone missed those and resolved to `never`,
+ * which surfaced as "argument of type … is not assignable to parameter of
+ * type never" at the call site rather than as anything about a body.
+ *
+ * Operations that take no body at all declare `requestBody?: never`, and
+ * `NonNullable<never>` is still `never`, so they are unaffected.
+ */
+type RequestBody<Op extends keyof operations> = NonNullable<operations[Op]['requestBody']>;
+
+export type Accepts<Op extends keyof operations> =
+  RequestBody<Op> extends {
+    content: { 'application/json': infer Body };
+  }
+    ? Body
+    : never;

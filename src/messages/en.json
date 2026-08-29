@@ -348,7 +348,8 @@
     "announceProgress": "{phase}, {pct} percent",
     "announceDone": "Your resume is ready",
     "announceFailed": "The generation failed",
-    "startOver": "Start again"
+    "startOver": "Start again",
+    "coverLetter": "Write a covering letter too"
   },
   "Result": {
     "title": "Your resume",
@@ -360,7 +361,24 @@
     "announceDownloaded": "Download started",
     "loading": "Fetching your resume…",
     "generalNote": "No posting was given, so there is nothing to measure this against.",
-    "languageNote": "Written in {content}, not {posting}. A resume is written in one language, and your profile does not yet have {posting} wording for everything on this page."
+    "languageNote": "Written in {content}, not {posting}. A resume is written in one language, and your profile does not yet have {posting} wording for everything on this page.",
+    "coverLetterTitle": "Covering letter",
+    "coverLetterAbsent": "No letter has been written for this resume yet.",
+    "coverLetterAsk": "Write one",
+    "coverLetterAnother": "Try another draft",
+    "coverLetterWriting": "Writing…",
+    "coverLetterCopy": "Copy the letter",
+    "coverLetterCopied": "Copied",
+    "coverLetterOptions": "Options",
+    "coverLetterStyle": "Style",
+    "coverLetterStyles": {
+      "default": "As it comes",
+      "shorter": "Shorter",
+      "more_formal": "More formal"
+    },
+    "coverLetterNote": "Anything you know about this employer",
+    "coverLetterNotePlaceholder": "They open-sourced their scheduler last year.",
+    "coverLetterNoteHint": "Used as you wrote it. Nothing is inferred from it, and nothing is looked up."
   },
   "Fit": {
     "heading": "How this matches the posting",

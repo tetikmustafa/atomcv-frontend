@@ -23,6 +23,9 @@ import type { CompletedEvent, FailedEvent, ImportCompletedEvent, PhaseEvent } fr
 import { problem } from './problem';
 import { fixture } from './profileFixture';
 import {
+  claimCoverLetterRejection,
+  COVER_LETTER_LIMIT,
+  coverLetterText,
   FIT_REPORT,
   generations,
   jobSnapshot,
@@ -35,6 +38,7 @@ import { currentQuota } from './sessionFixture';
 
 type Schemas = components['schemas'];
 type GenerationRequest = Schemas['GenerationRequest'];
+type CoverLetterRequest = Schemas['CoverLetterRequest'];
 
 const GENERATIONS = '/api/v1/generations';
 
@@ -144,6 +148,11 @@ function onePagePdf(): Uint8Array {
   body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${startxref}\n%%EOF\n`;
 
   return new TextEncoder().encode(body);
+}
+
+/** An hour from now — § 34 counts letters by the hour, not by the day. */
+function inAnHour(): string {
+  return new Date(Date.now() + 60 * 60 * 1000).toISOString();
 }
 
 /**
@@ -270,6 +279,20 @@ export const generationHandlers = [
     };
 
     generations.jobs.push(job);
+
+    /*
+      `coverLetter: true` asks for one alongside the CV, and a letter that
+      could not be written **does not fail the job** (`B-056`). So this can
+      leave a completed generation with no letter — which is not an error
+      state but one the result screen has a button for.
+    */
+    if (body.coverLetter && !claimCoverLetterRejection()) {
+      generations.coverLetters[job.generationId] = {
+        text: coverLetterText('default'),
+        style: 'default',
+      };
+    }
+
     // Both claimed here, together: the outcome and the error that goes with
     // it belong to this job now, and a request queued after it must not
     // inherit either.
@@ -422,8 +445,66 @@ export const generationHandlers = [
       // `B-042`. Omitted rather than blank, the way `F-010` settled it.
       ...(job.contentLanguage ? { contentLanguage: job.contentLanguage } : {}),
       ...(job.postingLanguage ? { postingLanguage: job.postingLanguage } : {}),
+      // Absent when none was written, which is a state the reader can act on
+      // rather than an error: a letter that could not be written does not
+      // fail the generation (`B-056`).
+      ...(generations.coverLetters[id] ? { coverLetter: generations.coverLetters[id].text } : {}),
     });
   }),
+
+  /**
+   * A letter for a generation that already exists (§ 34, `B-056`).
+   *
+   * Three behaviours worth having, and none of them is a payload: the letter
+   * **replaces** the stored one rather than adding to a list, the hourly
+   * allowance is its own limit and not the daily quota, and the endpoint can
+   * refuse a draft it wrote itself.
+   */
+  http.post(
+    '*/api/v1/generations/:generationId/cover-letter/regenerate',
+    async ({ params, request }) => {
+      const id = String(params.generationId);
+      const instance = `/api/v1/generations/${id}/cover-letter/regenerate`;
+      const job = generations.jobs.find((candidate) => candidate.generationId === id);
+
+      if (!job) return notFound(instance);
+
+      if (generations.coverLetterAttempts >= COVER_LETTER_LIMIT) {
+        return HttpResponse.json(
+          problem(429, 'RATE_LIMITED', instance, [], { resetsAt: inAnHour() }),
+          // **No `Retry-After` here**, unlike the quota gates. `B-056` publishes
+          // only `resetsAt` for this one, so the client meets a `429` with no
+          // header to build a duration from — which is the branch its sentence
+          // has for exactly this, and the only place anything exercises it.
+          { status: 429 },
+        );
+      }
+
+      generations.coverLetterAttempts += 1;
+
+      // The body is entirely optional: `{}` is a valid request, and the server
+      // defaults the style.
+      const body = ((await request.json().catch(() => ({}))) ?? {}) as Partial<CoverLetterRequest>;
+      const style = body.style ?? 'default';
+
+      if (claimCoverLetterRejection()) {
+        return HttpResponse.json(
+          problem(422, 'COVER_LETTER_REJECTED', instance, [{ action: 'retry' }], {
+            issues: ['unsupported_claim'],
+          }),
+          { status: 422 },
+        );
+      }
+
+      generations.coverLetters[id] = { text: coverLetterText(style), style };
+
+      return HttpResponse.json<Schemas['CoverLetterResponse']>({
+        generationId: id,
+        coverLetter: generations.coverLetters[id].text,
+        style,
+      });
+    },
+  ),
 
   http.get('*/api/v1/generations/:generationId/download', ({ params, request }) => {
     const id = String(params.generationId);

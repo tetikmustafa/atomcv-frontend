@@ -107,6 +107,43 @@ iki yere bakamaz. Bölmek doğru olanı ve **ertelendi**, unutulmadı.
 **252.2** KB (dinamik, elle). Ölçülenler: profil 251.3 → **251.7**, üretim
 215.7 → **215.9**, pazarlama 168.4'te sabit.
 
+### Dilim 4 — cover letter · 2026-08-29
+
+`B-056` kapandı. Ekran sonuç sayfasında; üretim formuna bir anahtar eklendi.
+
+**Reddedilen taslak kırmızı panelde çizilmiyor.** `COVER_LETTER_REJECTED`
+isteğe değil **taslağa** verilmiş bir hüküm: mektubun arkasında orijinal yok,
+o yüzden aşırıya kaçan bir cümlenin yerine basılacak bir şey de yok ve taslak
+atılıyor. Okuyucu bir şey yanlış yapmadı, düzeltecek bir şey de yok. Kural 7
+delinmiyor: panelin var olma sebebi *sunucunun* ne sunulacağına karar
+vermesi, ve buradaki tek resolution `retry` — onu taşıyacak düğme zaten
+ekranda duruyor ("başka bir taslak dene"). `declined`'da (`B-048`) verilen
+kararın aynısı.
+
+**`Accepts<>` düzeltildi ve sebebi tam olarak bu uç.** Gövdesi **bütünüyle**
+opsiyonel bir uç `requestBody?` ilan ediyor (`{}` geçerli bir istek), ve eski
+koşul yalnız `requestBody:` ile eşleşiyordu — sonuç `never`, ve çağrı yerinde
+"argument of type … is not assignable to parameter of type never" diye
+görünüyordu, gövdeyle ilgisi olduğu hiç belli olmadan. `NonNullable` ile
+düzeldi; gövdesiz uçlar `requestBody?: never` ilan ettiği için etkilenmiyor.
+
+**Mektup önbelleğe yazılıyor, yeniden çekilmiyor.** Yanıt mektubun kendisini
+taşıyor ve sunucu saklananı değiştirdi. Bu, "sonuç ekranındaki düzenlemeler
+yerel durum değildir" kuralının kapsadığı durum **değil**: o kural CV'yi
+düzenlemenin Faz C'den itibaren boru hattını yeniden koşturmasıyla ilgili.
+Mektup yalnız mektubu değiştiriyor.
+
+**Bu uç `Retry-After` göndermiyor** ve mock da göndermiyor. `B-056` yalnız
+`params.resetsAt` yayımlıyor, yani `429` cümlesi süreyi kuramıyor ve dilim
+2b'de yazılan "birazdan tekrar dene" dalına düşüyor — o dalın gerçekten
+kullanıldığı tek yer burası, ve testi de burada.
+
+**`issues` hâlâ sayılmıyor** (`F-017` bekliyor). Altı değer makine belirteci;
+sözlüğün kapalı olduğu doğrulanınca ICU'da adlandırılacak.
+
+**Bütçe:** üretim 215.9 → **219.4** (Radix `Switch`), profil 251.7 →
+**252.0**. Sonuç ekranı dinamik, elle **215.8** KB.
+
 ---
 
 ## Kasıtlı boşluklar — sorulmadan "düzeltilmez"
