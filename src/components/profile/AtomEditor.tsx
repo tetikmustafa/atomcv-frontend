@@ -30,6 +30,7 @@ import { ImportanceSlider } from '@/components/profile/ImportanceSlider';
 import { LockToggles, type LockToggle } from '@/components/profile/LockToggles';
 import { RichText } from '@/components/profile/RichText';
 import { TagInput } from '@/components/profile/TagInput';
+import { StaleWording } from '@/components/profile/StaleWording';
 import { VariantTabs } from '@/components/profile/VariantTabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -135,6 +136,13 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
   const wordingField = (
     <div className="flex flex-col gap-2">
       <Label htmlFor={`${atomId}-text`}>{t('text')}</Label>
+
+      {/*
+        Here rather than inside `VariantTabs`, because it belongs to the
+        wording being read and not to the tab strip: an atom with one wording
+        has no strip and would otherwise never say it was out of date.
+      */}
+      <StaleWording atomId={atomId} variant={selected} />
 
       {/*
         The stored content, as it will be read. Kept visible while editing:

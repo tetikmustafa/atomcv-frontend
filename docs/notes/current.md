@@ -144,6 +144,45 @@ sözlüğün kapalı olduğu doğrulanınca ICU'da adlandırılacak.
 **Bütçe:** üretim 215.9 → **219.4** (Radix `Switch`), profil 251.7 →
 **252.0**. Sonuç ekranı dinamik, elle **215.8** KB.
 
+### Dilim 5 — bayat sözcükleme · 2026-08-29
+
+`B-052` kapandı, ve kasıtlı boşluklardan biri **kapandı**: "bayat sözcüklemeyi
+yeniden üretecek kontrol yok" satırı artık yanlış, çünkü hem uç hem de
+`stale`'i true yapan iş yayımlandı.
+
+**Mesaj bir çiftten kuruluyor, tek bayraktan değil** — ve ikisini birleştirmek
+§ 32.2'nin önlemeye çalıştığı hata. Düzenlenen bir sözcüklemeden türeyen her
+şey bayatlanıyor (kişi ayrıştıklarını bilmeye hak sahibi), ama yalnız kişinin
+**yazmadıkları** kuyruğa giriyor: birinin kendi cümlesini, o kişi öteki dilde
+bir yazım hatası düzeltti diye makine çevirisiyle değiştirmek ürünün onu
+sessizce ezmesidir. Üçüncü satır bu yüzden soruyor.
+
+**"Benim halimi koru" hiçbir şey göndermiyor**, ve sayfa yenilenince uyarı
+geri geliyor. Eksik değil: satır gerçekten hâlâ bayat, kapatılan şey yalnız bu
+okumaydı. Sunucuya kaydedilecek bir "reddettim" hâli de yok.
+
+**Bileşen sekme şeridinin içinde değil, alanın yanında.** Tek sözcüklemeli bir
+atomun şeridi yok — `VariantTabs` yalnız birden fazlada çiziliyor — ve orada
+kalsaydı böyle bir atom bayat olduğunu hiç söyleyemezdi.
+
+**"Yeniden yaz" ikinci uyarıya dönüşüyor, kaybolmuyor.** Sunucu bayrağı
+temizliyor ama satır **bayat kalıyor**; yenileme arka plan işi. Mock'un da
+`stale`'i temizlememesi bu yüzden önemli — temizleseydi ekranın mesajı olan tek
+durum atlanırdı, ve negatif kontrol tam olarak onu yakalıyor.
+
+**Mock `{userEdited: true}`'ü reddediyor** — istemci hiç göndermese de. Kabul
+eden bir mock, istemciye çalıştığını öğretirdi. Reddin **şekli** bizim
+okumamız (`400 VALIDATION_FAILED`), maddede yayımlanmış değil; hiçbir şey ona
+bağlı olmadığı için sorun değil, ve yorumda öyle yazıyor.
+
+**Bir test seçici yüzünden kırıldı ve düzeltmesi kayda değer.** `VariantTabs`
+testi önizlemeyi "rol taşımayan paragraf" diye seçiyordu; `StaleWording` panele
+kendi paragrafını koyunca o tarif başka bir şeyi gösterdi. Komşuluğu tarif eden
+bir seçici, komşu değişince sessizce yanlış şeyi iddia ediyor — metnine ve
+`span` seçicisine geçti.
+
+**Bütçe:** profil 252.0 → **252.2**.
+
 ---
 
 ## Kasıtlı boşluklar — sorulmadan "düzeltilmez"
@@ -154,7 +193,6 @@ sözlüğün kapalı olduğu doğrulanınca ICU'da adlandırılacak.
 | **"Bir sayfadan kısa CV" notu yazılmadı** | `pageCount` tam sayı ve sunucu "sayfa dolmadı" diye bir sinyal göndermiyor. Sinyalsiz yazılırsa her CV'de çıkar. |
 | **`keep_top_pinned` düğmesi çizilmiyor** | Şema sabitlenmiş atomları isteğe koyacak bir alan yayımlamıyor; çizilse basılınca hiçbir şey yapmazdı. |
 | **Metin düzenleme düz metin, mark'ları düşürüyor** | Mark farkında editör kural 4'ün lazy-load edeceği bileşen ve henüz yok. Kabul edilebilir olmasının tek sebebi **söylenmesi**: atomun gerçekten mark'ı varsa kaydetmeden **önce** uyarı çıkıyor (P8). |
-| **Bayat sözcüklemeyi yeniden üretecek kontrol yok** | Ne uç ne de `stale`'i true yapacak iş yayımlandı (B-024). Çalışamayacak düğme, zaten bir şeyin bozuk olduğunu söyleyen ekranda hiç yoktan kötü. |
 | **Sözcükleme tek başına silinemiyor** | Sunucuda iki ayrı kural var (B-036); silinmek istenen şey madde. Uç fonksiyonu ve iki reddi de üreten mock duruyor. |
 | **Profil başında dil eksenleri düzenlenemiyor** | `sourceLanguage`/`enabledLanguages` **içerik dili** ekseni (Bölüm 38.1), arayüz dili değil. Hangi dillerin sunulabileceği `capabilities`'e bağlı ve o yayımlanmadı. Form ikisini de olduğu gibi geçiriyor ve ikisi de gövdede zorunlu (B-035). |
 | **Dark mode bağlı değil** | CLAUDE.md · *Deferred by Decision*. Yarım uygulamak kullanıcıya değiştiremeyeceği bir tema verir. |

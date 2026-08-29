@@ -658,7 +658,33 @@ export const profileHandlers = [
       content?: NonNullable<typeof variant.content>;
       tone?: string | null;
       primary?: boolean;
+      userEdited?: boolean;
     };
+
+    /*
+      A wording becomes yours by writing words, never by claiming it, so the
+      server refuses `true` (`B-052`). The refusal is encoded here although
+      nothing in the client sends it — a mock that accepted it would teach the
+      client that it works.
+
+      The **shape** of that refusal is our reading rather than something the
+      handoff publishes: it says the request is rejected and not with what.
+      Nothing depends on the code, because nothing sends the request.
+    */
+    if (body.userEdited === true) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['userEdited'] }),
+        { status: 400 },
+      );
+    }
+
+    /*
+      Handing a wording back (`B-052`). The flag clears and the row **stays
+      stale** — the regeneration is a background job, so what the reader sees
+      next is "being rewritten", not a finished sentence. A mock that also
+      cleared `stale` would skip the only state the screen has a message for.
+    */
+    if (body.userEdited === false) variant.userEdited = false;
 
     // Nothing is required. A promote is `{ primary: true }` and carries no
     // content — resending the wording used to be the only way, and it cleared

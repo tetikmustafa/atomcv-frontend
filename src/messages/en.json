@@ -227,9 +227,12 @@
       "listLabel": "Wordings",
       "primary": "default",
       "staleBadge": "out of date",
-      "staleExplained": "The wording this was based on has changed since. Regenerating it is not built yet — editing it here is the way to bring it up to date.",
       "makePrimary": "Use this one by default",
-      "unknownLanguage": "Unknown language"
+      "unknownLanguage": "Unknown language",
+      "staleRefreshing": "The wording this was based on has changed. A new version is being written.",
+      "staleYours": "The wording this was based on has changed, and you wrote this one yourself. Nothing will replace it unless you ask.",
+      "staleRegenerate": "Write it again from the new source",
+      "staleKeepMine": "Keep what I wrote"
     },
     "entry": {
       "range": "{start} – {end}",

@@ -8,12 +8,10 @@
  * server-side, which is why `usePatchVariant` refetches on that write instead
  * of merging the response.
  *
- * **⚠️ `stale` is shown and cannot be acted on.** `spec/09-frontend.md` § 37.6
- * draws two buttons next to a stale wording — regenerate, or keep mine — and
- * Stage 1 publishes no endpoint for either, nor any job that would set
- * `stale` (handoff B-024, confirmed by the backend). Rendering a "Regenerate"
- * button that cannot work would be worse than not having one, so the badge
- * says what is true and stops there.
+ * **The badge is all this draws about staleness.** What to *do* about an
+ * out-of-date wording depends on who wrote it (§ 32.2's pair), and that
+ * belongs to the wording rather than to the tab strip — `StaleWording`, next
+ * to the field, so an atom with a single wording says it too.
  */
 
 import { Tabs } from 'radix-ui';
@@ -80,12 +78,6 @@ export function VariantTabs({
 
       {variants.map((variant) => (
         <Tabs.Content key={variant.id} value={variant.id!} className="pt-3">
-          {variant.stale && (
-            <p role="status" className="text-muted-foreground pb-2 text-xs">
-              {t('staleExplained')}
-            </p>
-          )}
-
           {children(variant)}
         </Tabs.Content>
       ))}

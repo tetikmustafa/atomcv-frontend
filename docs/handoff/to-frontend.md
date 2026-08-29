@@ -13,12 +13,13 @@
 ## OPEN
 
 > **Dosya hâlâ 100 satır sınırının üstünde, ve sebebi arşivleme gecikmesi
-> değil:** beş madde açık. Sınır bir okunabilirlik kuralı; onu delen şey
+> değil:** dört madde açık. Sınır bir okunabilirlik kuralı; onu delen şey
 > burada bir belge sorunu değil, **bir koordinasyon sorunu** — ve mekanizma
 > 2026-08-29'da çalışmaya başladı: dilim 0 dördünü, dilim 1 birini, dilim 2a
-> birini, dilim 2b üçünü, dilim 3a üçünü, dilim 4 birini kapattı; on üçü
-> `resolved/to-frontend-2026-08.md`'ye taşındı ve dosya 496'dan 212'ye indi.
-> Kalan beşi aşağıda, dilim dilim kapanacak.
+> birini, dilim 2b üçünü, dilim 3a üçünü, dilim 4 ile 5 birer tane kapattı;
+> on dördü
+> `resolved/to-frontend-2026-08.md`'ye taşındı ve dosya 496'dan 178'e indi.
+> Kalan dördü aşağıda, dilim dilim kapanacak.
 >
 > Gezinebilir olsun diye aşağıda bir dizin var. Gerekçelerin kalıcı olanı
 > `spec/`'e işlendi; burada yalnız *ne yapman lazım* duruyor.
@@ -27,45 +28,10 @@
 
 | ID | Konu | Ne yapman lazım, tek cümlede |
 |---|---|---|
-| `B-052` | Bayat varyant | Bir sözcüklemeyi düzenlemek ötekileri bayatlatıyor; uyarıyı siz gösterin. |
 | `B-057` | Hesap silme | `DELETE /api/v1/account`. |
 | `B-058` | Geri bildirim | Bir başparmak ve 48 saatlik bir içerik izni. |
 | `B-059` | Gizlilik Politikası | Alt işleyen listesine Resend + AWS SES (Tokyo). **Yayın öncesi zorunlu.** |
 | `B-061` | Maddesiz entry | Altında madde olmayan bir entry artık CV'ye çıkabiliyor — editörde engellemeyin. |
-
-### B-052 · Bir sözcüklemeyi düzenlemek ötekileri bayatlatıyor — ekranı siz kuruyorsunuz
-**Since:** commit <sha> · Adım 3.5 · **Spec:** `spec/07-subsystems.md` § 32.2, § 32.2.1
-
-Kullanıcı Türkçe maddeyi düzenleyince İngilizcesi **bayat** işaretleniyor.
-Sunucu ne yapacağına kendi karar vermiyor — **siz soruyorsunuz.**
-
-**Varyant nesnesi artık iki bayrak taşıyor**, ve uyarı ikisinin **çiftinden**
-kuruluyor:
-
-| `stale` | `userEdited` | Ne demek | Ekranda |
-|---|---|---|---|
-| `false` | — | Güncel | — |
-| `true` | `false` | Kaynağı değişti, **arka planda yenileniyor** | "güncelleniyor" göstergesi yeter |
-| `true` | `true` | Kaynağı değişti **ama bu sözcüklemeyi sen yazdın** | § 32.2'nin iki düğmesi |
-
-Üçüncü satır maddenin tamamı. Sunucu, kullanıcının kendi yazdığı bir
-sözcüklemeyi **asla** kendiliğinden yenilemiyor; onu yalnız işaretleyip
-bırakıyor. § 32.2'nin metni:
-
-> ⚠ Bu maddenin Türkçe hali güncellendi, İngilizce halini sen düzenlemiştin.
->   [ İngilizceyi yeniden üret ] [ Benim halimi koru ]
-
-**"Yeniden üret" düğmesi bağlanabilir** — varyanta `PATCH` gönderin, gövdede
-`{"userEdited": false}`. Sunucu bayrağı temizliyor ve satır bayatsa çeviriyi
-**hemen** kuyruğa alıyor. `{"userEdited": true}` **reddediliyor**: bir
-sözcükleme kelime yazarak sizin olur, iddia ederek değil.
-
-"Benim halimi koru" sunucuya hiçbir şey sormuyor: kullanıcı uyarıyı kapatır,
-satır bayat kalır. Bu doğru davranış, eksik değil.
-
-**Yenileme başarısız olabilir** ve bu da sessiz: iş `TRANSLATION_FAILED` (422,
-parametresiz) ile düşerse sözcükleme **bayat kalır**. Ekranınız zaten doğru
-şeyi gösteriyor olur; ayrıca bir hata bildirimi göstermeyin.
 
 ### B-057 · Hesap silme telde — `DELETE /api/v1/account`
 **Since:** commit <sha> · Adım 3.9 · **Spec:** `spec/16-cost-legal.md` § 57.4
@@ -180,7 +146,8 @@ maliyetini ödemez. Sayfa sınırı garantisi aynen duruyor.
 _(`B-037`…`B-043`, dilim 0'ın kapattığı `B-044`, `B-045`, `B-047`, `B-055`,
 dilim 1'in kapattığı `B-046`, dilim 2a'nın kapattığı `B-048`, dilim 2b'nin
 kapattığı `B-049`, `B-050`, `B-054`, dilim 3a'nın kapattığı `B-051`, `B-053`,
-`B-060` ve dilim 4'ün kapattığı `B-056` — hepsi
+`B-060`, dilim 4'ün kapattığı `B-056` ve dilim 5'in kapattığı `B-052` —
+hepsi
 `resolved/to-frontend-2026-08.md`'de.)_
 
 **`B-047`'de yapılacak bir şey çıkmadı:** LinkedIn hiçbir zaman giriş

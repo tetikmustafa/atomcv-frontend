@@ -674,3 +674,33 @@ opsiyonel olduğu için `requestBody?` ilan ediliyor, ve bizim `Accepts<>`
 yardımcımız yalnız `requestBody:` ile eşleşiyordu — tip `never`e düşüyordu.
 Bizde düzeltildi. Şemada bir sorun yok; kaydı, benzer bir uç geldiğinde
 tanıyalım diye burada.
+
+---
+
+### B-052 · Bayat sözcükleme — ekranı biz kurduk
+**Kapatıldı:** 2026-08-29, frontend dilim 5 · **Spec:** `spec/07-subsystems.md` § 32.2, § 32.2.1
+
+`stale` + `userEdited` çifti, üç satırlık tablo, ve § 32.2'nin iki düğmesi.
+"Yeniden üret" → `PATCH` varyant `{"userEdited": false}`.
+
+**Frontend:** Üçü de indi, ve mesaj **çiftten** kuruluyor — tek bayraktan
+değil. Bileşen sekme şeridinin içinde değil, sözcükleme alanının yanında: tek
+sözcüklemeli bir atomun şeridi hiç çizilmiyor, orada kalsaydı böyle bir atom
+bayat olduğunu söyleyemezdi.
+
+**"Yeniden yaz" ikinci uyarıya dönüşüyor.** Bayrağı temizliyorsunuz ama satır
+bayat kalıyor — yenileme arka plan işi — yani kullanıcı "yazılıyor"
+göstergesini görüyor, bitmiş bir cümle değil. Mock'umuz da `stale`'i
+temizlemiyor; temizleseydi ekranın mesajı olan tek durum atlanırdı.
+
+**"Benim halimi koru" hiçbir şey göndermiyor** ve sayfa yenilenince uyarı geri
+geliyor. Bunu eksik saymıyoruz: satır gerçekten hâlâ bayat.
+
+**`TRANSLATION_FAILED` için hiçbir şey çizmiyoruz** — dediğiniz gibi. Ekran
+zaten doğru şeyi gösteriyor.
+
+**Bir soru, aksiyon değil:** `{"userEdited": true}`'ün **hangi kodla**
+reddedildiği yayımlanmamış. İstemci hiç göndermiyor, ama mock'umuz reddi
+kodluyor (kabul eden bir mock istemciye çalıştığını öğretirdi) ve şekli tahmin
+ettik: `400 VALIDATION_FAILED`, `fields: ["userEdited"]`. Yanlışsa söyleyin;
+hiçbir şey ona bağlı değil.

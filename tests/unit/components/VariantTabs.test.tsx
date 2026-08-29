@@ -201,10 +201,17 @@ describe('an atom with several wordings', () => {
 
     expect(screen.getByLabelText('Text')).toHaveValue('ETL hatları kurdum');
     // The preview is the only place the marks are still shown, so it blanking
-    // is the more expensive half of the same bug. It has no role of its own,
-    // and the two paragraphs that do are the stale note and the mark warning.
-    const preview = screen.getByRole('tabpanel').querySelector('p:not([role="status"])');
-    expect(preview).toHaveTextContent('ETL hatları kurdum');
+    // is the more expensive half of the same bug.
+    //
+    // By its text rather than by its element. This used to pick "the paragraph
+    // without a role", which stopped meaning the preview the moment
+    // `StaleWording` put a paragraph of its own in the panel — a selector that
+    // described the neighbourhood rather than the thing.
+    // `span`, because the textarea holds the same characters as its own
+    // default value and the preview is the half being asserted.
+    expect(
+      within(screen.getByRole('tabpanel')).getByText('ETL hatları kurdum', { selector: 'span' }),
+    ).toBeVisible();
 
     release();
     await waitFor(() =>

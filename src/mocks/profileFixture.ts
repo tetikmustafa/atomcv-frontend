@@ -194,8 +194,16 @@ function initial(): ProfileFixture {
             content: { v: 1, runs: [{ t: 'ETL hatları kurdum', m: [] }] },
             plainText: 'ETL hatları kurdum',
             contentHash: 'seeded',
-            createdBy: 'llm_translate',
+            createdBy: 'user',
+            /*
+              § 32.2's third row, the only one that asks a question: the source
+              moved on **and** the person wrote this wording. Everything else
+              here is `userEdited: false`, so the two branches of `StaleWording`
+              are both reachable — pressing "write it again" turns this row
+              into the other one.
+            */
             stale: true,
+            userEdited: true,
             version: 0,
           },
         ],
