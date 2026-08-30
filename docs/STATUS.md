@@ -35,15 +35,13 @@ model seçilince fiyat tablosu, VPS kurulumu (§ XI-A.4) ve **restore testi**.
 | Aşama 0 — İskelet · 1 — Profil editörü · 2 — Üretim akışı + SSE | ✅ |
 | Aşama 3 — **bütün dilimler** ✅ · açık `B-nnn` kalmadı | ✅ |
 
-On iki dilim (dökümü kendi `notes/`'larında). Geçit uyarıları **adlandırıyor**,
-geçmiş satırı rol ve şirketle **etiketli**. **Gerçek uca karşı ölçüldü**
-(2026-08-30, MSW kapalı) — mektup üretimi ve hesap silme dahil,
-geliştiricinin onayıyla. Ölçüm mock'un kapı sırasını yanlışladı ve dört kusur
-çıkardı: `F-024` (kapandı), `F-025`, `F-026`, `F-027`. **Ölçülmeyen yalnız
-OAuth ve Turnstile** — ikisi de yapılandırılmış bir dağıtım istiyor.
+On iki dilim (dökümü kendi `notes/`'larında). Geçit uyarıları adlandırıyor,
+geçmiş satırı rol ve şirketle etiketli. **Gerçek uca karşı ölçüldü**
+(2026-08-30, MSW kapalı; mektup ve hesap silme dahil): ölçüm mock'un kapı
+sırasını yanlışladı ve `F-024`-`F-027`'yi çıkardı. **Ölçülmeyen yalnız OAuth
+ile Turnstile** — ikisi de yapılandırılmış bir dağıtım istiyor.
 
-**Test:** 649 birim · 51 e2e · **bundle** profil 252.5 / üretim 220.3 /
-geçmiş 213.9 / onboarding 217.3 / ayarlar 229.8 KB (dinamik rotalar elle).
+**Test:** 649 birim · 51 e2e · **bundle** profil 252.5 / geçmiş 213.9 / üretim 220.3 / onboarding 217.3 / ayarlar 229.8 KB.
 
 ## Açık kararlar (ikisini de ilgilendirir)
 
@@ -55,8 +53,8 @@ geçmiş 213.9 / onboarding 217.3 / ayarlar 229.8 KB (dinamik rotalar elle).
 ## Sonraki senkronizasyon noktası
 
 **Sıra backend'de: `F-025`, `F-026`, `F-027`** — üçü de telde ölçüldü, hiçbiri
-bir ekranı bloke etmiyor. `F-025` `companyName: "not specified"`; `F-026` dört
-mektup taslağının dördünün de reddedilmesi (tek çözüm `retry`, ve dördünde de
-işe yaramadı); `F-027` silinmiş hesabın çerezinin her profil okumasında `500`
-üretmesi — silmenin kendisi belgelendiği gibi çalışıyor. **Yayın öncesi
-açık:** gizlilik politikasının sağlayıcı listesi, model seçimini bekliyor.
+bir ekranı bloke etmiyor: `companyName: "not specified"`; dört mektup
+taslağının dördünün de reddedilmesi (tek çözüm `retry`, ve işe yaramadı); ve
+silinmiş hesabın çerezinin her profil okumasında `500` üretmesi. **Yayın
+öncesi açık:** gizlilik politikasının sağlayıcı listesi, model seçimini
+bekliyor.
