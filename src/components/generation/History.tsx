@@ -6,12 +6,12 @@
  * `capabilities.canSaveHistory` had nothing behind it until `GET /generations`
  * landed; this is what it now means.
  *
- * **The row carries no title, and that is the server's deliberate gap.** Every
- * label a history screen would want — the role, the company — is read from the
- * posting, and no response has ever returned the posting (absolute rule 4).
- * `F-022` answers the question with "publish the role and the company"; until
- * they arrive a row says what it truthfully can, and nothing here invents a
- * name for a generation.
+ * **The row is labelled with the role and the company** (`B-070`), which is
+ * the whole of § 57.6's exception to absolute rule 4: enough of the posting to
+ * *name* a generation, never enough to read it back. The two are independent —
+ * a posting can name the job and not the employer — and neither ever arrives
+ * empty, so there is no `''` to guard against. A generation made in general
+ * mode has neither, and is named by its facts instead.
  *
  * **Paged by cursor, and the absence of the cursor is the end.** Nothing here
  * reads the value: it is the server's to write and ours to echo back.
@@ -118,9 +118,29 @@ function Row({ row }: { row: GenerationSummary }) {
     row.hasCoverLetter ? t('withLetter') : null,
   ].filter(Boolean);
 
+  /*
+    Two elements rather than one string joined by a dash, and the reason is on
+    the wire: measured against the real backend, a `roleTitle` can itself
+    contain one — "Integration Engineer — Legacy Systems". A row reading
+    "Integration Engineer — Legacy Systems — Acme" looks like a mistake, and
+    nothing here can tell the reader which dash was ours.
+
+    The accessible name joins them with a comma instead, which is what a
+    screen reader wants anyway.
+  */
+  const label = [row.roleTitle, row.companyName].filter(Boolean);
+
   const body = (
     <>
-      <span className="text-sm">{facts.join(' · ')}</span>
+      {label.length > 0 && (
+        <span className="flex flex-wrap items-baseline gap-x-2 text-sm">
+          {row.roleTitle && <span className="font-medium">{row.roleTitle}</span>}
+          {row.companyName && <span className="text-muted-foreground">{row.companyName}</span>}
+        </span>
+      )}
+      <span className={label.length > 0 ? 'text-muted-foreground text-xs' : 'text-sm'}>
+        {facts.join(' · ')}
+      </span>
       {row.status && row.status !== 'completed' && (
         <span className="text-muted-foreground text-xs">{t('status', { status: row.status })}</span>
       )}
@@ -142,10 +162,11 @@ function Row({ row }: { row: GenerationSummary }) {
   return (
     <Link
       href={`/generations/${row.generationId}`}
-      // Named by its facts rather than by "open": a screen reader running
-      // through the links hears the dates and the pages, which is the only
-      // thing distinguishing one row from another until `F-022` lands.
-      aria-label={t('open', { facts: facts.join(', ') })}
+      // The label first, then the facts: a screen reader running through the
+      // links hears what each generation was for, which is the question this
+      // screen exists to answer. A row without a label falls back to its
+      // facts, which is all it has.
+      aria-label={t('open', { facts: [...label, ...facts].join(', ') })}
       className={`${className} hover:bg-muted/50 focus-visible:ring-ring block focus-visible:ring-3 focus-visible:outline-none`}
     >
       {body}

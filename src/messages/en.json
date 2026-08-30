@@ -109,6 +109,9 @@
     "reviewWarnings": "We were unsure about {count, plural, =1 {one thing} other {# things}} while reading.",
     "reviewWarningsOpened": "The sections they point at are open below.",
     "reviewWarningsElsewhere": "{count, plural, =1 {One of them pointed} other {# of them pointed}} nowhere in particular, so look through the rest as well.",
+    "reviewWarningsList": "What we were unsure about",
+    "warning": "{code, select, ambiguous_date {A date could not be read.} missing_organization {An entry has no employer or school on it.} unclear_section {Something could not be placed in a section with any confidence.} scrambled_text {Some of the text came out of the file scrambled.} overlapping_dates {Two entries cover the same dates.} untranslatable_atom {A line could not be given an English wording.} other {Something could not be settled.}}",
+    "warningAt": "{warning} In {section}.",
     "confirm": "Looks right — continue"
   },
   "Session": {

@@ -46,6 +46,10 @@ test.describe('the history', () => {
     const rows = page.getByRole('listitem');
     await expect(rows).toHaveCount(1);
     await expect(rows.first().getByRole('link')).toHaveAttribute('href', '/en/generations/gen-1');
+    // `B-070`: the row is named by what the posting was for, which is the
+    // question somebody opening this screen came with.
+    await expect(rows.first()).toContainText('Senior Backend Engineer');
+    await expect(rows.first()).toContainText('Acme');
   });
 
   /**

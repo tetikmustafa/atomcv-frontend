@@ -18,6 +18,7 @@
  */
 
 import { http, HttpResponse } from 'msw';
+import type { JobStatus } from '@/lib/api/endpoints/jobs';
 import type { components } from '@/types/api';
 import type { CompletedEvent, FailedEvent, PhaseEvent } from './contracts';
 import { problem } from './problem';
@@ -37,6 +38,16 @@ import {
 import { currentQuota } from './sessionFixture';
 
 type Schemas = components['schemas'];
+
+/**
+ * A job's body, with the warning code re-opened.
+ *
+ * The client's own read type rather than a second declaration of it: the
+ * schema's enum is documentation for a field the server stores as a `String`
+ * (`B-069`), and a mock held to the closed union could not send the one thing
+ * the open reading exists for.
+ */
+type JobStatusBody = JobStatus;
 type GenerationRequest = Schemas['GenerationRequest'];
 type CoverLetterRequest = Schemas['CoverLetterRequest'];
 
@@ -321,6 +332,17 @@ export const generationHandlers = [
       ...(jobDescription === ''
         ? {}
         : { postingLanguage: looksEnglish(jobDescription) ? 'en' : 'tr' }),
+      /*
+        `B-070`'s two labels, and a stand-in in the same sense the language
+        guess above is one: reading a role and a company out of a posting is
+        Faz A's work, and a mock that pattern-matched for it would be inventing
+        an analysis rather than encoding a behaviour. What is real here is the
+        **shape** — both present only when there was a posting, and absent
+        rather than empty otherwise.
+      */
+      ...(jobDescription === ''
+        ? {}
+        : { roleTitle: 'Senior Backend Engineer', companyName: 'Acme' }),
       startedAt: Date.now(),
       outcome: generations.nextOutcome,
       ...(generations.nextFailure ? { failure: generations.nextFailure } : {}),
@@ -369,7 +391,7 @@ export const generationHandlers = [
       // warnings with their places. This is what a reload after extraction
       // gets, and the review screen is built on it rather than on the memory
       // of the tab that watched the stream.
-      return HttpResponse.json<Schemas['JobStatusResponse']>({
+      return HttpResponse.json<JobStatusBody>({
         jobId: job.jobId,
         status: 'completed',
         pct: 100,
@@ -380,7 +402,7 @@ export const generationHandlers = [
     }
 
     if (snapshot.status === 'failed') {
-      return HttpResponse.json<Schemas['JobStatusResponse']>({
+      return HttpResponse.json<JobStatusBody>({
         jobId: job.jobId,
         status: 'failed',
         pct: snapshot.pct,
@@ -391,7 +413,7 @@ export const generationHandlers = [
     // Spread rather than listed: `phase` and `label` are absent while the
     // job is queued, and naming them here would put `undefined` back into a
     // body the server sends without them (`B-040`).
-    return HttpResponse.json<Schemas['JobStatusResponse']>({
+    return HttpResponse.json<JobStatusBody>({
       jobId: job.jobId,
       status: snapshot.status,
       ...frame(snapshot),
@@ -528,6 +550,8 @@ export const generationHandlers = [
         status: job.outcome === 'completed' ? 'completed' : 'failed',
         createdAt: new Date(job.startedAt).toISOString(),
         ...(job.outcome === 'completed' ? { pageCount: 1 } : {}),
+        ...(job.roleTitle ? { roleTitle: job.roleTitle } : {}),
+        ...(job.companyName ? { companyName: job.companyName } : {}),
         ...(job.fitReport?.level ? { matchLevel: job.fitReport.level } : {}),
         ...(job.contentLanguage ? { contentLanguage: job.contentLanguage } : {}),
         hasCoverLetter: Boolean(generations.coverLetters[job.generationId]),

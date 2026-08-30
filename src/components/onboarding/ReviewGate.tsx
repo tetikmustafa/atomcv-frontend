@@ -80,12 +80,10 @@ export function ReviewGate({ jobId }: ReviewGateProps) {
    * counted without opening anything: the model dropped something it could
    * not place, which is worth saying and not worth pointing at.
    */
-  const { placedSectionIds, unplaced } = useMemo(() => {
-    const warnings = job?.warnings ?? [];
+  const { placed, placedSectionIds, unplaced } = useMemo(() => {
     const ids = new Set<string>();
-    let loose = 0;
 
-    for (const warning of warnings) {
+    const placedList = (job?.warnings ?? []).map((warning) => {
       const section = sections?.find(
         (candidate) => candidate.displayOrder === warning.sectionOrder,
       );
@@ -93,11 +91,19 @@ export function ReviewGate({ jobId }: ReviewGateProps) {
       // A `sectionOrder` pointing at a section this profile does not have is
       // treated as placeless rather than dropped: the count stays honest even
       // when the two sides disagree about the profile.
-      if (warning.sectionOrder === undefined || !section?.id) loose += 1;
-      else ids.add(section.id);
-    }
+      if (warning.sectionOrder === undefined || !section?.id) {
+        return { code: warning.code, title: undefined };
+      }
 
-    return { placedSectionIds: [...ids], unplaced: loose };
+      ids.add(section.id);
+      return { code: warning.code, title: section.title };
+    });
+
+    return {
+      placed: placedList,
+      placedSectionIds: [...ids],
+      unplaced: placedList.filter((warning) => warning.title === undefined).length,
+    };
   }, [job?.warnings, sections]);
 
   // Joined rather than passed as the array: the array is rebuilt on every
@@ -137,6 +143,32 @@ export function ReviewGate({ jobId }: ReviewGateProps) {
             */}
             {unplaced > 0 && ` ${t('reviewWarningsElsewhere', { count: unplaced })}`}
           </p>
+        )}
+
+        {/*
+          Named, since `B-069` published the vocabulary. `code` is read
+          **open**: the field is a `String` on the wire and an old row may
+          carry a name this build has never seen, so an unrecognised value
+          falls to the general sentence rather than to an empty line.
+
+          Outside the live region above: this list is on the screen from the
+          first render, and announcing six sentences on load would bury the
+          one that says how many there are.
+        */}
+        {placed.length > 0 && (
+          <ul data-testid="review-warning-list" className="text-muted-foreground text-sm">
+            {placed.map((warning, index) => {
+              const sentence = t('warning', { code: warning.code ?? '' });
+
+              return (
+                <li key={`${warning.code ?? 'unknown'}-${index}`}>
+                  {warning.title
+                    ? t('warningAt', { warning: sentence, section: warning.title })
+                    : sentence}
+                </li>
+              );
+            })}
+          </ul>
         )}
       </header>
 

@@ -109,6 +109,9 @@
     "reviewWarnings": "Okurken {count, plural, =1 {bir konuda} other {# konuda}} emin olamadık.",
     "reviewWarningsOpened": "İşaret ettikleri bölümleri aşağıda açık bıraktık.",
     "reviewWarningsElsewhere": "Bunlardan {count, plural, =1 {biri} other {# tanesi}} belirli bir yeri işaret etmiyordu, o yüzden kalanına da göz at.",
+    "reviewWarningsList": "Emin olamadıklarımız",
+    "warning": "{code, select, ambiguous_date {Bir tarih okunamadı.} missing_organization {Bir kaydın kurum ya da şirket adı yok.} unclear_section {Bir şeyin hangi bölüme ait olduğu anlaşılamadı.} scrambled_text {Dosyadan çıkan metnin bir kısmı karışık geldi.} overlapping_dates {İki kayıt aynı tarihleri kapsıyor.} untranslatable_atom {Bir maddenin İngilizce karşılığı üretilemedi.} other {Bir şey netleştirilemedi.}}",
+    "warningAt": "{warning} {section} bölümünde.",
     "confirm": "Doğru görünüyor — devam et"
   },
   "Session": {

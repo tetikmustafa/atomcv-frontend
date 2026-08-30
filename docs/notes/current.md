@@ -172,6 +172,32 @@ anahtarlarıyla yapılandırılmış bir dağıtım istiyor; **hesap silme ile m
 gerçekten siler, öteki bir LLM çağrısı harcar. İkisinin de reddedilen yolları
 ölçüldü, başarı yolları ölçülmedi.
 
+### Dilim 11 — uyarıların adı, satırın etiketi · 2026-08-30
+
+`B-068`, `B-069`, `B-070` kapandı. `F-022`-`F-024`'ün üçü de cevaplanmış
+döndü ve ikisi iki ekranın eksiğini kapattı.
+
+**Kapalı sözlük açık okunuyor, ve bu sefer gerekçe sunucudan geldi.**
+`ImportWarning.code` şemada enum, telde `String`: değer JSONB'den geri
+okunuyor ve adı sonradan değişmiş bir kod taşıyan eski satır, tip enum olsa
+düşerdi — düşen uyarı da `warningCount == warnings.length` iddiasını bozardı.
+`domain.ts` `ImportWarningCode`'u `ResolutionAction` kalıbıyla açıyor,
+`JobStatus` `warnings`'i onunla değiştiriyor, tanınmayan kod genel cümleye
+düşüyor. Mock'un `imported.warnings`'i de açık tipte — kapalı olsaydı mock, bu
+davranışın var olduğu tek durumu üretemezdi.
+
+**Satırdaki iki adı bir tire ile birleştirmedik, ve sebebi ölçüm.** Telde
+duran bir `roleTitle` `"Integration Engineer — Legacy Systems"`. Birleştirilmiş
+bir etiket *"… — Legacy Systems — Acme"* olurdu ve hangi tirenin bizim olduğu
+belli olmazdı. İki ayrı öğe; erişilebilir ad virgülle birleştiriyor.
+
+**Ve aynı ölçüm bir kusur çıkardı:** `companyName` bir satırda `"not
+specified"` — `""` değil, yani "boş dize dönmez" kuralı tutmuyor. İstemcide
+çözmek yer tutucu ifade kara listesi demek olurdu (`"belirtilmemiş"`, `"N/A"`,
+ve modelin yarın yazacağı); `F-025`'e yazıldı, ekran bugün geleni gösteriyor.
+
+**Bütçe:** `/en/history` 213.8 → **213.9**, ötekiler değişmedi.
+
 ---
 
 ## Kasıtlı boşluklar — sorulmadan "düzeltilmez"
@@ -225,6 +251,8 @@ taşıyor; burada yalnız **nerede olduğu** var. Aşama 1'in profil değişmezl
 - **Terminal yük yayılarak saklanıyor**, alan adları sayılarak değil: `B-067`
   sonrası `JobStatus` iki iş türünü de tarif ediyor, ve burada isim saymak
   şemayla adım uydurulacak ikinci bir liste olurdu.
+- **Uyarı kodu kapalı sözlük ama açık okunur** (`domain.ts`), çünkü alan telde
+  `String`: düşen bir uyarı `warningCount` iddiasını bozar.
 - **Uyarının yeri `displayOrder`'dır, id değil**, ve elimizdeki profile karşı
   çözülür — `ReviewGate` bunun için satır okumaya geri gitmiyor.
 - **Multipart'ta `Content-Type`'a dokunulmaz.** Boundary'yi tarayıcı yazar.

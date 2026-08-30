@@ -11,72 +11,35 @@
 
 ## OPEN
 
-### F-022 · Geçmiş satırının etiketi — cevabımız (b): rol ve şirket
-**Since:** frontend commit `c62de11` · `B-066`'nın sorusu
-**Neden:** Üç seçeneğinizden **(b)**. (a) yetmiyor: tarihle sayfa sayısı iki
-üretimi birbirinden ayırmıyor, ve bu ekranın tek işi "hangisiydi o" sorusuna
-cevap vermek. (c) — kullanıcının verdiği ad — kullanıcıya, hiç istemediği bir
-adlandırma işi yüklüyor; on üretimi olan biri onu da yapmaz ve liste yine
-okunmaz kalır.
+### F-025 · `companyName` telde `"not specified"` olabiliyor — boş dize kuralı bunu tutmuyor
+**Since:** frontend commit `1c63e27` · gerçek uca karşı ölçüm, 2026-08-30
+**Neden:** `B-070` "boş dize hiç dönmüyor, alan ya doludur ya yoktur" diyor ve
+`""` için doğru. Ama telde duran 45 satırın birinde `companyName` **`"not
+specified"`** — modelin, şirketin adı geçmediğini söylemek için yazdığı bir
+cümle. `""` değil, o yüzden çeviren kural onu yakalamıyor, ve satır ekranda
+*"Business Intelligence Specialist (SQL Developer) · not specified"* diye
+çıkıyor: § 57.6'nın "bir şey söylüyormuş gibi duran etiket" diye tarif ettiği
+şeyin ta kendisi.
 
-**İstenen:** `GenerationSummary` üstünde ilanın rolü ve şirketi —
-`jdAnalysis`'in okuduğu iki alan, satır için yeterli olan en dar hâlleriyle.
-İkisi de **yoksa** (genel mod, ya da ilanda şirket geçmiyorsa) alan hiç
-olmasın; boş bir dize satırı bir şey söylüyormuş gibi gösterir. Uç, ilanın
-kendisini döndürmesin — istediğimiz etiket, metin değil.
+**Bizde çözülemez, ve denemeyeceğiz.** İstemci tarafında bu, bir yer tutucu
+ifade kara listesi demek — `"not specified"`, `"belirtilmemiş"`, `"N/A"`,
+`"unknown"`, ve modelin yarın yazacağı yedincisi. Dilden ve modelden bağımlı
+bir tahmin, ve yanlış tarafta.
 
-**Ve bunun mutlak kural 4'ün sınırını çizdiğini biz de görüyoruz.** Bugüne
-kadar hiçbir yanıt ilanı geri vermiyordu; iki alan onu bir istisnaya çeviriyor
-ve istisnanın nerede bittiğini yazan bir cümle yoksa bir sonraki alan da aynı
-gerekçeyle girer. **§ 57'de açık bir karar olarak yazın** — "satırı
-adlandıracak kadarı, ilanın kendisi değil" gibi bir sınırla.
+**İstenen:** ikisinden biri. (a) `JobAnalysis` "yok"u tek bir biçimde
+söylesin — prompt'ta şirket yoksa alanı boş bırakma talimatı, ve mevcut
+`""` → yok çevirisi işini görsün; ya da (b) çevirici, boş dizeye ek olarak
+modelin "yok" demek için kullandığı kalıpları da yok sayar — hangisi
+sizin tarafınızda daha az kırılgansa. Kararı sizinki, çünkü hangi kalıpların
+çıktığını **prompt'u yazan** taraf görebiliyor.
 
-**Spec:** `spec/08-api.md` EK D.8.7 (satır), `spec/16-cost-legal.md` § 57
+**Kayıt için doğru çıkanlar:** iki alan gerçekten bağımsız (45 satırın 28'inde
+rol var, 19'unda şirket), ve genel modda ikisi de yok. Bir de şunu ölçtük:
+`roleTitle` **kendi içinde tire taşıyabiliyor** (`"Integration Engineer —
+Legacy Systems"`), o yüzden satırda rolü ve şirketi bir tire ile birleştirmiyor,
+iki ayrı öğe olarak çiziyoruz.
 
-### F-023 · `ImportWarning.code` telde düz `string` — kapalı sözlük yayımlanmıyor
-**Since:** frontend commit `c62de11` · `B-067`
-**Neden:** `B-067` "mesajı `code` üstünden kurun" diyor, ve § 31.6.4
-`ExtractionWarningCode`'un **kapalı ve tam altı değerli** olduğunu söylüyor —
-ama şemada alan `code?: string`. Yani altı değerin beşi buradan bilinmiyor:
-`spec/`'in yazdığı tek kod `AMBIGUOUS_DATE` (§ 31.4'ün örneği). Altı ICU
-anahtarı yazmanın yolu yok, ve tahminle yazılan bir anahtar kümesi hiç
-eşleşmeyecek altı satır olurdu — **`B-067`'nin faz çevirileri için verdiği
-gerekçenin aynısı.**
-
-Bugün geçit uyarıları **sayıyor ve yerlerini açıyor**, hiçbirini
-adlandırmıyor. Bu doğru bir ekran, ama eksik olanı da o: okuyan kişi hangi
-bölümün neden açıldığını göremiyor.
-
-**İstenen:** `ExtractionWarningCode` enum olarak yayımlansın — hata kataloğu
-`code`'ları ile aynı disiplinde, `@Schema(implementation = ...)` ya da
-neyse. Değerleri gördüğümüz gün altı ICU mesajını yazarız; bilmediğimiz bir
-yedinci kod da genel bir cümleye düşer, çünkü enum'un **kapalı olduğunu
-bilerek** açık okuyacağız (aynı `ResolutionAction`'da yaptığımız gibi).
-
-**Spec:** `spec/07-subsystems.md` § 31.6.4, `spec/08-api.md` (şema)
-
-### F-024 · `file` parçası olmayan içe aktarma isteği `500` dönüyor
-**Since:** frontend commit `b99b6c1` · gerçek uca karşı ölçüm, 2026-08-30
-**Neden:** `POST /api/v1/profile/import`'a multipart gövde gönderip **`file`
-parçasını koymayınca** cevap `500 INTERNAL_ERROR`. Muhtemelen
-`MissingServletRequestPartException`'ın advice'ta işleyicisi yok — `B-064`'ün
-`IllegalArgumentException`'ı ile aynı sınıf, aynı sonuç: sunucu kullanıcıya
-"isteğin beni bozdu" diyor.
-
-**Bizim arayüzümüzden ulaşılmıyor** (form dosya seçilmeden göndermiyor), o
-yüzden acil değil. Ama `500` bir istemci hatasının cevabı değil, ve bir dahaki
-istemci — mobil, betik, bizim gelecekteki bir ekranımız — bunu bir sunucu
-arızası sanır.
-
-**İstenen:** `400 VALIDATION_FAILED`, `fields: ["file"]`. Mock'umuz bugün de
-bunu üretiyor, yani cevabınız evetse bizde yapılacak bir şey yok.
-
-**Ölçümün kaydı:** `curl -F "notfile=@cv.txt"` → `500`. Aynı oturumda
-ölçülen ve **doğru** çıkan her şey: `413` → `409` → `415`/`422` sırası,
-`{"userEdited": true}` → `400`, `405`/`406`/`415`, `rating: 0` → `400`,
-cursor'lu sayfalama ve bozuk cursor'ın `400`'ü, CSRF'siz yazmanın `403`'ü.
-
-**Spec:** `spec/08b-api-contract.md` EK D.6
+**Spec:** `spec/16-cost-legal.md` § 57.6, `spec/08-api.md` EK D.8.7
 
 <!-- Şablon:
 ### F-001 · Kısa başlık
@@ -89,6 +52,41 @@ cursor'lu sayfalama ve bozuk cursor'ın `400`'ü, CSRF'siz yazmanın `403`'ü.
 ---
 
 ## ACK — backend tamamladı, frontend arşivleyebilir
+
+### F-022 · (b) uygulandı, ve sınır istediğinizden geniş yazıldı
+`GenerationSummary` üstünde `roleTitle` ve `companyName`. **İkisi bağımsız**
+ve **boş dize hiç dönmüyor** — alan ya doludur ya yoktur, yani `""` kontrolü
+yazmanız gerekmiyor.
+
+§ 57.6'yı istediğiniz gibi bir cümle olarak değil, **üç ölçüt ve bir liste**
+olarak yazdık: amaç adlandırmaksa, model çıkarımıysa, bir satıra sığıyorsa —
+ve listede olmayan alan istisna değil. Sizin gördüğünüz risk ("sınırı yazan
+bir cümle yoksa bir sonraki alan da aynı gerekçeyle girer") tam olarak doğru
+riskti; bir cümle onu ölçemezdi. **Aksiyonunuz var — `B-070`.**
+
+### F-023 · Haklıydınız, ve gerekçeniz kendi gerekçemizdi
+`ImportWarning.code` artık `enum`. Altı değer: `ambiguous_date`,
+`missing_organization`, `unclear_section`, `scrambled_text`,
+`overlapping_dates`, `untranslatable_atom`.
+
+Yayımlamak enum'u `shared`'a taşımayı gerektirdi — kodları çıkarım üretiyor,
+`GET /jobs/{id}` yayımlıyor, ve çıkarım işi kuyruğa vermek için `jobs`'a
+zaten bağımlı; ters yöndeki import bir çevrim kapatıyordu.
+
+**Alanın tipi telde `String` kaldı, bilerek**, ve bu tam sizin okuma
+biçiminize göre: değer JSONB'den geri geliyor, adı sonradan değişmiş bir kod
+taşıyan eski satır tipi enum olsa ya düşerdi ya isteği bozardı. Kapalı
+olduğunu bilerek açık okuyun. **Aksiyonunuz var — `B-069`.**
+
+### F-024 · Doğru teşhis, ve sizde iş yok
+`MissingServletRequestPartException`'ın işleyicisi yoktu, istek son çareye
+düşüyordu. Artık `400 VALIDATION_FAILED`, `fields: ["file"]` — mock'unuzun
+ürettiği şey. `B-064` ile aynı sınıf ve bir istisna kadar yakın:
+`handleBadParameter` query parametresinin eksiğini zaten yakalıyordu.
+
+**Asıl değerli olan madde değil, ölçümü yapmış olmanız.** Kendi formunuzdan
+bakan hiçbir test buraya ulaşamazdı; bir aşama boyunca durmasının sebebi o, ve
+EK D.6.9'a ders olarak öyle yazıldı. **`B-068`.**
 
 *(`F-001`…`F-021` `resolved/to-backend-2026-08.md`'de — beşinin de cevabı
 oraya indi 2026-08-29'da, dosya sınırı.)*

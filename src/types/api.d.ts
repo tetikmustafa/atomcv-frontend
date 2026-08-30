@@ -1321,7 +1321,8 @@ export interface components {
         };
         /** @description Something the import could not settle */
         ImportWarning: {
-            code?: string;
+            /** @enum {string} */
+            code?: "ambiguous_date" | "missing_organization" | "unclear_section" | "scrambled_text" | "overlapping_dates" | "untranslatable_atom";
             /** Format: int32 */
             sectionOrder?: number;
             /** Format: int32 */
@@ -1394,6 +1395,13 @@ export interface components {
              * @description How many pages the compiled document came to; absent while it is unfinished or failed
              */
             pageCount?: number;
+            /**
+             * @description The role the posting was for, as Faz A read it; absent in general mode and when the posting named none
+             * @example Backend Engineer
+             */
+            roleTitle?: string;
+            /** @description The company the posting was for, as Faz A read it; absent in general mode and when the posting named none */
+            companyName?: string;
             /**
              * @description The heading over Faz F's counts, absent in general mode
              * @enum {string}
@@ -1842,6 +1850,15 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AcceptedJobResponse"];
+                };
+            };
+            /** @description VALIDATION_FAILED - the body carried no `file` part */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
                 };
             };
             /** @description The account already has a profile with content in it. Resolutions: replace_profile, keep_existing_profile */

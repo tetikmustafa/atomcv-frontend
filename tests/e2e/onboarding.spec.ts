@@ -59,6 +59,13 @@ test.describe('bringing a CV', () => {
     await expect(note).toContainText('unsure about 2 things');
     await expect(note).toContainText('nowhere in particular');
 
+    // `B-069`: named, not only counted — and the located one says where.
+    const named = page.getByTestId('review-warning-list').getByRole('listitem');
+    await expect(named).toHaveText([
+      'A date could not be read. In Experience.',
+      'A line could not be given an English wording.',
+    ]);
+
     // Exact: the row also carries 'Move Experience up' and its siblings.
     await expect(page.getByRole('button', { name: 'Experience', exact: true })).toHaveAttribute(
       'aria-expanded',

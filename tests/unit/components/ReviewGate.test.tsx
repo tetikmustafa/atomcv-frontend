@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NextIntlClientProvider } from 'next-intl';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReviewGate } from '@/components/onboarding/ReviewGate';
@@ -106,7 +106,7 @@ describe('the review after an import', () => {
    * because that is the state the deleted rule was about.
    */
   it('lets the reader carry on even with warnings on the screen', async () => {
-    seedImport([{ code: 'AMBIGUOUS_DATE', sectionOrder: 0, entryOrder: 1 }]);
+    seedImport([{ code: 'ambiguous_date', sectionOrder: 0, entryOrder: 1 }]);
     renderGate({ jobId: JOB });
 
     const confirm = await screen.findByRole('button', { name: en.Onboarding.confirm });
@@ -117,8 +117,8 @@ describe('the review after an import', () => {
 
   it('says how many things extraction was unsure about', async () => {
     seedImport([
-      { code: 'AMBIGUOUS_DATE', sectionOrder: 0, entryOrder: 1 },
-      { code: 'AMBIGUOUS_DATE' },
+      { code: 'ambiguous_date', sectionOrder: 0, entryOrder: 1 },
+      { code: 'ambiguous_date' },
     ]);
     renderGate({ jobId: JOB });
 
@@ -159,7 +159,7 @@ describe('the review after an import', () => {
  */
 describe('where the warnings are', () => {
   it('opens the section a warning points at', async () => {
-    seedImport([{ code: 'AMBIGUOUS_DATE', sectionOrder: 2, entryOrder: 0 }]);
+    seedImport([{ code: 'ambiguous_date', sectionOrder: 2, entryOrder: 0 }]);
     renderGate({ jobId: JOB });
 
     // Education is `displayOrder: 2` in the profile fixture.
@@ -185,7 +185,7 @@ describe('where the warnings are', () => {
     education!.displayOrder = 0;
     experience!.displayOrder = 2;
 
-    seedImport([{ code: 'AMBIGUOUS_DATE', sectionOrder: 0 }]);
+    seedImport([{ code: 'ambiguous_date', sectionOrder: 0 }]);
     renderGate({ jobId: JOB });
 
     const opened = await screen.findByRole('button', { name: 'Education' });
@@ -203,7 +203,7 @@ describe('where the warnings are', () => {
    * nothing, because there is nothing to point at.
    */
   it('counts a placeless warning without opening anything', async () => {
-    seedImport([{ code: 'AMBIGUOUS_DATE' }]);
+    seedImport([{ code: 'ambiguous_date' }]);
     renderGate({ jobId: JOB });
 
     const note = await screen.findByTestId('review-warnings');
@@ -214,11 +214,52 @@ describe('where the warnings are', () => {
     expect(experience).toHaveAttribute('aria-expanded', 'false');
   });
 
+  /**
+   * `B-069` published the six codes, so a warning can be **named** rather than
+   * only counted. The one that knows where it is says so; the reader should
+   * not have to guess which of four open sections the sentence is about.
+   */
+  it('says what each warning was, and where', async () => {
+    seedImport([
+      { code: 'ambiguous_date', sectionOrder: 0, entryOrder: 1 },
+      { code: 'untranslatable_atom' },
+    ]);
+    renderGate({ jobId: JOB });
+
+    const list = await screen.findByTestId('review-warning-list');
+    const items = within(list).getAllByRole('listitem');
+
+    expect(items[0]).toHaveTextContent('A date could not be read. In Experience.');
+    expect(items[1]).toHaveTextContent('A line could not be given an English wording.');
+    // The placeless one names no section, rather than naming the wrong one.
+    expect(items[1]).not.toHaveTextContent('In ');
+  });
+
+  /**
+   * The code is read **open**, exactly as `ResolutionAction` is. The field is
+   * a `String` on the wire and the enum is its documentation (`B-069`), so a
+   * row written before a rename carries a name this build has never seen —
+   * and dropping it would make `warningCount` a lie.
+   */
+  it('still says something about a code it has never seen', async () => {
+    seedImport([{ code: 'a_code_from_a_later_version', sectionOrder: 0 }]);
+    renderGate({ jobId: JOB });
+
+    const list = await screen.findByTestId('review-warning-list');
+
+    expect(within(list).getByRole('listitem')).toHaveTextContent(
+      'Something could not be settled. In Experience.',
+    );
+    expect(await screen.findByTestId('review-warnings')).toHaveTextContent(
+      'unsure about one thing',
+    );
+  });
+
   /** Both kinds at once: the note has to say both things, not the louder one. */
   it('tells the reader about the placed and the placeless separately', async () => {
     seedImport([
-      { code: 'AMBIGUOUS_DATE', sectionOrder: 0, entryOrder: 1 },
-      { code: 'AMBIGUOUS_DATE' },
+      { code: 'ambiguous_date', sectionOrder: 0, entryOrder: 1 },
+      { code: 'ambiguous_date' },
     ]);
     renderGate({ jobId: JOB });
 
@@ -237,7 +278,7 @@ describe('where the warnings are', () => {
    * section the reader had opened by hand.
    */
   it('leaves a section the reader opened alone when the screen comes back', async () => {
-    seedImport([{ code: 'AMBIGUOUS_DATE', sectionOrder: 0, entryOrder: 1 }]);
+    seedImport([{ code: 'ambiguous_date', sectionOrder: 0, entryOrder: 1 }]);
     const first = renderGate({ jobId: JOB });
 
     await waitFor(() =>

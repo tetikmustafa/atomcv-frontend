@@ -51,6 +51,33 @@ export type Resolution = {
   params?: Record<string, unknown>;
 };
 
+/** The six the schema publishes today (`B-069`). */
+export type KnownImportWarningCode = NonNullable<components['schemas']['ImportWarning']['code']>;
+
+/**
+ * Open for the same reason `ResolutionAction` is, and this time the server
+ * says so itself: the field is a `String` on the wire and the schema's enum
+ * is only its documentation. A row written before a code was renamed still
+ * carries the old name, and a client that refused it would drop a warning —
+ * which would then contradict `warningCount`, the one number the review
+ * screen states out loud.
+ *
+ * So an unrecognised code falls to a general sentence rather than to nothing.
+ */
+export type ImportWarningCode = KnownImportWarningCode | (string & {});
+
+/**
+ * One thing the import could not settle, with the code re-opened.
+ *
+ * The position is not an id: `sectionOrder` and `entryOrder` are the
+ * `displayOrder` values `GET /profile` already publishes, so the warning is
+ * resolved against the profile in hand and the endpoint never reads rows back
+ * to name them.
+ */
+export type ImportWarning = Omit<components['schemas']['ImportWarning'], 'code'> & {
+  code?: ImportWarningCode;
+};
+
 /**
  * RFC 7807 problem detail, extended with the fields Bölüm 35.4 adds.
  *

@@ -25,6 +25,7 @@
  */
 
 import type { FailedEvent } from './contracts';
+import type { ImportWarning } from '@/types/domain';
 import type { components } from '@/types/api';
 
 type Schemas = components['schemas'];
@@ -59,10 +60,21 @@ export type MockJob = {
    * `JobStatusResponse` alongside the generation ones, so `GET /jobs/{id}`
    * answers with them and a reload after extraction is no longer blind.
    */
-  imported?: Pick<
-    Schemas['JobStatusResponse'],
-    'profileId' | 'sectionCount' | 'atomCount' | 'warningCount' | 'detectedLanguage' | 'warnings'
-  >;
+  imported?: Omit<
+    Pick<
+      Schemas['JobStatusResponse'],
+      'profileId' | 'sectionCount' | 'atomCount' | 'warningCount' | 'detectedLanguage' | 'warnings'
+    >,
+    'warnings'
+  > & {
+    /**
+     * The open code, not the generated union (`B-069`). The field is a
+     * `String` on the wire and the enum is its documentation, so a mock that
+     * could only emit today's six could not reproduce the case the client is
+     * written for: a stored row carrying a name this build has never seen.
+     */
+    warnings?: ImportWarning[];
+  };
   /** Absent in general mode, exactly as the server omits it. */
   fitReport?: MockFitReport;
   /**
@@ -72,6 +84,18 @@ export type MockJob = {
    */
   contentLanguage?: string;
   postingLanguage?: string;
+  /**
+   * What the history row is labelled with (`B-070`) — the two names Faz A
+   * reads off the posting, and the whole of § 57.6's exception to absolute
+   * rule 4.
+   *
+   * **Independent, and never empty.** A posting can name the job without
+   * naming the company, and the server turns `JobAnalysis`'s `""` into an
+   * absent field rather than a blank one, so a row is labelled or it is not.
+   * General mode has neither: there was no posting to read.
+   */
+  roleTitle?: string;
+  companyName?: string;
   /** Wall-clock ms, the origin of this job's schedule. */
   startedAt: number;
   outcome: MockOutcome;

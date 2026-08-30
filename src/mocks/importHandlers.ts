@@ -56,18 +56,15 @@ function importResult(): NonNullable<MockJob['imported']> {
     first and count the second without opening anything, and a fixture with
     only the located kind would let the second half go unbuilt.
 
-    Both carry `AMBIGUOUS_DATE` because it is the one code the spec writes
-    down (§ 31.4's own example). `ExtractionWarningCode` is closed and has
-    six values, but the schema publishes `code` as a plain string, so five of
-    them are not knowable from here — asked as `F-023`, and the screen is
-    written not to need them.
-
-    The located one is § 31.6.4's own example resolved against this fixture:
-    `sectionOrder: 0` is Experience, `entryOrder: 1` its second job.
+    Real codes since `B-069` published the vocabulary — the six are the
+    server's, not a guess. The located one is § 31.6.4's own example resolved
+    against this fixture: `sectionOrder: 0` is Experience, `entryOrder: 1`
+    its second job. The other is document-level, which is the shape the model
+    produces for something it removed without being able to place.
   */
   const warnings: NonNullable<MockJob['imported']>['warnings'] = [
-    { code: 'AMBIGUOUS_DATE', sectionOrder: 0, entryOrder: 1 },
-    { code: 'AMBIGUOUS_DATE' },
+    { code: 'ambiguous_date', sectionOrder: 0, entryOrder: 1 },
+    { code: 'untranslatable_atom' },
   ];
 
   return {

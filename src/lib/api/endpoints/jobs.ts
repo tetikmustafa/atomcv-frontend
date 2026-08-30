@@ -9,9 +9,20 @@
 
 import { API_BASE_URL, api } from '../client';
 import type { Returns } from '../operations';
+import type { ImportWarning } from '@/types/domain';
 
-/** Wildcard media type, as with the accepted-job body. */
-export type JobStatus = Returns<'status', '*/*'>;
+/**
+ * Wildcard media type, as with the accepted-job body — with one narrowing.
+ *
+ * `warnings[]` carries a code the schema publishes as a closed enum and the
+ * server stores as a `String` (`B-069`), so the generated union is a snapshot
+ * of the day `gen:api` last ran rather than a promise. `ImportWarning`
+ * re-opens it; the alternative is a client that drops a warning it does not
+ * recognise, and a dropped warning makes `warningCount` a lie.
+ */
+export type JobStatus = Omit<Returns<'status', '*/*'>, 'warnings'> & {
+  warnings?: ImportWarning[];
+};
 
 /**
  * The terminal statuses. `cancelled` is in the schema's enum and nothing

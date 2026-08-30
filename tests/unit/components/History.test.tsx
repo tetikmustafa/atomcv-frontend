@@ -150,6 +150,59 @@ describe('the history', () => {
   });
 
   /**
+   * `B-070`: § 57.6's exception, and the only part of a posting that ever
+   * comes back. It leads the row, because "which one was that" is the
+   * question this screen exists to answer.
+   */
+  it('labels a row with the role and the company', async () => {
+    signIn();
+    seedGenerations(1, { roleTitle: 'Backend Engineer', companyName: 'Acme' });
+    renderHistory();
+
+    const link = await screen.findByRole('link');
+
+    expect(link).toHaveTextContent('Backend Engineer');
+    expect(link).toHaveTextContent('Acme');
+    // The label leads the accessible name too, ahead of the facts.
+    expect(link).toHaveAccessibleName(/Backend Engineer, Acme/);
+  });
+
+  /**
+   * The two fields are independent: a posting can name the job without naming
+   * the employer, and a row must not then carry half of a joined phrase.
+   *
+   * The role is kept whole, which is why nothing joins these with a dash: a
+   * real `roleTitle` measured on 2026-08-30 was "Integration Engineer —
+   * Legacy Systems", and one more dash would have read as our own punctuation.
+   */
+  it('keeps a role that contains a dash of its own', async () => {
+    signIn();
+    seedGenerations(1, { roleTitle: 'Integration Engineer — Legacy Systems' });
+    renderHistory();
+
+    const link = await screen.findByRole('link');
+
+    expect(link).toHaveTextContent('Integration Engineer — Legacy Systems');
+    expect(link).toHaveAccessibleName(/Integration Engineer — Legacy Systems, /);
+  });
+
+  /**
+   * General mode had no posting, so there is nothing to name it with. The row
+   * falls back to its facts rather than to a placeholder that would look like
+   * a title nobody filled in.
+   */
+  it('names a general-mode row by its facts alone', async () => {
+    signIn();
+    seedGenerations(1);
+    renderHistory();
+
+    const link = await screen.findByRole('link');
+
+    expect(link).toHaveAccessibleName(/Open the resume: /);
+    expect(link).toHaveTextContent('one page');
+  });
+
+  /**
    * A generation that did not finish has no document behind it, so its row is
    * not a link: the only thing that screen could show is an error the label
    * already gave.
