@@ -683,7 +683,11 @@ export const generationHandlers = [
       if (claimCoverLetterRejection()) {
         return HttpResponse.json(
           problem(422, 'COVER_LETTER_REJECTED', instance, [{ action: 'retry' }], {
-            issues: ['unsupported_claim'],
+            // The pair the real guard actually sent, measured on 2026-08-30
+            // against `make record`. It used to be one issue, invented: a
+            // single-element list never exercises `Intl.ListFormat`, and the
+            // wire sends two or three.
+            issues: ['number_invented', 'length_out_of_range'],
           }),
           { status: 422 },
         );

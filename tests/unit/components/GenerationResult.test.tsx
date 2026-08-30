@@ -323,8 +323,17 @@ describe('the covering letter', () => {
     rejectNextCoverLetter();
     await userEvent.click(await screen.findByRole('button', { name: en.Result.coverLetterAsk }));
 
-    expect(await screen.findByTestId('cover-letter-rejected')).toHaveTextContent(
-      "That draft didn't pass our own check",
+    const refusal = await screen.findByTestId('cover-letter-rejected');
+
+    expect(refusal).toHaveTextContent("That draft didn't pass our own check");
+    /*
+      Both issues, named and joined by `Intl.ListFormat` — the body this
+      asserts is the one measured off the wire on 2026-08-30, where the guard
+      sent two. A refusal listing one of the two reasons would be a screen
+      quietly dropping half of what it was told.
+    */
+    expect(refusal).toHaveTextContent(
+      "a figure that isn't in your CV and a length that was well off",
     );
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     // And the way forward is the button that was already there.
@@ -511,8 +520,8 @@ describe('why a draft was refused', () => {
     await userEvent.click(await screen.findByRole('button', { name: en.Result.coverLetterAsk }));
 
     const note = await screen.findByTestId('cover-letter-rejected');
-    expect(note).toHaveTextContent("a claim your CV doesn't back up");
-    expect(note).not.toHaveTextContent('unsupported_claim');
+    expect(note).toHaveTextContent("a figure that isn't in your CV");
+    expect(note).not.toHaveTextContent('number_invented');
   });
 });
 

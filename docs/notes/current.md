@@ -198,6 +198,42 @@ ve modelin yarın yazacağı); `F-025`'e yazıldı, ekran bugün geleni gösteri
 
 **Bütçe:** `/en/history` 213.8 → **213.9**, ötekiler değişmedi.
 
+### Dilim 12 — kalan iki yol da ölçüldü · 2026-08-30
+
+Geliştiricinin onayıyla, `make record` ayaktayken: **mektup üretimi** (gerçek
+LLM çağrıları) ve **hesap silme** (yerel hesabı gerçekten siler). Bunlarla
+birlikte, dağıtım isteyen ikisi (OAuth, Turnstile) dışında her yol telde
+görüldü.
+
+**Mektup: dört taslağın dördü de reddedildi.** `default`, `shorter`,
+`shorter`, `more_formal`+`companyNote` — ilk üçü `number_invented` +
+`length_out_of_range`, dördüncüsü üstüne `cliche`. Dördüncünün farklı çıkması,
+tek bir fixture'ın tekrar oynatılmadığını gösteriyor. **Ekranımız doğru
+davrandı**: iki değer `errorValues`'tan adlandırılıp `Intl.ListFormat` ile
+birleşti, panel kırmızı değil, `retry` zaten ekrandaki düğme. Yanlış olan,
+metnimizin "tekrar istemek genelde geçer" iddiası — **yumuşatmadık**, çünkü tek
+profil ve tek model yapılandırmasına bakarak ürün metnini değiştirmek
+ölçtüğümüzden fazlasını iddia etmek olurdu. `F-026`.
+
+**Mock'un `issues`'u tek elemanlıydı ve uydurmaydı.** Ölçülen çiftle
+değiştirildi: tek elemanlı bir liste `Intl.ListFormat`'ı hiç sınamıyor, yani
+"iki sebebin ikisi de yazılıyor mu" sorusu test edilmemişti. Şimdi ediliyor.
+
+**Silme tam olarak belgelendiği gibi:** `204`, `sid` çerezi `Max-Age=0` ile
+siliniyor, `GET /generations` `{"items":[],"total":0}`. Mock'umuz zaten aynı
+şeyi üretiyordu; değiştirilecek bir şey çıkmadı.
+
+**Ama silmenin ardındaki durum bozuk:** aynı kimlikle yapılan **her profil
+okuması `500`** (`/profile`, `/sections`, `/atoms`, `/entries`), oysa
+`/account/usage` ile `/generations` `200`. Yerelde bunu dev auth stub'ı
+üretiyor, **ama üretimde de ulaşılabilir**: hesabı bir cihazda silen kişinin
+öteki sekmesinde eski çerez duruyor ve o sekme `401` yerine `500` alıyor.
+`F-027`.
+
+**Yerel veri geri gelir:** `DevSeeder` idempotent ve `local` profilinde
+açılışta çalışıyor — backend yeniden başlatıldığında altın profil geri
+seed'leniyor. Silinen 45 üretim geri gelmiyor; onlar zaten deneme koşuları.
+
 ---
 
 ## Kasıtlı boşluklar — sorulmadan "düzeltilmez"
