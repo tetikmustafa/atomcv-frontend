@@ -28,9 +28,13 @@ export function getUsage() {
  * would be a second lock on the same door and would put the decision in a
  * place the user never sees. The confirmation is a screen, and it is ours.
  *
- * **Idempotent.** Pressing it twice is not an error — a `204` either way —
- * which matters because the second press is what a dropped connection
- * produces.
+ * **Idempotent, but the second press does not reach it.** A `204` either way
+ * was measured wrong (`F-027`): the first response clears the cookie, and a
+ * session pointing at an account that no longer exists is no session at all,
+ * so a repeat answers `401 AUTHENTICATION_REQUIRED`. The `204` we had seen
+ * came from the local dev auth stub, which identified the caller without one.
+ * That is the answer a dropped connection now produces, and it is the right
+ * one: the work was done.
  *
  * The response clears the session cookie, so the caller falls to **anonymous**
  * rather than to nothing: the next `GET /auth/session` stamps a fresh one.

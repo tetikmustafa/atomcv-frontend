@@ -10,9 +10,14 @@ import { asAccount } from './support/session';
  * journey a person actually makes.
  */
 
-/** A posting with two distinct signal words and enough of them (§ 18.1). */
+/**
+ * A posting with two distinct signal words and enough of them (§ 18.1), and
+ * one that **names the employer** — which is now what decides whether the row
+ * carries a company at all (§ 18.4.1, `F-025`). A posting that never says
+ * "Acme" produces a role-only row, and that case is pinned in the unit suite.
+ */
 const REAL_POSTING = [
-  'We are seeking a senior backend engineer to join a small platform team.',
+  'Acme is seeking a senior backend engineer to join a small platform team.',
   'Responsibilities: designing services, operating them in production, and',
   'mentoring the engineers around you. Requirements: several years of Java,',
   'PostgreSQL, container orchestration and a habit of writing things down.',
@@ -47,7 +52,8 @@ test.describe('the history', () => {
     await expect(rows).toHaveCount(1);
     await expect(rows.first().getByRole('link')).toHaveAttribute('href', '/en/generations/gen-1');
     // `B-070`: the row is named by what the posting was for, which is the
-    // question somebody opening this screen came with.
+    // question somebody opening this screen came with. The company is here
+    // because the posting above names it — § 18.4.1's rule, end to end.
     await expect(rows.first()).toContainText('Senior Backend Engineer');
     await expect(rows.first()).toContainText('Acme');
   });

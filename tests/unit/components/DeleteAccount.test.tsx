@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SettingsScreen } from '@/components/settings/SettingsScreen';
 import { api } from '@/lib/api/client';
+import { deleteAccount } from '@/lib/api/endpoints/account';
 import { profileKeys, sessionKeys } from '@/lib/api/queryKeys';
 import { server } from '@/mocks/node';
 import { signIn } from '@/mocks/sessionFixture';
@@ -125,6 +126,26 @@ describe('deleting an account', () => {
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/'));
     expect(calls).toEqual(['DELETE']);
+  });
+
+  /**
+   * `F-027`: the repeat a dropped connection produces, measured against the
+   * real backend. The endpoint is still idempotent — what changed is that the
+   * second press cannot reach it, because the first response cleared the
+   * cookie and a session pointing at a deleted account is no session.
+   *
+   * No screen presses this twice; a stale tab does. What it must not get is
+   * an answer shaped like the account is still there.
+   */
+  it('answers a repeat with 401 rather than a second 204', async () => {
+    signIn();
+
+    // `204`, no body — which is what the first press has always answered.
+    await expect(deleteAccount()).resolves.toBeUndefined();
+    await expect(deleteAccount()).rejects.toMatchObject({
+      status: 401,
+      code: 'AUTHENTICATION_REQUIRED',
+    });
   });
 
   /**

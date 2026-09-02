@@ -954,6 +954,7 @@ bir yedeğe düşüyor, yani ekran çalışıyor gibi görünüyor. Geri bildiri
 panelinin grant tarihi bunu zaten yaşıyormuş. `formats` artık
 `lib/i18n/formats.ts`'te ve hem istek yapılandırmasında hem test
 sarmalayıcılarında aynı nesne.
+
 ---
 
 ## Aşama 3 · `F-022`-`F-024`'ün cevapları — 2026-08-30

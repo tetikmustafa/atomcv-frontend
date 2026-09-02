@@ -90,9 +90,14 @@ export type MockJob = {
    * rule 4.
    *
    * **Independent, and never empty.** A posting can name the job without
-   * naming the company, and the server turns `JobAnalysis`'s `""` into an
-   * absent field rather than a blank one, so a row is labelled or it is not.
-   * General mode has neither: there was no posting to read.
+   * naming the company, and the field is absent rather than blank when it
+   * cannot be filled — so a row is labelled or it is not. General mode has
+   * neither: there was no posting to read.
+   *
+   * `""` was only half of that. `F-025` measured `"not specified"` on the
+   * wire, and § 18.4.1 answered it with a rule rather than a list of
+   * placeholder phrases: the employer is a name **the posting contains**, or
+   * the field is dropped. `roleTitle` is deliberately outside that rule.
    */
   roleTitle?: string;
   companyName?: string;

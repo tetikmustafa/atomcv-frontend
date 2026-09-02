@@ -421,6 +421,36 @@ describe('the generation resource', () => {
     expect(generation.pageCount).toBe(1);
   });
 
+  /**
+   * `F-025`, § 18.4.1: the employer is a name the posting carries or it is
+   * nothing. Both rows come from the same posting, so what is asserted is the
+   * rule rather than which fixture was picked — and the second is the row the
+   * wire produces most often, a role with no company at all.
+   *
+   * The old mock wrote both names together and could not produce it, which is
+   * how `"not specified"` reached a screen before anybody had rendered the
+   * half-labelled row.
+   */
+  it('names the employer only when the posting does', async () => {
+    const named = await start({
+      jobDescription: `Acme is hiring. ${POSTING}`,
+      acknowledgePreflight: false,
+    });
+    await readStream(named.streamUrl!);
+
+    const unnamed = await start({ jobDescription: POSTING, acknowledgePreflight: false });
+    await readStream(unnamed.streamUrl!);
+
+    const page = await api.get<{ items: { roleTitle?: string; companyName?: string }[] }>(
+      '/generations?limit=10',
+    );
+
+    // Newest first, so the posting without the name leads.
+    expect(page.items[0]).toMatchObject({ roleTitle: 'Senior Backend Engineer' });
+    expect(page.items[0]!.companyName).toBeUndefined();
+    expect(page.items[1]).toMatchObject({ companyName: 'Acme' });
+  });
+
   it('reports the match level on the terminal event too', async () => {
     const job = await start({ jobDescription: POSTING, acknowledgePreflight: false });
 

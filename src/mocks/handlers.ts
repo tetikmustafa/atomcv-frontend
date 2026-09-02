@@ -70,15 +70,19 @@ export const handlers = [
   /**
    * Deleting the account (§ 57.4, `B-057`).
    *
-   * **`204` whichever time it is pressed.** A second press is not an error —
-   * it is what a dropped connection produces — so this does not check whether
-   * there was an account to delete.
+   * **`204` once, then `401` — and the second half was measured** (`F-027`).
+   * The gate is the caller: an anonymous one has no account, and the endpoint
+   * says so rather than pretending to have deleted something. A second press
+   * meets the same gate, because the first response signed this caller out.
    *
-   * What it does check is the caller: an anonymous one has no account, and the
-   * endpoint answers `401 AUTHENTICATION_REQUIRED` rather than pretending to
-   * have deleted something. The screen never reaches this, because it gates on
-   * the session — the handler encodes it so a screen that stopped gating would
-   * be caught here rather than by nothing.
+   * That used to be an accident of `signOut()` here while the comment claimed
+   * `204` either way. The wire settled it: a session pointing at a deleted
+   * account is no session, so the repeat a dropped connection produces gets
+   * `401` too. The old `204` came from the local dev auth stub.
+   *
+   * The screen never reaches the anonymous branch, because it gates on the
+   * session — the handler encodes it so a screen that stopped gating would be
+   * caught here rather than by nothing.
    */
   http.delete('*/api/v1/account', () => {
     if (!isAccount()) {

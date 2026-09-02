@@ -129,6 +129,24 @@ function looksEnglish(text: string): boolean {
   return !/[çğıöşü]/i.test(text);
 }
 
+/** The only employer this mock can name. */
+const MOCK_COMPANY = 'Acme';
+
+/**
+ * Whether the posting carries the employer's name (§ 18.4.1, `F-025`).
+ *
+ * Unlike the language guess above this is **not** a stand-in for Faz A: the
+ * server's rule is itself a containment check, insensitive to case and line
+ * breaks, and dropping `company.name` when the posting does not contain it is
+ * exactly what stopped `"not specified"` from reaching a history row.
+ *
+ * `toLocaleLowerCase('en')` rather than the reader's locale (absolute rule
+ * 11): a posting is user text, and Turkish folds `I` to `ı`.
+ */
+function namesTheEmployer(text: string): boolean {
+  return text.toLocaleLowerCase('en').includes(MOCK_COMPANY.toLocaleLowerCase('en'));
+}
+
 function sseFrame(event: string, data: unknown, id: number) {
   return `id: ${id}\nevent: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
@@ -333,16 +351,20 @@ export const generationHandlers = [
         ? {}
         : { postingLanguage: looksEnglish(jobDescription) ? 'en' : 'tr' }),
       /*
-        `B-070`'s two labels, and a stand-in in the same sense the language
-        guess above is one: reading a role and a company out of a posting is
-        Faz A's work, and a mock that pattern-matched for it would be inventing
-        an analysis rather than encoding a behaviour. What is real here is the
-        **shape** — both present only when there was a posting, and absent
-        rather than empty otherwise.
+        `B-070`'s two labels. The role is a stand-in in the same sense the
+        language guess above is one — reading a title out of a posting is Faz
+        A's work — so what is real here is the **shape**: present when there
+        was a posting, absent rather than empty otherwise. The server does not
+        apply § 18.4.1 to it, because a model rewrites a title legitimately
+        ("Senior Backend Engineer" ↔ "Backend Engineer (Senior)").
+
+        The employer is different, and `F-025` is why: it is a name the
+        posting carries or it is nothing. So this mock can produce the row the
+        wire produces most often — a role with no company — which it could
+        not while both were written together.
       */
-      ...(jobDescription === ''
-        ? {}
-        : { roleTitle: 'Senior Backend Engineer', companyName: 'Acme' }),
+      ...(jobDescription === '' ? {} : { roleTitle: 'Senior Backend Engineer' }),
+      ...(namesTheEmployer(jobDescription) ? { companyName: MOCK_COMPANY } : {}),
       startedAt: Date.now(),
       outcome: generations.nextOutcome,
       ...(generations.nextFailure ? { failure: generations.nextFailure } : {}),
