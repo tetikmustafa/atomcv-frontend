@@ -3,7 +3,7 @@
 > İki repo da bu dosyayı okur ve kendi satırlarını günceller. **Kural: 60 satırı geçmez.**
 > Ayrıntılı inşa kayıtları repo-yerel `notes/current.md`'dedir, buraya taşınmaz.
 
-**2026-09-02** · **iki kanal da boş** — `F-025`-`F-027` indi ve `ACK` edildi
+**2026-09-02** · **açık `B-nnn` de `F-nnn` de yok** — `F-025`-`F-027` indi
 
 ---
 
@@ -33,17 +33,15 @@ düşüren iki HIGH CVE yamalandı (netty-codec, pgjdbc).
 | Aşama / Adım | Durum |
 |---|---|
 | Aşama 0 — İskelet · 1 — Profil editörü · 2 — Üretim akışı + SSE | ✅ |
-| Aşama 3 — on üç dilim · **kapandı 2026-09-02**, kaydı `archive/stage-3.md` | ✅ |
-| Aşama 4 — olgunlaşma (§ XI-A.7, sabit sırası yok) | başladı |
+| Aşama 3 — **bütün dilimler** ✅ · açık `B-nnn` kalmadı | ✅ |
 
-**Gerçek uca karşı ölçüldü** (2026-08-30 ve 2026-09-02, MSW kapalı; mektup,
-hesap silme ve silme sonrası dahil). Dilim 13 üç cevabı karşıladı: `gen:api`
-fark üretmedi, `F-025`'in kuralı mock'a girdi, ve `F-027` iki yorumumuzun
-"ikinci basış `204`" iddiasını yanlışladı — telde altı ucun altısı da `401`.
-**Ölçülmeyen yalnız OAuth ile Turnstile** — ikisi de yapılandırılmış bir
-dağıtım istiyor.
+On iki dilim (dökümü kendi `notes/`'larında). Geçit uyarıları adlandırıyor,
+geçmiş satırı rol ve şirketle etiketli. **Gerçek uca karşı ölçüldü**
+(2026-08-30, MSW kapalı; mektup ve hesap silme dahil): ölçüm mock'un kapı
+sırasını yanlışladı ve `F-024`-`F-027`'yi çıkardı. **Ölçülmeyen yalnız OAuth
+ile Turnstile** — ikisi de yapılandırılmış bir dağıtım istiyor.
 
-**Test:** 651 birim · 51 e2e · **bundle** profil 252.5 / geçmiş 213.9 / üretim 220.3 / onboarding 217.3 / ayarlar 229.8 KB.
+**Test:** 649 birim · 51 e2e · **bundle** profil 252.5 / geçmiş 213.9 / üretim 220.3 / onboarding 217.3 / ayarlar 229.8 KB.
 
 ## Açık kararlar (ikisini de ilgilendirir)
 
@@ -54,7 +52,9 @@ dağıtım istiyor.
 
 ## Sonraki senkronizasyon noktası
 
-**Sırada kimse yok.** Üç cevap `ACK` edildi ve `to-backend-2026-09.md`'ye
-indi; kalan tek canlı satır `DELETE /account`'un ikinci basışının `401`
-olması. **Yayın öncesi açık:** gizlilik politikasının sağlayıcı listesi model
-seçimini, OAuth ile Turnstile yapılandırılmış bir dağıtımı bekliyor.
+**Sıra frontend'de: üç cevabın `ACK`'i.** `F-027` hesabı olmayan oturuma
+`401`, ve bu yüzden `DELETE /account`'un ikinci basışı `204` değil `401`.
+`F-025` işveren adını ilanda geçmiyorsa siliyor. `F-026`'nın ikisi de
+sistematikti: mektup tabanı 250'den **120**'ye indi (§ 34.4.2) ve sayı
+kontrolü nicelik okuyor. Üçü de istemcide iş çıkarmıyor. **Yayın öncesi
+açık:** gizlilik politikası model seçimini bekliyor.
