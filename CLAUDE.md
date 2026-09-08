@@ -11,16 +11,52 @@ logic belongs there.
 
 During local development the backend runs at `http://localhost:8080`.
 
-## Documentation Layout
+### Documentation Access — Manual Only
 
-### Read every session (~600 lines total)
+Do NOT read anything under `docs/` — `INDEX.md`, `STATUS.md`, `spec/**`,
+`notes/**`, `handoff/**` — at the start of a session, at the start of a task,
+or proactively while working, **unless the user's current message explicitly
+asks you to.**
 
-| File                          | What                                             |
-| ----------------------------- | ------------------------------------------------ |
-| `docs/INDEX.md`               | Task → spec file routing map                     |
-| `docs/STATUS.md`              | Where both repos are                             |
-| `docs/handoff/to-frontend.md` | Open items from backend — **handle these first** |
-| `docs/notes/current.md`       | Active-stage build notes for this repo           |
+Explicit means one of:
+
+- "check the spec for X" / "read INDEX.md" / "what's in STATUS.md"
+- "check if there's anything from backend/frontend" (→ read the handoff file only)
+- "update the notes" / "record this as a deviation"
+- the user names a section by number ("per Bölüm 20")
+
+If you think consulting a doc would help and the user hasn't asked for it,
+**ask in one sentence instead of reading it**: "İlgili kararı `spec/05-...`'de
+kontrol edeyim mi?" Wait for yes.
+
+If you're missing a fact you'd normally get from a doc, ask the user for the
+fact directly. Do not read a 300-line file to answer a one-line question.
+
+**Never write to `docs/notes/**` or `docs/STATUS.md` unless the user
+explicitly asks you to record something.** Silently updating these after
+finishing a task is exactly the behavior being removed here.
+
+## Propose, Don't Run
+
+For the operations below, **never call Bash yourself.** Print the exact
+command(s) in a fenced code block, say one line about what it does, and stop.
+I will run it myself.
+
+- `git push`, `git merge`, `git rebase`, anything touching a remote or moving
+  `main`
+- `gh pr create`, `gh pr merge`, `gh pr review`
+- `scripts/sync-spec.sh`, `scripts/sync-handoff.sh`, or any script under
+  `scripts/` whose job is repo-to-repo sync
+- Anything under `docker-compose.prod.yml` or touching the deploy pipeline
+- Database migrations against anything other than the local dev database
+- Any command that deletes data (`git clean -fdx`, `docker volume rm`, etc.)
+
+This is enforced at the tool-permission layer too (see `.claude/settings.json`
+and the PreToolUse hook) — if a call is blocked, don't retry it. Print the
+command and move on.
+
+You may run freely, without asking: local build, test, lint, typecheck, and
+any `gradlew`/`npm` script that only touches this repo's own working tree.
 
 ### Read on demand — never in full
 

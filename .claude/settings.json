@@ -13,13 +13,10 @@
       "Bash(git clean -fdx*)",
       "Write(docs/spec/**)"
     ],
-    "ask": [
+    "ask": ["Write(docs/notes/**)", "Write(docs/STATUS.md)"],
+    "allow": [
       "Bash(git commit:*)",
       "Bash(git tag:*)",
-      "Write(docs/notes/**)",
-      "Write(docs/STATUS.md)"
-    ],
-    "allow": [
       "Bash(npm run dev:*)",
       "Bash(npm run build:*)",
       "Bash(npm run lint:*)",
