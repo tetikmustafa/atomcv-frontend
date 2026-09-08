@@ -58,6 +58,28 @@ Backend'in kapanış sonrası dilimlerinden gelen dört madde. İkisi kod işi
   `sectionCount` bekleyen birim + e2e testlerini oynatırdı. Fixture bir örnek
   listesi değil, davranış taşıyor — yeni bir kod, yeni bir davranış değil.
 
+### Aşama ≤3 denetimi (2026-09-08)
+
+"Bir eksik kaldı mı" sorusuna karşı, backend ayaktayken. Bulunan tek şey bir
+**gerekçe**, bir eksik değil — aşağıdaki dil ekseni satırı.
+
+- **İki kanal da boş.** `to-frontend.md`'de `OPEN` yok; `to-backend.md`'de de
+  yok (`F-025`-`F-027` cevaplandı, dosya yalnız cevapları taşıdığı için sınırın
+  üstünde).
+- **`contracts.ts` kuralına uyuyor.** Geriye yalnız üç SSE olayı kaldı ve
+  şema `text/event-stream`'i `unknown` olarak üretiyor — yani şemanın taşıdığı
+  bir ucu tarif etmiyor. Boşaltacak tip yok.
+- **§ 31.6.4'ün "kritik uyarı" kuralı spec'ten kaldırılmıştı**, ve orada
+  "yedinci bir kod gerçekten engelleyici olursa karar burada verilir" yazıyor.
+  `B-071` yedinciyi getirdi ve **engelleyici değil** dedi; Onayla hep aktif
+  kalıyor, yani ekran hâlâ spec'in dediği şeyi yapıyor.
+- **Kapılar:** typecheck · 658 birim · 51 e2e · lint · prettier · bütçe
+  (`npm run size` — hepsi tavanın altında) · üretim chunk'larında `setupWorker`
+  yok (MSW sızıntısı kontrolü).
+- **Aşama 3'ten devrolan tek kod işi hâlâ açık ve kasıtlı:** `MockJob` iki iş
+  türünü birden taşıyor, `generationFixture`'ı bölmek ertelendi
+  (`archive/stage-3.md`, dilim 3a). Davranış değil, isimlendirme.
+
 ---
 
 ## Kasıtlı boşluklar — sorulmadan "düzeltilmez"
@@ -69,7 +91,7 @@ Backend'in kapanış sonrası dilimlerinden gelen dört madde. İkisi kod işi
 | **`keep_top_pinned` düğmesi çizilmiyor** | Şema sabitlenmiş atomları isteğe koyacak bir alan yayımlamıyor; çizilse basılınca hiçbir şey yapmazdı. |
 | **Metin düzenleme düz metin, mark'ları düşürüyor** | Mark farkında editör kural 4'ün lazy-load edeceği bileşen ve henüz yok. Kabul edilebilir olmasının tek sebebi **söylenmesi**: atomun gerçekten mark'ı varsa kaydetmeden **önce** uyarı çıkıyor (P8). |
 | **Sözcükleme tek başına silinemiyor** | Sunucuda iki ayrı kural var (B-036); silinmek istenen şey madde. Uç fonksiyonu ve iki reddi de üreten mock duruyor. |
-| **Profil başında dil eksenleri düzenlenemiyor** | `sourceLanguage`/`enabledLanguages` **içerik dili** ekseni (Bölüm 38.1), arayüz dili değil. Hangi dillerin sunulabileceği `capabilities`'e bağlı ve o yayımlanmadı. Form ikisini de olduğu gibi geçiriyor ve ikisi de gövdede zorunlu (B-035). |
+| **Profil başında dil eksenleri düzenlenemiyor** | `sourceLanguage`/`enabledLanguages` **içerik dili** ekseni (Bölüm 38.1), arayüz dili değil. Form ikisini de olduğu gibi geçiriyor ve ikisi de gövdede zorunlu (B-035). ⚠ **Gerekçesi bayatladı ve düzeltildi (2026-09-08):** satır "hangi diller sunulabilir `capabilities`'e bağlı ve o yayımlanmadı" diyordu — `allowedLanguages` yayımlanıyor ve okunuyor, gerçek uca karşı `["en","tr"]`. Bekleyen bağımlılık yok; kalan şey **çizilmemiş bir kontrol**, yani karar. Denetimde 8 satırın 7'si doğru çıktı, bu biri değil. |
 | **Bölüm düzeni seçtiren arayüz yok** | `sections.layout` beş değer alıyor (`B-073` ile `paragraph` da) ama hiçbir ekran onu göstermiyor ya da seçtirmiyor; sunucu her bölüm türü için doğrusunu zaten yazıyor. Çizilecekse beşinin de ICU adı ve About için `paragraph` varsayılanı gerekir — yarım hâli kullanıcıya anlamını bilmediği bir seçim verir. |
 | **Dark mode bağlı değil** | CLAUDE.md · *Deferred by Decision*. Yarım uygulamak kullanıcıya değiştiremeyeceği bir tema verir. |
 

@@ -17,15 +17,21 @@
  *
  * **`sourceLanguage` and `enabledLanguages` are passed through untouched.**
  * They are the content-language axis (Bölüm 38.1), not the interface one, and
- * which languages a profile may offer is a server `capabilities` question that
- * Stage 1 does not publish. Reusing `routing.locales` here is precisely what
- * `lib/i18n/locales.ts` warns against, and hardcoding a list is the assumption
- * the anonymous-mode rule forbids. So the form carries the current values
- * forward — `enabledLanguages` is required on this endpoint, and dropping it
- * is a `400` naming it, verified — and the control that edits them arrives
- * with `capabilities`. What changed with `B-035` is only that
- * `sourceLanguage` must now be *present* in the body, not that the editor may
- * choose it.
+ * which languages a profile may offer is a server `capabilities` question.
+ * Reusing `routing.locales` here is precisely what `lib/i18n/locales.ts` warns
+ * against, and hardcoding a list is the assumption the anonymous-mode rule
+ * forbids. So the form carries the current values forward — `enabledLanguages`
+ * is required on this endpoint, and dropping it is a `400` naming it,
+ * verified. What changed with `B-035` is only that `sourceLanguage` must now
+ * be *present* in the body, not that the editor may choose it.
+ *
+ * **The dependency this waited on has arrived, and the control still has not.**
+ * `capabilities.allowedLanguages` is published and read (`["en", "tr"]`
+ * against the running backend, 2026-09-08), so nothing here is blocked any
+ * more: what is left is an unbuilt control, which is a decision rather than a
+ * missing answer. Said out loud because the older wording claimed the server
+ * did not publish it, and a reason that has quietly stopped being true is how
+ * a deliberate gap turns into an unnoticed one.
  *
  * Email is not validated here. The server does it and says which field
  * (`400`, `params.fields: ["contact.email"]`, verified), which the save status
