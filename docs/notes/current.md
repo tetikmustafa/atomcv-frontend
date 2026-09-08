@@ -33,6 +33,31 @@ Kod işi değil, ikisi de bir ürün ya da altyapı kararını bekliyor:
   anahtarlarıyla yapılandırılmış bir dağıtım istiyor; bugün doğrulanan şey
   mock'a karşı. Dağıtım ayağa kalktığında ilk ölçülecek ikisi bunlar.
 
+### `B-071`-`B-074` kapandı (2026-09-08)
+
+Backend'in kapanış sonrası dilimlerinden gelen dört madde. İkisi kod işi
+çıkardı, ikisi çıkarmadı — ve çıkarmama sebepleri kayda değer.
+
+- **Yedinci `ExtractionWarningCode` (`unsupported_by_source`) yalnız bir ICU
+  dalı istedi.** `ImportWarning.code` `B-069`'dan beri **açık** okunuyor, o
+  yüzden tip tarafı sessizdi: dal gelene kadar uyarı `other`'a düşüyor ve
+  "bir şey netleştirilemedi" diyordu. Kırık bir şey yok, yalnızca söylenmeyen
+  bir şey vardı — açık okunan her sözlükte aynı boşluk mümkün.
+- **`no_responsibilities` telden kalkınca bir test nöbeti kayboluyordu.**
+  `F-016`'nın kontrolü — refüzün *sayımı suçlamaması* — `wireErrors`'ta tam o
+  yakalanmış yükün üzerinde duruyordu (18 yetenek bulunmuş, yine reddedilmiş).
+  Yük silinince kontrol `errorCatalogue`'a taşındı ve artık `too_few_skills`
+  dışındaki **her** nedene karşı koşuyor. Yakalanmış yük dosyasına uydurma bir
+  yük konmadı: o dosyanın tek değeri gövdelerin gerçekten gönderilmiş olması.
+- **`paragraph` ile yedinci kod yalnızca `npm run gen:api` ile geldi.** İkisi
+  de üretilen birliği genişletmekten başka bir şey yapmadı; canlı şemada
+  `no_responsibilities` hiç geçmiyor — neden sözlüğü zaten şemada değil, hata
+  kataloğunda.
+- **Ortak fixture'a hiçbir şey eklenmedi.** Ne yedinci uyarı ne de bir `about`
+  bölümü: ikisi de ekrandaki davranışı değiştirmiyor, ama `warningCount` ve
+  `sectionCount` bekleyen birim + e2e testlerini oynatırdı. Fixture bir örnek
+  listesi değil, davranış taşıyor — yeni bir kod, yeni bir davranış değil.
+
 ---
 
 ## Kasıtlı boşluklar — sorulmadan "düzeltilmez"
@@ -45,6 +70,7 @@ Kod işi değil, ikisi de bir ürün ya da altyapı kararını bekliyor:
 | **Metin düzenleme düz metin, mark'ları düşürüyor** | Mark farkında editör kural 4'ün lazy-load edeceği bileşen ve henüz yok. Kabul edilebilir olmasının tek sebebi **söylenmesi**: atomun gerçekten mark'ı varsa kaydetmeden **önce** uyarı çıkıyor (P8). |
 | **Sözcükleme tek başına silinemiyor** | Sunucuda iki ayrı kural var (B-036); silinmek istenen şey madde. Uç fonksiyonu ve iki reddi de üreten mock duruyor. |
 | **Profil başında dil eksenleri düzenlenemiyor** | `sourceLanguage`/`enabledLanguages` **içerik dili** ekseni (Bölüm 38.1), arayüz dili değil. Hangi dillerin sunulabileceği `capabilities`'e bağlı ve o yayımlanmadı. Form ikisini de olduğu gibi geçiriyor ve ikisi de gövdede zorunlu (B-035). |
+| **Bölüm düzeni seçtiren arayüz yok** | `sections.layout` beş değer alıyor (`B-073` ile `paragraph` da) ama hiçbir ekran onu göstermiyor ya da seçtirmiyor; sunucu her bölüm türü için doğrusunu zaten yazıyor. Çizilecekse beşinin de ICU adı ve About için `paragraph` varsayılanı gerekir — yarım hâli kullanıcıya anlamını bilmediği bir seçim verir. |
 | **Dark mode bağlı değil** | CLAUDE.md · *Deferred by Decision*. Yarım uygulamak kullanıcıya değiştiremeyeceği bir tema verir. |
 
 ---

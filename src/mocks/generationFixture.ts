@@ -316,9 +316,14 @@ export function failNextJob(error?: FailedEvent) {
  * `suspicious_output` is the one that gets `retry`, and that is not decorative
  * either: the refused analysis is deliberately not cached, so asking again can
  * genuinely come back different.
+ *
+ * `no_responsibilities` was a fourth reason here until `B-072` took it off the
+ * wire. A mock that could still emit it would describe a server that no longer
+ * exists, and the handler is the one place a dead reason would keep looking
+ * alive.
  */
 export function gateRefusal(
-  reason: 'low_confidence' | 'too_few_skills' | 'no_responsibilities' | 'suspicious_output',
+  reason: 'low_confidence' | 'too_few_skills' | 'suspicious_output',
 ): FailedEvent {
   const retriable = reason === 'suspicious_output';
 

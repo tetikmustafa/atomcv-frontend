@@ -189,12 +189,18 @@ describe.each(CATALOGUES)('the %s error catalogue', (locale, messages) => {
   });
 
   /**
-   * `B-043`: eight reasons behind one code, and the sentence is chosen by
+   * `B-043`: several reasons behind one code, and the sentence is chosen by
    * `reason` rather than by `skillsFound`. Before this, every refusal read as
    * "no skills came out of it" — accidentally true for the preflight, which
    * sends zero because it analysed nothing, and simply wrong for the gate.
+   *
+   * Seven since `B-072`: `no_responsibilities` is no longer produced and left
+   * the enum. The rule behind it was sound and wrong about the world — most
+   * real postings are an unheaded list of qualifications, and Faz B now reads
+   * the work out of whatever the text has, so the door stopped throwing away
+   * postings it had understood.
    */
-  describe('the eight reasons behind UNPARSEABLE_JOB_DESCRIPTION', () => {
+  describe('the seven reasons behind UNPARSEABLE_JOB_DESCRIPTION', () => {
     const REASONS = [
       'too_short',
       'too_long',
@@ -202,7 +208,6 @@ describe.each(CATALOGUES)('the %s error catalogue', (locale, messages) => {
       'not_job_like',
       'low_confidence',
       'too_few_skills',
-      'no_responsibilities',
       'suspicious_output',
     ] as const;
 
@@ -221,14 +226,34 @@ describe.each(CATALOGUES)('the %s error catalogue', (locale, messages) => {
     });
 
     it('gives each reason a different sentence', () => {
-      // Eight branches that render the same string would pass every check
-      // above while telling the user nothing new.
+      // Branches that render the same string would pass every check above
+      // while telling the user nothing new.
       expect(new Set(REASONS.map(render)).size).toBe(REASONS.length);
     });
 
+    /**
+     * `F-016`, kept alive after `B-072` took its captured payload off the
+     * wire: a posting can be read confidently, yield twenty skills, and still
+     * be refused. Only the reason that is *about* the count may print it —
+     * any other sentence that reads `skillsFound` contradicts itself out loud.
+     */
+    it.each(REASONS.filter((reason) => reason !== 'too_few_skills'))(
+      'does not blame the count in the sentence for %s',
+      (reason) => {
+        const rendered = t(
+          'UNPARSEABLE_JOB_DESCRIPTION',
+          formatErrorParams({ reason, confidence: 0.92, skillsFound: 20 }, locale),
+        );
+
+        expect(rendered).not.toContain('20');
+      },
+    );
+
     it('falls back rather than printing a key for a reason it has never seen', () => {
       // The vocabulary is closed today. `other` is what keeps a client that
-      // meets a server which grew a ninth reason from rendering its own key.
+      // meets a server which grew an eighth reason from rendering its own key
+      // — and, since `B-072`, what would catch a stored refusal still naming
+      // a reason the server has stopped producing.
       const rendered = render('a_reason_from_the_future');
 
       expect(rendered.length).toBeGreaterThan(0);

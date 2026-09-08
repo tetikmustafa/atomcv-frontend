@@ -236,6 +236,29 @@ describe('where the warnings are', () => {
   });
 
   /**
+   * `B-071`'s seventh code, and the one whose sentence has to point at the
+   * document rather than at the reading of it: the pipeline caught the model
+   * writing a name the uploaded file never contained — `SQL Server` for a
+   * line that said `SQL`. Named like the other six, and located, because it
+   * carries `sectionOrder`/`entryOrder` like them.
+   */
+  it('names the atom whose wording the file does not support', async () => {
+    seedImport([{ code: 'unsupported_by_source', sectionOrder: 0, entryOrder: 1 }]);
+    renderGate({ jobId: JOB });
+
+    const list = await screen.findByTestId('review-warning-list');
+
+    expect(within(list).getByRole('listitem')).toHaveTextContent(
+      'A name here does not appear in the file you uploaded. In Experience.',
+    );
+    // Not the `other` branch: a seventh code that fell through would still
+    // render a sentence, and only its wording would say the branch is missing.
+    expect(within(list).getByRole('listitem')).not.toHaveTextContent(
+      'Something could not be settled.',
+    );
+  });
+
+  /**
    * The code is read **open**, exactly as `ResolutionAction` is. The field is
    * a `String` on the wire and the enum is its documentation (`B-069`), so a
    * row written before a rename carries a name this build has never seen —

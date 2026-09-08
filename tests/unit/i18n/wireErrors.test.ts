@@ -34,12 +34,13 @@ const CAPTURED = [
     params: { reason: 'too_few_skills', confidence: 0.9, skillsFound: 0 },
     resolutions: ['paste_full_posting', 'continue_as_general_cv'],
   },
-  {
-    what: 'the gate refusing a posting that never says what the job is',
-    transport: 'stream',
-    params: { reason: 'no_responsibilities', confidence: 1, skillsFound: 18 },
-    resolutions: ['paste_full_posting', 'continue_as_general_cv'],
-  },
+  /*
+    A third capture stood here — the gate refusing a posting that named no
+    responsibilities, at 0.92 confidence with twenty skills read. `B-072`
+    removed the reason from the enum, so no server sends that payload any
+    more and there is nothing left to capture. Not replaced by an invented
+    one: the point of this file is that every payload in it was really sent.
+  */
 ] as const;
 
 /** `as const` for the same reason the catalogue test needs it: `describe.each`
@@ -69,18 +70,14 @@ describe.each(CATALOGUES)(
       expect(rendered).not.toContain('UNPARSEABLE_JOB_DESCRIPTION');
     });
 
-    it('does not blame the count when the count is not what refused it', () => {
-      // 18 skills found, and still refused — for having no responsibilities.
-      // The old single sentence read the count and would have contradicted
-      // itself out loud (`F-016`).
-      const noResponsibilities = CAPTURED[2].params;
-      const rendered = t(
-        'UNPARSEABLE_JOB_DESCRIPTION',
-        formatErrorParams(noResponsibilities, locale),
-      );
-
-      expect(rendered).not.toContain('18');
-    });
+    /*
+      `F-016`'s regression — a refusal that reads the count when the count is
+      not what refused it — was asserted here against the `no_responsibilities`
+      capture: 18 skills found and still refused. `B-072` retired that reason,
+      and no remaining capture has a high count with a reason that ignores it.
+      The check moved to the catalogue test, where it runs over every reason
+      instead of the one payload that happened to be on disk.
+    */
   },
 );
 

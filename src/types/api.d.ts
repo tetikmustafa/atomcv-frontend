@@ -852,7 +852,7 @@ export interface components {
              * @description Defaults to bullet_list
              * @enum {string}
              */
-            layout?: "bullet_list" | "entry_list" | "inline_list" | "two_column";
+            layout?: "bullet_list" | "entry_list" | "inline_list" | "two_column" | "paragraph";
             alwaysInclude?: boolean;
             verbatim?: boolean;
         };
@@ -867,7 +867,7 @@ export interface components {
              */
             title?: string;
             /** @enum {string} */
-            layout?: "bullet_list" | "entry_list" | "inline_list" | "two_column";
+            layout?: "bullet_list" | "entry_list" | "inline_list" | "two_column" | "paragraph";
             /**
              * Format: int32
              * @description Position among the sections, from 0
@@ -1241,7 +1241,7 @@ export interface components {
             kind?: "about" | "education" | "experience" | "projects" | "skills" | "soft_skills" | "languages" | "custom";
             title?: string;
             /** @enum {string} */
-            layout?: "bullet_list" | "entry_list" | "inline_list" | "two_column";
+            layout?: "bullet_list" | "entry_list" | "inline_list" | "two_column" | "paragraph";
             alwaysInclude?: boolean;
             verbatim?: boolean;
             active?: boolean;
@@ -1322,7 +1322,7 @@ export interface components {
         /** @description Something the import could not settle */
         ImportWarning: {
             /** @enum {string} */
-            code?: "ambiguous_date" | "missing_organization" | "unclear_section" | "scrambled_text" | "overlapping_dates" | "untranslatable_atom";
+            code?: "ambiguous_date" | "missing_organization" | "unclear_section" | "scrambled_text" | "overlapping_dates" | "untranslatable_atom" | "unsupported_by_source";
             /** Format: int32 */
             sectionOrder?: number;
             /** Format: int32 */
