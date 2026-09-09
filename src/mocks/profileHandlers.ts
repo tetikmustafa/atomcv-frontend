@@ -419,14 +419,16 @@ export const profileHandlers = [
       simply full. Both numbers travel so the screen can say "sixty of sixty"
       instead of "too many".
 
-      **No resolutions.** `B-081` publishes `sign_up` for the two `403`s and
-      names none here, and a mock that invented one would teach the client a
-      button the server never sends.
+      **`sign_up` travels with it**, which this mock had wrong for a day:
+      `B-081`'s table listed only the params, so the resolution was read as
+      absent and the empty list was the careful reading. `B-087` says
+      `AnonymousLimits` has always attached it. An account has no ceiling, so
+      the button is the way past this rather than a consolation.
     */
     const ceiling = currentMaxAtoms();
     if (ceiling !== undefined && fixture.atoms.length >= ceiling) {
       return HttpResponse.json(
-        problem(422, 'ATOM_LIMIT_EXCEEDED', instance, [], {
+        problem(422, 'ATOM_LIMIT_EXCEEDED', instance, [{ action: 'sign_up' }], {
           limit: ceiling,
           current: fixture.atoms.length,
         }),

@@ -165,6 +165,7 @@ export function currentCapabilities(): Capabilities {
       canCustomizeTemplate: true,
       canEditAtomControls: true,
       canAddAlternatives: true,
+      canWriteCoverLetter: true,
       canSaveHistory: true,
       // Absolute instant for an account, `null` anonymously — the anonymous
       // allowance is counted per address (§ 44.1), so there is no per-session
@@ -182,6 +183,10 @@ export function currentCapabilities(): Capabilities {
     canCustomizeTemplate: false,
     canEditAtomControls: false,
     canAddAlternatives: false,
+    // `B-085`: its own flag rather than something read off `canSaveHistory`.
+    // Every `feature` a `FEATURE_REQUIRES_ACCOUNT` can name has a boolean
+    // here, which is what lets a screen close the door before it is tried.
+    canWriteCoverLetter: false,
     canSaveHistory: false,
     maxAtoms,
     quotaResetsAt: null,

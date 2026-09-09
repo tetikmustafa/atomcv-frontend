@@ -87,7 +87,9 @@ describe('the sixtieth atom', () => {
   /**
    * `B-081`: a `422` rather than a `403`, because nothing about the request
    * is forbidden — the profile is full. Both numbers travel so the sentence
-   * can be "sixty of sixty" instead of "too many".
+   * can be "sixty of sixty" instead of "too many", and `sign_up` travels with
+   * them (`B-087`) — an account has no ceiling, so the button is the way past
+   * this rather than a consolation.
    */
   it('is the last one an anonymous profile takes', async () => {
     limitAtomsTo(fixture.atoms.length);
@@ -106,6 +108,7 @@ describe('the sixtieth atom', () => {
       limit: fixture.atoms.length,
       current: fixture.atoms.length,
     });
+    expect(error.resolutions.map((resolution) => resolution.action)).toEqual(['sign_up']);
   });
 
   it('is not a ceiling an account has at all', async () => {
@@ -187,6 +190,30 @@ describe('a generation without an account', () => {
     expect(error.code).toBe('FEATURE_REQUIRES_ACCOUNT');
     expect(error.params?.feature).toBe('cover_letter');
     expect(generations.usage.generation).toBe(spent);
+  });
+
+  /**
+   * `B-087`: this answered `401` until `F-030` asked what it should be, which
+   * told somebody holding a live anonymous session that their session had
+   * ended. The feature was never theirs — a different sentence entirely.
+   */
+  it('refuses a verdict with the feature that was missing, not with a dead session', async () => {
+    const job = await api.post<AcceptedJob>('/generations', {
+      acknowledgePreflight: false,
+      coverLetter: false,
+    });
+    const generationId = generations.jobs.find(
+      (candidate) => candidate.jobId === job.jobId,
+    )!.generationId;
+
+    const error = await refusal(
+      api.post(`/generations/${generationId}/feedback`, { rating: 1, contentGranted: false }),
+    );
+
+    expect(error.status).toBe(403);
+    expect(error.code).toBe('FEATURE_REQUIRES_ACCOUNT');
+    expect(error.params?.feature).toBe('feedback');
+    expect(error.resolutions.map((resolution) => resolution.action)).toEqual(['sign_up']);
   });
 
   it('reports no verdict on what it made, because a verdict needs an account', async () => {

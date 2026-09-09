@@ -266,7 +266,7 @@ export interface paths {
          * Say what you thought of a generation
          * @description A thumb, and everything after it is optional. One verdict                     per person per generation: pressing the other one changes                     your mind rather than adding a second opinion.
          *
-         *     `contentGranted` is Bolum 48.4's consent. Ticking it lets                     the CV's own content be read for forty-eight hours to work                     out what went wrong — everything else in this product is                     diagnosed from shapes and counts, and this is the one door                     through that. The response echoes the grant back,                     including `accessedAt`, which is null until somebody                     actually looks. Sending `contentGranted: false` later                     withdraws a grant that is still open.
+         *     `contentGranted` is Bolum 48.4's consent. Ticking it lets                     the CV's own content be read for forty-eight hours to work                     out what went wrong — everything else in this product is                     diagnosed from shapes and counts, and this is the one door                     through that. The response echoes the grant back,                     how long it has left, and whether anybody has read it —                     `accessedAt` is null until the offline support reader                     stamps it, which is the only thing that can (B-078).                     Sending `contentGranted: false` later                     withdraws a grant that is still open.
          *
          *     The comment is stored and never logged. It is not sent                     back either: you wrote it, you have it.
          */
@@ -705,6 +705,7 @@ export interface components {
     schemas: {
         ContactUpdate: {
             name?: string;
+            /** Format: email */
             email?: string;
             phone?: string;
             linkedin?: string;
@@ -1140,6 +1141,8 @@ export interface components {
              * @default false
              */
             acknowledgePreflight: boolean;
+            /** @description What the challenge widget produced. Required for a caller with no account and ignored for one with an account (Bolum 44.4): signing in already answered a challenge, and generating spends real money on a model. */
+            challengeToken?: string;
             /**
              * Format: int32
              * @description How many pages the CV may take
@@ -1232,6 +1235,7 @@ export interface components {
         };
         /** @description Ask for a sign-in link */
         MagicLinkRequest: {
+            /** Format: email */
             email: string;
             /** @description The Turnstile widget's token. Required wherever the challenge is configured; a request without one is answered `403 CHALLENGE_FAILED`. */
             challengeToken?: string;
@@ -1468,6 +1472,7 @@ export interface components {
             canCustomizeTemplate?: boolean;
             canEditAtomControls?: boolean;
             canAddAlternatives?: boolean;
+            canWriteCoverLetter?: boolean;
             canSaveHistory?: boolean;
             /** Format: int32 */
             dailyGenerationQuota?: number;
@@ -1834,11 +1839,16 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
                 "multipart/form-data": {
-                    /** Format: binary */
-                    file: string;
+                    /**
+                     * Format: binary
+                     * @description The CV. PDF, DOCX, TEX, TXT or MD, up to ten megabytes.
+                     */
+                    file?: string;
+                    /** @description What the challenge widget produced. Required for a caller with no account and ignored for one with an account (Bolum 44.4): this is the most expensive single call the product makes. Absent or blank is refused with `403 CHALLENGE_FAILED`. */
+                    challengeToken?: string;
                 };
             };
         };
@@ -2381,6 +2391,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ApiError"];
                 };
             };
+            /** @description FEATURE_REQUIRES_ACCOUNT — `params.feature` is `feedback`, and the resolution is `sign_up`. An anonymous session may hold this generation and still not have this control */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
             /** @description No such generation, or it belongs to someone else */
             404: {
                 headers: {
@@ -2414,6 +2433,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CoverLetterResponse"];
+                };
+            };
+            /** @description FEATURE_REQUIRES_ACCOUNT — `params.feature` is `cover_letter`, and the resolution is `sign_up`. An anonymous session may hold this generation and still not have this control */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
                 };
             };
             /** @description No such generation, or it belongs to someone else */

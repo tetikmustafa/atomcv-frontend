@@ -65,18 +65,19 @@ artık oturumsuz çağıranda da çalışıyor, ve § 35.7'nin ilan ettiği limi
 **gerçekten uygulanıyor**. Dokuz maddenin kaydı `handoff/to-frontend.md`'nin
 ACK'inde; burada yalnız **sapmalar ve kararlar** var.
 
-- **`challengeToken` şemada yok, kesişim tipiyle eklendi.** `B-083` alanı
-  telde diyor, `api.d.ts` alanı bilmiyor (backend ayakta olmadığı için
-  `gen:api` koşulamadı), mutlak kural 2 dosyayı elle düzenlemeyi yasaklıyor.
-  `GenerationRequest = Accepts<'generate'> & { challengeToken?: string }`:
-  öteki her alan hâlâ operasyona bağlı, yani telde bir değişiklik yine
-  typecheck'te patlıyor, ve şema alanı yayımladığı gün üye **gereksizleşir,
-  yanlışlaşmaz**. `F-029` bunu istiyor. Mock, ikinci bir bildirim olmasın diye
-  istemcinin tipini içe aktarıyor.
-- **Ön yazı kapısı `canSaveHistory`'ye bağlandı, ve bu bir vekil.** Blokta ön
-  yazıya dair alan yok (`F-028`). Vekil tek bir fonksiyonda
-  (`useCanWriteCoverLetter`); alan gelirse değişecek tek satır orası. Kapı
-  **oturum yüklenirken de kapalı** — görünüp kaybolan bir kontrol basılabilir.
+- ~~**`challengeToken` şemada yok, kesişim tipiyle eklendi.**~~ **Alan
+  yayımlanıyordu; bizim `api.d.ts` eskiydi** (`B-086`, aynı gün düzeldi).
+  Kesişim tipi kalktı, mock şemanın tipine döndü. Ders kesişimde değil
+  ölçümde: "şemada yok" dedik, ölçtüğümüz şey **diskteki üretilmiş dosyaydı**,
+  canlı şema değil — ve o dosya backend'in üç commit gerisinden üretilmişti.
+- **Ön yazı kapısı bir gün `canSaveHistory` vekiliyle durdu, artık kendi
+  alanı var** (`canWriteCoverLetter`, `B-085`). Vekili tek bir fonksiyona
+  hapsetmek işe yaradı: değişen tek satır oldu. Kapı **oturum yüklenirken de
+  kapalı** — görünüp kaybolan bir kontrol basılabilir.
+- **Yeni kural, ve bizden çıktı:** `FEATURE_REQUIRES_ACCOUNT`'ın her `feature`
+  değerinin yetenek bloğunda bir boolean karşılığı var (§ D.6.1). Karşılığı
+  olmayan bir değer, istemcinin **önleyemediği** bir ret demek — ön yazı tam
+  o boşluğa düşmüştü.
 - **Challenge'ın ölçütü yetenek değil, oturum.** `useIsAnonymous`, çünkü
   Turnstile "hangi özelliği kullanabilirsin" sorusu değil, "karşıda insan var
   mı" sorusu. Ürünün geri kalanı yeteneğe bakmaya devam ediyor.
@@ -87,11 +88,16 @@ ACK'inde; burada yalnız **sapmalar ve kararlar** var.
   kabul edilen istek de token'ı harcıyor.
 - **Token yoksa alan hiç gönderilmiyor.** Boş dize sunucuda **başarısızlık**
   sayılıyor; sırrı olmayan dağıtımda yokluk geçiyor, boş geçmiyor.
-- **Mock iki reddin şeklini tahmin ediyor** (`F-030`): `422
-  ATOM_LIMIT_EXCEEDED` `resolutions`'ı **boş** üretiyor (sunucunun
-  göndermediği düğmeyi öğretmemek için) ve anonim `POST .../feedback` için
-  `403` + `params.feature=feedback` uyduruyor. İstemcide ikisine de bağlı bir
-  şey yok — ekran anonimde formu çizmiyor.
+- **Mock iki reddin şeklini tahmin etmişti; `B-087` ikisini de kapattı.**
+  `422 ATOM_LIMIT_EXCEEDED` `sign_up` **taşıyor** ve hep taşıyormuş — boş
+  liste yanlıştı, düzeltildi. Anonim `POST .../feedback` ise bizim tahmin
+  ettiğimiz şekle **çevrildi**: uç o güne kadar `401` diyordu, yani canlı bir
+  oturumu olan kişiye "oturumun bitti" dedirtiyordu. Sorunun kendisi kusuru
+  buldu.
+- **`params.feature` kapalı sözlüğü dört:** `atom_controls`, `alternatives`,
+  `cover_letter`, `feedback` (`AccountFeature`). Katalog `string` diyordu, yani
+  dışarıdan tahminle sözleşme aynı görünüyordu; dördü de ICU dalını alıyor —
+  `feedback`'i hiçbir ekran üretemese de, çünkü sözlük sunucunun.
 - **`limitAtomsTo()` bir test düğmesi**, `requireChallenge()` gibi. Altmış
   atomluk fixture yazmak ekranı değil fixture'ı test ederdi; handler hâlâ
   `capabilities`'in yayımladığı sayıyı okuyor, yani ikisi çelişemiyor.

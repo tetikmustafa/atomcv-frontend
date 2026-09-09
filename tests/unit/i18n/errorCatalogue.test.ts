@@ -205,13 +205,20 @@ describe.each(CATALOGUES)('the %s error catalogue', (locale, messages) => {
    * postings it had understood.
    */
   /**
-   * `B-081` and `B-082`: one code, three doors. The point of `params.feature`
-   * is that the refusal names the control the reader just pressed rather than
+   * One code, four doors — a **closed** set since `B-087` (`AccountFeature`,
+   * § D.6.1), where it used to be `feature: string` and a guess was
+   * indistinguishable from the contract. The point of `params.feature` is
+   * that the refusal names the control the reader just pressed rather than
    * putting up a general registration wall, so each token has to reach a
    * sentence of its own.
+   *
+   * `feedback` is the one no screen can reach — the verdict form is not drawn
+   * without an account — and it is covered anyway: the vocabulary is the
+   * server's, and a value it may send has to render whether or not today's UI
+   * can produce it.
    */
-  describe('the three features behind FEATURE_REQUIRES_ACCOUNT', () => {
-    const FEATURES = ['atom_controls', 'alternatives', 'cover_letter'] as const;
+  describe('the four features behind FEATURE_REQUIRES_ACCOUNT', () => {
+    const FEATURES = ['atom_controls', 'alternatives', 'cover_letter', 'feedback'] as const;
 
     const render = (feature: string) => renderCode('FEATURE_REQUIRES_ACCOUNT', { feature });
 

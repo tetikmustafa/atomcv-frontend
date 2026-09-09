@@ -92,15 +92,16 @@ export function useIsAnonymous(): boolean | undefined {
 }
 
 /**
- * Whether the covering-letter box may be offered at all (§ 35.7.3, `B-082`).
+ * Whether the covering-letter box may be offered at all (§ 35.7.3, `B-085`).
  *
- * **`canSaveHistory` is standing in for a flag that does not exist yet.**
- * `B-082` says to close the box from `capabilities`, and
- * `CapabilitiesResponse` publishes nothing about letters — the closest true
- * thing it says is that history is kept, which is the flag that separates the
- * two capability sets § 35.7 publishes. So this is a proxy, deliberately
- * behind one function: `F-028` asks the backend for `canWriteCoverLetter`,
- * and the day it lands this body is the only line that changes.
+ * **Its own flag now.** This read `canSaveHistory` for a day, because the
+ * block published nothing about letters and that was the one field which
+ * separated the two capability sets — a proxy that answered correctly only
+ * because the two moved together. `F-028` asked for the real thing and got
+ * it, along with a rule: every `feature` value
+ * `FEATURE_REQUIRES_ACCOUNT` can carry has a boolean beside it in the block,
+ * so a refusal the client could not have prevented is a contract bug rather
+ * than a screen's oversight.
  *
  * Closed while the session is still loading, for the reason `AtomEditor`
  * gives about atom controls: a control that appears and then vanishes can be
@@ -108,7 +109,7 @@ export function useIsAnonymous(): boolean | undefined {
  * the button.
  */
 export function useCanWriteCoverLetter(): boolean {
-  return useCapabilities()?.canSaveHistory === true;
+  return useCapabilities()?.canWriteCoverLetter === true;
 }
 
 /**

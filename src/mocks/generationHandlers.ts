@@ -18,7 +18,6 @@
  */
 
 import { http, HttpResponse } from 'msw';
-import type { GenerationRequest as ClientGenerationRequest } from '@/lib/api/endpoints/generations';
 import type { JobStatus } from '@/lib/api/endpoints/jobs';
 import type { components } from '@/types/api';
 import type { CompletedEvent, FailedEvent, PhaseEvent } from './contracts';
@@ -50,15 +49,7 @@ type Schemas = components['schemas'];
  * the open reading exists for.
  */
 type JobStatusBody = JobStatus;
-/*
-  The client's request type rather than the schema's, for one field: § 35.7.4's
-  `challengeToken` is on the wire (`B-083`) and not yet in `api.d.ts`, which
-  was generated before it existed. Taking the client's shape keeps one
-  declaration of it instead of a second here — a mock that could not see the
-  field could not refuse a request that omits it, which is the whole behaviour
-  worth having.
-*/
-type GenerationRequest = ClientGenerationRequest;
+type GenerationRequest = Schemas['GenerationRequest'];
 type CoverLetterRequest = Schemas['CoverLetterRequest'];
 
 const GENERATIONS = '/api/v1/generations';
@@ -701,11 +692,11 @@ export const generationHandlers = [
       `feedback: null` for one, so a write that succeeded would contradict the
       read a moment later.
 
-      **The shape of this refusal is our reading**, in the sense the
-      `userEdited` guard in `profileHandlers` is: `B-082` states the absence
-      and not the status code behind it. Nothing in the client depends on the
-      choice — the section is not drawn without an account — and `F-030` asks
-      the backend to confirm it.
+      **The shape was a guess and is now the contract** (`B-087`): the server
+      answered `401` here until `F-030` asked what it should be, which told an
+      anonymous caller holding a live session that the session had ended. The
+      code, the `params.feature` and the `sign_up` below are what it sends
+      today, and `feature` is one of the four `AccountFeature` publishes.
     */
     if (!isAccount()) {
       return HttpResponse.json(
