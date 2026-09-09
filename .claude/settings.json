@@ -1,7 +1,10 @@
 {
   "permissions": {
     "defaultMode": "default",
-    "deny": [
+    "deny": [],
+    "ask": [
+      "Write(docs/notes/**)",
+      "Write(docs/STATUS.md)",
       "Bash(git push:*)",
       "Bash(git merge:*)",
       "Bash(git rebase:*)",
@@ -13,7 +16,6 @@
       "Bash(git clean -fdx*)",
       "Write(docs/spec/**)"
     ],
-    "ask": ["Write(docs/notes/**)", "Write(docs/STATUS.md)"],
     "allow": [
       "Bash(git commit:*)",
       "Bash(git tag:*)",

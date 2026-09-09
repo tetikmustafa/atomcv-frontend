@@ -75,8 +75,26 @@ jobs:
 
       - run: npm ci
 
+      # `--with-deps` runs `apt-get update`, and the runner image ships
+      # Google's `chrome-stable` apt source. On 2026-09-09 that repository
+      # served a `Packages.gz` whose hash did not match the one its own
+      # `InRelease` declares, so apt exited 100 and this step failed twice in
+      # a row with nothing wrong on our side.
+      #
+      # The source is **dropped rather than waited out**: Playwright downloads
+      # its own Chromium build, and `--with-deps` only needs the Ubuntu
+      # archives for the shared libraries around it. Nothing here has ever
+      # installed Google's package, so a third party's index is a dependency
+      # this job should not have had.
+      #
+      # Matched by content rather than by filename — the image has used both
+      # `google-chrome.list` and a deb822 `.sources` file — and the `|| true`
+      # is for the day it stops being there at all: `grep` exits 1 on no match
+      # and the step's shell runs with `pipefail`.
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: |
+          grep -rlF dl.google.com /etc/apt/sources.list.d 2>/dev/null | xargs -r sudo rm -f || true
+          npx playwright install --with-deps chromium
 
       # Playwright starts its own dev server (playwright.config.ts). MSW is
       # disabled in production builds by design, so these run against `next
