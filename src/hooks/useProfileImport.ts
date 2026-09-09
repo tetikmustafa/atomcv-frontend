@@ -19,6 +19,15 @@ export type ImportAttempt = {
   file: File;
   /** Set only by answering the server's own `replace_profile` (`B-060`). */
   replace?: boolean;
+  /**
+   * The challenge, for a caller without an account (§ 35.7.4, `B-083`).
+   *
+   * Passed per attempt rather than held here: a Turnstile token is
+   * single-use, so the one that answered the `409` cannot answer the replace
+   * that follows it. The screen owns the widget and hands over whichever
+   * token is current.
+   */
+  challengeToken?: string;
 };
 
 /**
@@ -64,8 +73,12 @@ export function useImportCv() {
   }, []);
 
   return useMutation({
-    mutationFn: ({ file, replace }: ImportAttempt) =>
-      importCv(file, { idempotencyKey: keyFor(file), ...(replace ? { replace } : {}) }),
+    mutationFn: ({ file, replace, challengeToken }: ImportAttempt) =>
+      importCv(file, {
+        idempotencyKey: keyFor(file),
+        ...(replace ? { replace } : {}),
+        ...(challengeToken ? { challengeToken } : {}),
+      }),
     onSuccess: () => {
       attempt.current = null;
       // Charged on enqueue, so the number on screen is one behind the moment

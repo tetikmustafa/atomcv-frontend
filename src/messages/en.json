@@ -6,7 +6,7 @@
     "INSUFFICIENT_PROFILE": "There isn't enough in your profile to build a resume from yet. It's {completeness, number, ::percent scale/0.01} complete, and what's still missing is: {missing}.",
     "UNPARSEABLE_JOB_DESCRIPTION": "{reason, select,\n  too_short {That posting is too short to work from. Paste the whole advert — the requirements are the part that matters most.}\n  too_long {That is longer than any posting we can read. Paste the advert on its own, without the page around it.}\n  low_entropy {That text repeats itself too much to read as a posting. If you pasted a whole page, try just the advert.}\n  not_job_like {That does not read like a job posting to us. If it is one, you can carry on anyway.}\n  low_confidence {We read the posting but were not sure enough of it to tailor anything — we would rather not guess at what the job wants.}\n  too_few_skills {We read the posting, but only {skillsFound, plural, =0 {no skills} =1 {one skill} other {# skills}} came out of it — not enough to tailor anything to.}\n  suspicious_output {Our reading of that posting came back malformed. Nothing is wrong with what you pasted — asking again usually settles it.}\n  other {We couldn't make sense of that job posting.}\n}",
     "CONFLICTING_PREFERENCES": "The content you've pinned needs about {pinnedPages, number} pages, and the limit is set to {maxPages, plural, =1 {one page} other {# pages}}.",
-    "FEATURE_REQUIRES_ACCOUNT": "{feature} needs an account.",
+    "FEATURE_REQUIRES_ACCOUNT": "{feature, select,\n  atom_controls {Importance, availability and the two locks need an account. Everything else about this item stays editable.}\n  alternatives {Adding a second wording needs an account. Editing the one that is here does not.}\n  cover_letter {A covering letter needs an account. Your resume was not affected.}\n  other {That needs an account.}\n}",
     "QUOTA_EXCEEDED": "{metric, select, generation {You have used every resume you can generate today.} profile_extract {You have used every profile import you can make today.} other {You have used today's allowance.}} It renews {resetsAt, date, short} at {resetsAt, time, short}.",
     "ALL_PROVIDERS_UNAVAILABLE": "None of the AI providers answered. Nothing was lost — your profile is untouched.",
     "COMPILATION_FAILED": "The document didn't come out. {detail}",
@@ -140,7 +140,7 @@
     "continue": "Continue",
     "errorTitle": "Sign-in didn't finish",
     "upgrade": {
-      "upgraded": "You're signed in, and the profile you were working on is now part of your account.",
+      "upgraded": "You're signed in. The profile you were working on is now part of your account, and so are the resumes you made from it.",
       "kept_existing": "You're signed in. Your account already had a profile, so the one you were just working on wasn't moved into it — and it can't be reached any more. The profile on your account is untouched.",
       "unavailable": "You're signed in, but the profile you were working on couldn't be carried over. Something went wrong on our side; your account itself is fine."
     }
@@ -207,7 +207,7 @@
       },
       "skills": {
         "label": "Skills",
-        "hint": "Canonical names used to match this against a posting."
+        "hint": "Canonical names used to match this against a posting. They are saved in a standard form, so \"Spring Boot\" comes back as \"spring-boot\" and two spellings of one skill become one entry."
       },
       "metrics": {
         "label": "Numbers",
@@ -373,7 +373,9 @@
     "announceDone": "Your resume is ready",
     "announceFailed": "The generation failed",
     "startOver": "Start again",
-    "coverLetter": "Write a covering letter too"
+    "coverLetter": "Write a covering letter too",
+    "coverLetterAccount": "Covering letters need an account. The resume itself is the same either way.",
+    "coverLetterSignIn": "Create an account"
   },
   "Result": {
     "title": "Your resume",
@@ -387,6 +389,7 @@
     "generalNote": "No posting was given, so there is nothing to measure this against.",
     "languageNote": "Written in {content}, not {posting}. A resume is written in one language, and your profile does not yet have {posting} wording for everything on this page.",
     "coverLetterTitle": "Covering letter",
+    "coverLetterAccount": "Covering letters need an account. This resume was built exactly as it would have been with one, and downloads the same way.",
     "coverLetterAbsent": "No letter has been written for this resume yet.",
     "coverLetterAsk": "Write one",
     "coverLetterAnother": "Try another draft",
@@ -457,9 +460,9 @@
       "why": "Why we collect it",
       "whyBody": "To generate resumes, manage your account, and improve the service.",
       "share": "Who we share it with",
-      "shareBody": "AI providers receive the content needed to analyse a posting and rewrite your own wording. The current list of providers, what is sent to each, and whether any free tier may use that data for model training must be stated here explicitly. They may also keep short-lived logs of those requests on their own side.\n\nThe other processors we use: email delivery — Resend, which sends through AWS SES in the ap-northeast-1 (Tokyo) region, so your address and the delivery metadata around it are processed outside the EU; file storage — Cloudflare R2; and sign-in with Google or GitHub, when you choose it. Analytics are anonymous and cookie-free.",
+      "shareBody": "AI providers receive the content needed to analyse a posting and rewrite your own wording: the text of your CV, the postings you paste, the text of individual items, and the inputs to summaries and covering letters. That is personal data.\n\nRequests go to OpenRouter, which brokers them to whichever provider is serving the model we use. For the model currently in use those are OpenAI, Microsoft Azure (its global, US and EU endpoints), Amazon Bedrock (us-east-1) and Google. A request names the model rather than a provider, and the answer does not say which one served it, so all of them are listed. They may also keep short-lived logs of those requests on their own side.\n\nEvery request is sent with data collection denied, which means it is not routed to a provider that may train on it. OpenRouter's own logging policy is separate from that and is set on our account. The model currently in use is openai/gpt-5.6-sol; this list follows the model, and is reviewed whenever the model changes.\n\nThe other processors we use: email delivery — Resend, which sends through AWS SES in the ap-northeast-1 (Tokyo) region, so your address and the delivery metadata around it are processed outside the EU; file storage — Cloudflare R2; and sign-in with Google or GitHub, when you choose it. Analytics are anonymous and cookie-free.",
       "retention": "How long we keep it",
-      "retentionBody": "Account data for as long as the account exists. Anonymous sessions expire two hours after your last activity. Generated PDFs are kept 14 days, or indefinitely if you archive them. Logs are kept 30 days.",
+      "retentionBody": "Account data for as long as the account exists. Anonymous sessions expire two hours after your last activity (what you made in one is deleted from the database within five minutes of that, and can remain in encrypted backups for up to six months). Generated PDFs are kept 14 days, or indefinitely if you archive them. Logs are kept 30 days.",
       "rights": "Your rights",
       "rightsBody": "Access, correction, deletion, and export of your data in JSON and Markdown.",
       "deletion": "How to delete everything",

@@ -295,13 +295,25 @@ export function exportProfileAsMarkdown() {
  * (`B-060`). The server reads anything else as absent, so a typo cannot stand
  * in for consent — and nothing here sends it unless the reader pressed the
  * resolution the server offered.
+ *
+ * **`challengeToken` is a form field, not a header** (§ 35.7.4, `B-083`), and
+ * it is required of a caller without an account: this and `POST /generations`
+ * are the two anonymous requests that spend model money, and the quota
+ * counters of § 44.1 say *how much* rather than *who*. Omitted rather than
+ * sent empty where there is none — an empty value is a **failure**, while an
+ * absent one is what a deployment with no Turnstile secret expects.
  */
 export function importCv(
   file: File,
-  { idempotencyKey, replace = false }: { idempotencyKey: string; replace?: boolean },
+  {
+    idempotencyKey,
+    replace = false,
+    challengeToken,
+  }: { idempotencyKey: string; replace?: boolean; challengeToken?: string },
 ) {
   const form = new FormData();
   form.append('file', file);
+  if (challengeToken) form.append('challengeToken', challengeToken);
 
   return api.post<Returns<'importCv', '*/*'>>(
     `/profile/import${query({ mode: replace ? 'replace' : undefined })}`,

@@ -10,6 +10,7 @@ import { api } from '@/lib/api/client';
 import { submitFeedback } from '@/lib/api/endpoints/generations';
 import { FIT_REPORT, generations, rejectNextCoverLetter } from '@/mocks/generationFixture';
 import { server } from '@/mocks/node';
+import { signIn } from '@/mocks/sessionFixture';
 import { formats } from '@/lib/i18n/formats';
 import en from '@/messages/en.json';
 import tr from '@/messages/tr.json';
@@ -214,6 +215,15 @@ describe('a finished generation', () => {
 });
 
 describe('the covering letter', () => {
+  /*
+    As an account throughout. Both of these belong to one since § 35.7.3
+    (`B-082`): `POST /generations` refuses the box, the regenerate endpoint
+    refuses the button behind it, and `GET /generations/{id}` answers
+    `feedback: null` for a caller without an account. What an anonymous reader
+    sees instead has its own tests at the bottom of this file.
+  */
+  beforeEach(signIn);
+
   /**
    * § 34 keeps it off the main path: a second LLM call, and most people want
    * a resume. So a generation that did not ask for one arrives without a
@@ -365,6 +375,15 @@ describe('the covering letter', () => {
 });
 
 describe('the verdict on a generation', () => {
+  /*
+    As an account throughout. Both of these belong to one since § 35.7.3
+    (`B-082`): `POST /generations` refuses the box, the regenerate endpoint
+    refuses the button behind it, and `GET /generations/{id}` answers
+    `feedback: null` for a caller without an account. What an anonymous reader
+    sees instead has its own tests at the bottom of this file.
+  */
+  beforeEach(signIn);
+
   /**
    * § 48.4: a form that accepts the judgement before asking why collects more
    * of it and better of it. So the thumb is the whole required form, and the
@@ -483,6 +502,15 @@ describe('the verdict on a generation', () => {
  * through the screen.
  */
 describe('the diagnostic window', () => {
+  /*
+    As an account throughout. Both of these belong to one since § 35.7.3
+    (`B-082`): `POST /generations` refuses the box, the regenerate endpoint
+    refuses the button behind it, and `GET /generations/{id}` answers
+    `feedback: null` for a caller without an account. What an anonymous reader
+    sees instead has its own tests at the bottom of this file.
+  */
+  beforeEach(signIn);
+
   it('runs from the first consent, not from the latest one', async () => {
     const generationId = await generate();
 
@@ -512,6 +540,15 @@ describe('the diagnostic window', () => {
  * joins whatever it is handed.
  */
 describe('why a draft was refused', () => {
+  /*
+    As an account throughout. Both of these belong to one since § 35.7.3
+    (`B-082`): `POST /generations` refuses the box, the regenerate endpoint
+    refuses the button behind it, and `GET /generations/{id}` answers
+    `feedback: null` for a caller without an account. What an anonymous reader
+    sees instead has its own tests at the bottom of this file.
+  */
+  beforeEach(signIn);
+
   it('names the reasons instead of printing their tokens', async () => {
     const generationId = await generate();
     render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
@@ -531,6 +568,15 @@ describe('why a draft was refused', () => {
  * grant stays visible on the day somebody would actually check `accessedAt`.
  */
 describe('a verdict given earlier', () => {
+  /*
+    As an account throughout. Both of these belong to one since § 35.7.3
+    (`B-082`): `POST /generations` refuses the box, the regenerate endpoint
+    refuses the button behind it, and `GET /generations/{id}` answers
+    `feedback: null` for a caller without an account. What an anonymous reader
+    sees instead has its own tests at the bottom of this file.
+  */
+  beforeEach(signIn);
+
   it('comes back on a fresh render of the screen', async () => {
     const generationId = await generate();
     await submitFeedback(generationId, { rating: -1, contentGranted: true });
@@ -567,5 +613,48 @@ describe('a verdict given earlier', () => {
 
     const yes = await screen.findByRole('button', { name: en.Result.feedbackGood });
     expect(yes).toHaveAttribute('aria-pressed', 'false');
+  });
+});
+
+/**
+ * What the result screen is without an account (§ 35.7.3, § 35.7.2,
+ * `B-082`).
+ *
+ * The resume itself is the whole product and it is untouched — built,
+ * measured and downloadable exactly as it would be. What is missing is the
+ * two things that need somebody who can still be reached tomorrow: a letter,
+ * and a verdict with a 48-hour window on the content behind it.
+ */
+describe('the same result without an account', () => {
+  it('says where the covering letter went, and offers no way to ask for one', async () => {
+    const generationId = await generate();
+
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    expect(await screen.findByTestId('cover-letter-account')).toHaveTextContent(
+      en.Result.coverLetterAccount,
+    );
+    expect(
+      screen.queryByRole('button', { name: en.Result.coverLetterAsk }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('draws no verdict form, because there is no verdict to give', async () => {
+    const generationId = await generate();
+
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    // Awaited on the resume, so this is not asserting on a render that has
+    // not happened yet.
+    await screen.findByRole('button', { name: 'Download PDF' });
+    expect(screen.queryByRole('button', { name: en.Result.feedbackGood })).not.toBeInTheDocument();
+  });
+
+  it('still downloads the resume, which is the part that is not narrower', async () => {
+    const generationId = await generate();
+
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    expect(await screen.findByRole('button', { name: 'Download PDF' })).toBeEnabled();
   });
 });

@@ -24,6 +24,7 @@ import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useAccountResolution } from '@/hooks/useAccountResolution';
 import { useCreateAtom } from '@/hooks/useProfile';
 import { announce } from '@/stores/announcerStore';
 import type { AtomCreate, Entry, Section } from '@/lib/api/endpoints/profile';
@@ -57,6 +58,7 @@ const ATOM_KIND: Record<string, AtomCreate['kind']> = {
 export function AddAtom({ section, entry }: AddAtomProps) {
   const t = useTranslations('Editor.add');
   const create = useCreateAtom();
+  const account = useAccountResolution();
   const [text, setText] = useState('');
 
   const fieldId = `add-atom-${entry?.id ?? section.id}`;
@@ -110,9 +112,24 @@ export function AddAtom({ section, entry }: AddAtomProps) {
         {create.isPending ? t('adding') : t('submit')}
       </Button>
 
-      {/* The panel renders whatever the server said to offer. A failed create
-          leaves the text in the field, so retrying is re-submitting. */}
-      {create.error ? <ErrorPanel error={create.error} onRetry={() => create.reset()} /> : null}
+      {/*
+        The panel renders whatever the server said to offer. A failed create
+        leaves the text in the field, so retrying is re-submitting.
+
+        The one refusal here that is not about this bullet is `B-081`'s
+        sixty-atom ceiling: `422 ATOM_LIMIT_EXCEEDED` names the limit and how
+        many there already are, and the way past it is an account rather than
+        another press. That resolution is carried out now instead of being
+        drawn and doing nothing.
+      */}
+      {create.error ? (
+        <ErrorPanel
+          error={create.error}
+          onResolve={account.onResolve}
+          canResolve={account.canResolve}
+          onRetry={() => create.reset()}
+        />
+      ) : null}
     </form>
   );
 }

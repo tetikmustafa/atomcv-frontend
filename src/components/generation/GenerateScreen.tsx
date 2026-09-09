@@ -16,6 +16,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { JobProgress } from '@/components/generation/JobProgress';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useStartGeneration } from '@/hooks/useGeneration';
-import { useRouter } from '@/lib/i18n/navigation';
+import { useCanWriteCoverLetter, useIsAnonymous } from '@/hooks/useSession';
+import { Link, useRouter } from '@/lib/i18n/navigation';
 import type { GenerationRequest } from '@/lib/api/endpoints/generations';
 import type { Resolution } from '@/types/domain';
 
@@ -73,6 +75,22 @@ export function GenerateScreen() {
   const [coverLetter, setCoverLetter] = useState(false);
   const [job, setJob] = useState<{ jobId: string; streamUrl?: string } | null>(null);
 
+  /**
+   * The challenge, and the way it is reset (§ 35.7.4, `B-083`).
+   *
+   * Both halves are `MagicLinkForm`'s, arrived at there for the same reasons:
+   * a Turnstile token is single-use, so bumping `attempt` remounts the widget
+   * rather than reaching for an imperative handle that can get out of step
+   * with the render. What differs is *when*: that form resets on refusal
+   * only, and this one resets after **every** attempt — a generation that was
+   * accepted has spent its token too, and the next press is a second request.
+   */
+  const [challengeToken, setChallengeToken] = useState<string>();
+  const [attempt, setAttempt] = useState(0);
+
+  const anonymous = useIsAnonymous();
+  const canWriteCoverLetter = useCanWriteCoverLetter();
+
   const start = useStartGeneration();
 
   function submit(overrides: Partial<GenerationRequest> = {}) {
@@ -84,20 +102,41 @@ export function GenerateScreen() {
       // endpoint's own comment gives about `acknowledgePreflight`: the
       // generator makes both required because the server defaults them, and a
       // body that states what it asked for is the one that cannot drift.
-      coverLetter,
+      //
+      // `&&` rather than the state alone: the box is not drawn without an
+      // account, and a `true` left behind by a session that ended — the two
+      // hours can run out with the switch on screen — would be refused with
+      // `403 FEATURE_REQUIRES_ACCOUNT` for a control the reader can no longer
+      // see (`B-082`).
+      coverLetter: coverLetter && canWriteCoverLetter,
       ...(trimmed === '' ? {} : { jobDescription: trimmed }),
+      // Omitted rather than sent empty where there is none: an empty value is
+      // a **failure** to the challenge, while an absence is what a deployment
+      // without a Turnstile secret expects (`B-083`).
+      ...(challengeToken ? { challengeToken } : {}),
       ...overrides,
     };
 
     start.mutate(body, {
       onSuccess: (accepted) => {
+        spendChallenge();
         if (!accepted.jobId) return;
         setJob({
           jobId: accepted.jobId,
           ...(accepted.streamUrl ? { streamUrl: accepted.streamUrl } : {}),
         });
       },
+      // On every refusal, not only `CHALLENGE_FAILED`: the server does not
+      // publish which layer turned a request away, so there is no telling a
+      // refusal that spent the token from one that did not. A fresh token
+      // always works; a discarded good one costs a second.
+      onError: spendChallenge,
     });
+  }
+
+  function spendChallenge() {
+    setChallengeToken(undefined);
+    setAttempt((n) => n + 1);
   }
 
   /**
@@ -153,18 +192,38 @@ export function GenerateScreen() {
     }
   }
 
+  /**
+   * Drawn on both views, and only for a caller without an account.
+   *
+   * Not only on the form: every way out of a failed job that this screen
+   * offers ends in `submit()` — `retry`, `continue_anyway`,
+   * `continue_as_general_cv`, `increase_page_limit` — and each of those is a
+   * fresh `POST /generations` that has to carry a fresh token. A widget that
+   * unmounted with the form would leave the reader on the progress screen
+   * with a `403 CHALLENGE_FAILED` and nothing to answer it with.
+   *
+   * It draws nothing where no site key is configured, which is the local
+   * deployment and both test environments (`B-050`).
+   */
+  const challenge = anonymous === true && (
+    <TurnstileWidget key={attempt} onToken={setChallengeToken} />
+  );
+
   if (job) {
     return (
-      <JobProgress
-        jobId={job.jobId}
-        {...(job.streamUrl ? { streamUrl: job.streamUrl } : {})}
-        onResolve={resolve}
-        canResolve={canResolve}
-        onStartOver={() => {
-          setJob(null);
-          start.reset();
-        }}
-      />
+      <div className="flex flex-col gap-4">
+        <JobProgress
+          jobId={job.jobId}
+          {...(job.streamUrl ? { streamUrl: job.streamUrl } : {})}
+          onResolve={resolve}
+          canResolve={canResolve}
+          onStartOver={() => {
+            setJob(null);
+            start.reset();
+          }}
+        />
+        {challenge}
+      </div>
     );
   }
 
@@ -188,12 +247,43 @@ export function GenerateScreen() {
         />
       </div>
 
-      <div className="flex items-center gap-3">
-        <Switch id="cover-letter" checked={coverLetter} onCheckedChange={setCoverLetter} />
-        <Label htmlFor="cover-letter" className="font-normal">
-          {t('coverLetter')}
-        </Label>
-      </div>
+      {/*
+        The box, or the sentence that stands in for it (§ 35.7.3, `B-082`).
+
+        Hidden rather than disabled, like the atom controls: a switch greyed
+        out beside the primary action of the screen is an upsell in the middle
+        of somebody's work, and § 9's promise is a **narrower** product rather
+        than a nagging one. The note is the honest half of it — the box is the
+        one thing on this screen an anonymous caller genuinely cannot have, so
+        saying where it went beats a form that quietly differs from the one in
+        the documentation.
+
+        Refused **before the quota** server-side, so leaving the box open
+        would not cost anyone a generation — it would cost them a round trip
+        and an error panel instead of a resume.
+      */}
+      {canWriteCoverLetter && (
+        <div className="flex items-center gap-3">
+          <Switch id="cover-letter" checked={coverLetter} onCheckedChange={setCoverLetter} />
+          <Label htmlFor="cover-letter" className="font-normal">
+            {t('coverLetter')}
+          </Label>
+        </div>
+      )}
+
+      {/* Neither, until the session has answered: a sentence that says an
+          account is needed, shown for a moment to somebody who has one, is a
+          worse first impression than the space it occupies. */}
+      {!canWriteCoverLetter && anonymous === true && (
+        <p className="text-muted-foreground text-sm">
+          {t('coverLetterAccount')}{' '}
+          <Link href="/login?next=%2Fgenerate" className="underline underline-offset-4">
+            {t('coverLetterSignIn')}
+          </Link>
+        </p>
+      )}
+
+      {challenge}
 
       {start.error && (
         <ErrorPanel error={start.error} onResolve={resolve} canResolve={canResolve} />

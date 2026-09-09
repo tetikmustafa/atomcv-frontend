@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { ApiError, isApiError } from '@/lib/api/errors';
 import {
   getProfile,
@@ -9,6 +9,7 @@ import {
   reorderAtoms,
 } from '@/lib/api/endpoints/profile';
 import { server } from '@/mocks/node';
+import { signIn } from '@/mocks/sessionFixture';
 
 async function captured(promise: Promise<unknown>): Promise<ApiError> {
   const caught = await promise.then(
@@ -153,6 +154,15 @@ describe('atoms', () => {
  * failure `toIfMatch` exists to prevent, so it is asserted rather than assumed.
  */
 describe('optimistic concurrency', () => {
+  /*
+    `importance` is one of the four controls § 35.7.2 keeps for an account,
+    and since `B-081` an anonymous patch touching one is refused whole. What
+    these three exercise is the version header, so they are made as somebody
+    who is allowed to send the field — the refusal has its own test in
+    `AtomEditor.test`.
+  */
+  beforeEach(signIn);
+
   it('accepts a write built on the current version and hands back the next one', async () => {
     const [atom] = await listAtoms();
 

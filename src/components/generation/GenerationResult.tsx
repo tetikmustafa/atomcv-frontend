@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from '@/lib/i18n/navigation';
 import { languageName } from '@/lib/i18n/languageNames';
 import { useDownloadGeneration, useGenerationResult } from '@/hooks/useGeneration';
+import { useCanWriteCoverLetter, useIsAnonymous } from '@/hooks/useSession';
 import { announce } from '@/stores/announcerStore';
 
 /**
@@ -41,6 +42,8 @@ export function GenerationResult({ generationId }: { generationId: string }) {
   const locale = useLocale();
   const { data, isPending, error, refetch } = useGenerationResult(generationId);
   const download = useDownloadGeneration();
+  const canWriteCoverLetter = useCanWriteCoverLetter();
+  const anonymous = useIsAnonymous();
 
   function save() {
     download.mutate(generationId, {
@@ -116,18 +119,42 @@ export function GenerationResult({ generationId }: { generationId: string }) {
       )}
 
       {/*
-        Always drawn, letter or not. `coverLetter: true` at generation time is
-        allowed to produce a resume with no letter — a letter that could not
-        be written does not fail the job (`B-056`) — so the absence is a state
-        the reader can act on rather than an error to report.
+        Always drawn for an account, letter or not. `coverLetter: true` at
+        generation time is allowed to produce a resume with no letter — a
+        letter that could not be written does not fail the job (`B-056`) — so
+        the absence is a state the reader can act on rather than an error to
+        report.
+
+        Without an account there is neither a letter nor a way to ask for one
+        (§ 35.7.3): `POST /generations` refuses the box and this endpoint
+        refuses the request behind the button. The panel is replaced by the
+        sentence that says so, rather than left on screen to be pressed into a
+        `403`.
       */}
-      <CoverLetter generationId={generationId} letter={data.coverLetter} />
+      {canWriteCoverLetter ? (
+        <CoverLetter generationId={generationId} letter={data.coverLetter} />
+      ) : (
+        anonymous === true && (
+          <p
+            data-testid="cover-letter-account"
+            className="border-border text-muted-foreground rounded-md border p-4 text-sm"
+          >
+            {t('coverLetterAccount')}
+          </p>
+        )
+      )}
 
       {/*
         Last, and after the letter: the verdict is about what the reader has
         by then actually looked at.
+
+        An anonymous caller has no verdict to show and none to give — `B-082`
+        is explicit that `feedback` comes back null there, because both the
+        verdict and the 48-hour diagnostic grant belong to an account that can
+        still be reached when somebody reads them. An empty form would post
+        into a refusal.
       */}
-      <Feedback generationId={generationId} recorded={data.feedback} />
+      {anonymous === false && <Feedback generationId={generationId} recorded={data.feedback} />}
     </div>
   );
 }

@@ -5,12 +5,25 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { AtomEditor } from '@/components/profile/AtomEditor';
 import { listAtoms, type Atom } from '@/lib/api/endpoints/profile';
 import { profileKeys } from '@/lib/api/queryKeys';
 import en from '@/messages/en.json';
 import { server } from '@/mocks/node';
+
+/*
+  next-intl's client navigation is imported for one thing here: the editor
+  carries out the `sign_up` the server offers when an anonymous session meets
+  one of § 35.7.2's limits (`B-081`). It has to be mocked rather than left
+  alone — its ESM entry does not resolve under Vitest, and the App Router it
+  reaches for does not exist in jsdom. Nothing in this file asserts on it;
+  `useAccountResolution.test` is where that resolution is checked.
+*/
+vi.mock('@/lib/i18n/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => '/profile',
+}));
 
 async function renderEditor(atomId: string, locale: 'en' | 'tr' = 'en') {
   const client = new QueryClient({

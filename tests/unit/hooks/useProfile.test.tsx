@@ -8,6 +8,7 @@ import { patchAtom, type Atom } from '@/lib/api/endpoints/profile';
 import { isApiError } from '@/lib/api/errors';
 import { fixture } from '@/mocks/profileFixture';
 import { server } from '@/mocks/node';
+import { signIn } from '@/mocks/sessionFixture';
 
 function makeClient() {
   return new QueryClient({
@@ -86,6 +87,14 @@ describe('the atom cache', () => {
 });
 
 describe('writing an atom', () => {
+  /*
+    As an account, because `importance` is one of the four controls
+    § 35.7.2 keeps for one (`B-081`): an anonymous patch carrying it is
+    refused whole, and what these check is the cache write-through rather than
+    the gate.
+  */
+  beforeEach(signIn);
+
   it('updates both caches from the response, without refetching the collection', async () => {
     const client = makeClient();
     const wrapper = wrapperFor(client);

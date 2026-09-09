@@ -28,16 +28,23 @@ import { SignInOutcome } from '@/components/auth/SignInOutcome';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { Button } from '@/components/ui/button';
 import { useSession, useVerifyMagicLink } from '@/hooks/useSession';
-import { describableUpgrade, type DescribedUpgrade } from '@/lib/auth/profileUpgrade';
+import {
+  describableUpgrade,
+  upgradeDestination,
+  type DescribedUpgrade,
+} from '@/lib/auth/profileUpgrade';
 import { Link, useRouter } from '@/lib/i18n/navigation';
 
 /**
- * Where a redeemed link leads.
+ * Where a redeemed link leads by default.
  *
  * Not `safeReturnPath`'s `/`, and not a `next` either: the link was composed
  * on a server that knew nothing about the browser it would eventually be
  * opened in. Somebody who just signed in has no use for the marketing page,
  * so this names the product's own front door.
+ *
+ * `upgradeDestination` overrides it for the one outcome that now has
+ * somewhere better to go (`B-084`).
  */
 const DESTINATION = '/profile';
 
@@ -61,12 +68,20 @@ export function VerifyScreen({ selector, verifier }: VerifyScreenProps) {
    */
   const [outcome, setOutcome] = useState<{ upgrade: DescribedUpgrade | null }>();
 
+  /*
+    `upgraded` carries the anonymous generations across as well as the profile
+    (`B-084`), so that reader is sent to the list rather than to the editor —
+    there is something in it now, which is the whole reason the redirect was
+    wrong before. Every other outcome keeps the front door.
+  */
+  const destination = upgradeDestination(outcome?.upgrade ?? null, DESTINATION);
+
   useEffect(() => {
     // Only once it is in, and only when there is nothing to say.
     if (!outcome || outcome.upgrade) return;
 
-    router.replace(DESTINATION);
-  }, [outcome, router]);
+    router.replace(destination);
+  }, [outcome, destination, router]);
 
   if (!selector || !verifier) {
     return (
@@ -87,7 +102,7 @@ export function VerifyScreen({ selector, verifier }: VerifyScreenProps) {
   if (outcome?.upgrade) {
     return (
       <Frame title={t('verifyTitle')}>
-        <SignInOutcome outcome={outcome.upgrade} destination={DESTINATION} />
+        <SignInOutcome outcome={outcome.upgrade} destination={destination} />
       </Frame>
     );
   }

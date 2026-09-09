@@ -18,6 +18,7 @@
  */
 
 import { http, HttpResponse } from 'msw';
+import type { GenerationRequest as ClientGenerationRequest } from '@/lib/api/endpoints/generations';
 import type { JobStatus } from '@/lib/api/endpoints/jobs';
 import type { components } from '@/types/api';
 import type { CompletedEvent, FailedEvent, PhaseEvent } from './contracts';
@@ -35,7 +36,8 @@ import {
   TERMINAL_AT,
   type MockJob,
 } from './generationFixture';
-import { currentQuota } from './sessionFixture';
+import { challengeRefused } from './authFixture';
+import { currentQuota, isAccount } from './sessionFixture';
 
 type Schemas = components['schemas'];
 
@@ -48,7 +50,15 @@ type Schemas = components['schemas'];
  * the open reading exists for.
  */
 type JobStatusBody = JobStatus;
-type GenerationRequest = Schemas['GenerationRequest'];
+/*
+  The client's request type rather than the schema's, for one field: § 35.7.4's
+  `challengeToken` is on the wire (`B-083`) and not yet in `api.d.ts`, which
+  was generated before it existed. Taking the client's shape keeps one
+  declaration of it instead of a second here — a mock that could not see the
+  field could not refuse a request that omits it, which is the whole behaviour
+  worth having.
+*/
+type GenerationRequest = ClientGenerationRequest;
 type CoverLetterRequest = Schemas['CoverLetterRequest'];
 
 const GENERATIONS = '/api/v1/generations';
@@ -208,6 +218,14 @@ const GRANT_HOURS = 48;
  * neutral one.
  */
 function feedbackBody(generationId: string): Schemas['FeedbackResponse'] | undefined {
+  /*
+    Null for an anonymous caller (`B-082`), whoever wrote it. The verdict and
+    the 48-hour diagnostic grant both belong to an account: somebody has to be
+    reachable when the grant is read, and an anonymous session is gone two
+    hours after its last activity.
+  */
+  if (!isAccount()) return undefined;
+
   const record = generations.feedback[generationId];
   if (!record) return undefined;
 
@@ -255,6 +273,40 @@ export const generationHandlers = [
     const key = request.headers.get('Idempotency-Key');
     const existing = key ? generations.jobs.find((job) => job.idempotencyKey === key) : undefined;
     if (existing) return accepted(existing);
+
+    /*
+      § 35.7.4's challenge (`B-083`), and it comes before everything that
+      costs something: the counters of § 44.1 say *how much*, never *who*, and
+      this is the only question in the request about whether there is a person
+      behind it.
+
+      **Anonymous only.** An account answered a challenge to sign in
+      (§ 40.4.1), and a token it sends anyway is ignored rather than checked —
+      asking the same person twice is friction with nothing behind it.
+
+      Off unless a test asks for production, exactly as the magic link's is:
+      a deployment without a Turnstile secret lets the request through, and
+      that is why "it worked locally" is not evidence this field is being
+      sent.
+    */
+    if (!isAccount() && challengeRefused(body.challengeToken)) {
+      return HttpResponse.json(problem(403, 'CHALLENGE_FAILED', GENERATIONS), { status: 403 });
+    }
+
+    /*
+      § 35.7.3: a letter is an account's (`B-082`). Refused **before the quota
+      gate below**, deliberately — the request is turned away without spending
+      a generation, so the reader loses a round trip rather than one of their
+      five. `params.feature` names the box that has to close.
+    */
+    if (!isAccount() && body.coverLetter) {
+      return HttpResponse.json(
+        problem(403, 'FEATURE_REQUIRES_ACCOUNT', GENERATIONS, [{ action: 'sign_up' }], {
+          feature: 'cover_letter',
+        }),
+        { status: 403 },
+      );
+    }
 
     // § 44.3: the brake runs ahead of the quota, so a paused deployment does
     // not spend anyone's allowance on a request it is going to refuse.
@@ -644,6 +696,26 @@ export const generationHandlers = [
       );
     }
 
+    /*
+      An anonymous caller has no verdict to give (`B-082`): the read answers
+      `feedback: null` for one, so a write that succeeded would contradict the
+      read a moment later.
+
+      **The shape of this refusal is our reading**, in the sense the
+      `userEdited` guard in `profileHandlers` is: `B-082` states the absence
+      and not the status code behind it. Nothing in the client depends on the
+      choice — the section is not drawn without an account — and `F-030` asks
+      the backend to confirm it.
+    */
+    if (!isAccount()) {
+      return HttpResponse.json(
+        problem(403, 'FEATURE_REQUIRES_ACCOUNT', instance, [{ action: 'sign_up' }], {
+          feature: 'feedback',
+        }),
+        { status: 403 },
+      );
+    }
+
     const existing = generations.feedback[id];
     const granted = body.contentGranted === true;
 
@@ -676,6 +748,22 @@ export const generationHandlers = [
       const job = generations.jobs.find((candidate) => candidate.generationId === id);
 
       if (!job) return notFound(instance);
+
+      /*
+        The same refusal `POST /generations` gives the box (§ 35.7.3,
+        `B-082`), on the endpoint behind the button: a letter cannot be asked
+        for after the fact either. Ahead of the hourly limiter for the reason
+        the generation gate is ahead of the quota — a request that will never
+        be served should not spend an allowance.
+      */
+      if (!isAccount()) {
+        return HttpResponse.json(
+          problem(403, 'FEATURE_REQUIRES_ACCOUNT', instance, [{ action: 'sign_up' }], {
+            feature: 'cover_letter',
+          }),
+          { status: 403 },
+        );
+      }
 
       if (generations.coverLetterAttempts >= COVER_LETTER_LIMIT) {
         const at = inAnHour();

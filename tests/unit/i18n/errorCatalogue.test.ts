@@ -22,7 +22,11 @@ const PARAMS = {
   // reasons — which is why the sentence is chosen by `reason` first.
   UNPARSEABLE_JOB_DESCRIPTION: { reason: 'too_few_skills', confidence: 0.3, skillsFound: 2 },
   CONFLICTING_PREFERENCES: { pinnedPages: 2.3, maxPages: 1 },
-  FEATURE_REQUIRES_ACCOUNT: { feature: 'Cover letters' },
+  // A **token**, not a phrase. § 35.7.2 and § 35.7.3 publish the three
+  // (`B-081`, `B-082`) and the message branches on them, because
+  // `atom_controls` on screen is a machine name and "that needs an account"
+  // is a sentence that names no button.
+  FEATURE_REQUIRES_ACCOUNT: { feature: 'cover_letter' },
   QUOTA_EXCEEDED: { metric: 'generation', resetsAt: '2026-08-16T00:00:00Z' },
   ALL_PROVIDERS_UNAVAILABLE: { tried: ['anthropic', 'openai'] },
   COMPILATION_FAILED: { detail: 'Undefined control sequence.', rawSourceAvailable: true },
@@ -200,6 +204,42 @@ describe.each(CATALOGUES)('the %s error catalogue', (locale, messages) => {
    * the work out of whatever the text has, so the door stopped throwing away
    * postings it had understood.
    */
+  /**
+   * `B-081` and `B-082`: one code, three doors. The point of `params.feature`
+   * is that the refusal names the control the reader just pressed rather than
+   * putting up a general registration wall, so each token has to reach a
+   * sentence of its own.
+   */
+  describe('the three features behind FEATURE_REQUIRES_ACCOUNT', () => {
+    const FEATURES = ['atom_controls', 'alternatives', 'cover_letter'] as const;
+
+    const render = (feature: string) => renderCode('FEATURE_REQUIRES_ACCOUNT', { feature });
+
+    it.each(FEATURES)('says something of its own for %s', (feature) => {
+      const rendered = render(feature);
+
+      expect(rendered.length).toBeGreaterThan(0);
+      expect(rendered).not.toMatch(/[{}]/);
+      expect(rendered).not.toContain('errors.');
+      // The token itself must not reach the reader: it is a machine name.
+      expect(rendered).not.toContain(feature);
+    });
+
+    it('gives each feature a different sentence', () => {
+      expect(new Set(FEATURES.map(render)).size).toBe(FEATURES.length);
+    });
+
+    it('falls back rather than printing a key for a feature it has never seen', () => {
+      // The vocabulary can grow — the server gates a feature the day it adds
+      // one — and a client built before that must still say something true.
+      const rendered = render('a_feature_from_the_future');
+
+      expect(rendered.length).toBeGreaterThan(0);
+      expect(rendered).not.toMatch(/[{}]/);
+      expect(rendered).not.toContain('errors.');
+    });
+  });
+
   describe('the seven reasons behind UNPARSEABLE_JOB_DESCRIPTION', () => {
     const REASONS = [
       'too_short',

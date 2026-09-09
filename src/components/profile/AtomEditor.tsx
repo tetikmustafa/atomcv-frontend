@@ -34,6 +34,7 @@ import { StaleWording } from '@/components/profile/StaleWording';
 import { VariantTabs } from '@/components/profile/VariantTabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { useAccountResolution } from '@/hooks/useAccountResolution';
 import { useAutosave } from '@/hooks/useAutosave';
 import { useAtom, useDeleteAtom, usePatchAtom, usePatchVariant } from '@/hooks/useProfile';
 import { useCapabilities } from '@/hooks/useSession';
@@ -80,6 +81,14 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
     forward it would silently draw a control the caller may not use.
   */
   const capabilities = useCapabilities();
+  /*
+    The way out of § 35.7.2's three refusals (`B-081`). The gates below mean
+    an anonymous reader should never reach one — but a session that ran out
+    mid-edit lands here, and so would a control this file forgot to close.
+    Without it the panel drew the server's `sign_up` button and nothing
+    happened when it was pressed.
+  */
+  const account = useAccountResolution();
 
   const patchAtom = usePatchAtom();
   const patchVariant = usePatchVariant();
@@ -282,7 +291,9 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
         it belongs to. The panel is here for what the indicator cannot say:
         the code, and the resolutions the server attached to it.
       */}
-      {failed ? <ErrorPanel error={failed} /> : null}
+      {failed ? (
+        <ErrorPanel error={failed} onResolve={account.onResolve} canResolve={account.canResolve} />
+      ) : null}
 
       {/*
         Last, and behind a confirmation.

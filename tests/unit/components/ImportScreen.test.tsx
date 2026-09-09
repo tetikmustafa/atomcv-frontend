@@ -231,3 +231,48 @@ describe('when the job fails', () => {
     expect(screen.getByRole('button', { name: 'Choose another file' })).toBeInTheDocument();
   });
 });
+
+/**
+ * § 35.7.4 (`B-083`): an upload from a caller with no account has to carry a
+ * Turnstile token, as a **form field** beside the file. The unit suite runs
+ * with Cloudflare's always-passing test key configured — see
+ * `vitest.config.mts` — so the widget here is a real one.
+ */
+describe('the challenge on an anonymous upload', () => {
+  it('is drawn for a caller without an account', async () => {
+    await renderImport();
+
+    expect(await screen.findByTestId('turnstile')).toBeInTheDocument();
+  });
+
+  it('is not drawn for an account, which answered one to sign in', async () => {
+    signIn();
+    await renderImport();
+
+    // Awaited on something that does appear, so this is not asserting on a
+    // render that has not happened yet.
+    await screen.findByLabelText(en.Onboarding.fileLabel);
+    expect(screen.queryByTestId('turnstile')).not.toBeInTheDocument();
+  });
+
+  it('sends no field at all when the widget produced no token', async () => {
+    await renderImport();
+
+    const bodies: Promise<FormData>[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (request.url.includes('/profile/import')) bodies.push(request.clone().formData());
+    });
+
+    await upload();
+    await waitFor(() => expect(bodies).toHaveLength(1));
+
+    /*
+      Nothing loads Cloudflare's script in jsdom, so no callback fires. Absent
+      rather than empty is the assertion that matters: the server counts an
+      empty value as a **failed** challenge (`B-083`), so a client that always
+      sent the field would turn a deployment with no Turnstile secret — the
+      local one — into a wall.
+    */
+    expect((await bodies[0]!).get('challengeToken')).toBeNull();
+  });
+});

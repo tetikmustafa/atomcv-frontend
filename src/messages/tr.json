@@ -6,7 +6,7 @@
     "INSUFFICIENT_PROFILE": "Profilinde bir CV oluşturmaya yetecek kadar içerik yok. Profilin {completeness, number, ::percent scale/0.01} tamamlanmış durumda; eksik olanlar: {missing}.",
     "UNPARSEABLE_JOB_DESCRIPTION": "{reason, select,\n  too_short {Bu ilan üzerinde çalışmak için fazla kısa. İlanın tamamını yapıştır — en çok işe yarayan kısım aranan nitelikler.}\n  too_long {Bu, okuyabileceğimiz her ilandan uzun. İlanı çevresindeki sayfa olmadan, tek başına yapıştır.}\n  low_entropy {Bu metin ilan olarak okunamayacak kadar kendini tekrar ediyor. Bütün bir sayfa yapıştırdıysan yalnız ilanı dene.}\n  not_job_like {Bu bize ilan gibi görünmedi. Öyleyse yine de devam edebilirsin.}\n  low_confidence {İlanı okuduk ama bir uyarlama yapacak kadar emin olamadık — işin ne istediğini tahmin etmemeyi tercih ederiz.}\n  too_few_skills {İlanı okuduk ama içinden {skillsFound, plural, =0 {hiç yetkinlik} =1 {tek bir yetkinlik} other {# yetkinlik}} çıktı; bu da bir uyarlama yapmaya yetmiyor.}\n  suspicious_output {Bu ilanı okuyuşumuz bozuk döndü. Yapıştırdığın metinde bir sorun yok — tekrar sormak genellikle çözüyor.}\n  other {Bu ilanı çözümleyemedik.}\n}",
     "CONFLICTING_PREFERENCES": "Sabitlediğin içerik yaklaşık {pinnedPages, number} sayfa tutuyor, sınır ise {maxPages, plural, =1 {bir sayfa} other {# sayfa}}.",
-    "FEATURE_REQUIRES_ACCOUNT": "{feature} için hesap gerekiyor.",
+    "FEATURE_REQUIRES_ACCOUNT": "{feature, select,\n  atom_controls {Önem, kullanılabilirlik ve iki kilit için hesap gerekiyor. Bu maddenin geri kalanını düzenlemeye devam edebilirsin.}\n  alternatives {İkinci bir yazım eklemek için hesap gerekiyor. Buradaki yazımı düzenlemek için gerekmiyor.}\n  cover_letter {Ön yazı için hesap gerekiyor. CV'ne bir şey olmadı.}\n  other {Bunun için hesap gerekiyor.}\n}",
     "QUOTA_EXCEEDED": "{metric, select, generation {Bugün üretebileceğin CV hakkını doldurdun.} profile_extract {Bugün yapabileceğin profil içe aktarma hakkını doldurdun.} other {Bugünkü hakkını doldurdun.}} {resetsAt, date, short} {resetsAt, time, short}’te yenilenir.",
     "ALL_PROVIDERS_UNAVAILABLE": "Yapay zekâ sağlayıcılarının hiçbiri yanıt vermedi. Hiçbir şey kaybolmadı, profiline dokunulmadı.",
     "COMPILATION_FAILED": "Belge oluşturulamadı. {detail}",
@@ -140,7 +140,7 @@
     "continue": "Devam et",
     "errorTitle": "Giriş tamamlanmadı",
     "upgrade": {
-      "upgraded": "Giriş yaptın, ve üzerinde çalıştığın profil artık hesabına ait.",
+      "upgraded": "Giriş yaptın. Üzerinde çalıştığın profil artık hesabına ait, ondan ürettiğin CV'ler de.",
       "kept_existing": "Giriş yaptın. Hesabında zaten bir profil vardı, o yüzden az önce üzerinde çalıştığın profil hesabına taşınmadı — ve artık ona erişilemiyor. Hesabındaki profil olduğu gibi duruyor.",
       "unavailable": "Giriş yaptın, ama üzerinde çalıştığın profil taşınamadı. Bizim tarafımızda bir aksaklık oldu; hesabında bir sorun yok."
     }
@@ -207,7 +207,7 @@
       },
       "skills": {
         "label": "Yetkinlikler",
-        "hint": "Bunu bir ilanla eşleştirmek için kullanılan standart adlar."
+        "hint": "Bunu bir ilanla eşleştirmek için kullanılan standart adlar. Standart biçimde saklanır: \"Spring Boot\" yazınca \"spring-boot\" olarak döner, aynı becerinin iki yazımı tek maddeye iner."
       },
       "metrics": {
         "label": "Sayılar",
@@ -373,7 +373,9 @@
     "announceDone": "CV’n hazır",
     "announceFailed": "Üretim başarısız oldu",
     "startOver": "Yeniden başla",
-    "coverLetter": "Ön yazı da yaz"
+    "coverLetter": "Ön yazı da yaz",
+    "coverLetterAccount": "Ön yazı için hesap gerekiyor. CV'nin kendisi iki durumda da aynı.",
+    "coverLetterSignIn": "Hesap aç"
   },
   "Result": {
     "title": "CV’n",
@@ -387,6 +389,7 @@
     "generalNote": "İlan verilmedi, yani karşılaştırılacak bir şey yok.",
     "languageNote": "{content} yazıldı, {posting} değil. Bir CV tek dilde yazılır ve profilinde bu sayfaya girecek her şeyin {posting} sözcüklemesi henüz yok.",
     "coverLetterTitle": "Ön yazı",
+    "coverLetterAccount": "Ön yazı için hesap gerekiyor. Bu CV, hesabın olsaydı nasıl üretilecekse öyle üretildi ve aynı şekilde indiriliyor.",
     "coverLetterAbsent": "Bu CV için henüz bir ön yazı yazılmadı.",
     "coverLetterAsk": "Bir tane yaz",
     "coverLetterAnother": "Başka bir taslak dene",
@@ -457,9 +460,9 @@
       "why": "Neden topluyoruz",
       "whyBody": "CV üretmek, hesabını yönetmek ve hizmeti iyileştirmek için.",
       "share": "Kimlerle paylaşıyoruz",
-      "shareBody": "Yapay zekâ sağlayıcıları, bir ilanı çözümlemek ve kendi ifadelerini yeniden yazmak için gereken içeriği alıyor. Güncel sağlayıcı listesi, her birine ne gönderildiği ve ücretsiz bir katmanın bu veriyi model eğitiminde kullanıp kullanamayacağı burada açıkça yazılmalı. Sağlayıcılar bu isteklerin kısa ömürlü kayıtlarını kendi taraflarında tutabiliyor.\n\nKullandığımız öteki işleyiciler: e-posta teslimatı — Resend, ki altta AWS SES’i ap-northeast-1 (Tokyo) bölgesinde kullanıyor, yani adresin ve gönderim üstverisi AB dışında işleniyor; dosya depolama — Cloudflare R2; ve tercih edersen Google ya da GitHub ile giriş. Analitik anonim ve çerezsiz.",
+      "shareBody": "Yapay zekâ sağlayıcıları, bir ilanı çözümlemek ve kendi ifadelerini yeniden yazmak için gereken içeriği alıyor: CV metnin, yapıştırdığın ilan metinleri, tek tek madde metinleri, özet ve ön yazı girdileri. Bunlar kişisel veri.\n\nİstekler, kullandığımız modeli o an hangi sağlayıcı karşılıyorsa ona yönlendiren OpenRouter üzerinden gidiyor. Şu an kullanılan model için bunlar OpenAI, Microsoft Azure (küresel, ABD ve AB uçları), Amazon Bedrock (us-east-1) ve Google. İstek bir sağlayıcıyı değil modeli adlandırıyor ve yanıt hangisinin karşıladığını yazmıyor; o yüzden hepsi burada listeleniyor. Sağlayıcılar bu isteklerin kısa ömürlü kayıtlarını kendi taraflarında tutabiliyor.\n\nHer istek veri toplamaya kapalı gönderiliyor; yani eğitebilecek bir sağlayıcıya yönlendirilmiyor. OpenRouter'ın kendi kayıt tutma politikası bundan ayrı ve hesap ayarımızda duruyor. Şu an kullanılan model openai/gpt-5.6-sol; bu liste modelin peşinden gidiyor ve model her değiştiğinde gözden geçiriliyor.\n\nKullandığımız öteki işleyiciler: e-posta teslimatı — Resend, ki altta AWS SES’i ap-northeast-1 (Tokyo) bölgesinde kullanıyor, yani adresin ve gönderim üstverisi AB dışında işleniyor; dosya depolama — Cloudflare R2; ve tercih edersen Google ya da GitHub ile giriş. Analitik anonim ve çerezsiz.",
       "retention": "Ne kadar saklıyoruz",
-      "retentionBody": "Hesap verisi, hesap var olduğu sürece. Anonim oturumlar son etkinliğinden iki saat sonra sona erer. Üretilen PDF'ler 14 gün, arşivlersen süresiz saklanır. Loglar 30 gün tutulur.",
+      "retentionBody": "Hesap verisi, hesap var olduğu sürece. Anonim mod son etkinlikten 2 saat sonra sona erer (veritabanından beş dakika içinde silinir; şifreli yedeklerde en fazla altı aya kadar kalabilir). Üretilen PDF'ler 14 gün, arşivlersen süresiz saklanır. Loglar 30 gün tutulur.",
       "rights": "Hakların",
       "rightsBody": "Verine erişme, düzeltme, silme ve JSON ile Markdown olarak dışa aktarma.",
       "deletion": "Her şey nasıl silinir",

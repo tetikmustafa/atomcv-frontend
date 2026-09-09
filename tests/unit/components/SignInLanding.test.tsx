@@ -87,6 +87,23 @@ describe('the OAuth landing page', () => {
   });
 
   /**
+   * `B-084`. An `upgraded` sign-in brought the generations across as well as
+   * the profile, so with nothing else asked for the list is where the reader
+   * goes — and a `next` still wins, because it is the screen they were sent
+   * away from.
+   */
+  it('offers the resumes that came with an upgrade when no `next` was asked for', async () => {
+    signIn();
+    renderLanding({ profile: 'upgraded' });
+
+    expect(await screen.findByText(en.Auth.upgrade.upgraded)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: en.Auth.continue })).toHaveAttribute(
+      'href',
+      '/history',
+    );
+  });
+
+  /**
    * The most-walked path in the product. A confirmation nobody needed is a
    * step added to every ordinary sign-in.
    */

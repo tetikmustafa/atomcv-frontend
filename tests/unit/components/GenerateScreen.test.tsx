@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GenerateScreen } from '@/components/generation/GenerateScreen';
 import { failNextJob, gateRefusal } from '@/mocks/generationFixture';
 import { server } from '@/mocks/node';
+import { signIn } from '@/mocks/sessionFixture';
 import en from '@/messages/en.json';
 
 const push = vi.fn();
@@ -285,14 +286,77 @@ describe('the covering letter', () => {
   });
 
   it('is asked for when the control is on', async () => {
+    signIn();
     const user = userEvent.setup();
     render(<GenerateScreen />, { wrapper });
 
-    await user.click(screen.getByRole('switch', { name: 'Write a covering letter too' }));
+    // Found rather than got: the switch waits for the session, because a
+    // control that appears and then vanishes can be pressed in between.
+    await user.click(await screen.findByRole('switch', { name: 'Write a covering letter too' }));
     await user.click(screen.getByRole('button', { name: 'Generate' }));
 
     await waitFor(() => expect(bodies).toHaveLength(1));
     expect(await sent(0)).toMatchObject({ coverLetter: true });
+  });
+
+  /**
+   * § 35.7.3 (`B-082`): the box is an account's. Hidden rather than disabled,
+   * for the reason the atom controls are — a greyed-out switch beside the
+   * primary action is an upsell in the middle of somebody's work — and
+   * replaced by the sentence that says where it went.
+   */
+  it('is not offered at all without an account', async () => {
+    render(<GenerateScreen />, { wrapper });
+
+    // Substring, because the sentence ends in a link: the paragraph's text is
+    // the note plus the invitation, and neither half is the whole node.
+    expect(
+      await screen.findByText(en.Generation.coverLetterAccount, { exact: false }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('switch', { name: 'Write a covering letter too' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('asks for no letter in the body it sends without an account', async () => {
+    await submitPosting();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(await sent(0)).toMatchObject({ coverLetter: false });
+  });
+});
+
+/**
+ * § 35.7.4 (`B-083`). The unit suite runs with Cloudflare's always-passing
+ * test key configured, so the widget is a real one — see `vitest.config.mts`.
+ */
+describe('the challenge', () => {
+  it('is drawn for a caller without an account', async () => {
+    render(<GenerateScreen />, { wrapper });
+
+    expect(await screen.findByTestId('turnstile')).toBeInTheDocument();
+  });
+
+  it('is not drawn for an account, which answered one to sign in', async () => {
+    signIn();
+    render(<GenerateScreen />, { wrapper });
+
+    // Awaited on something that does appear, so this is not asserting on a
+    // render that has not happened yet.
+    await screen.findByRole('switch', { name: 'Write a covering letter too' });
+    expect(screen.queryByTestId('turnstile')).not.toBeInTheDocument();
+  });
+
+  it('sends the token the widget produced, and only where there is one', async () => {
+    await submitPosting();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    // Nothing loads Cloudflare's script in jsdom, so no callback fires and
+    // there is no token to send. Absent rather than empty is the assertion
+    // that matters: the server reads an empty value as a **failed** challenge
+    // (`B-083`), so a client that sent `''` would turn a deployment with the
+    // challenge switched off into a wall.
+    expect(await sent(0)).not.toHaveProperty('challengeToken');
   });
 });
 
@@ -312,4 +376,34 @@ describe('accessibility', () => {
     // that the bar has a name and a range at all.
     expect(await axe(container)).toHaveNoViolations();
   });
+});
+
+/**
+ * § 35.7.3 (`B-082`): the two anonymous hours can run out **during** a
+ * generation, and the job is not retried. So the code arrives as a job
+ * outcome and not only as an answer to the request — one shared renderer for
+ * both transports, which is the whole reason there is no second
+ * `switch (code)` anywhere.
+ */
+describe('a session that ends while the job is running', () => {
+  it('says so from the stream, and offers the one way out the server sent', async () => {
+    failNextJob({
+      code: 'ANONYMOUS_SESSION_EXPIRED',
+      resolutions: [{ action: 'sign_up' }],
+    });
+    await submitPosting();
+
+    const panel = await findFailurePanel();
+    expect(panel).toHaveTextContent(en.errors.ANONYMOUS_SESSION_EXPIRED);
+
+    const offered = within(panel)
+      .getAllByRole('button')
+      .map((button) => button.textContent);
+    // Nothing else: retrying is what the server refuses to do, and it did not
+    // offer it.
+    expect(offered).toEqual([en.resolutions.sign_up]);
+
+    await userEvent.click(within(panel).getByRole('button', { name: en.resolutions.sign_up }));
+    expect(push).toHaveBeenCalledWith('/login?next=%2Fgenerate');
+  }, 10_000);
 });

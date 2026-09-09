@@ -45,3 +45,28 @@ export function describableUpgrade(raw: string | null | undefined): DescribedUpg
 
   return (DESCRIBED as readonly string[]).includes(raw) ? (raw as DescribedUpgrade) : null;
 }
+
+/** Where an `upgraded` sign-in leads when nowhere else was asked for. */
+const CARRIED_OVER = '/history';
+
+/**
+ * Where to send somebody whose anonymous work came with them (`B-084`).
+ *
+ * `upgraded` used to mean the profile moved. It now means the **generations**
+ * moved too — which is usually the reason the account was opened at all:
+ * somebody made a resume and wanted to keep it. So the list is no longer the
+ * wrong place to land, and it was: before this it would have been an empty
+ * page with a sentence about accounts on it.
+ *
+ * Only for that one outcome. `kept_existing` leaves the anonymous
+ * generations to expire with the profile they were made from — a CV built
+ * from one profile is not filed under another — so its reader has nothing new
+ * to look at, and `unavailable` has less than nothing.
+ *
+ * The fallback wins whenever the caller has somewhere specific in mind. A
+ * `next` is where the reader was when they were sent to sign in, and finishing
+ * that is worth more than a list they can reach from the navigation.
+ */
+export function upgradeDestination(outcome: DescribedUpgrade | null, fallback: string): string {
+  return outcome === 'upgraded' ? CARRIED_OVER : fallback;
+}

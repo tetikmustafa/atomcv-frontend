@@ -18,12 +18,14 @@
 
 import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { ProgressBar } from '@/components/feedback/ProgressBar';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useJobStream } from '@/hooks/useJob';
 import { useImportCv, useProfileReplaced } from '@/hooks/useProfileImport';
+import { useIsAnonymous } from '@/hooks/useSession';
 import { useRouter } from '@/lib/i18n/navigation';
 import { announce } from '@/stores/announcerStore';
 import { useEffect } from 'react';
@@ -55,21 +57,48 @@ export function ImportScreen() {
   const [file, setFile] = useState<File | null>(null);
   const [job, setJob] = useState<{ jobId: string; streamUrl?: string } | null>(null);
 
+  /**
+   * The challenge (§ 35.7.4, `B-083`), reset by remounting the widget.
+   *
+   * Reset after **every** attempt rather than only on refusal: the token is
+   * single-use, and the second request this screen makes most often is the
+   * `replace_profile` answer to a `409` — the same file, one question later,
+   * with the first token already spent.
+   */
+  const [challengeToken, setChallengeToken] = useState<string>();
+  const [attempt, setAttempt] = useState(0);
+
+  const anonymous = useIsAnonymous();
+
   const start = useImportCv();
+
+  function spendChallenge() {
+    setChallengeToken(undefined);
+    setAttempt((n) => n + 1);
+  }
 
   function submit(replace = false) {
     if (!file) return;
 
     start.mutate(
-      { file, ...(replace ? { replace } : {}) },
+      {
+        file,
+        ...(replace ? { replace } : {}),
+        // Absent rather than empty where there is none: the server reads an
+        // empty value as a failed challenge, and a deployment without a
+        // secret lets an absent one through (`B-083`).
+        ...(challengeToken ? { challengeToken } : {}),
+      },
       {
         onSuccess: (accepted) => {
+          spendChallenge();
           if (!accepted.jobId) return;
           setJob({
             jobId: accepted.jobId,
             ...(accepted.streamUrl ? { streamUrl: accepted.streamUrl } : {}),
           });
         },
+        onError: spendChallenge,
       },
     );
   }
@@ -101,18 +130,36 @@ export function ImportScreen() {
     }
   }
 
+  /**
+   * Drawn on both views, and only for a caller without an account.
+   *
+   * Two of the ways out of a failed extraction — `retry` and, after a `409`,
+   * `replace_profile` — send the file again from the progress view, and each
+   * is a fresh upload that has to carry a fresh token. A widget that
+   * unmounted with the form would answer both with `403 CHALLENGE_FAILED`.
+   *
+   * Nothing is drawn where no site key is configured, which is the local
+   * deployment and both test environments (`B-050`).
+   */
+  const challenge = anonymous === true && (
+    <TurnstileWidget key={attempt} onToken={setChallengeToken} />
+  );
+
   if (job) {
     return (
-      <ImportProgress
-        jobId={job.jobId}
-        {...(job.streamUrl ? { streamUrl: job.streamUrl } : {})}
-        onResolve={resolve}
-        onStartOver={() => {
-          setJob(null);
-          setFile(null);
-          start.reset();
-        }}
-      />
+      <div className="flex flex-col gap-4">
+        <ImportProgress
+          jobId={job.jobId}
+          {...(job.streamUrl ? { streamUrl: job.streamUrl } : {})}
+          onResolve={resolve}
+          onStartOver={() => {
+            setJob(null);
+            setFile(null);
+            start.reset();
+          }}
+        />
+        {challenge}
+      </div>
     );
   }
 
@@ -136,6 +183,8 @@ export function ImportScreen() {
         />
         <p className="text-muted-foreground text-sm">{t('fileHint')}</p>
       </div>
+
+      {challenge}
 
       {start.error && (
         <ErrorPanel error={start.error} onResolve={resolve} canResolve={canResolve} />

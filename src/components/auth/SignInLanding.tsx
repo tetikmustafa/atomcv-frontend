@@ -25,7 +25,7 @@ import { useTranslations } from 'next-intl';
 import { SignInOutcome } from '@/components/auth/SignInOutcome';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { useSession } from '@/hooks/useSession';
-import { describableUpgrade } from '@/lib/auth/profileUpgrade';
+import { describableUpgrade, upgradeDestination } from '@/lib/auth/profileUpgrade';
 import { safeReturnPath } from '@/lib/auth/returnPath';
 import { Link, useRouter } from '@/lib/i18n/navigation';
 
@@ -41,8 +41,21 @@ export function SignInLanding({ next, profile }: SignInLandingProps) {
   const router = useRouter();
   const { data: session, isPending, isError, error, refetch } = useSession();
 
-  const destination = safeReturnPath(next);
+  const requested = safeReturnPath(next);
   const outcome = describableUpgrade(profile);
+
+  /*
+    `B-084`: an `upgraded` sign-in now carries the anonymous **generations**
+    across as well as the profile, so the list is worth landing on — it was
+    not before, when it would have been an empty page.
+
+    Only where nothing else was asked for. A `next` that survived
+    `safeReturnPath` is the screen the reader was sent away from, and
+    finishing that beats a list the navigation already reaches; a `next` that
+    did not survive is indistinguishable here from none at all, and both mean
+    the same thing — nowhere in particular.
+  */
+  const destination = requested === '/' ? upgradeDestination(outcome, requested) : requested;
   const signedIn = session?.authenticated === true;
 
   useEffect(() => {

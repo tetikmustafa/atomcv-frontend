@@ -18,6 +18,72 @@ import {
   type MockProfile,
   type MockSection,
 } from './profileFixture';
+import { currentMaxAtoms, isAccount } from './sessionFixture';
+
+/**
+ * Skill names the dictionary folds into one (`B-077`).
+ *
+ * A handful rather than a copy of `SkillNames`: what the screen has to
+ * survive is that **what comes back is not what went in** — a spelling
+ * rewritten, and two spellings collapsing into one entry. Three synonyms
+ * demonstrate both; sixty would only be a second dictionary to keep in step
+ * with the server's.
+ */
+const SKILL_SYNONYMS: Record<string, string> = {
+  postgresql: 'postgres',
+  'node-js': 'nodejs',
+  golang: 'go',
+};
+
+/**
+ * One skill, as it is stored (§ 31.5, `B-077`).
+ *
+ * The column is read as a **key** — Faz B scores against it and `RunMarking`
+ * asks it whether a highlighted phrase is a technology — so the server
+ * canonicalises on write and answers with the stored form. The import path
+ * always did this; the editor did not, and the same column held keys in one
+ * row and prose in the next.
+ *
+ * `toLocaleLowerCase('en')` rather than the ambient locale: rule 11, and this
+ * is exactly the trap it names. Under `tr`, `I` lowercases to a dotless `ı`
+ * and `SQLite` would canonicalise to something no dictionary has.
+ */
+function canonicalSkill(raw: string): string {
+  const slug = raw
+    .trim()
+    .toLocaleLowerCase('en')
+    .replace(/[\s_/]+/g, '-')
+    .replace(/[^a-z0-9+#.-]/g, '')
+    .replace(/^-+|-+$/g, '');
+
+  return SKILL_SYNONYMS[slug] ?? slug;
+}
+
+/**
+ * The whole list, canonical and deduplicated — so it can come back
+ * **shorter** than it was sent, which is the case the screen has to redraw
+ * from the response rather than from what it sent.
+ */
+function canonicalSkills(values: readonly string[] | undefined): string[] | undefined {
+  if (!values) return undefined;
+
+  const seen = new Set<string>();
+  for (const value of values) {
+    const name = canonicalSkill(value);
+    if (name) seen.add(name);
+  }
+
+  return [...seen];
+}
+
+/**
+ * The atom fields § 35.7.2 keeps for accounts (`B-081`).
+ *
+ * A patch touching any of them from an anonymous session is refused **whole**
+ * — there is no partial write — which is why this is a list of names rather
+ * than a filter.
+ */
+const ACCOUNT_ONLY_ATOM_FIELDS = ['importance', 'active', 'alwaysInclude', 'verbatim'] as const;
 
 /**
  * The kinds the server accepts, so the mock refuses exactly what the server
@@ -334,6 +400,9 @@ export const profileHandlers = [
       content: { runs?: { t: string; m?: string[] }[] };
       language?: string;
       importance?: number;
+      skills?: string[];
+      metrics?: string[];
+      properNouns?: string[];
     };
 
     const runs = body.content?.runs ?? [];
@@ -341,6 +410,27 @@ export const profileHandlers = [
       return HttpResponse.json(
         problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['content'] }),
         { status: 400 },
+      );
+    }
+
+    /*
+      § 35.7.2's ceiling, enforced since `B-081` — and a `422` rather than a
+      `403`, because nothing about the request is forbidden: this profile is
+      simply full. Both numbers travel so the screen can say "sixty of sixty"
+      instead of "too many".
+
+      **No resolutions.** `B-081` publishes `sign_up` for the two `403`s and
+      names none here, and a mock that invented one would teach the client a
+      button the server never sends.
+    */
+    const ceiling = currentMaxAtoms();
+    if (ceiling !== undefined && fixture.atoms.length >= ceiling) {
+      return HttpResponse.json(
+        problem(422, 'ATOM_LIMIT_EXCEEDED', instance, [], {
+          limit: ceiling,
+          current: fixture.atoms.length,
+        }),
+        { status: 422 },
       );
     }
 
@@ -363,9 +453,12 @@ export const profileHandlers = [
       active: true,
       alwaysInclude: false,
       verbatim: false,
-      skills: [],
-      metrics: [],
-      properNouns: [],
+      // Canonical on the way in (`B-077`): the import path always did this and
+      // the create path did not, so one column held keys in one row and prose
+      // in the next.
+      skills: canonicalSkills(body.skills) ?? [],
+      metrics: body.metrics ?? [],
+      properNouns: body.properNouns ?? [],
       source: 'manual',
       verified: false,
       version: 0,
@@ -635,7 +728,33 @@ export const profileHandlers = [
     if (refused) return refused;
 
     const patch = (await request.json()) as Partial<MockAtom>;
-    Object.assign(atom, patch, { version: (atom.version ?? 0) + 1 });
+
+    /*
+      § 35.7.2, enforced since `B-081`: the controls belong to an account, and
+      a patch that touches one is refused **whole**. The all-or-nothing part
+      is the behaviour worth encoding — a mock that dropped the offending
+      field and saved the rest would let a client ship that quietly loses half
+      of what the user changed.
+
+      `params.feature` says which control it was, so the panel can name the
+      button rather than putting up a general wall.
+    */
+    if (!isAccount() && ACCOUNT_ONLY_ATOM_FIELDS.some((field) => field in patch)) {
+      return HttpResponse.json(
+        problem(403, 'FEATURE_REQUIRES_ACCOUNT', instance, [{ action: 'sign_up' }], {
+          feature: 'atom_controls',
+        }),
+        { status: 403 },
+      );
+    }
+
+    Object.assign(atom, patch, {
+      // The stored form, not the sent one (`B-077`). Written back over the
+      // patch so the response — which is what the editor redraws from —
+      // carries what was actually kept.
+      ...(patch.skills ? { skills: canonicalSkills(patch.skills) } : {}),
+      version: (atom.version ?? 0) + 1,
+    });
 
     return HttpResponse.json(atom, { headers: { ETag: `"${atom.version}"` } });
   }),

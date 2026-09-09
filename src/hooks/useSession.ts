@@ -70,6 +70,48 @@ export function useCapabilities(): Capabilities | undefined {
 }
 
 /**
+ * Whether the caller has no account — `undefined` until the session answers.
+ *
+ * The one question in the product that is genuinely about the **session**
+ * rather than about a capability, and it is asked in exactly one place: the
+ * challenge (§ 35.7.4, `B-083`). A sessionless caller must send a Turnstile
+ * token with an import and with a generation; an account must not, and the
+ * server ignores one that arrives anyway. That is not a feature being
+ * withheld, so no capability flag describes it and none should be pressed
+ * into the job.
+ *
+ * The absence is left as `undefined` rather than folded into `true`: drawing
+ * a challenge widget at somebody who turns out to have an account is a
+ * control that appears and then disappears, and Turnstile is not free to
+ * start.
+ */
+export function useIsAnonymous(): boolean | undefined {
+  const { data } = useSession();
+
+  return data === undefined ? undefined : !data.authenticated;
+}
+
+/**
+ * Whether the covering-letter box may be offered at all (§ 35.7.3, `B-082`).
+ *
+ * **`canSaveHistory` is standing in for a flag that does not exist yet.**
+ * `B-082` says to close the box from `capabilities`, and
+ * `CapabilitiesResponse` publishes nothing about letters — the closest true
+ * thing it says is that history is kept, which is the flag that separates the
+ * two capability sets § 35.7 publishes. So this is a proxy, deliberately
+ * behind one function: `F-028` asks the backend for `canWriteCoverLetter`,
+ * and the day it lands this body is the only line that changes.
+ *
+ * Closed while the session is still loading, for the reason `AtomEditor`
+ * gives about atom controls: a control that appears and then vanishes can be
+ * pressed in between, and the `403` would land on somebody who was offered
+ * the button.
+ */
+export function useCanWriteCoverLetter(): boolean {
+  return useCapabilities()?.canSaveHistory === true;
+}
+
+/**
  * The sign-in providers this deployment has credentials for (§ 40.6.1).
  *
  * The opposite of `useSession` in every way that matters, which is why the

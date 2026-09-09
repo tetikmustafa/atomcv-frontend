@@ -14,6 +14,7 @@
  */
 
 import { http, HttpResponse } from 'msw';
+import { challengeRefused } from './authFixture';
 import { generations, type MockJob } from './generationFixture';
 import { accepted, resetsAt } from './generationHandlers';
 import { problem } from './problem';
@@ -88,6 +89,28 @@ export const importHandlers = [
     const existing = key ? generations.jobs.find((job) => job.idempotencyKey === key) : undefined;
     if (existing) return accepted(existing);
 
+    const form = await request.formData();
+
+    /*
+      § 35.7.4's challenge (`B-083`), and it is read out of the **multipart
+      body** rather than a header — a form field beside the file.
+
+      Ahead of the quota gate below on purpose: that gate spends a unit even
+      when it refuses (`B-040`), and a request that never proved there was a
+      person behind it must not be able to spend anybody's three-a-day.
+
+      Anonymous only. An account answered a challenge when it signed in
+      (§ 40.4.1), and a token it sends anyway is ignored.
+    */
+    const challengeToken = form.get('challengeToken');
+
+    if (
+      !isAccount() &&
+      challengeRefused(typeof challengeToken === 'string' ? challengeToken : undefined)
+    ) {
+      return HttpResponse.json(problem(403, 'CHALLENGE_FAILED', IMPORT), { status: 403 });
+    }
+
     const quota = currentQuota().profile_extract;
 
     if (generations.usage.profile_extract >= quota) {
@@ -106,7 +129,6 @@ export const importHandlers = [
       );
     }
 
-    const form = await request.formData();
     const part = form.get('file');
 
     /*

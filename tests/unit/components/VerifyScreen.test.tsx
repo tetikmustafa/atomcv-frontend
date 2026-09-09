@@ -129,6 +129,25 @@ describe('redeeming a sign-in link', () => {
   });
 
   /**
+   * `B-084`: `upgraded` now carries the anonymous **generations** across as
+   * well as the profile, so the list is somewhere worth landing — it was not
+   * before, when it would have been an empty page with a sentence about
+   * accounts on it. Only that one outcome: `kept_existing` leaves the
+   * anonymous generations to expire with the profile they were made from.
+   */
+  it('points an upgraded sign-in at the resumes that came with it', async () => {
+    nextUpgrade('upgraded');
+    renderVerify();
+    await userEvent.click(await signIn());
+
+    expect(await screen.findByText(en.Auth.upgrade.upgraded)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: en.Auth.continue })).toHaveAttribute(
+      'href',
+      '/history',
+    );
+  });
+
+  /**
    * One answer for expired, already used, wrong verifier and never existed
    * (§ 40.4.1) — told apart, they tell a guesser which half of the guess was
    * right. The mock produces it the ordinary way: a link redeemed twice.

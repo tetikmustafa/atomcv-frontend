@@ -58,6 +58,61 @@ Backend'in kapanış sonrası dilimlerinden gelen dört madde. İkisi kod işi
   `sectionCount` bekleyen birim + e2e testlerini oynatırdı. Fixture bir örnek
   listesi değil, davranış taşıyor — yeni bir kod, yeni bir davranış değil.
 
+### `B-075`-`B-084` kapandı (2026-09-09)
+
+Backend'in anonim akışı bitiren dilimi: profil editörü, üretim ve challenge
+artık oturumsuz çağıranda da çalışıyor, ve § 35.7'nin ilan ettiği limitler
+**gerçekten uygulanıyor**. Dokuz maddenin kaydı `handoff/to-frontend.md`'nin
+ACK'inde; burada yalnız **sapmalar ve kararlar** var.
+
+- **`challengeToken` şemada yok, kesişim tipiyle eklendi.** `B-083` alanı
+  telde diyor, `api.d.ts` alanı bilmiyor (backend ayakta olmadığı için
+  `gen:api` koşulamadı), mutlak kural 2 dosyayı elle düzenlemeyi yasaklıyor.
+  `GenerationRequest = Accepts<'generate'> & { challengeToken?: string }`:
+  öteki her alan hâlâ operasyona bağlı, yani telde bir değişiklik yine
+  typecheck'te patlıyor, ve şema alanı yayımladığı gün üye **gereksizleşir,
+  yanlışlaşmaz**. `F-029` bunu istiyor. Mock, ikinci bir bildirim olmasın diye
+  istemcinin tipini içe aktarıyor.
+- **Ön yazı kapısı `canSaveHistory`'ye bağlandı, ve bu bir vekil.** Blokta ön
+  yazıya dair alan yok (`F-028`). Vekil tek bir fonksiyonda
+  (`useCanWriteCoverLetter`); alan gelirse değişecek tek satır orası. Kapı
+  **oturum yüklenirken de kapalı** — görünüp kaybolan bir kontrol basılabilir.
+- **Challenge'ın ölçütü yetenek değil, oturum.** `useIsAnonymous`, çünkü
+  Turnstile "hangi özelliği kullanabilirsin" sorusu değil, "karşıda insan var
+  mı" sorusu. Ürünün geri kalanı yeteneğe bakmaya devam ediyor.
+- **Widget iş ekranında da duruyor, ve her denemeden sonra sıfırlanıyor.**
+  Başarısız bir işten çıkan her yol (`retry`, `continue_anyway`,
+  `replace_profile`…) yeni bir POST; formla birlikte sökülen bir widget o
+  yolları `403 CHALLENGE_FAILED`'e çıkarırdı. Sıfırlama refüze bağlı değil:
+  kabul edilen istek de token'ı harcıyor.
+- **Token yoksa alan hiç gönderilmiyor.** Boş dize sunucuda **başarısızlık**
+  sayılıyor; sırrı olmayan dağıtımda yokluk geçiyor, boş geçmiyor.
+- **Mock iki reddin şeklini tahmin ediyor** (`F-030`): `422
+  ATOM_LIMIT_EXCEEDED` `resolutions`'ı **boş** üretiyor (sunucunun
+  göndermediği düğmeyi öğretmemek için) ve anonim `POST .../feedback` için
+  `403` + `params.feature=feedback` uyduruyor. İstemcide ikisine de bağlı bir
+  şey yok — ekran anonimde formu çizmiyor.
+- **`limitAtomsTo()` bir test düğmesi**, `requireChallenge()` gibi. Altmış
+  atomluk fixture yazmak ekranı değil fixture'ı test ederdi; handler hâlâ
+  `capabilities`'in yayımladığı sayıyı okuyor, yani ikisi çelişemiyor.
+- **Sekiz birim test dosyası artık `@/lib/i18n/navigation`'ı mock'luyor.**
+  Editör `sign_up` çözümünü yürütmek için router'ı içeri aldı; next-intl'in
+  istemci navigasyonu Vitest altında **çözülmüyor bile** (ESM girişi), o
+  yüzden ağaçta AtomEditor geçen her dosya mock'a muhtaç. Ne yaptığı tek
+  yerde sınanıyor: `useAccountResolution.test`.
+- **Bulunan sessiz kusur:** profil editöründeki `ErrorPanel`'ler sunucunun
+  `sign_up` düğmesini çiziyordu ve basılınca hiçbir şey olmuyordu — `B-081`
+  o reddi gerçek yapana kadar görünmezdi. `useAccountResolution` yalnız o tek
+  eylemi üstleniyor, gerisini panelin düşürmesine bırakıyor.
+- **`B-081`'in ikinci maddesi boşta:** "alternatif ekle" düğmesi hiç yok
+  (`addVariant` istemcide tanımlı, çağıran yok). Çizildiği gün
+  `canAddAlternatives` ile kapanacak; mevcut yazımı düzenlemek zaten açık ve
+  öyle kalmalı.
+- **Gizlilik metni artık model adı taşıyor** (`openai/gpt-5.6-sol`). Metin
+  "şu an kullanılan model" diyor, yani model değişince sayfa gözden
+  geçirilecek — ve yayımlanan hâli `ProcessorAudit`'in açılış satırına karşı
+  okunacak (dağıtım işi).
+
 ### Aşama ≤3 denetimi (2026-09-08)
 
 "Bir eksik kaldı mı" sorusuna karşı, backend ayaktayken. Bulunan tek şey bir

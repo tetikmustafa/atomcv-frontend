@@ -19,7 +19,25 @@ import type { Accepts, Returns } from '../operations';
  * here because the generator says so — the server defaults it to `false`, but
  * a caller that means "the user insisted" should have to say it.
  */
-export type GenerationRequest = Accepts<'generate'>;
+export type GenerationRequest = Accepts<'generate'> & {
+  /**
+   * Turnstile's token, and the one field here the schema does not publish yet.
+   *
+   * § 35.7.4 (`B-083`) requires it of a caller **without an account**: a
+   * missing or spent token is `403 CHALLENGE_FAILED`, and an empty string
+   * counts as a failure rather than as an absence. An account sends nothing
+   * and the server ignores one that arrives — signing in already answered a
+   * challenge (§ 40.4.1).
+   *
+   * Added by intersection rather than by hand-writing the body: every other
+   * field stays bound to the operation, so a wire change still fails the
+   * typecheck, and the day `gen:api` runs against a backend that publishes
+   * this field the member becomes redundant instead of wrong. It cannot be
+   * derived today — `api.d.ts` was generated before the field existed, and
+   * rule 2 forbids editing it (`F-029`).
+   */
+  challengeToken?: string;
+};
 
 /** Wildcard media type: springdoc publishes the 202 body without a `produces`. */
 export type AcceptedJob = Returns<'generate', '*/*'>;

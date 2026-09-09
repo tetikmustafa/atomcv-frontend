@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { asAccount } from './support/session';
 
 /**
  * The generation flow, end to end, through the browser's own `EventSource`
@@ -161,6 +162,15 @@ test.describe('generating a resume', () => {
 });
 
 test.describe('the covering letter', () => {
+  /*
+    As an account throughout: § 35.7.3 makes the letter one (`B-082`), so the
+    switch is not drawn without one and the endpoint behind the button
+    refuses. What an anonymous visitor gets instead is the block below.
+  */
+  test.beforeEach(async ({ page }) => {
+    await asAccount(page);
+  });
+
   /**
    * § 34 keeps it off the main path — a second LLM call, and most people want
    * a resume — so it is a control on the form rather than something that
@@ -190,5 +200,26 @@ test.describe('the covering letter', () => {
     // Each press replaces the stored letter (§ 34) — one letter, not three.
     await page.getByRole('button', { name: 'Try another draft' }).click();
     await expect(page.getByTestId('cover-letter')).toHaveCount(1);
+  });
+});
+
+/**
+ * § 35.7.3 (`B-082`): an anonymous visitor generates, and the resume is the
+ * same one an account gets. What is narrower is the letter — and the way that
+ * is said is a sentence where the control was, not a disabled switch.
+ */
+test.describe('generating without an account', () => {
+  test('builds and shows a resume, with no covering letter offered', async ({ page }) => {
+    await openGenerate(page);
+
+    await expect(page.getByRole('switch', { name: 'Write a covering letter too' })).toHaveCount(0);
+    await expect(page.getByText('Covering letters need an account')).toBeVisible();
+
+    await page.getByLabel('Job posting').fill(REAL_POSTING);
+    await page.getByRole('button', { name: 'Generate', exact: true }).click();
+
+    await expect(page).toHaveURL(/\/en\/generations\/gen-1$/, { timeout: 15_000 });
+    await expect(page.getByRole('button', { name: 'Download PDF' })).toBeVisible();
+    await expect(page.getByTestId('cover-letter-account')).toBeVisible();
   });
 });

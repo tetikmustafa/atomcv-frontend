@@ -22,6 +22,32 @@ const TEMPLATES = ['classic'];
 /** Two hours from the last activity, and answering this counts (§ 35.7). */
 const ANONYMOUS_TTL_MS = 2 * 60 * 60 * 1000;
 
+/**
+ * § 35.7's ceiling on an anonymous profile, and § 35.7.2's newly enforced one
+ * (`B-081`): the sixty-first atom is `422 ATOM_LIMIT_EXCEEDED`.
+ */
+const ANONYMOUS_MAX_ATOMS = 60;
+
+/**
+ * The ceiling in force, so a test can reach it.
+ *
+ * A knob rather than sixty rows of fixture, for the reason `requireChallenge`
+ * is one: what has to be exercised is the **refusal** and the sentence built
+ * out of `limit` and `current`, and building fifty-nine atoms to get there
+ * would test the fixture rather than the screen. The handler still reads the
+ * same number `capabilities` publishes, so the two cannot disagree.
+ */
+let maxAtoms = ANONYMOUS_MAX_ATOMS;
+
+export function limitAtomsTo(limit: number) {
+  maxAtoms = limit;
+}
+
+/** The ceiling for whoever is here — `undefined` for an account, which has none. */
+export function currentMaxAtoms(): number | undefined {
+  return isAccount() ? undefined : maxAtoms;
+}
+
 export const session = { authenticated: false };
 
 /**
@@ -87,6 +113,7 @@ export function isAccount(): boolean {
 export function resetSessionFixture() {
   session.authenticated = false;
   storedSession.write(null);
+  maxAtoms = ANONYMOUS_MAX_ATOMS;
 }
 
 /**
@@ -156,7 +183,7 @@ export function currentCapabilities(): Capabilities {
     canEditAtomControls: false,
     canAddAlternatives: false,
     canSaveHistory: false,
-    maxAtoms: 60,
+    maxAtoms,
     quotaResetsAt: null,
     // Recomputed per call, which is the behaviour and not just the value: a
     // frozen instant would let a screen built on a stale read pass.
