@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Mirror of atomcv-backend/.githooks/post-commit — same mechanism, opposite
-# direction. Syncs docs/handoff/**.md and docs/STATUS.md to the sibling
-# backend repo. Never touches docs/spec/** (frontend doesn't own spec; that
-# stays a manual/Claude-run sync via scripts/sync-spec.sh, run from backend).
+# direction. Copies docs/handoff/**.md and docs/STATUS.md into the sibling
+# backend repo and stops there: it does not stage or commit anything on that
+# side. Never touches docs/spec/** (frontend doesn't own spec; that stays a
+# manual/Claude-run sync via scripts/sync-spec.sh, run from backend).
 #
 # Setup (once per machine):
 #   git config core.hooksPath .githooks
@@ -30,11 +31,9 @@ mkdir -p "$SIBLING/docs/handoff"
 cp docs/handoff/*.md "$SIBLING/docs/handoff/" 2>/dev/null || true
 cp docs/STATUS.md "$SIBLING/docs/" 2>/dev/null || true
 
-(
-  cd "$SIBLING"
-  git add docs/handoff docs/STATUS.md 2>/dev/null || true
-  if ! git diff --cached --quiet 2>/dev/null; then
-    git commit -q -m "chore(docs-sync): receive handoff + STATUS from frontend"
-    echo "[docs-sync] handoff + STATUS synced and committed in $SIBLING"
-  fi
-)
+# Copied and left there. **This hook does not commit in the sibling**, and
+# that is the point: a commit made from outside a repo lands in whatever
+# state its working tree happened to be in, under a message nobody there
+# wrote, in the middle of somebody else's work. The channel is the files;
+# the backend commits them when it reads them.
+echo "[docs-sync] handoff + STATUS copied into $SIBLING — commit them there"
