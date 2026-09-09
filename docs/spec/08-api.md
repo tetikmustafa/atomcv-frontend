@@ -472,6 +472,133 @@ saydırırdı.
 **Uç oturumu kendisi basıyor.** İstemci ilk olarak burayı çağırıyor; aksi hâlde
 "henüz yok" diye bir durumu ele alması gerekirdi.
 
+#### 35.7.2 Kararlar — küme artık zorlanıyor (2026-09-09)
+
+§ 35.7 *"Sunucu yine de doğrular — istemci kontrolü sadece UX"* diyor ve o
+cümlenin doğrulanacak bir şeyi yoktu: anonim kişi profil uçlarına hiç
+erişemiyordu, bu yüzden üç limit ilan edilip hiç uygulanmıyordu ve
+`ATOM_LIMIT_EXCEEDED` hiçbir şey tarafından fırlatılmıyordu. Anonim düzenleme
+inince üçü de `AnonymousLimits`'te uygulanıyor.
+
+**Kapsam denetimin kendisi.** Profilin altındaki her yazma bir `ProfileRef`
+alıyor, ve `EPHEMERAL` olan "karşı tarafta hesap yok" demek. Yani limit yazmanın
+olduğu yerde uygulanıyor — dört ucun ayrı ayrı hatırlaması gereken bir şey değil,
+ve sonradan eklenen beşinci uç aynı argümanı aldığı için devralıyor.
+
+**Hangi alanlar "atom kontrolü" — tahmin değil.** `04-data-model.md` şemanın
+içinde etiketliyor (`-- kullanıcı kontrolleri`): `importance`, `active`,
+`always_include`, `verbatim`. Yanındaki skorlama girdileri değil: `skills`,
+`metrics` ve `proper_nouns` CV'nin *söylediği* şey, ve onları reddetmek anonim
+kişinin kendi cümlesini düzeltmesini engellerdi — düzenlemenin tamamı bunun için
+açıldı.
+
+**Yama bütün olarak reddediliyor**, alan alan değil: bir kontrolü sessizce düşüren
+kısmi yazma, ekranda sunucunun tutmadığı bir değer bırakırdı.
+
+**Ret sürümden önce geliyor.** Kontrol yaması `403` alıyor, `If-Match` hiç
+okunmuyor — "bunun için hesap aç" cevabı kullanıcının hangi sürüme baktığına
+bağlı değil.
+
+**Mevcut yazımı düzeltmek "alternatif" değil.** `POST /atoms/{id}/variants`
+reddediliyor (`canAddAlternatives: false`), ama `PATCH .../variants/{id}` açık:
+içe aktarımın ürettiği cümleyi düzeltmek o cümlenin kendisidir, ikinci bir
+seçenek değil.
+
+**Ve o yamanın çeviri adımı anonimde atlanıyor.** § 32.2'nin işleri kullanıcı
+başına kuyruğa giriyor; anonim oturumun ne talebi sahiplenecek bir id'si var ne
+de çevrilecek ikinci bir dili (§ 35.7 ona `["en"]` veriyor). Bozulmuş bir yol
+değil, kısa bir yol — `AtomService.patchVariant` bu yüzden `Optional<UserContext>`
+alıyor.
+
+#### 35.7.3 Kararlar — anonim üretim indi (2026-09-09)
+
+**Kota beşe döndü.** Bir gün sıfırdı (§ 35.7.2'nin sapması): blok, API'nin
+reddettiği bir üretimi ilan ediyordu. İki uç da var artık, yani sayı yine bir söz.
+
+**Boru hattı `UserContext` değil `GenerationSubject` alıyor.** Kullanıcıyı üç
+ayrı iş için kullanıyordu — profili çözmek, A/B kovası (§ 53.3), LLM maliyet
+atfı — ve yalnız üçüncüsü hesap gerektiriyor. Anonimde kova **profil id'si**
+(`ProfileExtractionJobHandler`'ın emsali), atıf ise boş: `llm_invocations.user_id`
+nullable ve § 51.6'nın notu bunu zaten öngörmüş.
+
+**Kota adrese göre, oturuma göre değil** (§ 44.1) — ve özne **payload'da
+yolculuk ediyor**, çünkü işçinin adres okuyacağı bir istek yok. Ödemeyenden
+farkına iade etmek, hiç iade etmemekten kötü.
+
+**Ön yazı anonimde yok** (karar 2026-09-09), ve ret **kotadan önce**: reddedilecek
+bir istek kimsenin gününü harcamamalı. `FEATURE_REQUIRES_ACCOUNT`,
+`params.feature = cover_letter`.
+
+**Oturum bitmişse üretim yapılmıyor, söyleniyor.** İstekle işçi arasında iki saat
+dolup süpürme profili almışsa üretilecek bir şey yok: `ANONYMOUS_SESSION_EXPIRED`
++ `sign_up`, ve **tekrar denenmiyor** — sonraki deneme aynı yokluğu okur.
+
+**Okuma iki kapıdan, üçüncüsü yok.** Hesabın üretimleri kullanıcı-kapsamlı;
+oturumun üretimleri **profil-kapsamlı**, çünkü satır zaten oturumun sahip olduğu
+`profile_id`'yi taşıyor. Hangi kapı, hesabın olup olmadığına göre seçiliyor —
+ikisini de denemek yok: anonim okuyucuya kalıcı ref vermek programlama hatasıdır
+ve reddediyor.
+
+**Verdict anonimde yok, reddedilmiyor.** Geri bildirim kullanıcıya anahtarlı bir
+satır, destek izni de hesabın verdiği bir onay; okunacak şey yok. Burada
+kullanıcı istemek, bulduğu üretimi tüm ucun `401` ile reddetmesine yol açıyordu.
+
+**Sayfa garantisi kendiliğinden sağlandı, ve bu (i)'in karşılığı.** `measureMissing`
+boru hattının *içinde*, seçim sayı istemeden önce koşuyor ve profil-kapsamlı —
+yani anonim profilin satırlarına karşı çalışıyor. Arka plan ölçüm işi ilk üretimi
+*hızlandırmak* için var, *doğru* kılmak için değil. Bedeli: ilk anonim üretim bir
+derlemeyi satır içi ödüyor.
+
+**Genel CV modu hâlâ hesaba özel** — reddedilmiyor, sunulmuyor: § 35.7 anonime tek
+dil veriyor ve akış "bu ilana karşı" diye kuruldu. İsteyen çıkınca gelir.
+
+#### 35.7.4 Kararlar — challenge iki uç daha kapsıyor (2026-09-09)
+
+**Anonim içe aktarım ve anonim üretim challenge istiyor** (§ 44.4). Hesap
+istemiyor: giriş zaten bir challenge cevaplıyor (§ 40.4.1), ve aynı kişiye ikinci
+kez sormak arkasında bir şey olmayan sürtünmedir.
+
+**Kota bunun yerini tutmuyor, ve asıl gerekçe bu.** § 44.1'in sayaçları *ne kadar*
+diyor, *kim* demiyor: adres başına beş üretim, adresini döndürebilen için beş
+demektir, ve § 44.3'ün sıkılaştırması harcamadan *sonra* koşan bir dedektör.
+Challenge, karşıda bir insan olup olmadığını soran tek şey.
+
+**Yokluk başarısızlıktır.** Token'ı göndermeyen istemci, bunun durdurmak için var
+olduğu istemcinin tam kendisi — boş ve null ikisi de reddediliyor.
+
+**`GenerationRequest.challengeToken`** ve `POST /profiles/import`'un
+`challengeToken` form alanı. `CHALLENGE_FAILED` (403).
+
+**Ve bu muhafız hiçbir lane'de kendini kanıtlamıyor:** `ChallengeConfig` sırrı
+olmayan dağıtımda `token -> true` veriyor (prod dışı her profil). O yüzden
+`CallerChallengeTest` gerçek reddeden bir uygulamaya karşı doğrudan koşuyor
+(§ 51.7) — yeşil bir suite'i reddin çalıştığının kanıtı sanmamak için.
+
+#### 35.7.5 Kararlar — hesap açmak üretimleri de taşıyor (2026-09-09)
+
+**Profil taşınırken üretimleri de taşınıyor**, aynı transaction içinde. Kişi tam
+da az önce yaptığı CV'yi saklamak için hesap açıyor; profili taşıyıp belgeyi
+bırakmak, geldiği şeyi silmek olurdu — anonim profilin süresi süpürmenin okuduğu
+şey ve `generations.profile_id` ondan cascade ediyor.
+
+**Satırlar taşınmıyor, sahip kazanıyor.** Üretim profile bağlı olduğu için zaten
+doğru yerde duruyor; değişen tek şey `user_id`. Profilin `adoptedBy`'ı gibi bu da
+alan nesnesinde ve sahibi olan bir satırı reddediyor — bir hesabın üretimini
+başkasına devretmek, reddetmekten çok daha kötü bir hata.
+
+**Hesap kendi profilini koruyorsa üretimler de kalıyor** (`KEPT_EXISTING`):
+ait oldukları profil taşınmıyor, o profille birlikte sönüyorlar. Onları
+sahiplenmek, bir profilden yapılmış CV'yi başka bir profilin altına dosyalamak
+olurdu.
+
+**Ve bu bir *olayla* yapılıyor, çağrıyla değil — çünkü alternatifi döngü.**
+`profile` modülü `AnonymousProfileAdopted` yayımlıyor ve generation'ın ne
+olduğunu bilmiyor; `generation` zaten `profile`'a bağlı, yani bağımlılık tek yöne
+akıyor. Düz `@EventListener` senkron ve yayımlayanın transaction'ı içinde koşuyor
+(`ProviderChain` → `LlmInvocationRecorder`'ın deseni), yani ikisi birlikte oluyor
+ya da hiç olmuyor. Anonim profile ileride başka bir şey bağlanırsa **ikinci bir
+dinleyici** yazılır, yükseltme düzenlenmez.
+
 ### 35.8 Tip üretimi (repolar arası)
 
 Backend ve frontend ayrı repolarda olduğu için tip senkronizasyonu **OpenAPI şeması üzerinden** yapılır:

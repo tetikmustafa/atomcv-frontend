@@ -388,6 +388,16 @@ if (!embeddingProvider.isHealthy()) {
 
 Kalite düşer ama sistem çalışır. Kullanıcıya bilgi verilmez (iç detay), ama telemetriye kaydedilir.
 
+**Ölçüldü (2026-09-09) — "kalite düşer" Faz D için doğru değil; Faz D durur.**
+Vektör yokken embedding bileşeni 0.0 ve kalan üç terim atom başına küçüktür:
+gerçek ilana karşı gerçek profilde en yüksek atom skoru **0.0959**, § 21.2'nin
+tabanı 0.40. DEFAULT ağırlıklarla ama vektörsüz koşulduğunda nötr 0.5 her atoma
+sabit **0.20** ekliyor; dağılım 0.20-0.26'ya sıkışıyor ve tabana yine
+ulaşılmıyor — skorlar birlikte yükseliyor, birbirinden ayrışmıyor. Yani bu geri
+çekilme Faz B'nin sıralamasını bozmakla kalmıyor, **Faz D'yi tamamen kapatıyor**:
+§ 21.2'nin eşikleri hangi ağırlık setinin koştuğuna bağlıdır. Sayıları
+`PhaseDReachTest` tutuyor.
+
 **`isHealthy()` TEI'nin kendi `/health`'ini sorar, port testi yapmaz.** Container portu ağırlıklar yüklenmeden çok önce açar; "bir şey dinliyor mu" diye soran bir kontrol, 2.5 GB'lık ilk açılışın tamamı boyunca *sağlıklı* raporlar ve skorlama her çağrıya 503 dönen bir servise karşı çalışır.
 
 **`isHealthy()` bir sinyaldir, garanti değil.** Geçmiş bir anı anlatır, ve
@@ -848,6 +858,24 @@ göründüğü için: Markdown bir *taslak* — model `## Deneyim`'i başlık,
 `- yaptım`ı madde olarak okur; LaTeX ise bir dizgi programıdır ve komutları
 prose değildir. LaTeX tarafında argüman korunur, komut atılır (kalın yazılmış
 bir isim yine isimdir), preamble ise bütünüyle atılır.
+
+**Düzeltme — iki argüman iki alandır, tek kelime değil** (kapanış sonrası
+dilim K). Sadeleştirme bir argümanı açıyor, gerisi süslü parantez öbeği olarak
+kalıyor, ve parantezler silinince aralarında hiçbir şey olmadan birleşiyorlar.
+Gerçek bir `.tex` yüklemesi bunu üretti:
+
+```
+\resumeSubheading{Marmara University}{Istanbul, Turkiye}
+                 {Computer Engineering | GPA: 3.21}{2022 -- 2026}
+   →   Computer Engineering | GPA: 3.212022 -- 2026
+```
+
+Bir not ortalaması ile bir tarih aralığı tek bir sayıya kaynamış, ve model onu
+sadakatle bir atoma taşıdı — üretilen CV'deki, kaynak belgenin söylemediği tek
+satır. Bitişik iki öbeğin arasına satır sonu giriyor, **ikincisi noktalama ile
+başlamıyorsa**: referans şablon etiketli satırı `\textbf{Kategori}{: öğe, öğe}`
+diye yazıyor ve orada ikinci öbek birincinin *devamı*. Ayraç her çiftin arasına
+konsaydı her Tech Stack satırında iki noktadan önce boşluk olurdu.
 
 ### 31.4 LLM ile yapılandırma (tek çağrı)
 
@@ -1490,12 +1518,47 @@ public record TemplateCustomization(
 enum SectionLayout {
     BULLET_LIST,    // madde listesi
     ENTRY_LIST,     // başlık + tarih + maddeler
-    INLINE_LIST,    // virgülle ayrılmış tek satır
-    TWO_COLUMN      // yan yana iki liste
+    INLINE_LIST,    // etiketli satırlar: "Kategori: öğe, öğe, öğe"
+    TWO_COLUMN,     // yan yana iki liste
+    PARAGRAPH       // başlığın altında düz nesir, madde işareti yok
 }
 ```
 
 Kullanıcı "Sertifikalar", "Yayınlar", "Gönüllü Çalışmalar" ekler; düzen tipini seçer. Her düzen tipinin sabit maliyeti şablon config'inde bir kez ölçülür.
+
+#### 33.4.1 Kararlar (kapanış sonrası dilim K) — iki düzenin gerçek şekli
+
+Referans şablon (§ 33.5'in Klasik'i) bir CV'nin altı bölümünü **üç** farklı
+şekilde diziyor, listelenen dördü ise ikisini ifade edemiyordu. İkisi de gerçek
+bir CV'de yanlış çıktı.
+
+**Ekleme — beşinci değer: `PARAGRAPH`.** Bir özet tek bir akan paragraftır;
+kolonun varsayılanı `bullet_list` olduğu için madde işaretiyle basılıyordu —
+paragrafın önünde bir işaret, ve hiç gelmeyen bir listenin ilk maddesi gibi
+okunuyor. `INLINE_LIST`'e katlanamaz: bir inline satır **etiket + liste**
+demek, ilk iki noktası kalın diziliyor, ve "Backend engineer: beş yıl…" diye
+açılan bir özetin ilk kelimeleri onunla ilgisi olmayan bir kuralla kalınlaşırdı.
+`PARAGRAPH` yalnız doğru olan tek şeyi söylüyor: nesir, işaret yok. Geometri
+değişmiyor (aynı kenar boşluğunda aynı `itemize`, işaret marjda durur), o
+yüzden şablon sürümü yükselmedi ve hiçbir ölçülmüş maliyet geçersizleşmedi.
+`ProfileWriter` `ABOUT` için bunu yazıyor, `V9` eski satırları taşıyor.
+
+**Düzeltme — `INLINE_LIST` "virgülle ayrılmış tek satır" değil, etiketli
+satırlar.** Referans belge her satırı `\textbf{Kategori}{: öğe, öğe}` diye
+diziyor; düz basılan bir Tech Stack, okuyucunun aşağı doğru tarayacağı hiçbir
+şeyi olmayan altı satırlık virgüllü kelime dizisi. Ayırma **render kararı**:
+kalın etiket ilk iki noktaya kadar, gerisi sade — ve satırdaki başka hiçbir
+işaret dizilmiyor. Çıkarım not bulduğunu işaretliyor, ve her öğesi bir teknoloji
+olan bir listede bu satırın **yüzde yetmişi** demek; yüzde yetmişi italik bir
+beceri matrisi hiçbir şeyi vurgulamıyor. Etiket de aynı yoldan sade: kalın zaten
+vurgunun kendisi.
+
+**İçerikte değil render'da, ve sebebi ölçülebilir.** `RichContent.contentHash`
+düz metin üzerinden hesaplanıyor (§ 16.2), yani satırı işaretleyerek kalın
+yapmak **ölçülmüş maliyeti geçersizleştirmezdi**: daha geniş basılan bir satır
+dar satırın sayısını taşımaya devam ederdi. Üstelik Tech Stack satırını
+düzenleyen kişi düz metin yazıyor; kimse dokunmadıkça ayakta kalan bir şekil,
+bölümün sahip olduğu bir şekil değil.
 
 ### 33.5 Şablon kataloğu
 
@@ -1653,13 +1716,30 @@ ve her zaman bir gerisinde. Burada iki dilde bin, milyon ve milyar; o dillere
 ait bir olgu. Bilinmeyen bir sözcük bir birleştirmeyi kaçırır, yanlış bir
 birleştirme üretmez.
 
-**Bilinen ve kapatılmayan boşluk: sayı kontrolü yalnız rakam görüyor.** Aynı
-kayıtta model `800 ms'den 90 ms'ye` metriğini "from over eighty milliseconds
-to ninety milliseconds" diye yazdı — hem yanlış hem de anlamsız (artış), ve
-hiçbir muhafız görmedi çünkü ortada rakam yok. Deneyim süresi kontrolü de aynı
-kaçağa açık ("thirteen years"). Yazıyla yazılmış sayıları çözmek iki dilde
-açık uçlu bir sözlük demek; `F-025`'in reddettiği türden. **Ölçülmüş bir
-boşluk olarak duruyor.**
+**Ekleme (2026-09-09) — yazıyla yazılmış sayı da sayfanın taşıması gereken
+sayıdır.** Aynı kayıtta model `800 ms'den 90 ms'ye` metriğini "from over
+eighty milliseconds to ninety milliseconds" diye yazdı — hem yanlış hem
+anlamsız (artış) — ve hiçbir muhafız görmedi çünkü ortada rakam yoktu. Bu
+boşluk açık bırakılmıştı; kapatan şey sözlük değil, **çapa**.
+
+Üç şekil sayılır, başkası sayılmaz: sayı-kelimesi + birim ("thirteen years",
+"eighty milliseconds", "altı kişilik"), önünde "of" ile grup adı ("a team of
+six"), ve tek başına sıfır — bir şeyin sıfırını söylemenin iddia olmayan bir
+yolu yok. **Çapanın kendisi karardır:** "particularly *one* focused on Java"
+nicelik değildir, Türkçe "bir araya getiren" hiç değildir, ve **Türkçe'nin
+"on"u İngilizce'nin "on" edatıdır** — yani "focused on building" her İngilizce
+cümleye bir sayı kelimesi sokar. Her sayı kelimesini okuyan bir kural on iki
+kayıtlı taslağın sekizini çöpe atardı. Ölçüldü: **sıfır yanlış pozitif**,
+iddiada bulunan üç mektuptan çıkanlar 13, 6, 0, 50, 4, 80, 90 — 80 dahil.
+
+**İki boşluk bilerek açık, ikisi de "kaçırmak asla yanlış sayı olmasın"
+diye.** Yan yana iki sayı kelimesi ("twenty five") komple atlanır: beşi
+okumak mektuba mal olur. Ölçek sözcüğü önündeki yazılı sayı ("two million")
+okunmaz: sayfa "2M" yazabilir ve sayfanın kendi tarafı onu `2` okur.
+
+Deneyim süresi kontrolü de kelime okur, ve okumak zorundaydı: iki kontrol
+sıralı çalışıyor, biri "thirteen years"ı görüp öteki görmeseydi tarihleri on
+üç yıl diyen bir sayfada doğru mektup uydurma sayı diye reddedilirdi.
 
 ### 34.5 Şirket bilgisi eksikliği
 
