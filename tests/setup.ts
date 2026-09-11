@@ -5,6 +5,7 @@ import { cleanup } from '@testing-library/react';
 import { toHaveNoViolations } from 'jest-axe';
 import { server } from '@/mocks/node';
 import { installEventSource, resetEventSource } from './support/eventSource';
+import { resetApplications } from '@/mocks/applicationHandlers';
 import { resetGenerationFixture } from '@/mocks/generationFixture';
 import { resetProfileFixture } from '@/mocks/profileFixture';
 import { resetSessionFixture } from '@/mocks/sessionFixture';
@@ -84,6 +85,9 @@ afterEach(() => {
   // Same reason, different counter: a quota the previous test used up would
   // fail the next one on a limit it never asked for.
   resetGenerationFixture();
+  // Fourth: rows one test recorded would be there for the next one to find,
+  // and "the list is empty" is a state several of them assert.
+  resetApplications();
   // A test that signed in would otherwise hand the next one an account, and
   // the capability gates would pass for the wrong reason.
   resetSessionFixture();

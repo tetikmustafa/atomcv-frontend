@@ -15,6 +15,8 @@
     "COVER_LETTER_REJECTED": "Bu taslak kendi denetimimizden geçmedi, o yüzden saklanmadı: {issues}. Tekrar istemek genellikle geçen bir mektup üretiyor.",
     "EMBEDDING_UNAVAILABLE": "Yetkinlik eşleştirme şu anda kullanılamıyor.",
     "GENERATION_PAUSED": "Üretim şimdilik duraklatıldı. Başka bir şey etkilenmedi — profilini okumaya, düzenlemeye ve dışa aktarmaya devam edebilirsin.",
+    "GENERATION_SUPERSEDED": "Bu CV’nin daha yenisi var, o yüzden bu artık düzenlenemiyor. En yenisini açıp onu düzenle.",
+    "EDIT_NOT_UNDERSTOOD": "Bunu sayfadaki hiçbir maddeyle eşleştiremedik; hiçbir şey değişmedi ve üretim hakkından da düşmedi. Bir maddenin çıkarılmasını ya da geri konmasını iste, hangi yetenek ya da proje olduğunu söyleyerek. Bir satırı yeniden yazmak, tonu değiştirmek ve sayfayı uzatıp kısaltmak bunun yapabildiği şeyler değil.",
     "UNSUPPORTED_DOCUMENT": "Bu dosyayı okuyamıyoruz. Bunun yerine şunlardan birini yükle: {accepted}.",
     "DOCUMENT_TOO_LARGE": "Bu dosya {limitBytes, number, ::unit/megabyte scale/0.00000095367431640625 .#} sınırının üzerinde.",
     "PDF_NOT_TEXT_BASED": "Bu PDF metin değil, tarama. İçinden okunacak bir şey yok. Bir kelime işlemciden dışa aktarılmış PDF çalışır.",
@@ -75,6 +77,7 @@
     "profile": "Profil",
     "generate": "CV oluştur",
     "history": "CV'lerin",
+    "applications": "Başvurular",
     "settings": "Ayarlar"
   },
   "History": {
@@ -113,6 +116,34 @@
     "warning": "{code, select, ambiguous_date {Bir tarih okunamadı.} missing_organization {Bir kaydın kurum ya da şirket adı yok.} unclear_section {Bir şeyin hangi bölüme ait olduğu anlaşılamadı.} scrambled_text {Dosyadan çıkan metnin bir kısmı karışık geldi.} overlapping_dates {İki kayıt aynı tarihleri kapsıyor.} untranslatable_atom {Bir maddenin İngilizce karşılığı üretilemedi.} unsupported_by_source {Bu satırda, yüklediğiniz dosyada geçmeyen bir ad var.} other {Bir şey netleştirilemedi.}}",
     "warningAt": "{warning} {section} bölümünde.",
     "confirm": "Doğru görünüyor — devam et"
+  },
+  "Applications": {
+    "title": "Başvurular",
+    "anonymous": "Nereye başvurduğunu takip etmek hesap istiyor — kaydın oturumdan uzun yaşaması gerekiyor, anonim oturum ise iki saat sürüyor. Kalması için <link>giriş yap</link>.",
+    "loading": "Başvuruların getiriliyor…",
+    "failed": "Başvuruların getirilemedi. Tekrar denemek için sayfayı yenile.",
+    "empty": "Henüz bir şey yok. Başvurduğun ilk yeri ekle.",
+    "addTitle": "Bir başvuru kaydet",
+    "company": "Şirket",
+    "position": "Pozisyon",
+    "add": "Ekle",
+    "adding": "Ekleniyor…",
+    "added": "Başvuru eklendi.",
+    "status": "Durum",
+    "statuses": {
+      "applied": "Başvuruldu",
+      "interview": "Görüşmede",
+      "offer": "Teklif",
+      "rejected": "Reddedildi",
+      "withdrawn": "Geri çekildi"
+    },
+    "moved": "{status, select, applied {Başvuruldu} interview {Görüşmede} offer {Teklif} rejected {Reddedildi} withdrawn {Geri çekildi} other {{status}}} durumuna taşındı.",
+    "openResume": "CV’yi aç",
+    "resumeDeleted": "O CV silinmiş.",
+    "notes": "Notlar",
+    "notesLabel": "Hatırlamaya değer bir şey",
+    "saveNotes": "Notları kaydet",
+    "forget": "Bunu unut"
   },
   "Session": {
     "expiring": "Bu oturum {at, time, short} itibarıyla sona eriyor — buradaki son işleminden iki saat sonra, yani çalışmaya devam etmek bu süreyi ileri atıyor. Henüz bir hesaba kaydedilmiş bir şey yok."
@@ -382,6 +413,16 @@
     "ready": "Hazır.",
     "pages": "{count, plural, =1 {Tek sayfa.} other {# sayfa.}}",
     "download": "PDF'i indir",
+    "downloadDocx": "Word indir",
+    "formatNote": "PDF, ölçülen belgenin kendisi. Word aynı içeriği kendi fontlarıyla yeniden diziyor; o yüzden bir sayfalık bir CV orada biraz taşabilir.",
+    "editTitle": "Bir şey değiştir",
+    "editIntro": "Sayfadan neyin çıkmasını ya da geri gelmesini istediğini kendi cümlelerinle yaz. Hangi yetenek veya proje olduğunu söylemek yardımcı oluyor. Bir satırı yeniden yazmak, tonu değiştirmek ve sayfayı uzatıp kısaltmak bunun yapabildiği şeyler değil.",
+    "editLabel": "Ne değişsin",
+    "editPlaceholder": "Android maddesini çıkar, Kubernetes olanı geri koy.",
+    "editCost": "Bu, bugün üretebileceğin CV haklarından birini kullanır. Elindeki CV duruyor ve indirilebiliyor — değişiklik yenisini üretiyor.",
+    "editSubmit": "Değişikliği yap",
+    "editSending": "Üzerinde çalışılıyor…",
+    "supersededNote": "Bu CV’nin daha yeni bir sürümü üretildi, o yüzden değiştirilecek olan artık bu değil. Bu sürüm olduğu gibi duruyor ve indirilebiliyor — bir işverene gönderilmiş bir CV için gereken de bu.",
     "downloading": "Dosya hazırlanıyor…",
     "again": "Bir tane daha oluştur",
     "announceDownloaded": "İndirme başladı",
@@ -486,13 +527,59 @@
   },
   "Settings": {
     "title": "Ayarlar",
-    "anonymous": "Hesapsız çalışıyorsun, yani burada yönetilecek bir şey yok. İstersen <link>giriş yap</link>.",
+    "anonymous": "Hesapsız çalışıyorsun, o yüzden yukarıdaki ayarlar dar olanı. Geri kalanı için <link>giriş yap</link>.",
+    "emailsTitle": "E-postalar",
+    "emailsLabel": "Hesabımla ilgili ara sıra e-posta gönderin",
+    "emailsNote": "İki tane, fazlası yok: ilk girişinde bir hoş geldin postası, ve bir hesap silindiğinde onayı. Onay her halükarda gidiyor — verinin silindiğinin sana söylenmesi kapatabileceğin bir şey değil. Giriş bağlantıları bu listede değil; onlar az önce yaptığın bir şeye cevap veriyor.",
+    "emailsOn": "E-postalar açık.",
+    "emailsOff": "E-postalar kapalı.",
     "deleteTitle": "Hesabını sil",
     "deleteIntro": "Burada sana ait olan her şeyi siler. Geri alınamaz.",
     "deleteAction": "Hesabımı sil",
     "deleteConfirmTitle": "Hesabın silinsin mi?",
     "deleteConfirmBody": "Bu, profilini — {sections, plural, =1 {bir bölüm} other {# bölüm}} ve {atoms, plural, =1 {bir madde} other {# madde}} — {generations, plural, =0 {ürettiğin bütün CV'leri} =1 {ürettiğin tek CV'yi} other {ürettiğin # CV'nin hepsini}} ve onlardan çıkan belgeleri, sırada bekleyen işleri, kullanım sayaçlarını ve e-posta tercihlerini siler. Geri alınamaz.\n\nİki şey kalıyor. Üretimlerinin maliyet kaydı, seninle bağı koparılmış olarak duruyor; artık kimseyi göstermiyor. Ve adresin bir kez geri döndüyse ya da bizi şikâyet ettiyse, o kayıt hesaba değil **adrese** ait olduğu için kalıyor — silmek, bize yazma dememiş olan bir adrese yeniden yazmamıza izin verirdi.\n\nYapay zekâ sağlayıcıları kendi taraflarında kısa ömürlü kayıtlar tutabiliyor. Hangileri olduğu gizlilik politikasında.",
     "deleteConfirmAction": "Her şeyi sil"
+  },
+  "Appearance": {
+    "title": "CV’nin görünüşü",
+    "intro": "Bundan sonra ürettiğin her CV böyle çıkar. Her CV için ayrıca sorulmaz.",
+    "template": "Şablon",
+    "templates": {
+      "classic": "Klasik",
+      "compact": "Kompakt",
+      "modern": "Modern"
+    },
+    "templateDefault": "Şablonun kendi ayarı",
+    "reset": "Sıfırla",
+    "fontSize": "Yazı boyutu",
+    "fontSizeValue": "{value} punto",
+    "fontSizeWarning": "{recommended} puntonun altında bazı başvuru takip sistemleri CV’yi daha az güvenilir okuyor. Yine de serbest, ve sayfaya daha çok şey sığıyor.",
+    "margin": "Kenar boşlukları",
+    "marginValue": "{value} inç",
+    "lineSpacing": "Satır aralığı",
+    "lineSpacingValue": "{value}×",
+    "fontFamily": "Yazı tipi",
+    "fontFamilies": {
+      "MODERN": "Modern",
+      "SERIF": "Tırnaklı",
+      "SANS": "Tırnaksız"
+    },
+    "accentColor": "Vurgu rengi",
+    "accentColorHint": "Altı onaltılık hane, # olmadan. Boş bırakırsan şablon kendi rengini seçer — ve bu her şablonda siyah değil.",
+    "save": "Kaydet",
+    "saving": "Kaydediliyor…",
+    "saved": "Kaydedildi.",
+    "saveFailed": "Kaydedilemedi. Tekrar dene."
+  },
+  "Unsubscribe": {
+    "title": "İsteğe bağlı e-postaları durdur",
+    "intro": "Düğmeye bas, isteğe bağlı e-postaları sana göndermeyi bırakalım.",
+    "keeps": "Bir e-posta bu listede değil ve olamaz: bir hesap silinirse onayı yine gidiyor. Verinin silindiğinin sana söylenmesi kimsenin kapatabileceği bir şey değil. Giriş bağlantıları da isteğe bağlı değil — onlar az önce yaptığın bir şeye cevap veriyor.",
+    "confirm": "Göndermeyi bırak",
+    "working": "Durduruluyor…",
+    "done": "Tamam. İsteğe bağlı e-postalar durduruldu.",
+    "doneSettings": "Giriş yaptıysan <link>ayarlarından</link> tekrar açabilirsin.",
+    "noToken": "Bu bağlantıda kimin için olduğunu söyleyen kısım eksik. Adresi elle yazmak yerine e-postadaki bağlantıyı aç."
   },
   "errorValues": {
     "COVER_LETTER_REJECTED": {

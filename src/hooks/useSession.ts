@@ -18,8 +18,14 @@ import {
   verifyMagicLink,
   type Capabilities,
 } from '@/lib/api/endpoints/auth';
-import { deleteAccount } from '@/lib/api/endpoints/account';
-import { authKeys, sessionKeys } from '@/lib/api/queryKeys';
+import {
+  deleteAccount,
+  getAccountSettings,
+  unsubscribe,
+  updateAccountSettings,
+  type AccountSettings,
+} from '@/lib/api/endpoints/account';
+import { accountKeys, authKeys, sessionKeys } from '@/lib/api/queryKeys';
 
 /**
  * Under this much left, the anonymous notice appears.
@@ -229,4 +235,53 @@ export function useDeleteAccount() {
       await queryClient.fetchQuery({ queryKey: sessionKeys.current(), queryFn: getSession });
     },
   });
+}
+
+/**
+ * Whether the optional emails go out (§ 57.7, `B-096`).
+ *
+ * **An account's, not a profile's**, and the endpoint says so: it is `GET` and
+ * `PATCH /account` rather than a corner of `PUT /profile/preferences`. That
+ * endpoint *replaces* and is guarded by the profile's own `ETag`, so a
+ * version conflict about a CV would refuse a change about an email — and
+ * leaving the field out of a replace would be turning it off.
+ *
+ * Only mounted behind a session that has an account: an anonymous caller has
+ * no address, so there is nothing to send and nothing to turn off.
+ */
+export function useAccountSettings() {
+  return useQuery<AccountSettings>({
+    queryKey: accountKeys.settings(),
+    queryFn: getAccountSettings,
+  });
+}
+
+/**
+ * Writes it, and takes the answer as the truth.
+ *
+ * The response carries the value **as it now stands**, so the switch shows
+ * the server rather than the press — which is the difference between a
+ * control that reports a preference and one that reports a click. Written
+ * through rather than invalidated: the body is the whole resource.
+ */
+export function useUpdateAccountSettings() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updateAccountSettings,
+    onSuccess: (settings) => queryClient.setQueryData(accountKeys.settings(), settings),
+  });
+}
+
+/**
+ * Turning the optional emails off from an inbox (§ 57.7, `B-096`).
+ *
+ * Nothing is written into the cache and nothing is invalidated, and both are
+ * deliberate: the caller usually has **no session** — this is pressed from a
+ * mail client — so there is no `accountKeys.settings()` entry to correct. A
+ * reader who happens to be signed in gets the settings screen re-read when
+ * they next open it, which is the ordinary staleness every other screen has.
+ */
+export function useUnsubscribe() {
+  return useMutation({ mutationFn: (token: string) => unsubscribe(token) });
 }

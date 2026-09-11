@@ -46,6 +46,18 @@ function initial(): ProfileFixture {
       contact: { name: 'Elif Yıldırım', email: 'elif@example.com' },
       sourceLanguage: 'en',
       enabledLanguages: ['en'],
+      /*
+        The preferences arrive **inside the head** — there is no
+        `GET /profile/preferences` — and the appearance starts as an empty
+        object rather than as a set of numbers. That is the state the screen
+        is mostly written against: nothing overridden, so every control reads
+        "the template's own" and the template is free to change its defaults
+        later and take this profile with it (`B-091`).
+      */
+      preferences: {
+        writingStyle: { emphasizeMetrics: true, tone: 'formal', conciseSentences: true },
+        defaults: { maxPages: 1, templateId: 'classic', appearance: {} },
+      },
       completeness: 80,
     },
     sections: [

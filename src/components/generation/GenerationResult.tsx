@@ -16,12 +16,14 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { CoverLetter } from '@/components/generation/CoverLetter';
+import { EditRequest } from '@/components/generation/EditRequest';
 import { Feedback } from '@/components/generation/Feedback';
 import { FitReport } from '@/components/generation/FitReport';
 import { Button } from '@/components/ui/button';
 import { Link } from '@/lib/i18n/navigation';
 import { languageName } from '@/lib/i18n/languageNames';
 import { useDownloadGeneration, useGenerationResult } from '@/hooks/useGeneration';
+import type { DownloadFormat } from '@/lib/api/endpoints/generations';
 import { useCanWriteCoverLetter, useIsAnonymous } from '@/hooks/useSession';
 import { announce } from '@/stores/announcerStore';
 
@@ -42,26 +44,32 @@ export function GenerationResult({ generationId }: { generationId: string }) {
   const locale = useLocale();
   const { data, isPending, error, refetch } = useGenerationResult(generationId);
   const download = useDownloadGeneration();
+  // Which button is waiting. `variables` is the mutation's own record of what
+  // was asked for, so there is no second piece of state to keep true.
+  const pending = download.isPending ? download.variables.format : undefined;
   const canWriteCoverLetter = useCanWriteCoverLetter();
   const anonymous = useIsAnonymous();
 
-  function save() {
-    download.mutate(generationId, {
-      onSuccess: ({ blob, filename }) => {
-        // The browser owns the save dialog; this only hands it the bytes.
-        // A plain link would have been simpler and would have turned a `410`
-        // into a page of JSON instead of an error with a way out of it.
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement('a');
+  function save(format: DownloadFormat) {
+    download.mutate(
+      { generationId, format },
+      {
+        onSuccess: ({ blob, filename }) => {
+          // The browser owns the save dialog; this only hands it the bytes.
+          // A plain link would have been simpler and would have turned a `410`
+          // into a page of JSON instead of an error with a way out of it.
+          const url = URL.createObjectURL(blob);
+          const anchor = document.createElement('a');
 
-        anchor.href = url;
-        anchor.download = filename ?? `atomcv-${generationId}.pdf`;
-        anchor.click();
+          anchor.href = url;
+          anchor.download = filename ?? `atomcv-${generationId}.${format}`;
+          anchor.click();
 
-        URL.revokeObjectURL(url);
-        announce(t('announceDownloaded'));
+          URL.revokeObjectURL(url);
+          announce(t('announceDownloaded'));
+        },
       },
-    });
+    );
   }
 
   if (isPending) return <p className="text-muted-foreground text-sm">{t('loading')}</p>;
@@ -103,8 +111,24 @@ export function GenerationResult({ generationId }: { generationId: string }) {
       {download.error && <ErrorPanel error={download.error} />}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="button" onClick={save} disabled={download.isPending}>
-          {download.isPending ? t('downloading') : t('download')}
+        {/*
+          Two formats, one endpoint (`B-094`). Both buttons go out of service
+          while either is fetching — they are the same request to the same
+          document — but only the one that was pressed says so, because a
+          second button announcing "preparing" is a claim about work nobody
+          asked for.
+        */}
+        <Button type="button" onClick={() => save('pdf')} disabled={download.isPending}>
+          {pending === 'pdf' ? t('downloading') : t('download')}
+        </Button>
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => save('docx')}
+          disabled={download.isPending}
+        >
+          {pending === 'docx' ? t('downloading') : t('downloadDocx')}
         </Button>
 
         <Link href="/generate" className="text-sm underline underline-offset-4">
@@ -112,10 +136,39 @@ export function GenerationResult({ generationId }: { generationId: string }) {
         </Link>
       </div>
 
+      {/*
+        § 22.6, and the backend asked for it by name: the page limit is exact
+        in the PDF and approximate in Word, because the atoms are the ones
+        that fitted a **typeset** page and Word sets them in whatever room its
+        own fonts take. Nothing claims a page count for the DOCX, here or on
+        the wire, so the sentence is the only place the difference is said.
+      */}
+      <p className="text-muted-foreground text-sm">{t('formatNote')}</p>
+
       {data.fitReport ? (
         <FitReport report={data.fitReport} />
       ) : (
         <p className="text-muted-foreground text-sm">{t('generalNote')}</p>
+      )}
+
+      {/*
+        Faz G (`B-088`, `B-089`). A generation that has already been edited is
+        retired, and editing it again is a `409` — so the box is replaced by
+        the sentence that says why, rather than left on screen to be pressed
+        into an error.
+
+        The note cannot link to the resume that replaced this one: nothing on
+        the wire points from a retired generation to its successor (`F-031`).
+        What it can say is that this one still downloads, which is the promise
+        that matters — a CV already sent to an employer does not stop existing
+        because a newer one was made.
+      */}
+      {data.status === 'superseded' ? (
+        <p data-testid="superseded-note" className="text-muted-foreground text-sm">
+          {t('supersededNote')}
+        </p>
+      ) : (
+        <EditRequest generationId={generationId} />
       )}
 
       {/*

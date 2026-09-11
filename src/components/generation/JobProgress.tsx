@@ -27,6 +27,17 @@ export type JobProgressProps = {
   canResolve: (action: Resolution['action']) => boolean;
   /** Starting over: a failed generation leaves the posting where it was. */
   onStartOver: () => void;
+  /**
+   * Called once, with the generation the job made, just before this leaves
+   * for it.
+   *
+   * It exists for Faz G (`B-088`, `B-089`): an edit makes a **new**
+   * generation and retires the one it was asked of, so the history, the
+   * account's total and the retired generation's own cache entry all stop
+   * being true at the moment this fires. A generation started from scratch
+   * invalidates none of that and passes nothing.
+   */
+  onCompleted?: (generationId: string) => void;
 };
 
 export function JobProgress({
@@ -35,6 +46,7 @@ export function JobProgress({
   onResolve,
   canResolve,
   onStartOver,
+  onCompleted,
 }: JobProgressProps) {
   const t = useTranslations('Generation');
   const phaseName = usePhaseLabel();
@@ -64,12 +76,14 @@ export function JobProgress({
   useEffect(() => {
     if (progress.status !== 'completed' || !progress.generationId) return;
 
+    onCompleted?.(progress.generationId);
+
     // `push`, so Back reaches the form. The progress screen is not its own
     // history entry — it is `/generate` with a job in component state — so a
     // remount shows an empty form rather than a bar frozen at 100%, and
     // `replace` would only have thrown away the step the user came through.
     router.push(`/generations/${progress.generationId}`);
-  }, [router, progress.status, progress.generationId]);
+  }, [router, onCompleted, progress.status, progress.generationId]);
 
   if (progress.status === 'failed') {
     return (

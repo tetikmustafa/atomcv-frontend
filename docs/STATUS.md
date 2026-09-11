@@ -3,7 +3,7 @@
 > İki repo da okur ve kendi satırlarını günceller. **Kural: 60 satırı geçmez.**
 > Ayrıntı repo-yerel `notes/current.md`'de.
 
-**2026-09-11** · **sıra frontend'de** — `B-088`…`B-094` ve `B-096` ACK bekliyor
+**2026-09-11** · **sıra backend'de** — `B-088`…`B-094`, `B-096` ACK; `F-031`…`F-033` açık
 
 ## Backend — `atomcv-backend`
 
@@ -32,13 +32,15 @@
 |---|---|
 | Aşama 0-2 — iskelet, profil editörü, üretim akışı + SSE | ✅ |
 | Aşama 3 — **bütün dilimler** | ✅ |
-| Aşama 4 — `B-071`-`B-074` karşılandı | ✅ |
+| Aşama 4 — `B-071`-`B-074`, `B-085`-`B-087`, `B-088`-`B-094`, `B-096` | ✅ |
 
-On iki dilim. **Gerçek uca karşı ölçüldü** (2026-08-30) ve `F-024`-`F-027`'yi çıkardı; ölçülmeyen OAuth ile Turnstile.
+**Aşama 4'ün sekizi karşılandı (2026-09-11).** Faz G'nin **cümle kutusu** (`B-089`) sonuç ekranında ve düzenleme yeni bir üretime taşıyor; emekli üretim okunur ve indirilir kalıyor, geçmiş ve `total` onu saymıyor. **Üç şablon + Katman B** ayarlarda, dokunulmamış her alan "şablonun kendi ayarı" diyor. **`/applications`** rotası nav'da, dört uç ve `If-Match`. **DOCX** düğmesi ve § 22.6'nın cümlesi. **`/unsubscribe`** sayfası — basılmadan kapatmıyor — ve ayarlarda e-posta anahtarı.
 
-**`B-071`-`B-074` (2026-09-08).** Yedinci uyarı kodu ve silinen `no_responsibilities` dalı ICU tarafında karşılandı; `paragraph` ile yedinci kod `gen:api` ile üretilen tipe girdi ve birliği genişletmekten başka bir şey yapmadı. `B-073` ve `B-074` kod işi çıkarmadı: düzen seçtiren arayüz de, elde hazırlanmış `classic` önizlemesi de yok. `F-016`'nın "sayımı suçlama" nöbeti, dayandığı yakalanmış yük silinince `errorCatalogue`'a taşındı.
-**`B-085`-`B-087` (2026-09-09), geldikleri gün karşılandı.** Şema yeniden üretildi ve kesişim tipi kalktı; ön yazı kontrolü artık `canWriteCoverLetter` okuyor; `params.feature`'ın dördü de kendi ICU dalını aldı. **`F-029`'un ölçüm hatası frontend'deydi:** ölçülen şey diskteki üretilmiş `api.d.ts`'ti, canlı şema değil.
-**Test:** 658 birim · 51 e2e · **bundle** profil 252.5 / geçmiş 213.9 / üretim 220.3 / onboarding 217.3 / ayarlar 229.8 KB.
+**Eksik kalan bir şey var ve bilerek:** `B-088`'in **elle aç/kapa arayüzü** çizilmedi. Hangi atomların tartıldığını söyleyen uç yok, ve profilden çizmek basılamayacak düğmeler demek olurdu — `F-031`. İstemci fonksiyonu, hook'u ve `GENERATION_SUPERSEDED` indi.
+
+**`gen:api` bir sessiz kusur açığa çıkardı:** springdoc `DELETE /account`'u `delete_1`'den `delete_2`'ye kaydırdı ve `delete_1` **başvuru silmeye** geçti; ikisi de 204 döndüğü için typecheck sustu. `operations.ts` artık numaralı id'li her ucu **yoluyla** bağlıyor. `F-033` kaynağını istiyor.
+
+**Test:** 751 birim · 56 e2e · **bundle** profil 253.2 / ayarlar 240.0 / üretim 222.9 / onboarding 219.8 / başvurular 215.6 / geçmiş 214.3 KB.
 
 ## Açık kararlar
 
@@ -50,11 +52,6 @@ _Kapandı 09-09: model `openai/gpt-5.6-sol`; `emphasis` kalın, bedeli sıfır; 
 
 ## Sonraki senkronizasyon noktası
 
-**Sıra frontend'de.** Sekiz madde açık: `B-088`…`B-094` (Faz G, üç şablon,
-Katman B, takip, DOCX) ve `B-096` (kapatma sayfası + ayar anahtarı). `B-095`
-düzeltilip `resolved/`'a indi; tek kalıcı sonucu yükselen şablon sürümleri.
+**Sıra backend'de.** Üç madde açık: `F-031` (seçim durumu + halef id'si — `B-088`'in arayüzünü bekleten tek şey), `F-032` (`supersededGenerationId` `JobStatusResponse`'ta yok), `F-033` (numaralı `operationId`'ler ve `isEmpty()`'nin alan olarak sızması).
 
-**Aşama 4'te buradan yapılabilecek madde kalmadı.** Geri kalanı dağıtım
-bekliyor (VPS/restore, OAuth, Turnstile, `B-083`, GitHub entegrasyonu),
-frontend'in işi (analitik, SEO), ya da karar: `docs/spec/`'in İngilizceye
-çevrilmesi ~8.500 satır ve kendi başına bir proje.
+**Frontend'de Aşama 4'ten kalanlar:** analitik (Umami) ve SEO — ikisi de backend beklemiyor, sıra geliştiricinin kararında.

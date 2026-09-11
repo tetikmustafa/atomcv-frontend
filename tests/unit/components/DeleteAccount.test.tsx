@@ -38,13 +38,23 @@ function renderSettings() {
   return { client, ...render(<SettingsScreen />, { wrapper: Wrapper }) };
 }
 
-/** Every account request, so "sent nothing" and "sent once" are assertable. */
+/**
+ * Every **write** to the account, so "sent nothing" and "sent once" are
+ * assertable.
+ *
+ * Narrowed from "every account request" when `B-096` put a second thing on
+ * this screen: `LifecycleEmails` reads `GET /account` for its switch, and a
+ * recorder that counted reads made "nothing was deleted" fail for a request
+ * that deletes nothing.
+ */
 let calls: string[] = [];
 /** And every history read, so the count can be shown to cost one row. */
 let history: string[] = [];
 
 function record({ request }: { request: Request }) {
-  if (request.url.endsWith('/api/v1/account')) calls.push(request.method);
+  if (request.url.endsWith('/api/v1/account') && request.method !== 'GET') {
+    calls.push(request.method);
+  }
   if (request.method === 'GET' && request.url.includes('/api/v1/generations?')) {
     history.push(request.url);
   }

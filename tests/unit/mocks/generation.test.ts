@@ -8,6 +8,7 @@ import {
   pauseGeneration,
   QUOTA,
 } from '@/mocks/generationFixture';
+import { DOCX_MEDIA_TYPE } from '@/mocks/generationHandlers';
 import { fixture } from '@/mocks/profileFixture';
 import type { components } from '@/types/api';
 
@@ -15,6 +16,7 @@ type AcceptedJob = components['schemas']['AcceptedJobResponse'];
 type JobStatus = components['schemas']['JobStatusResponse'];
 type Usage = components['schemas']['Usage'];
 type GenerationResponse = components['schemas']['GenerationResponse'];
+type GenerationPage = components['schemas']['GenerationPage'];
 
 /** Reads as a posting: two distinct signal words and more than forty of them. */
 const POSTING = [
@@ -295,6 +297,186 @@ describe('the gates in front of the queue', () => {
   });
 });
 
+/**
+ * Faz G (§ 24, `B-088` and `B-089`).
+ *
+ * What is worth pinning is the arithmetic the history and the deletion screen
+ * both rest on: twenty edits are twenty-one generations and **one CV**. And
+ * the difference between the two endpoints, which the screen states out loud
+ * — the hand toggle is free, the sentence is not.
+ */
+describe('editing a finished generation', () => {
+  /** The atoms this profile has, so a sentence can name one. */
+  const NAMES_AN_ATOM = 'take out the query monitor bullet';
+
+  async function finished() {
+    const job = await start();
+    await readStream(job.streamUrl!);
+    const status = await api.get<JobStatus>(`/jobs/${job.jobId}`);
+    return status.generationId!;
+  }
+
+  it('answers with a job, and the job makes a different generation', async () => {
+    const generationId = await finished();
+
+    const accepted = await api.post<AcceptedJob>(`/generations/${generationId}/edits`, {
+      instruction: NAMES_AN_ATOM,
+    });
+    await readStream(accepted.streamUrl!);
+    const outcome = await api.get<JobStatus>(`/jobs/${accepted.jobId}`);
+
+    expect(outcome.generationId).not.toBe(generationId);
+  });
+
+  /**
+   * `B-088`'s fourth item, and the one with a screen behind it: `total` is
+   * what the deletion confirmation states, and it counts **CVs** now rather
+   * than rows. A history that listed the retired one would say a person has
+   * twice as many resumes as they have.
+   */
+  it('drops the edited generation from the history, and from the total', async () => {
+    const generationId = await finished();
+    const before = await api.get<GenerationPage>('/generations');
+    expect(before.total).toBe(1);
+
+    const accepted = await api.post<AcceptedJob>(`/generations/${generationId}/edits`, {
+      instruction: NAMES_AN_ATOM,
+    });
+    await readStream(accepted.streamUrl!);
+
+    const after = await api.get<GenerationPage>('/generations');
+
+    expect(after.total).toBe(1);
+    expect(after.items?.map((row) => row.generationId)).not.toContain(generationId);
+  });
+
+  /**
+   * The other half of the same promise: the retired row does not disappear.
+   * A CV already sent to an employer still reads back and still downloads.
+   */
+  it('keeps the edited generation readable, marked superseded', async () => {
+    const generationId = await finished();
+    const accepted = await api.post<AcceptedJob>(`/generations/${generationId}/edits`, {
+      instruction: NAMES_AN_ATOM,
+    });
+    await readStream(accepted.streamUrl!);
+
+    const retired = await api.get<GenerationResponse>(`/generations/${generationId}`);
+    const file = await api.getFile(`/generations/${generationId}/download`);
+
+    expect(retired.status).toBe('superseded');
+    expect(file.blob.size).toBeGreaterThan(0);
+  });
+
+  it('refuses a second edit of the same generation', async () => {
+    const generationId = await finished();
+    const accepted = await api.post<AcceptedJob>(`/generations/${generationId}/edits`, {
+      instruction: NAMES_AN_ATOM,
+    });
+    await readStream(accepted.streamUrl!);
+
+    const error = await rejection(
+      api.post(`/generations/${generationId}/edits`, { instruction: NAMES_AN_ATOM }),
+    );
+
+    expect(error.status).toBe(409);
+    expect(error.code).toBe('GENERATION_SUPERSEDED');
+    // No way out: the server offers none, and the client must not invent one.
+    expect(error.resolutions ?? []).toHaveLength(0);
+  });
+
+  /**
+   * The difference the screen has to say out loud. A toggle is deterministic
+   * — a compilation and no more — so it takes nothing off the day.
+   */
+  it('charges the sentence and not the hand toggle', async () => {
+    const first = await finished();
+    const spentOnGenerating = generations.usage.generation;
+
+    const toggled = await api.post<AcceptedJob>(`/generations/${first}/selection`, {
+      exclude: [fixture.atoms[0]!.id],
+    });
+    await readStream(toggled.streamUrl!);
+    expect(generations.usage.generation).toBe(spentOnGenerating);
+
+    const second = (await api.get<JobStatus>(`/jobs/${toggled.jobId}`)).generationId!;
+    const written = await api.post<AcceptedJob>(`/generations/${second}/edits`, {
+      instruction: NAMES_AN_ATOM,
+    });
+    await readStream(written.streamUrl!);
+
+    expect(generations.usage.generation).toBe(spentOnGenerating + 1);
+    // Three streams at two seconds each, so the default five is not enough.
+  }, 20_000);
+
+  /**
+   * § 24.2: the refusal is the design, not a fault — removing the wrong
+   * bullet is worse than doing nothing, because the reader may not notice.
+   * And the allowance comes back, which is the half a screen would otherwise
+   * have to guess at.
+   */
+  it('refuses a sentence it matched nothing to, and refunds it', async () => {
+    const generationId = await finished();
+    const spent = generations.usage.generation;
+
+    const error = await rejection(
+      api.post(`/generations/${generationId}/edits`, {
+        instruction: 'please make the whole thing sound friendlier',
+      }),
+    );
+
+    expect(error.status).toBe(422);
+    expect(error.code).toBe('EDIT_NOT_UNDERSTOOD');
+    expect(error.resolutions?.map((resolution) => resolution.action)).toEqual(['retry']);
+    expect(generations.usage.generation).toBe(spent);
+  });
+
+  /**
+   * An atom this generation never weighed is refused rather than ignored:
+   * ignoring it would answer 202 and hand back the same document, which is
+   * indistinguishable from a bug.
+   */
+  it('refuses an unknown atom and an atom named on both sides', async () => {
+    const generationId = await finished();
+    const known = fixture.atoms[0]!.id;
+
+    const unknown = await rejection(
+      api.post(`/generations/${generationId}/selection`, { exclude: ['no-such-atom'] }),
+    );
+    expect(unknown.status).toBe(400);
+    expect(unknown.params?.fields).toEqual(['no-such-atom']);
+
+    const both = await rejection(
+      api.post(`/generations/${generationId}/selection`, { include: [known], exclude: [known] }),
+    );
+    expect(both.status).toBe(400);
+    expect(both.params?.fields).toEqual([known]);
+
+    const empty = await rejection(api.post(`/generations/${generationId}/selection`, {}));
+    expect(empty.status).toBe(400);
+  });
+
+  /**
+   * The terminal event names the generation that **was** edited, so a screen
+   * holding the old id learns where it went without re-reading the history.
+   * It travels on the stream only: the schema does not publish it, so the
+   * fallback poll cannot carry it (`F-031`).
+   */
+  it('names the replaced generation on the terminal event', async () => {
+    const generationId = await finished();
+    const accepted = await api.post<AcceptedJob>(`/generations/${generationId}/edits`, {
+      instruction: NAMES_AN_ATOM,
+    });
+
+    const frames = await readStream(accepted.streamUrl!);
+    const completed = frames.find((candidate) => candidate.event === 'completed')!;
+
+    expect((completed.data as { supersededGenerationId?: string }).supersededGenerationId).toBe(
+      generationId,
+    );
+  });
+});
+
 describe('download and usage', () => {
   it('returns a PDF as an attachment that is never cached', async () => {
     const job = await start();
@@ -324,6 +506,46 @@ describe('download and usage', () => {
     const error = await rejection(api.get(`/generations/${status.generationId}/download`));
 
     expect(error.status).toBe(406);
+  });
+
+  /**
+   * `B-094`: the same generation, a second format. Genuinely a zip, because
+   * the handler is what the dev harness downloads and a Word file Word
+   * refuses would look like a bug in the client rather than in the mock.
+   */
+  it('serves the same generation as a Word document', async () => {
+    const job = await start();
+    await readStream(job.streamUrl!);
+    const status = await api.get<JobStatus>(`/jobs/${job.jobId}`);
+
+    const response = await fetch(`/api/v1/generations/${status.generationId}/download?format=docx`);
+
+    expect(response.headers.get('Content-Type')).toBe(DOCX_MEDIA_TYPE);
+    expect(response.headers.get('Content-Disposition')).toContain('.docx');
+
+    // `PK\u0003\u0004` — the local file header every zip starts with, and an
+    // OPC package is a zip.
+    const head = new Uint8Array(await response.arrayBuffer()).subarray(0, 4);
+    expect(Array.from(head)).toEqual([0x50, 0x4b, 0x03, 0x04]);
+  });
+
+  /**
+   * \u00a7 35.3's map names a third format and nothing serves it. A silent PDF
+   * would make a "download the source" button hand back a PDF, which nobody
+   * would notice until they opened it \u2014 so the refusal is encoded.
+   */
+  it('refuses the source format rather than quietly sending a PDF', async () => {
+    const job = await start();
+    await readStream(job.streamUrl!);
+    const status = await api.get<JobStatus>(`/jobs/${job.jobId}`);
+
+    const error = await rejection(
+      api.getFile(`/generations/${status.generationId}/download?format=source`),
+    );
+
+    expect(error.status).toBe(400);
+    expect(error.code).toBe('VALIDATION_FAILED');
+    expect(error.params?.fields).toEqual(['format']);
   });
 
   it('answers 410 once the stored content is gone', async () => {

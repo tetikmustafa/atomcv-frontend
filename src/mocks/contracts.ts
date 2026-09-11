@@ -53,6 +53,18 @@ export type CompletedEvent = {
   pageCount: number;
   /** Over the counts, not a percentage — § 23.3 forbids one by name. */
   matchLevel: NonNullable<import('@/types/api').components['schemas']['FitReport']['level']>;
+  /**
+   * The generation an edit replaced (`B-088`). Present on the terminal event
+   * of a Faz G job and on no other.
+   *
+   * **It is on the stream and not on `JobStatusResponse`**, which is not a
+   * choice of ours: the schema does not publish the field at all, so the
+   * fallback poll — the one transport that is typed — cannot carry it.
+   * `F-031` asks for it. Nothing in the client depends on it today, because a
+   * screen that sent the edit already knows which generation it sent it
+   * about; what it is for is the screen that does not.
+   */
+  supersededGenerationId?: string;
 };
 
 /*

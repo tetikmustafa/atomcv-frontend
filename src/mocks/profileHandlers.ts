@@ -18,7 +18,7 @@ import {
   type MockProfile,
   type MockSection,
 } from './profileFixture';
-import { currentMaxAtoms, isAccount } from './sessionFixture';
+import { currentMaxAtoms, isAccount, TEMPLATES } from './sessionFixture';
 
 /**
  * Skill names the dictionary folds into one (`B-077`).
@@ -224,6 +224,79 @@ export const profileHandlers = [
     };
     fixture.profileVersion += 1;
 
+    return HttpResponse.json(fixture.profile, {
+      headers: { ETag: `"${fixture.profileVersion}"` },
+    });
+  }),
+
+  /**
+   * Replacing the preferences (`B-090`, `B-091`, `B-092`).
+   *
+   * **`PUT`, and it replaces** — a body carrying only `defaults` clears the
+   * writing style, which is why the client sends the whole object. The
+   * endpoint is separate from the head so that editing a headline cannot do
+   * the same thing one level up.
+   *
+   * Three refusals, and all three are the server's: the ranges of § 33.2, the
+   * three font families the pattern allows, and six hex digits without a `#`.
+   * The ranges are deliberately narrow — a bad-looking result should be
+   * physically impossible rather than discouraged — and 9pt is **inside**
+   * them: it is warned about on screen and never refused here.
+   *
+   * **An unknown `templateId` falls back to classic rather than failing**, so
+   * a stored preference from before a template was retired never leaves
+   * somebody unable to generate anything.
+   */
+  http.put('*/api/v1/profile/preferences', async ({ request }) => {
+    const instance = '/api/v1/profile/preferences';
+    const refused = precondition(request, instance, fixture.profileVersion);
+    if (refused) return refused;
+
+    const body = (await request.json()) as NonNullable<MockProfile['preferences']>;
+    const appearance = body.defaults?.appearance ?? {};
+
+    const outOfRange = [
+      ['fontSizePt', appearance.fontSizePt, 9, 12],
+      ['marginInches', appearance.marginInches, 0.4, 1],
+      ['lineSpacing', appearance.lineSpacing, 0.9, 1.3],
+    ] as const;
+
+    const bad = [
+      ...outOfRange
+        .filter(([, value, min, max]) => value !== undefined && (value < min || value > max))
+        .map(([field]) => field),
+      ...(appearance.fontFamily && !['MODERN', 'SERIF', 'SANS'].includes(appearance.fontFamily)
+        ? ['fontFamily']
+        : []),
+      ...(appearance.accentColor && !/^[0-9A-Fa-f]{6}$/.test(appearance.accentColor)
+        ? ['accentColor']
+        : []),
+    ];
+
+    if (bad.length > 0) {
+      return HttpResponse.json(problem(400, 'VALIDATION_FAILED', instance, [], { fields: bad }), {
+        status: 400,
+      });
+    }
+
+    const templateId = body.defaults?.templateId;
+
+    // Assigned, not merged: what is not sent is gone.
+    fixture.profile = {
+      ...fixture.profile,
+      preferences: {
+        ...(body.writingStyle ? { writingStyle: body.writingStyle } : {}),
+        defaults: {
+          ...body.defaults,
+          templateId: templateId && TEMPLATES.includes(templateId) ? templateId : 'classic',
+          appearance,
+        },
+      },
+    };
+    fixture.profileVersion += 1;
+
+    // The whole head, as the real endpoint answers — which is why the client
+    // writes it straight into the head's cache entry rather than refetching.
     return HttpResponse.json(fixture.profile, {
       headers: { ETag: `"${fixture.profileVersion}"` },
     });

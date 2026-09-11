@@ -73,6 +73,35 @@ describe('a finished generation', () => {
     expect(screen.getByRole('button', { name: 'Download PDF' })).toBeInTheDocument();
   });
 
+  /**
+   * `B-094`. Two buttons on one endpoint, and the sentence beside them is not
+   * decoration: \u00a7 22.6 makes the page limit approximate in Word, the backend
+   * claims no page count for a DOCX, and this screen states one for the PDF
+   * two lines above. Without the sentence the number reads as covering both.
+   */
+  it('offers Word beside the PDF, and says which of the two is exact', async () => {
+    const generationId = await generate({ jobDescription: POSTING, acknowledgePreflight: false });
+    const user = userEvent.setup();
+
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    await screen.findByRole('button', { name: 'Download PDF' });
+    expect(screen.getByText(en.Result.formatNote)).toBeInTheDocument();
+
+    const requested: string[] = [];
+    server.events.on('request:start', ({ request }) => {
+      const url = new URL(request.url, 'http://localhost');
+      if (url.pathname.endsWith('/download')) requested.push(url.search);
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Download Word' }));
+
+    // The format reaches the wire as the query the server reads. PDF omits it
+    // rather than stating it, so a call written before the parameter existed
+    // still means what it meant.
+    await waitFor(() => expect(requested).toContain('?format=docx'));
+  });
+
   it('shows countable facts and never a percentage', async () => {
     const generationId = await generate({ jobDescription: POSTING, acknowledgePreflight: false });
 

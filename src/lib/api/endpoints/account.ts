@@ -9,7 +9,7 @@
  */
 
 import { api } from '../client';
-import type { Returns } from '../operations';
+import type { Returns, ReturnsAt, AcceptsAt } from '../operations';
 
 export type Usage = Returns<'usage', '*/*'>[number];
 
@@ -47,5 +47,54 @@ export function getUsage() {
  * not to.
  */
 export function deleteAccount() {
-  return api.delete<Returns<'delete_1'>>('/account');
+  return api.delete<ReturnsAt<'/api/v1/account', 'delete'>>('/account');
+}
+
+/* ---------------------------- account settings --------------------------- */
+
+/**
+ * What the account itself is set to, as opposed to what the profile is
+ * (§ 57.7). One field today: whether the optional emails go out.
+ *
+ * **Not on `PUT /profile/preferences`**, and the reason is worth keeping.
+ * That endpoint *replaces* the preferences and is guarded by the profile's
+ * own `ETag`, so a version conflict about a CV would refuse a change about an
+ * email — and a body that left the field out would be turning it off. The
+ * preference belongs to the account, which is also what has an address.
+ */
+export type AccountSettings = ReturnsAt<'/api/v1/account', 'get', '*/*'>;
+
+export type AccountSettingsUpdate = AcceptsAt<'/api/v1/account', 'patch'>;
+
+export function getAccountSettings() {
+  return api.get<AccountSettings>('/account');
+}
+
+/**
+ * Writes it and answers with the value as it now stands, which is what the
+ * screen shows: the switch reflects the server rather than the press.
+ */
+export function updateAccountSettings(body: AccountSettingsUpdate) {
+  return api.patch<AccountSettings>('/account', body as Record<string, unknown>);
+}
+
+/* ------------------------------- unsubscribe ----------------------------- */
+
+/**
+ * Turns the optional emails off for whoever the token belongs to (§ 57.7).
+ *
+ * **No session**, because it is pressed from an inbox where there may be no
+ * cookie. CSRF still applies in the ordinary way: the page is on our origin
+ * and can read the token to double-submit it.
+ *
+ * **An unknown token answers 204 too**, deliberately — a different answer
+ * would be an oracle for which tokens are live. So there is no "invalid
+ * link" state to render, and the page says the same thing either way.
+ */
+export type UnsubscribeRequest = AcceptsAt<'/api/v1/email/unsubscribe', 'post'>;
+
+export function unsubscribe(token: string) {
+  return api.post<ReturnsAt<'/api/v1/email/unsubscribe', 'post'>>('/email/unsubscribe', {
+    token,
+  } satisfies UnsubscribeRequest);
 }

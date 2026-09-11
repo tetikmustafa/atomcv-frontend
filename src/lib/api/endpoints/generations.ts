@@ -79,13 +79,38 @@ export function getGeneration(generationId: string) {
 }
 
 /**
- * The finished PDF, re-rendered from the stored snapshot rather than from the
- * profile: editing a bullet afterwards does not change a CV that has already
- * been sent. When the snapshot is gone the answer is `410`
- * `GENERATION_ARTIFACT_EXPIRED`, which is why this is a fetch and not a link.
+ * The two formats the endpoint serves (`B-094`).
+ *
+ * **Not derived from the schema**, because there is nothing there to derive
+ * from: `format` is published as a bare `string` with a default, so the
+ * generated type says nothing a union here would not say better. § 35.3's map
+ * lists a third value, `source`, and asking for it is `400 VALIDATION_FAILED`
+ * today — nothing serves it. It is left out rather than offered and refused:
+ * a "download the source" button that answers with an error panel is worse
+ * than one that was never drawn.
  */
-export function downloadGeneration(generationId: string) {
-  return api.getFile(`/generations/${generationId}/download`);
+export type DownloadFormat = 'pdf' | 'docx';
+
+/**
+ * The finished document, re-rendered from the stored snapshot rather than
+ * from the profile: editing a bullet afterwards does not change a CV that has
+ * already been sent. When the snapshot is gone the answer is `410`
+ * `GENERATION_ARTIFACT_EXPIRED`, which is why this is a fetch and not a link.
+ *
+ * **`format` is omitted for PDF rather than stated.** The server defaults to
+ * it, so every call that was written before this parameter existed still
+ * means what it meant — and a query string that carries only what was chosen
+ * is the one that cannot disagree with the default.
+ *
+ * The page count promised on screen is the **PDF's**. Word sets the same
+ * atoms in whatever room its own fonts take (§ 22.6), so a one-page CV can
+ * run over there; the backend claims no page count for DOCX, and neither may
+ * the screen.
+ */
+export function downloadGeneration(generationId: string, format: DownloadFormat = 'pdf') {
+  const query = format === 'pdf' ? '' : `?format=${format}`;
+
+  return api.getFile(`/generations/${generationId}/download${query}`);
 }
 
 /**
@@ -113,6 +138,86 @@ export function regenerateCoverLetter(generationId: string, body: CoverLetterReq
     body,
   );
 }
+
+/* --------------------------------- edits -------------------------------- */
+
+/**
+ * Faz G, both halves (§ 24, `B-088` and `B-089`).
+ *
+ * **An edit applies to the selection state, never to the rendered
+ * document**, which is what keeps the page limit true after twenty of them:
+ * each edit goes back through the selection that made the promise. So this is
+ * the one place on the result screen where "edits are not local UI state"
+ * bites hardest — the answer is a **new generation**, not a changed one.
+ *
+ * Both endpoints answer `202` with a job on the same stream a generation
+ * uses. The edited generation stays, marked `superseded`, and remains
+ * readable and downloadable: the promise that a CV already sent to an
+ * employer still exists rests on that.
+ *
+ * `202` here is `application/json`, unlike `POST /generations` — which
+ * declares no `produces` and is published under the wildcard. Naming the
+ * wrong one resolves to `never` rather than to a wrong field, which is the
+ * whole reason `Returns` takes the media type.
+ */
+export type AcceptedEdit = Returns<'edit'>;
+
+export type SelectionEdit = Accepts<'editSelection'>;
+
+/**
+ * Keeping or dropping atoms by hand.
+ *
+ * **Costs nothing.** No model call and nothing off the day's allowance — the
+ * answer is deterministic, so it is a compilation and no more. A screen that
+ * warns about the quota here would be warning about a charge that does not
+ * happen.
+ *
+ * **No screen calls this yet, and the gap is the server's** (`F-031`).
+ * Drawing a toggle per bullet needs to know which atoms this generation
+ * weighed and which of them reached the page, and nothing publishes that:
+ * `GET /generations/{id}` carries the fit report and the letter, not the
+ * selection. An atom this generation never weighed is a `400` rather than a
+ * no-op, so a screen built from the profile's atoms instead would offer
+ * buttons that cannot be pressed.
+ */
+export function editSelection(generationId: string, body: SelectionEdit) {
+  return api.post<AcceptedEdit>(`/generations/${generationId}/selection`, body);
+}
+
+export type InstructionEdit = Accepts<'edit'>;
+
+/**
+ * The same change, asked for in a sentence.
+ *
+ * **This one costs a generation** off the day's allowance, because it is a
+ * model call — and that is the difference the screen has to say out loud.
+ * It is refunded when the sentence named no line, which arrives as
+ * `422 EDIT_NOT_UNDERSTOOD`.
+ *
+ * **That refusal is not a fault and will be common.** The model is shown the
+ * lines numbered and never their ids, so it cannot name a bullet that does
+ * not exist; when it can match nothing, the server would rather do nothing
+ * than delete the wrong line, because the reader may not notice. The message
+ * for it has to say what the endpoint *can* do, or the refusal is a dead end.
+ *
+ * No `Idempotency-Key`: the endpoint does not declare one. A double press
+ * makes a second edit of the same generation, and the second is answered
+ * `409 GENERATION_SUPERSEDED` — which is the collision being prevented,
+ * arriving as an error rather than as two CVs.
+ */
+export function editByInstruction(generationId: string, body: InstructionEdit) {
+  return api.post<AcceptedEdit>(`/generations/${generationId}/edits`, body);
+}
+
+/**
+ * § 24.2's limit, as the schema states it.
+ *
+ * Hand-written because `maxLength` does not survive into a TypeScript type,
+ * and the alternative is a textarea that lets somebody write six hundred
+ * characters and then answers `400`. The server is still the one enforcing
+ * it; this only keeps the reader from reaching that wall.
+ */
+export const INSTRUCTION_MAX_LENGTH = 500;
 
 /* ------------------------------- feedback ------------------------------ */
 

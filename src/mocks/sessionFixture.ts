@@ -11,13 +11,17 @@ import { ACCOUNT_QUOTA, generations, QUOTA } from './generationFixture';
 import type { Capabilities, Session } from '@/lib/api/endpoints/auth';
 
 /**
- * What the registry actually holds today (`B-046`).
+ * What the registry actually holds (`B-046`, then `B-090` and `B-092`).
  *
- * § 35.7's example lists three, and that example is older than the registry.
- * Listing a template that cannot be rendered offers a choice that fails at
- * generation time, so the mock publishes the real one.
+ * It was one for two stages, and § 35.7's three-template example was older
+ * than the registry — listing a template that cannot be rendered offers a
+ * choice that fails at generation time. Stage 4 landed the other two, so the
+ * list is three again for a different reason than the example gave.
+ *
+ * **Ordered, and it stays ordered.** The list is the server's; a screen
+ * sorting it would be inventing an order of its own.
  */
-const TEMPLATES = ['classic'];
+export const TEMPLATES = ['classic', 'compact', 'modern'];
 
 /** Two hours from the last activity, and answering this counts (§ 35.7). */
 const ANONYMOUS_TTL_MS = 2 * 60 * 60 * 1000;
@@ -48,6 +52,70 @@ export function currentMaxAtoms(): number | undefined {
   return isAccount() ? undefined : maxAtoms;
 }
 
+/**
+ * The unsubscribe token an email would have carried (§ 57.7).
+ *
+ * Opaque and random on the server, and one live value is enough here: what
+ * the page has to survive is **any other token**, because a token that is not
+ * live is answered `204` exactly like one that is. There is deliberately no
+ * way to tell them apart, so there is nothing else to fixture.
+ */
+export const UNSUBSCRIBE_TOKEN = '2f2c6d0e-0f6f-4a3a-9d1c-6b5a1d9a8f11';
+
+/**
+ * `users.lifecycle_emails`, which defaults to on.
+ *
+ * Its own state rather than a corner of `session`: it survives a sign-out the
+ * way the column does, and the unsubscribe endpoint writes it without a
+ * session at all.
+ *
+ * **Persisted in the browser as well as held in the module**, and the reason
+ * is the same one `MOCK_SESSION_KEY` exists for: module state lives as long
+ * as the page, and the journey worth testing crosses a navigation — turn the
+ * emails off from an inbox link, then open the settings screen and see the
+ * switch agree. A value that reset on reload would make the mock answer
+ * differently from anything with a database behind it.
+ */
+const EMAILS_KEY = 'atomcv-mock-lifecycle-emails';
+
+let optionalEmails = true;
+
+export function lifecycleEmails(): boolean {
+  const stored = readFlag(EMAILS_KEY);
+  if (stored) return stored === 'on';
+
+  return optionalEmails;
+}
+
+export function setLifecycleEmails(on: boolean) {
+  optionalEmails = on;
+  writeFlag(EMAILS_KEY, on ? 'on' : 'off');
+}
+
+/**
+ * Storage, guarded at every access: a mock that throws takes down the page it
+ * was meant to serve, and storage can be blocked outright.
+ */
+function readFlag(key: string): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeFlag(key: string, value: string | null) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (value === null) window.localStorage.removeItem(key);
+    else window.localStorage.setItem(key, value);
+  } catch {
+    // Blocked storage. The module flag still carries the state for anything
+    // running in this same process.
+  }
+}
+
 export const session = { authenticated: false };
 
 /**
@@ -63,33 +131,10 @@ export const session = { authenticated: false };
  */
 export const MOCK_SESSION_KEY = 'atomcv-mock-session';
 
-/**
- * Reads and writes the flag where it exists, and does nothing where it does
- * not.
- *
- * Every access is guarded: a mock that throws takes down the page it was
- * meant to serve, and storage can be blocked outright.
- */
+/** Reads and writes it through the same guarded pair as everything else here. */
 const storedSession = {
-  read(): string | null {
-    if (typeof window === 'undefined') return null;
-    try {
-      return window.localStorage.getItem(MOCK_SESSION_KEY);
-    } catch {
-      return null;
-    }
-  },
-
-  write(value: string | null) {
-    if (typeof window === 'undefined') return;
-    try {
-      if (value === null) window.localStorage.removeItem(MOCK_SESSION_KEY);
-      else window.localStorage.setItem(MOCK_SESSION_KEY, value);
-    } catch {
-      // Blocked storage. The module flag below still carries the state for
-      // anything running in this same process.
-    }
-  },
+  read: () => readFlag(MOCK_SESSION_KEY),
+  write: (value: string | null) => writeFlag(MOCK_SESSION_KEY, value),
 };
 
 /**
@@ -114,6 +159,10 @@ export function resetSessionFixture() {
   session.authenticated = false;
   storedSession.write(null);
   maxAtoms = ANONYMOUS_MAX_ATOMS;
+  // The column defaults to on, and a test that turned it off would hand the
+  // next one a switch already in the wrong position.
+  optionalEmails = true;
+  writeFlag(EMAILS_KEY, null);
 }
 
 /**

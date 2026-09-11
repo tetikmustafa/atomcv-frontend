@@ -9,9 +9,7 @@
  * runtime surprise. It caught one the day it was written (`reorder*`).
  */
 
-import type { operations } from '@/types/api';
-
-type Responses<Op extends keyof operations> = operations[Op]['responses'];
+import type { operations, paths } from '@/types/api';
 
 /**
  * The one success response an operation declares.
@@ -21,10 +19,9 @@ type Responses<Op extends keyof operations> = operations[Op]['responses'];
  * Without it the accepted body types as `void`, which is a lie the compiler
  * would happily let through.
  */
-type Success<Op extends keyof operations> = Responses<Op>[Extract<
-  keyof Responses<Op>,
-  200 | 201 | 202 | 204
->];
+type Success<Op> = Op extends { responses: infer R }
+  ? R[Extract<keyof R, 200 | 201 | 202 | 204>]
+  : never;
 
 /**
  * What a call resolves to: the success body in the media type asked for, or
@@ -35,12 +32,40 @@ type Success<Op extends keyof operations> = Responses<Op>[Extract<
  * `application/json`: an endpoint with no explicit `produces` is published
  * under the wildcard media type, and the accepted-job body is one of them.
  */
-export type Returns<Op extends keyof operations, Media extends string = 'application/json'> =
-  Success<Op> extends { content: infer Body }
-    ? Media extends keyof Body
-      ? Body[Media]
+type Body<Op, Media extends string> =
+  Success<Op> extends { content: infer Content }
+    ? Media extends keyof Content
+      ? Content[Media]
       : never
     : void;
+
+export type Returns<Op extends keyof operations, Media extends string = 'application/json'> = Body<
+  operations[Op],
+  Media
+>;
+
+/**
+ * The same, for an operation named by its **path and method** instead of by
+ * its id.
+ *
+ * springdoc numbers an operation id when the controller method name is not
+ * unique across the application — `delete_1`, `update_1`, `list_1` — and the
+ * number is **positional**. Adding the applications controller moved account
+ * deletion from `delete_1` to `delete_2`, and nothing failed to compile:
+ * both answer 204, so both resolve to `void`. A binding that silently means
+ * a different endpoint is exactly what this module exists to prevent, so an
+ * operation whose id carries a number is bound through its path, which the
+ * server cannot renumber.
+ *
+ * Named ids stay on `Returns`: they are the schema's own stable names, and
+ * rewriting forty call sites would trade one hazard for a diff nobody can
+ * review.
+ */
+export type ReturnsAt<
+  Path extends keyof paths,
+  Method extends keyof paths[Path],
+  Media extends string = 'application/json',
+> = Body<paths[Path][Method], Media>;
 
 /**
  * What a call sends.
@@ -55,11 +80,16 @@ export type Returns<Op extends keyof operations, Media extends string = 'applica
  * Operations that take no body at all declare `requestBody?: never`, and
  * `NonNullable<never>` is still `never`, so they are unaffected.
  */
-type RequestBody<Op extends keyof operations> = NonNullable<operations[Op]['requestBody']>;
-
-export type Accepts<Op extends keyof operations> =
-  RequestBody<Op> extends {
-    content: { 'application/json': infer Body };
+type Sends<Op> =
+  NonNullable<Op extends { requestBody?: infer R } ? R : never> extends {
+    content: { 'application/json': infer Sent };
   }
-    ? Body
+    ? Sent
     : never;
+
+export type Accepts<Op extends keyof operations> = Sends<operations[Op]>;
+
+/** `Accepts`, by path and method. See `ReturnsAt` for why both exist. */
+export type AcceptsAt<Path extends keyof paths, Method extends keyof paths[Path]> = Sends<
+  paths[Path][Method]
+>;

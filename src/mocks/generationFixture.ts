@@ -105,6 +105,26 @@ export type MockJob = {
   startedAt: number;
   outcome: MockOutcome;
   /**
+   * The generation that replaced this one (§ 24, `B-088`).
+   *
+   * Present on a **retired** row and only there. It is what makes this job
+   * report `status: "superseded"`, drop out of the history and stop being
+   * editable — while `GET /generations/{id}` and the download keep working,
+   * which is the promise a CV already sent to an employer rests on.
+   *
+   * The id is kept although nothing publishes it: the terminal event names
+   * the generation that **was** edited, not the other way round, so this is
+   * the fixture's own record of which row replaced which. A screen cannot
+   * read it, and `F-031` is the ask.
+   */
+  supersededBy?: string;
+  /**
+   * The generation this job's edit **replaced**, which is what the terminal
+   * event names (`B-088`). Present on the job an edit started and on no
+   * other.
+   */
+  supersededGenerationId?: string;
+  /**
    * The error this job reports when it fails. Carried on the job rather than
    * read from the fixture at stream time: the job is created long before
    * anyone subscribes, and a second job enqueued in between would otherwise

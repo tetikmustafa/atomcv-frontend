@@ -35,6 +35,7 @@ import {
   reorderAtoms,
   reorderEntries,
   reorderSections,
+  replacePreferences,
   replaceProfile,
   type Atom,
   type AtomCreate,
@@ -44,6 +45,7 @@ import {
   type EntryPatch,
   type Profile,
   type Section,
+  type PreferencesUpdate,
   type ProfileUpdate,
   type SectionCreate,
   type SectionPatch,
@@ -182,6 +184,40 @@ export function useReplaceProfile() {
     // not about the column: the section, entry and atom endpoints do not
     // return the head at all and still leave it to the next read. That is why
     // the delete hooks keep invalidating it and this one does not.
+    onSuccess: (result) => client.setQueryData(profileKeys.head(), result),
+  });
+}
+
+/**
+ * Replacing the preferences: the template, the appearance and the writing
+ * style (`B-090`, `B-091`, `B-092`).
+ *
+ * **`PUT`, so a field left out is cleared** — the same rule as the head, one
+ * resource down. It is separate from the head so that editing a headline
+ * cannot reset somebody's writing style by omission, and that separation is
+ * exactly why a caller here must hand over the **whole** preferences object
+ * rather than the part that changed. `CvAppearance` builds it from the cached
+ * copy for that reason.
+ *
+ * Inside `appearance` the same rule reads differently and deliberately so: an
+ * omitted field is the **template's own setting**, which is the state a
+ * slider returns to rather than a value of ours. So "reset" is an omission,
+ * not a number.
+ *
+ * The version is the head's `ETag`, read from the cache at call time. The
+ * response is the head again — with a `completeness` computed after the
+ * write — so it is written straight in rather than refetched.
+ */
+export function useReplacePreferences() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: PreferencesUpdate) =>
+      replacePreferences(
+        body,
+        client.getQueryData<Versioned<Profile>>(profileKeys.head())?.version as Version,
+      ),
+
     onSuccess: (result) => client.setQueryData(profileKeys.head(), result),
   });
 }

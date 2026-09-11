@@ -18,6 +18,7 @@
  */
 
 import { http, HttpResponse } from 'msw';
+import { INSTRUCTION_MAX_LENGTH } from '@/lib/api/endpoints/generations';
 import type { JobStatus } from '@/lib/api/endpoints/jobs';
 import type { components } from '@/types/api';
 import type { CompletedEvent, FailedEvent, PhaseEvent } from './contracts';
@@ -53,6 +54,10 @@ type GenerationRequest = Schemas['GenerationRequest'];
 type CoverLetterRequest = Schemas['CoverLetterRequest'];
 
 const GENERATIONS = '/api/v1/generations';
+
+/** Word's own, and long enough that nothing should be retyping it. */
+export const DOCX_MEDIA_TYPE =
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 /**
  * § 18.1's signal vocabulary, both languages. At least **two distinct**
@@ -178,6 +183,111 @@ function onePagePdf(): Uint8Array {
   body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${startxref}\n%%EOF\n`;
 
   return new TextEncoder().encode(body);
+}
+
+/**
+ * A minimal but genuinely valid `.docx`, for the same reason the PDF above is
+ * genuinely a PDF: the dev harness saves the file and something opens it, and
+ * a Word document Word refuses looks like a bug in the client.
+ *
+ * A `.docx` is an OPC zip of three parts. The entries are **stored**, not
+ * deflated — no compressor is needed and the reader does not care — so all
+ * this has to get right is the CRC and the offsets.
+ */
+function onePageDocx(): Uint8Array {
+  const files = [
+    [
+      '[Content_Types].xml',
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+        '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+        '</Types>',
+    ],
+    [
+      '_rels/.rels',
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+        '<Relationship Id="rId1" Target="word/document.xml" ' +
+        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"/>' +
+        '</Relationships>',
+    ],
+    [
+      'word/document.xml',
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+        '<w:body><w:p><w:r><w:t>AtomCV</w:t></w:r></w:p></w:body></w:document>',
+    ],
+  ] as const;
+
+  const encoder = new TextEncoder();
+  const parts: Uint8Array[] = [];
+  const directory: Uint8Array[] = [];
+  let offset = 0;
+
+  for (const [name, xml] of files) {
+    const nameBytes = encoder.encode(name);
+    const content = encoder.encode(xml);
+    const crc = crc32(content);
+
+    const local = new Uint8Array(30 + nameBytes.length);
+    const localView = new DataView(local.buffer);
+    localView.setUint32(0, 0x04034b50, true);
+    localView.setUint16(4, 20, true);
+    localView.setUint32(14, crc, true);
+    localView.setUint32(18, content.length, true);
+    localView.setUint32(22, content.length, true);
+    localView.setUint16(26, nameBytes.length, true);
+    local.set(nameBytes, 30);
+
+    const entry = new Uint8Array(46 + nameBytes.length);
+    const entryView = new DataView(entry.buffer);
+    entryView.setUint32(0, 0x02014b50, true);
+    entryView.setUint16(4, 20, true);
+    entryView.setUint16(6, 20, true);
+    entryView.setUint32(16, crc, true);
+    entryView.setUint32(20, content.length, true);
+    entryView.setUint32(24, content.length, true);
+    entryView.setUint16(28, nameBytes.length, true);
+    entryView.setUint32(42, offset, true);
+    entry.set(nameBytes, 46);
+
+    parts.push(local, content);
+    directory.push(entry);
+    offset += local.length + content.length;
+  }
+
+  const directorySize = directory.reduce((total, entry) => total + entry.length, 0);
+  const end = new Uint8Array(22);
+  const endView = new DataView(end.buffer);
+  endView.setUint32(0, 0x06054b50, true);
+  endView.setUint16(8, files.length, true);
+  endView.setUint16(10, files.length, true);
+  endView.setUint32(12, directorySize, true);
+  endView.setUint32(16, offset, true);
+
+  const zip = new Uint8Array(offset + directorySize + end.length);
+  let at = 0;
+  for (const chunk of [...parts, ...directory, end]) {
+    zip.set(chunk, at);
+    at += chunk.length;
+  }
+
+  return zip;
+}
+
+/** The one zip field a reader actually verifies. */
+function crc32(bytes: Uint8Array): number {
+  let crc = 0xffffffff;
+
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = crc & 1 ? (crc >>> 1) ^ 0xedb88320 : crc >>> 1;
+    }
+  }
+
+  return (crc ^ 0xffffffff) >>> 0;
 }
 
 /**
@@ -536,6 +646,13 @@ export const generationHandlers = [
                   generationId: job.generationId,
                   pageCount: 1,
                   matchLevel: job.fitReport?.level ?? 'STRONG',
+                  // Only on a Faz G job, and only on the stream: the schema
+                  // does not publish it, so `GET /jobs/{id}` cannot carry it
+                  // without claiming a field the generated type denies
+                  // (`F-031`).
+                  ...(job.supersededGenerationId
+                    ? { supersededGenerationId: job.supersededGenerationId }
+                    : {}),
                 };
 
           controller.enqueue(encoder.encode(sseFrame('completed', payload, id)));
@@ -588,8 +705,14 @@ export const generationHandlers = [
     const cursor = url.searchParams.get('cursor');
 
     // Newest first, and only the generations: an import job has no row here.
+    /*
+      Neither the imports nor the retired rows (`B-088`). Twenty edits are
+      twenty-one generations and **one CV**, so a history that listed them
+      would read as twenty-one resumes — and `total`, which the deletion
+      screen states out loud, would say the same.
+    */
     const rows = generations.jobs
-      .filter((job) => job.kind === 'generation')
+      .filter((job) => job.kind === 'generation' && !job.supersededBy)
       .sort((a, b) => b.startedAt - a.startedAt || b.generationId.localeCompare(a.generationId));
 
     let start = 0;
@@ -636,7 +759,14 @@ export const generationHandlers = [
 
     return HttpResponse.json<Schemas['GenerationResponse']>({
       generationId: job.generationId,
-      status: job.outcome === 'completed' ? 'completed' : 'failed',
+      // Still readable and still downloadable once it has been edited, and
+      // that is the point of keeping it (`B-088`) — what changes is that it
+      // is no longer the one to edit.
+      status: job.supersededBy
+        ? 'superseded'
+        : job.outcome === 'completed'
+          ? 'completed'
+          : 'failed',
       pageCount: 1,
       createdAt: new Date(job.startedAt).toISOString(),
       ...(job.fitReport ? { fitReport: job.fitReport } : {}),
@@ -651,6 +781,129 @@ export const generationHandlers = [
       // makes `accessedAt` readable the day after the permission was given.
       ...(feedbackBody(id) ? { feedback: feedbackBody(id) } : {}),
     });
+  }),
+
+  /**
+   * Faz G's hand toggle (§ 24.4, `B-088`).
+   *
+   * Four behaviours, and only the first is a payload:
+   *
+   * - **it costs nothing** — no model call, nothing off the allowance, which
+   *   is the difference from the sentence endpoint next door;
+   * - an atom this generation never weighed is a **400**, not a no-op: a
+   *   silent 202 would hand back the same document and look like a bug;
+   * - editing an already-edited generation is **409**, because the row it
+   *   would be based on is not the newest one;
+   * - the job it starts makes a **new** generation and retires this one.
+   */
+  http.post('*/api/v1/generations/:generationId/selection', async ({ params, request }) => {
+    const id = String(params.generationId);
+    const instance = `${GENERATIONS}/${id}/selection`;
+    const source = generations.jobs.find((candidate) => candidate.generationId === id);
+
+    if (!source || source.kind !== 'generation') return notFound(instance);
+    if (source.supersededBy) return supersededRefusal(instance);
+
+    const body = ((await request.json()) ?? {}) as { include?: string[]; exclude?: string[] };
+    const include = body.include ?? [];
+    const exclude = body.exclude ?? [];
+
+    if (include.length === 0 && exclude.length === 0) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['include', 'exclude'] }),
+        { status: 400 },
+      );
+    }
+
+    // The three refusals the endpoint names, and `params.fields` carries the
+    // offending ids rather than the field names: the server says which atom
+    // was wrong, which is the only thing a screen could act on.
+    const both = include.filter((atomId) => exclude.includes(atomId));
+    const unknown = [...include, ...exclude].filter(
+      (atomId) => !fixture.atoms.some((atom) => atom.id === atomId),
+    );
+
+    if (both.length > 0 || unknown.length > 0) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], {
+          fields: [...new Set([...both, ...unknown])],
+        }),
+        { status: 400 },
+      );
+    }
+
+    return accepted(supersede(source));
+  }),
+
+  /**
+   * The same edit, in a sentence (§ 24.2, `B-089`).
+   *
+   * **This one is charged**, and the refund is real: a sentence the model
+   * could not match answers `422 EDIT_NOT_UNDERSTOOD` and gives the unit
+   * back. The refusal is deliberately easy to reach here — it is the common
+   * answer, not an edge case, and a screen written against a mock that always
+   * succeeded would have no message for it.
+   */
+  http.post('*/api/v1/generations/:generationId/edits', async ({ params, request }) => {
+    const id = String(params.generationId);
+    const instance = `${GENERATIONS}/${id}/edits`;
+    const source = generations.jobs.find((candidate) => candidate.generationId === id);
+
+    if (!source || source.kind !== 'generation') return notFound(instance);
+    if (source.supersededBy) return supersededRefusal(instance);
+
+    const body = ((await request.json()) ?? {}) as { instruction?: string };
+    const instruction = (body.instruction ?? '').trim();
+
+    if (instruction === '' || instruction.length > INSTRUCTION_MAX_LENGTH) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['instruction'] }),
+        { status: 400 },
+      );
+    }
+
+    if (generations.usage.generation >= currentQuota().generation) {
+      const at = resetsAt();
+
+      // Charged even when refused, the way the generation gate charges: a
+      // refused request takes a unit too, or somebody past their limit could
+      // hammer the endpoint for free (`B-040`).
+      generations.usage.generation += 1;
+
+      return HttpResponse.json(
+        problem(429, 'QUOTA_EXCEEDED', instance, [], { metric: 'generation', resetsAt: at }),
+        {
+          status: 429,
+          headers: { 'Retry-After': String(Math.ceil((Date.parse(at) - Date.now()) / 1000)) },
+        },
+      );
+    }
+
+    // Charged on enqueue, like a generation.
+    generations.usage.generation += 1;
+
+    /*
+      § 24.2's refusal. The model is shown the lines numbered and answers with
+      numbers, so it cannot name a bullet that does not exist — what it can do
+      is match nothing, and then the server does nothing rather than remove
+      the wrong line.
+
+      The trigger is the **shape of the request**, not a magic string a real
+      server would ignore: a sentence naming no atom of this profile is one
+      nothing could be matched to. That is as close as a mock can honestly get
+      to a model's judgement, and it makes the common answer reachable.
+    */
+    if (!namesAnAtom(instruction)) {
+      // Refunded, which is why the counter goes back before the answer.
+      generations.usage.generation = Math.max(0, generations.usage.generation - 1);
+
+      return HttpResponse.json(
+        problem(422, 'EDIT_NOT_UNDERSTOOD', instance, [{ action: 'retry' }]),
+        { status: 422 },
+      );
+    }
+
+    return accepted(supersede(source));
   }),
 
   /**
@@ -693,7 +946,7 @@ export const generationHandlers = [
       read a moment later.
 
       **The shape was a guess and is now the contract** (`B-087`): the server
-      answered `401` here until `F-030` asked what it should be, which told an
+      answered `401` here until `F-031` asked what it should be, which told an
       anonymous caller holding a live session that the session had ended. The
       code, the `params.feature` and the `sign_up` below are what it sends
       today, and `feature` is one of the four `AccountFeature` publishes.
@@ -808,14 +1061,32 @@ export const generationHandlers = [
     const id = String(params.generationId);
     const instance = `/api/v1/generations/${id}/download`;
 
+    // Absent means PDF, the way the server defaults it (`B-094`).
+    const format = new URL(request.url).searchParams.get('format') ?? 'pdf';
+
     // Content negotiation, because the real server does it and refusing here
     // is the only way a client learns before production. Asking this endpoint
     // for JSON — which the API client did, by default — is a **406**, and it
     // was measured against the running backend rather than guessed at.
     const accept = request.headers.get('Accept') ?? '*/*';
+    const produced = format === 'docx' ? DOCX_MEDIA_TYPE : 'application/pdf';
 
-    if (!accept.includes('application/pdf') && !accept.includes('*/*')) {
+    if (!accept.includes(produced) && !accept.includes('*/*')) {
       return HttpResponse.json(problem(406, 'NOT_ACCEPTABLE', instance), { status: 406 });
+    }
+
+    /*
+      § 35.3's map has a third value and nothing serves it, so `format=source`
+      is a `400` rather than a quiet PDF (`B-094`). Encoded here because it is
+      the refusal a client is most likely to write against by accident: a
+      silent fallback would make a "download the source" button produce a PDF,
+      and nobody would notice until somebody opened it.
+    */
+    if (format !== 'pdf' && format !== 'docx') {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['format'] }),
+        { status: 400 },
+      );
     }
 
     if (generations.expired.includes(id)) {
@@ -826,10 +1097,12 @@ export const generationHandlers = [
 
     if (!generations.jobs.some((job) => job.generationId === id)) return notFound(instance);
 
-    return new HttpResponse(onePagePdf(), {
+    const day = new Date().toISOString().slice(0, 10);
+
+    return new HttpResponse(format === 'docx' ? onePageDocx() : onePagePdf(), {
       headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="atomcv-cv-${new Date().toISOString().slice(0, 10)}.pdf"`,
+        'Content-Type': produced,
+        'Content-Disposition': `attachment; filename="atomcv-cv-${day}.${format}"`,
         'Cache-Control': 'no-store',
       },
     });
@@ -863,6 +1136,73 @@ function metric(name: string, attempted: number, limit: number): Schemas['Usage'
   const used = Math.min(attempted, limit);
 
   return { metric: name, used, attempted, limit, remaining: limit - used, resetsAt: resetsAt() };
+}
+
+/**
+ * Retires a generation and queues the one that replaces it (`B-088`).
+ *
+ * The new job inherits everything the edited one was read against — the fit
+ * report, both language tags, the labels the history row is drawn from —
+ * because an edit changes **which atoms are on the page**, not what the
+ * posting said. Re-deriving any of it would make the mock disagree with
+ * itself two edits in.
+ */
+function supersede(source: MockJob): MockJob {
+  const replacement: MockJob = {
+    ...source,
+    jobId: crypto.randomUUID(),
+    generationId: crypto.randomUUID(),
+    startedAt: Date.now(),
+    outcome: 'completed',
+    // The replacement is the newest row; nothing has replaced it yet.
+    supersededBy: undefined,
+    // A new job, so the key that made the old one must not travel with it:
+    // a repeat of the original request would otherwise find this one.
+    idempotencyKey: undefined,
+    // The stream names the generation that **was** edited, so the job needs
+    // to know which one that is.
+    supersededGenerationId: source.generationId,
+  };
+
+  source.supersededBy = replacement.generationId;
+  generations.jobs.push(replacement);
+
+  // The letter travels with the CV: the edit changed which bullets are on the
+  // page, and the letter was written from the atoms rather than from the
+  // document. Leaving it behind would look like the edit deleted it.
+  const letter = generations.coverLetters[source.generationId];
+  if (letter) generations.coverLetters[replacement.generationId] = letter;
+
+  return replacement;
+}
+
+/** § 24's 409, and it carries no way out — the server offers none. */
+function supersededRefusal(instance: string) {
+  return HttpResponse.json(problem(409, 'GENERATION_SUPERSEDED', instance), { status: 409 });
+}
+
+/**
+ * Whether a sentence names anything this profile actually has.
+ *
+ * A stand-in for the model, and the honest kind: it decides on the request
+ * rather than on a magic value, so a screen cannot be written against a
+ * trigger the real server ignores. Matching is on whole words of four
+ * characters or more — "the" and "put" name nothing — and folds with an
+ * explicit `en` locale, because absolute rule 11 is about exactly this
+ * transform.
+ */
+function namesAnAtom(instruction: string): boolean {
+  const words = instruction
+    .toLocaleLowerCase('en')
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((word) => word.length >= 4);
+
+  return fixture.atoms.some((atom) =>
+    (atom.variants ?? []).some((variant) => {
+      const text = (variant.plainText ?? '').toLocaleLowerCase('en');
+      return words.some((word) => text.includes(word));
+    }),
+  );
 }
 
 /** The `202` every job-queueing endpoint answers with (§ 35.3). */

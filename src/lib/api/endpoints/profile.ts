@@ -53,6 +53,67 @@ export type ProfileExport = Returns<'export'>;
 
 export type ProfileUpdate = Accepts<'replace'>;
 export type PreferencesUpdate = Accepts<'replacePreferences'>;
+
+/**
+ * The preferences as they are read back, off the head.
+ *
+ * There is no `GET /profile/preferences`: they arrive inside `GET /profile`
+ * and the write answers with the whole head again. Derived from the read type
+ * rather than named out of `components['schemas']`, so a field the server
+ * moves shows up here as a typecheck failure.
+ */
+export type Preferences = NonNullable<Profile['preferences']>;
+
+/**
+ * What the CV is set to look like (§ 33.2, `B-091`).
+ *
+ * **Every field is optional, and leaving one out means "the template's own
+ * setting"** — not zero and not a default of ours. That is what lets a
+ * template change its own defaults later and take a profile that never
+ * overrode them along with it.
+ *
+ * Derived through `PreferencesUpdate` rather than from the read shape on
+ * purpose: `Appearance` (the read) carries an `empty` boolean that
+ * `AppearanceUpdate` does not, because springdoc publishes the record's
+ * `isEmpty()` as a property. Writing a value read straight back would send a
+ * field the write schema does not declare.
+ */
+export type AppearanceUpdate = NonNullable<
+  NonNullable<PreferencesUpdate['defaults']>['appearance']
+>;
+
+/**
+ * § 33.2's ranges, and the reason they are narrow: a bad-looking result
+ * should be physically impossible rather than discouraged.
+ *
+ * Hand-written because `minimum`/`maximum` do not survive into a TypeScript
+ * type. They are the server's, written twice there as well (the record and
+ * the endpoint), and a value outside them is a `400` — so these keep a slider
+ * from reaching a wall rather than standing in for the check.
+ */
+export const APPEARANCE_RANGES = {
+  fontSizePt: { min: 9, max: 12, step: 0.5 },
+  marginInches: { min: 0.4, max: 1, step: 0.05 },
+  lineSpacing: { min: 0.9, max: 1.3, step: 0.05 },
+} as const;
+
+/**
+ * § 33.2's warning, not a block: 9pt is legal and the reader is told what it
+ * costs rather than stopped.
+ */
+export const ATS_READABLE_FONT_SIZE_PT = 10;
+
+/**
+ * The three families the pattern allows.
+ *
+ * The schema publishes `fontFamily` as a `string` with a regex, so there is no
+ * generated union to derive from. A value outside this list is the server's to
+ * refuse; what this list decides is only which three buttons get drawn.
+ */
+export const FONT_FAMILIES = ['MODERN', 'SERIF', 'SANS'] as const;
+
+/** Six hex digits, no `#` — the shape the server stores and validates. */
+export const ACCENT_COLOR_PATTERN = /^[0-9A-Fa-f]{6}$/;
 export type SectionCreate = Accepts<'createSection'>;
 export type SectionPatch = Accepts<'patchSection'>;
 export type EntryCreate = Accepts<'createEntry'>;

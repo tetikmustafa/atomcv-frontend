@@ -73,9 +73,37 @@ export const generationKeys = {
   detail: (generationId: string) => [...generationKeys.all, generationId] as const,
 };
 
+/**
+ * The application tracker (`B-093`).
+ *
+ * One key for the whole list, because the endpoint answers with the whole
+ * list: it is not paginated, so there is no page to key by and no cursor to
+ * hold pages in order. Every write invalidates this one entry.
+ *
+ * Deliberately not under `generationKeys`, although a row may point at a
+ * generation: a record of applying **outlives the document** (`ON DELETE SET
+ * NULL`), so invalidating the resumes must not take the record of having
+ * applied with them.
+ */
+export const applicationKeys = {
+  all: ['applications'] as const,
+  list: () => [...applicationKeys.all] as const,
+};
+
 export const accountKeys = {
   all: ['account'] as const,
   usage: () => [...accountKeys.all, 'usage'] as const,
+
+  /**
+   * The account's own settings (§ 57.7) — today, whether the optional emails
+   * go out.
+   *
+   * Its own key rather than a corner of the session: the session says who is
+   * here and what they may do, and this says what they have chosen. Signing
+   * out clears the whole cache anyway, so nothing is gained by nesting it and
+   * a re-read of "who is here" would drag a preference along with it.
+   */
+  settings: () => [...accountKeys.all, 'settings'] as const,
 };
 
 /**

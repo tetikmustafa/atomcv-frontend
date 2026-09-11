@@ -34,6 +34,11 @@ const ROUTES = [
   // what an anonymous session gets instead, and a link that appears the
   // moment somebody signs in is a feature they never learn exists.
   { href: '/history', key: 'history' },
+  // Then where those resumes went (`B-093`). Listed for everyone for the same
+  // reason the history is: the screen says what an account gets and an
+  // anonymous session does not, and a link that appears the moment somebody
+  // signs in is a feature they never learn exists.
+  { href: '/applications', key: 'applications' },
   // Last, and listed although most of it is empty: § 57.4 requires deleting
   // an account to be reachable, and a route only a URL reaches is not.
   { href: '/settings', key: 'settings' },

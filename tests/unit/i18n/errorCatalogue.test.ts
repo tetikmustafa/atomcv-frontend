@@ -44,6 +44,12 @@ const PARAMS = {
   // 503. The kill switch of § 44.3: parameterless, because there is
   // nothing in the request to change.
   GENERATION_PAUSED: {},
+  // Faz G's two (`B-088`, `B-089`). Both parameterless, and the server says
+  // so: the id of the generation that replaced this one would name a row the
+  // reader cannot see, and the sentence that was not understood is one they
+  // just typed.
+  GENERATION_SUPERSEDED: {},
+  EDIT_NOT_UNDERSTOOD: {},
   // The accepted extensions are the server's to publish, not the client's to
   // embed: a format added server-side must correct this sentence without
   // waiting for a frontend release (§ EK D.6).

@@ -12,15 +12,20 @@ import { useCallback, useRef } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   downloadGeneration,
+  editByInstruction,
+  editSelection,
   getGeneration,
   listGenerations,
   regenerateCoverLetter,
   startGeneration,
   submitFeedback,
   type CoverLetterRequest,
+  type DownloadFormat,
   type FeedbackRequest,
   type Generation,
   type GenerationRequest,
+  type InstructionEdit,
+  type SelectionEdit,
 } from '@/lib/api/endpoints/generations';
 import { getUsage, type Usage } from '@/lib/api/endpoints/account';
 import { accountKeys, generationKeys } from '@/lib/api/queryKeys';
@@ -66,7 +71,10 @@ export function useStartGeneration() {
  * once would keep it in memory for nothing.
  */
 export function useDownloadGeneration() {
-  return useMutation({ mutationFn: (generationId: string) => downloadGeneration(generationId) });
+  return useMutation({
+    mutationFn: ({ generationId, format }: { generationId: string; format?: DownloadFormat }) =>
+      downloadGeneration(generationId, format),
+  });
 }
 
 /**
@@ -187,5 +195,67 @@ export function useGenerationHistory() {
     queryFn: ({ pageParam }) => listGenerations(pageParam ? { cursor: pageParam } : {}),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (page) => page.nextCursor ?? undefined,
+  });
+}
+
+/* --------------------------------- edits -------------------------------- */
+
+/**
+ * What both halves of Faz G do to the cache when their job lands.
+ *
+ * An edit does not change the generation it was asked of — it makes a **new**
+ * one and retires the old — so three things stop being true at once:
+ *
+ * - the edited generation's own `status` is now `superseded`, and the screen
+ *   showing it has to stop offering to edit it again;
+ * - the history no longer lists it, and `total` no longer counts it
+ *   (`B-088`), so both the list and the number the deletion screen states are
+ *   stale;
+ * - nothing points from the retired row to the one that replaced it, so
+ *   there is no cache entry to write — only ones to drop.
+ *
+ * Invalidated rather than written: none of the three values is in hand, and
+ * the history is a paged query whose first page is the only one that carries
+ * the count.
+ */
+export function useGenerationEdited(generationId: string) {
+  const queryClient = useQueryClient();
+
+  return useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: generationKeys.detail(generationId) });
+    void queryClient.invalidateQueries({ queryKey: generationKeys.history() });
+    void queryClient.invalidateQueries({ queryKey: generationKeys.count() });
+  }, [queryClient, generationId]);
+}
+
+/**
+ * Keeping or dropping atoms by hand (`B-088`).
+ *
+ * **The allowance is not touched here**, which is why this does not
+ * invalidate it: a toggle is deterministic, so the server charges nothing and
+ * a counter re-read would show the same number it already shows.
+ */
+export function useEditSelection(generationId: string) {
+  return useMutation({ mutationFn: (body: SelectionEdit) => editSelection(generationId, body) });
+}
+
+/**
+ * The same edit, asked for in a sentence (`B-089`).
+ *
+ * **This one is charged on enqueue**, so the counter on screen is one behind
+ * the moment the 202 resolves — the same reason `useStartGeneration` re-reads
+ * it. A sentence the server could not match is refunded, and the refund
+ * arrives as the refusal: `422 EDIT_NOT_UNDERSTOOD` leaves the count where it
+ * was, and the error path re-reads it too rather than deciding which
+ * refusals cost anything.
+ */
+export function useEditByInstruction(generationId: string) {
+  const queryClient = useQueryClient();
+  const refreshUsage = () => void queryClient.invalidateQueries({ queryKey: accountKeys.usage() });
+
+  return useMutation({
+    mutationFn: (body: InstructionEdit) => editByInstruction(generationId, body),
+    onSuccess: refreshUsage,
+    onError: refreshUsage,
   });
 }

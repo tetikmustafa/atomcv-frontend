@@ -1,12 +1,21 @@
 import { http, HttpResponse } from 'msw';
 import type { MagicLinkRequest, Session, VerifyRequest } from '@/lib/api/endpoints/auth';
+import { applicationHandlers } from './applicationHandlers';
 import { auth, challengeRefused, overAddressLimit, retryAfter } from './authFixture';
 import { generationHandlers } from './generationHandlers';
 import { importHandlers } from './importHandlers';
 import { problem } from './problem';
 import { profileHandlers } from './profileHandlers';
 import { resetProfileFixture } from './profileFixture';
-import { currentSession, isAccount, signIn, signOut } from './sessionFixture';
+import {
+  currentSession,
+  isAccount,
+  lifecycleEmails,
+  setLifecycleEmails,
+  signIn,
+  signOut,
+  UNSUBSCRIBE_TOKEN,
+} from './sessionFixture';
 
 /**
  * Mock API surface. One set of handlers, shared by the browser worker, Vitest
@@ -66,6 +75,69 @@ export const handlers = [
    * same way the browser arrives.
    */
   http.get('*/api/v1/auth/providers', () => HttpResponse.json(['google', 'github'])),
+
+  /**
+   * The account's own settings (§ 57.7, `B-096`).
+   *
+   * On `/account` rather than on `PUT /profile/preferences`, and the reason
+   * is behavioural: that endpoint replaces the preferences and is guarded by
+   * the profile's `ETag`, so a version conflict about a CV would refuse a
+   * change about an email — and leaving the field out of a replace would be
+   * turning it off.
+   *
+   * `PATCH` answers with the value **as it now stands**, which is what the
+   * switch shows: a control that reported the click rather than the server
+   * would go on looking right after a refusal.
+   */
+  http.get('*/api/v1/account', () => {
+    if (!isAccount()) {
+      return HttpResponse.json(problem(401, 'AUTHENTICATION_REQUIRED', '/api/v1/account'), {
+        status: 401,
+      });
+    }
+
+    return HttpResponse.json({ lifecycleEmails: lifecycleEmails() });
+  }),
+
+  http.patch('*/api/v1/account', async ({ request }) => {
+    if (!isAccount()) {
+      return HttpResponse.json(problem(401, 'AUTHENTICATION_REQUIRED', '/api/v1/account'), {
+        status: 401,
+      });
+    }
+
+    const body = (await request.json()) as { lifecycleEmails?: boolean };
+    if (body.lifecycleEmails !== undefined) setLifecycleEmails(body.lifecycleEmails);
+
+    return HttpResponse.json({ lifecycleEmails: lifecycleEmails() });
+  }),
+
+  /**
+   * Turning the optional emails off from an inbox (§ 57.7, § 40.3).
+   *
+   * **No session**, and **204 for a token nobody has ever heard of.** A
+   * different answer would be an oracle for which tokens are live, so there
+   * is deliberately no "invalid link" state for a page to render — which is
+   * also why the mock cannot be asked to produce one.
+   */
+  http.post('*/api/v1/email/unsubscribe', async ({ request }) => {
+    const body = (await request.json()) as { token?: string };
+
+    // The one refusal there is: a body with no token at all is malformed
+    // rather than unknown.
+    if (!body.token) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', '/api/v1/email/unsubscribe', [], { fields: ['token'] }),
+        { status: 400 },
+      );
+    }
+
+    // A live token turns the preference off; any other token changes nothing
+    // and says the same thing.
+    if (body.token === UNSUBSCRIBE_TOKEN) setLifecycleEmails(false);
+
+    return new HttpResponse(null, { status: 204 });
+  }),
 
   /**
    * Deleting the account (§ 57.4, `B-057`).
@@ -157,4 +229,5 @@ export const handlers = [
 
   ...importHandlers,
   ...generationHandlers,
+  ...applicationHandlers,
 ];

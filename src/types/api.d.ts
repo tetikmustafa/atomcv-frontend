@@ -232,7 +232,9 @@ export interface paths {
          *
          *     Cursor pagination, not offset: the list grows from the top,                     and a page two taken after a new generation lands would                     repeat one row and hide another. Pass the `nextCursor` of                     a page back as `cursor` to get the one after it; its                     absence is the end of the history.
          *
-         *     `total` counts the whole account rather than the page.                     The one screen that needs it cannot page — deleting an                     account has to say what goes, and a number that meant "at                     least this many" would be worse there than none.
+         *     `total` counts the whole history rather than the page.                     The one screen that needs it cannot page — deleting an                     account has to say what goes, and a number that meant "at                     least this many" would be worse there than none.
+         *
+         *     Generations a hand edit replaced are **not listed** and not                     counted. Faz G writes a new generation per edit and retires                     the one before it, so twenty edits of one CV would otherwise                     be twenty-one rows and one of them the CV. Nothing is                     deleted: a retired row is still there and still downloadable                     by id, and deleting the account still takes it.
          *
          *     A row carries no posting and no letter, only whether                     there is a letter to open. The posting stays on the row                     (absolute rule 4).
          */
@@ -247,6 +249,32 @@ export interface paths {
          *     `Idempotency-Key` is honoured: the same key from the same                     user answers with the job it already made, so a double                     click produces one CV and not two.
          */
         post: operations["generate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/generations/{generationId}/selection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Keep or drop atoms by hand, and re-make the CV
+         * @description Bolum 24.4. An edit applies to the **selection state**, never to the rendered document — which is what keeps the page limit true after twenty of them: every edit goes back through the selection that made the promise.
+         *
+         *     Answers 202 with a job, like a generation, because it re-runs the renderer and a real compiler. It does not re-run Faz A or Faz B — the posting was read once and the profile ranked against it once, and a toggle changes neither answer — and Faz D carries the wording it already wrote. **No model call, and nothing off the day's allowance.**
+         *
+         *     The job's terminal event names a **new** generation. The edited one stays, marked superseded, and its id comes back as `supersededGenerationId`.
+         *
+         *     An atom this generation never weighed is refused rather than ignored, because ignoring it would answer 202 and hand back the same document.
+         */
+        post: operations["editSelection"];
         delete?: never;
         options?: never;
         head?: never;
@@ -277,6 +305,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/generations/{generationId}/edits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say what should change, in your own words
+         * @description Bolum 24.2, and the other half of the toggle next door. One sentence is read into a change of **which atoms are on the page**, and the CV is re-made from its own selection state — so the page limit is re-checked and still holds, however many sentences it takes.
+         *
+         *     202 with a job, and the model is asked exactly once: it sees the lines **numbered**, never their ids, and answers with numbers. It cannot name a bullet that does not exist.
+         *
+         *     **This one costs a generation** off the day's allowance, unlike the hand toggle. Refunded when the sentence named no line.
+         *
+         *     What it does *not* do: reword a line, change the tone, or resize the page. A sentence asking for any of those is answered `EDIT_NOT_UNDERSTOOD` rather than guessed at — removing the wrong bullet is worse than saying nothing, because the person may not notice.
+         */
+        post: operations["edit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/generations/{generationId}/cover-letter/regenerate": {
         parameters: {
             query?: never;
@@ -297,6 +351,23 @@ export interface paths {
          *     **It can refuse.** A letter has no original to fall back                     on, so a draft that claims a skill the page does not carry,                     overstates the experience, or greets the wrong company is                     thrown away twice and then reported as                     `COVER_LETTER_REJECTED`. Another press is a different                     draft.
          */
         post: operations["coverLetter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email/unsubscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stop the optional emails for the account this token belongs to */
+        post: operations["unsubscribe"];
         delete?: never;
         options?: never;
         head?: never;
@@ -363,6 +434,34 @@ export interface paths {
          * @description Revokes the session server-side and clears the cookie. Idempotent: calling it without a session is a 204 as well, because a client whose cookie has already expired is exactly the client that calls this.
          */
         post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every application, newest first
+         * @description Not paginated: this is a table somebody scans, not a feed they scroll.
+         *
+         *     A row whose `generationId` is null is one whose CV has been deleted — the record of applying survives the document. Do not offer a download for those.
+         */
+        get: operations["list_1"];
+        put?: never;
+        /**
+         * Record an application
+         * @description `status` omitted means `applied` and `appliedAt` omitted means today, which is what somebody who has just pressed the button means.
+         *
+         *     `generationId` must be one of your own generations. Somebody else's is a 400 rather than a 404: the field is wrong rather than the row missing.
+         */
+        post: operations["create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -465,6 +564,64 @@ export interface paths {
         patch: operations["patchVariant"];
         trace?: never;
     };
+    "/api/v1/applications/{applicationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Forget an application
+         * @description Guarded by `If-Match` like an edit, and for the same reason: a row deleted from a stale screen is a row another tab had just changed.
+         *
+         *     The CV is untouched. This forgets the record of applying, not the document.
+         */
+        delete: operations["delete_1"];
+        options?: never;
+        head?: never;
+        /**
+         * Change an application
+         * @description A partial edit: omitting a field leaves it alone, so a screen moving one row from applied to interview does not have to send the notes back and risk overwriting an edit made in another tab.
+         *
+         *     Emptying the notes needs `clearNotes: true` — null cannot mean both "leave them" and "empty them".
+         *
+         *     `If-Match` is required (Bolum 35.6).
+         */
+        patch: operations["update"];
+        trace?: never;
+    };
+    "/api/v1/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The account's own settings */
+        get: operations["settings"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete this account and everything in it
+         * @description Immediate and irreversible. The profile, its atoms and their embeddings, every generation and its stored document, the queued jobs, the counters and the email preferences all go with the account, and every session signed into it stops working at once.
+         *
+         *     Two things deliberately survive, and neither identifies anybody afterwards. Cost history keeps its rows with the user link cut, because a month's spend is not personal data once it points at nobody. And an address that hard bounced or complained stays on the suppression list, because that record is what stops the product mailing it again — it belongs to the address, not to the account.
+         *
+         *     LLM providers may hold their own short-term logs on their side; that is on the privacy policy, and it is not something this call can reach.
+         *
+         *     Answers 204 whether or not the account was still there: a second press is the same answer as the first.
+         */
+        delete: operations["delete_2"];
+        options?: never;
+        head?: never;
+        /** Turn the optional emails on or off (Bolum 57.7) */
+        patch: operations["update_1"];
+        trace?: never;
+    };
     "/api/v1/profile/export": {
         parameters: {
             query?: never;
@@ -565,10 +722,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Download a generation as a PDF
+         * Download a generation, as a PDF or a Word document
          * @description Re-rendered from the stored content snapshot, never from                     the profile. Editing a bullet afterwards does not change                     a CV that has already been sent — the document that comes                     back is the one that was made.
          *
          *     No LLM and no scoring: one compilation, and the same                     generation produces the same bytes on any day.
+         *
+         *     `format=docx` writes the same content as a Word                     document. **The page limit is approximate there** (Bolum                     22.6): the atoms are the ones that fitted a typeset page,                     and Word sets them in whatever room its own fonts take.                     Same CV, not a second promise -- say so next to the                     button.
          */
         get: operations["download"];
         put?: never;
@@ -673,32 +832,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/account": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Delete this account and everything in it
-         * @description Immediate and irreversible. The profile, its atoms and their embeddings, every generation and its stored document, the queued jobs, the counters and the email preferences all go with the account, and every session signed into it stops working at once.
-         *
-         *     Two things deliberately survive, and neither identifies anybody afterwards. Cost history keeps its rows with the user link cut, because a month's spend is not personal data once it points at nobody. And an address that hard bounced or complained stays on the suppression list, because that record is what stops the product mailing it again — it belongs to the address, not to the account.
-         *
-         *     LLM providers may hold their own short-term logs on their side; that is on the privacy policy, and it is not something this call can reach.
-         *
-         *     Answers 204 whether or not the account was still there: a second press is the same answer as the first.
-         */
-        delete: operations["delete_1"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -727,6 +860,17 @@ export interface components {
             /** @description At least one; the first is the working language */
             enabledLanguages: string[];
         };
+        Appearance: {
+            /** Format: double */
+            fontSizePt?: number;
+            /** Format: double */
+            marginInches?: number;
+            /** Format: double */
+            lineSpacing?: number;
+            fontFamily?: string;
+            accentColor?: string;
+            empty?: boolean;
+        };
         Contact: {
             name?: string;
             email?: string;
@@ -742,6 +886,7 @@ export interface components {
             templateId?: string;
             cvLanguage?: string;
             coverLetterLanguage?: string;
+            appearance?: components["schemas"]["Appearance"];
         };
         Preferences: {
             writingStyle?: components["schemas"]["WritingStyle"];
@@ -806,7 +951,7 @@ export interface components {
              * @description Translation key: the client resolves errors.{CODE}
              * @enum {string}
              */
-            code: "INSUFFICIENT_PROFILE" | "UNPARSEABLE_JOB_DESCRIPTION" | "CONFLICTING_PREFERENCES" | "FEATURE_REQUIRES_ACCOUNT" | "QUOTA_EXCEEDED" | "ALL_PROVIDERS_UNAVAILABLE" | "COMPILATION_FAILED" | "PAGE_LIMIT_EXCEEDED" | "REWRITE_VALIDATION_FAILED" | "COVER_LETTER_REJECTED" | "EMBEDDING_UNAVAILABLE" | "GENERATION_PAUSED" | "UNSUPPORTED_DOCUMENT" | "DOCUMENT_TOO_LARGE" | "PDF_NOT_TEXT_BASED" | "PDF_ENCRYPTED" | "EXTRACTION_EMPTY" | "EXTRACTION_TIMEOUT" | "LANGUAGE_UNDETECTED" | "TRANSLATION_FAILED" | "PROFILE_QUOTA_EXCEEDED" | "ANONYMOUS_SESSION_EXPIRED" | "ATOM_LIMIT_EXCEEDED" | "NO_ANONYMOUS_PROFILE" | "PROFILE_ALREADY_EXISTS" | "GENERATION_ARTIFACT_EXPIRED" | "CSRF_TOKEN_INVALID" | "AUTHENTICATION_REQUIRED" | "OAUTH_FAILED" | "MAGIC_LINK_INVALID" | "RATE_LIMITED" | "CHALLENGE_FAILED" | "RESOURCE_NOT_FOUND" | "VERSION_CONFLICT" | "PRECONDITION_REQUIRED" | "VALIDATION_FAILED" | "INTERNAL_ERROR" | "METHOD_NOT_ALLOWED" | "NOT_ACCEPTABLE" | "UNSUPPORTED_MEDIA_TYPE";
+            code: "INSUFFICIENT_PROFILE" | "UNPARSEABLE_JOB_DESCRIPTION" | "CONFLICTING_PREFERENCES" | "FEATURE_REQUIRES_ACCOUNT" | "QUOTA_EXCEEDED" | "ALL_PROVIDERS_UNAVAILABLE" | "COMPILATION_FAILED" | "PAGE_LIMIT_EXCEEDED" | "REWRITE_VALIDATION_FAILED" | "COVER_LETTER_REJECTED" | "EMBEDDING_UNAVAILABLE" | "GENERATION_PAUSED" | "UNSUPPORTED_DOCUMENT" | "DOCUMENT_TOO_LARGE" | "PDF_NOT_TEXT_BASED" | "PDF_ENCRYPTED" | "EXTRACTION_EMPTY" | "EXTRACTION_TIMEOUT" | "LANGUAGE_UNDETECTED" | "TRANSLATION_FAILED" | "PROFILE_QUOTA_EXCEEDED" | "ANONYMOUS_SESSION_EXPIRED" | "ATOM_LIMIT_EXCEEDED" | "NO_ANONYMOUS_PROFILE" | "PROFILE_ALREADY_EXISTS" | "GENERATION_ARTIFACT_EXPIRED" | "GENERATION_SUPERSEDED" | "EDIT_NOT_UNDERSTOOD" | "CSRF_TOKEN_INVALID" | "AUTHENTICATION_REQUIRED" | "OAUTH_FAILED" | "MAGIC_LINK_INVALID" | "RATE_LIMITED" | "CHALLENGE_FAILED" | "RESOURCE_NOT_FOUND" | "VERSION_CONFLICT" | "PRECONDITION_REQUIRED" | "VALIDATION_FAILED" | "INTERNAL_ERROR" | "METHOD_NOT_ALLOWED" | "NOT_ACCEPTABLE" | "UNSUPPORTED_MEDIA_TYPE";
             /**
              * @description Values the translated message interpolates. Keys and types are fixed per code; the server refuses to publish anything undeclared.
              * @example {
@@ -827,12 +972,28 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /**
+         * @description How the CV looks. Every field is optional and omitting one leaves             the template's own setting.
+         *
+         *     The four geometric ones cost a measurement — a CV asked for             before it lands is produced against an estimate that spends a             little less of the page, so the page limit still holds. The             colour costs nothing.
+         */
+        AppearanceUpdate: {
+            /** Format: double */
+            fontSizePt?: number;
+            /** Format: double */
+            marginInches?: number;
+            /** Format: double */
+            lineSpacing?: number;
+            fontFamily?: string;
+            accentColor?: string;
+        };
         DefaultsUpdate: {
             /** Format: int32 */
             maxPages?: number;
             templateId?: string;
             cvLanguage?: string;
             coverLetterLanguage?: string;
+            appearance?: components["schemas"]["AppearanceUpdate"];
         };
         PreferencesUpdate: {
             writingStyle?: components["schemas"]["WritingStyleUpdate"];
@@ -1160,6 +1321,16 @@ export interface components {
              */
             coverLetter: boolean;
         };
+        /**
+         * @description Which atoms this CV should keep and which it should drop, whatever Faz B thought of them. The generation is re-made from its own selection state — the page limit is re-checked and still holds, however many times it is edited — and a new generation replaces the one that was edited.
+         *
+         *     No LLM call and no quota: the answer is deterministic, so it costs nothing but a compilation.
+         */
+        SelectionEditRequest: {
+            include?: string[];
+            exclude?: string[];
+            empty?: boolean;
+        };
         /** @description A verdict on one generation */
         FeedbackRequest: {
             /**
@@ -1200,6 +1371,15 @@ export interface components {
             /** Format: date-time */
             revokedAt?: string;
         };
+        /**
+         * @description One sentence about what should change. It is read into a change of which atoms are on the page, and the CV is re-made from its own selection state — so the page limit is re-checked and still holds.
+         *
+         *     This one costs a model call and comes off the day's generations. The hand toggle next door does not.
+         */
+        NaturalLanguageEditRequest: {
+            /** @example take out the Android bullet and put the Kubernetes one back */
+            instruction: string;
+        };
         /** @description A covering letter for a generation that already exists */
         CoverLetterRequest: {
             /**
@@ -1223,6 +1403,10 @@ export interface components {
             /** @enum {string} */
             style?: "default" | "shorter" | "more_formal";
         };
+        UnsubscribeRequest: {
+            /** Format: uuid */
+            token: string;
+        };
         /** @description Redeem a sign-in link */
         VerifyRequest: {
             selector: string;
@@ -1239,6 +1423,34 @@ export interface components {
             email: string;
             /** @description The Turnstile widget's token. Required wherever the challenge is configured; a request without one is answered `403 CHALLENGE_FAILED`. */
             challengeToken?: string;
+        };
+        ApplicationCreate: {
+            company: string;
+            position: string;
+            /** Format: uuid */
+            generationId?: string;
+            /** @enum {string} */
+            status?: "applied" | "interview" | "offer" | "rejected" | "withdrawn";
+            /** Format: date */
+            appliedAt?: string;
+            notes?: string;
+        };
+        Application: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            generationId?: string;
+            company?: string;
+            position?: string;
+            /** @enum {string} */
+            status?: "applied" | "interview" | "offer" | "rejected" | "withdrawn";
+            /** Format: date */
+            appliedAt?: string;
+            notes?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: int64 */
+            version?: number;
         };
         SectionPatch: {
             /** @enum {string} */
@@ -1302,6 +1514,26 @@ export interface components {
             primary?: boolean;
             /** @description Send `false` to hand a wording back: it stops being yours, and a stale one is queued for regeneration (Bolum 32.2's "regenerate" button). `true` is refused — a wording becomes yours by writing words, never by claiming it. */
             userEdited?: boolean;
+        };
+        /**
+         * @description A partial edit. Omitting a field leaves it as it is — send only what changed.
+         *
+         *     Requires `If-Match` with the version from the row you are editing. A stale one is a 412: somebody else's tab changed the row first.
+         */
+        ApplicationUpdate: {
+            company?: string;
+            position?: string;
+            /** Format: uuid */
+            generationId?: string;
+            /** @enum {string} */
+            status?: "applied" | "interview" | "offer" | "rejected" | "withdrawn";
+            /** Format: date */
+            appliedAt?: string;
+            notes?: string;
+            clearNotes?: boolean;
+        };
+        AccountSettings: {
+            lifecycleEmails?: boolean;
         };
         EntryExport: {
             entry?: components["schemas"]["Entry"];
@@ -2358,6 +2590,59 @@ export interface operations {
             };
         };
     };
+    editSelection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                generationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SelectionEditRequest"];
+            };
+        };
+        responses: {
+            /** @description Queued; follow the Location */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcceptedJobResponse"];
+                };
+            };
+            /** @description VALIDATION_FAILED — an empty edit, an atom named in both lists, or one this generation never weighed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description No such generation, or it belongs to someone else */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description GENERATION_SUPERSEDED — a newer generation has replaced this one; edit that */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     feedback: {
         parameters: {
             query?: never;
@@ -2403,6 +2688,70 @@ export interface operations {
             /** @description No such generation, or it belongs to someone else */
             404: {
                 headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    edit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                generationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NaturalLanguageEditRequest"];
+            };
+        };
+        responses: {
+            /** @description Queued; follow the Location */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcceptedJobResponse"];
+                };
+            };
+            /** @description VALIDATION_FAILED — an empty or over-long sentence */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description No such generation, or it belongs to someone else */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description GENERATION_SUPERSEDED — a newer generation has replaced this one; edit that */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description QUOTA_EXCEEDED — the day's generations are spent */
+            429: {
+                headers: {
+                    /** @description Seconds to wait, rounded up and never zero. The same moment as `params.resetsAt`, as a duration: it is the one of the two that is still right when the client's own clock is wrong. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2475,6 +2824,28 @@ export interface operations {
             };
         };
     };
+    unsubscribe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnsubscribeRequest"];
+            };
+        };
+        responses: {
+            /** @description Done, or there was no such token — the answer is the same */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     verify: {
         parameters: {
             query?: never;
@@ -2536,6 +2907,61 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    list_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The whole list */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Application"][];
+                };
+            };
+        };
+    };
+    create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicationCreate"];
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            201: {
+                headers: {
+                    /** @description Current version as a quoted number, for If-Match on writes. Sent as: "7" */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Application"];
+                };
+            };
+            /** @description VALIDATION_FAILED — a missing field, or a `generationId` that is not yours */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
             };
         };
     };
@@ -2965,6 +3391,174 @@ export interface operations {
             };
         };
     };
+    delete_1: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                applicationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Gone */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such application, or not yours */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description VERSION_CONFLICT — somebody changed it first */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    update: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                applicationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicationUpdate"];
+            };
+        };
+        responses: {
+            /** @description Changed */
+            200: {
+                headers: {
+                    /** @description Current version as a quoted number, for If-Match on writes. Sent as: "7" */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Application"];
+                };
+            };
+            /** @description No such application, or not yours */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description VERSION_CONFLICT — somebody changed it first */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description PRECONDITION_REQUIRED — no `If-Match` was sent */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current values */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AccountSettings"];
+                };
+            };
+        };
+    };
+    delete_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Gone */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AUTHENTICATION_REQUIRED — no account to delete */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    update_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountSettings"];
+            };
+        };
+        responses: {
+            /** @description The value as it now stands */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountSettings"];
+                };
+            };
+        };
+    };
     export: {
         parameters: {
             query?: {
@@ -3096,7 +3690,9 @@ export interface operations {
     };
     download: {
         parameters: {
-            query?: never;
+            query?: {
+                format?: string;
+            };
             header?: never;
             path: {
                 generationId: string;
@@ -3112,6 +3708,15 @@ export interface operations {
                 };
                 content: {
                     "application/pdf": unknown;
+                };
+            };
+            /** @description VALIDATION_FAILED — a format that is not `pdf` or `docx` */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
                 };
             };
             /** @description No such generation, or it belongs to someone else */
@@ -3236,33 +3841,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Usage"][];
-                };
-            };
-        };
-    };
-    delete_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Gone */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description AUTHENTICATION_REQUIRED — no account to delete */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
                 };
             };
         };

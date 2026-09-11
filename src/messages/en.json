@@ -15,6 +15,8 @@
     "COVER_LETTER_REJECTED": "That draft didn't pass our own check, so we didn't keep it: {issues}. Asking again usually produces one that does.",
     "EMBEDDING_UNAVAILABLE": "Skill matching is unavailable right now.",
     "GENERATION_PAUSED": "Generation is paused for now. Nothing else is affected — your profile stays open to read, edit and export.",
+    "GENERATION_SUPERSEDED": "There is a newer version of this resume, so this one can no longer be edited. Open the newest one and edit that.",
+    "EDIT_NOT_UNDERSTOOD": "We could not match that to anything on the page, so nothing changed and it did not cost you a generation. Ask for an item to be taken out or put back, naming the skill or project it is about. Rewording a line, changing the tone and resizing the page are not things this can do.",
     "UNSUPPORTED_DOCUMENT": "We can't read that file. Upload one of these instead: {accepted}.",
     "DOCUMENT_TOO_LARGE": "That file is over the {limitBytes, number, ::unit/megabyte scale/0.00000095367431640625 .#} limit.",
     "PDF_NOT_TEXT_BASED": "That PDF is a scan rather than text, so there's nothing to read out of it. A PDF exported from a word processor works.",
@@ -75,6 +77,7 @@
     "profile": "Profile",
     "generate": "Generate",
     "history": "Your resumes",
+    "applications": "Applications",
     "settings": "Settings"
   },
   "History": {
@@ -113,6 +116,34 @@
     "warning": "{code, select, ambiguous_date {A date could not be read.} missing_organization {An entry has no employer or school on it.} unclear_section {Something could not be placed in a section with any confidence.} scrambled_text {Some of the text came out of the file scrambled.} overlapping_dates {Two entries cover the same dates.} untranslatable_atom {A line could not be given an English wording.} unsupported_by_source {A name here does not appear in the file you uploaded.} other {Something could not be settled.}}",
     "warningAt": "{warning} In {section}.",
     "confirm": "Looks right — continue"
+  },
+  "Applications": {
+    "title": "Applications",
+    "anonymous": "Tracking where you applied needs an account — the record has to outlive a session, and an anonymous one lasts two hours. <link>Sign in</link> to keep one.",
+    "loading": "Fetching your applications…",
+    "failed": "Your applications could not be fetched. Reload the page to try again.",
+    "empty": "Nothing here yet. Add the first place you applied.",
+    "addTitle": "Record an application",
+    "company": "Company",
+    "position": "Position",
+    "add": "Add",
+    "adding": "Adding…",
+    "added": "Application added.",
+    "status": "Status",
+    "statuses": {
+      "applied": "Applied",
+      "interview": "Interviewing",
+      "offer": "Offer",
+      "rejected": "Rejected",
+      "withdrawn": "Withdrawn"
+    },
+    "moved": "Moved to {status, select, applied {applied} interview {interviewing} offer {offer} rejected {rejected} withdrawn {withdrawn} other {{status}}}.",
+    "openResume": "Open the resume",
+    "resumeDeleted": "That resume has been deleted.",
+    "notes": "Notes",
+    "notesLabel": "Anything worth remembering",
+    "saveNotes": "Save notes",
+    "forget": "Forget this"
   },
   "Session": {
     "expiring": "This session ends at {at, time, short} — two hours after your last activity here, so carrying on pushes it back. Nothing is saved to an account yet."
@@ -382,6 +413,16 @@
     "ready": "It is ready.",
     "pages": "{count, plural, =1 {One page.} other {# pages.}}",
     "download": "Download PDF",
+    "downloadDocx": "Download Word",
+    "formatNote": "The PDF is exactly what was measured. Word re-flows the same content with its own fonts, so a one-page resume can run a little over there.",
+    "editTitle": "Change something",
+    "editIntro": "Say what should come off the page or go back on it, in your own words. Naming the skill or the project it is about helps. Rewording a line, changing the tone and resizing the page are not things this can do.",
+    "editLabel": "What should change",
+    "editPlaceholder": "Take out the Android bullet and put the Kubernetes one back.",
+    "editCost": "This uses one of the resumes you can generate today. The resume you have now is kept and still downloads — the change makes a new one.",
+    "editSubmit": "Make the change",
+    "editSending": "Working on it…",
+    "supersededNote": "A newer version of this resume has been made, so this one is no longer the one to change. It is kept exactly as it was and still downloads, which is what a resume already sent to an employer needs.",
     "downloading": "Preparing the file…",
     "again": "Generate another",
     "announceDownloaded": "Download started",
@@ -486,13 +527,59 @@
   },
   "Settings": {
     "title": "Settings",
-    "anonymous": "You are working without an account, so there is nothing here to manage. <link>Sign in</link> if you want one.",
+    "anonymous": "You are working without an account, so the settings above are the narrower set. <link>Sign in</link> for the rest of them.",
+    "emailsTitle": "Emails",
+    "emailsLabel": "Send me the occasional email about my account",
+    "emailsNote": "Two, and no more: a welcome note the first time you sign in, and a confirmation when an account is deleted. The confirmation is sent either way — being told your data has gone is not something we let you switch off. Sign-in links are not on this list; they answer something you just did.",
+    "emailsOn": "Emails are on.",
+    "emailsOff": "Emails are off.",
     "deleteTitle": "Delete your account",
     "deleteIntro": "This removes everything you have here. It cannot be undone.",
     "deleteAction": "Delete my account",
     "deleteConfirmTitle": "Delete your account?",
     "deleteConfirmBody": "This deletes your profile — {sections, plural, =1 {one section} other {# sections}} and {atoms, plural, =1 {one item} other {# items}} — along with {generations, plural, =0 {every resume you generate} =1 {the one resume you have generated} other {all # resumes you have generated}} and the documents they made, anything still queued, your usage counters and your email preferences. It cannot be undone.\n\nTwo things stay. Our record of what your generations cost is kept with the link to you cut, so it no longer shows anyone. And if your address ever bounced or reported us, that record stays with the address rather than with the account — deleting it would let us write to you again after being told not to.\n\nThe AI providers may hold their own short-lived logs on their side. The privacy policy says which.",
     "deleteConfirmAction": "Delete everything"
+  },
+  "Appearance": {
+    "title": "How your resume looks",
+    "intro": "This applies to every resume you generate from now on. It is not asked again per resume.",
+    "template": "Template",
+    "templates": {
+      "classic": "Classic",
+      "compact": "Compact",
+      "modern": "Modern"
+    },
+    "templateDefault": "The template's own",
+    "reset": "Reset",
+    "fontSize": "Text size",
+    "fontSizeValue": "{value} pt",
+    "fontSizeWarning": "Below {recommended} pt some applicant tracking systems read a resume less reliably. It is still allowed, and it fits more on the page.",
+    "margin": "Margins",
+    "marginValue": "{value} in",
+    "lineSpacing": "Line spacing",
+    "lineSpacingValue": "{value}×",
+    "fontFamily": "Typeface",
+    "fontFamilies": {
+      "MODERN": "Modern",
+      "SERIF": "Serif",
+      "SANS": "Sans serif"
+    },
+    "accentColor": "Accent colour",
+    "accentColorHint": "Six hex digits, no #. Left empty, the template picks its own — which is not black for every template.",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved.",
+    "saveFailed": "That did not save. Try again."
+  },
+  "Unsubscribe": {
+    "title": "Stop the optional emails",
+    "intro": "Press the button and we will stop sending you the optional emails.",
+    "keeps": "One email is not on this list and cannot be: if an account is ever deleted, the confirmation is still sent. Being told your data has gone is not something we let anyone switch off. Sign-in links are not optional either — they answer something you just did.",
+    "confirm": "Stop sending them",
+    "working": "Stopping…",
+    "done": "Done. The optional emails have been stopped.",
+    "doneSettings": "If you signed in, you can turn them back on in <link>your settings</link>.",
+    "noToken": "This link is missing the part that says who it is for. Open the link from the email itself rather than typing the address."
   },
   "errorValues": {
     "COVER_LETTER_REJECTED": {

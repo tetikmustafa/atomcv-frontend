@@ -119,6 +119,97 @@ ACK'inde; burada yalnız **sapmalar ve kararlar** var.
   geçirilecek — ve yayımlanan hâli `ProcessorAudit`'in açılış satırına karşı
   okunacak (dağıtım işi).
 
+### `B-088`…`B-094`, `B-096` kapandı (2026-09-11)
+
+Backend'in Aşama 4'te indirdiği sekiz madde, bir oturumda. Ne yapıldığı
+`handoff/resolved/to-frontend-2026-09.md`'de; burada **sapmalar ve
+kararlar**.
+
+- **`gen:api` sessiz bir yanlışı açığa çıkardı, ve kendi başına
+  çıkarmadı.** Başvuru controller'ı inince springdoc `DELETE /account`'u
+  `delete_1`'den `delete_2`'ye kaydırdı ve `delete_1`'i **başvuru silmeye**
+  verdi. `deleteAccount` o günden beri yanlış operasyona bağlıydı ve
+  **typecheck sustu**: ikisi de 204, ikisi de `void`. `operations.ts` artık
+  `ReturnsAt`/`AcceptsAt` taşıyor — **yol ve metotla** bağlama — ve
+  numaralı id'li her uç onunla bağlanıyor. Adlandırılmış id'ler
+  `Returns`'te kaldı: onlar şemaanın kendi kararlı adları, ve kırk çağırı
+  yerini değiştirmek bir tehlikeyi kimsenin inceleyemeyeceği bir diff'le
+  takas ederdi. `F-033` kaynağını istiyor.
+- **`B-088`'in arayüzü çizilmedi, ve bu bir eksik değil bir karar.**
+  Düğme başına toggle çizmek "bu üretim neyi tarttı" bilgisini istiyor;
+  hiçbir uç yayımlamıyor. Profilin atomlarından çizmek, tartılmamış atom
+  `400` döndüğü için **basılamayacak düğmeler** demek olurdu — yani
+  kural 7'nin tersi: sunucunun vermediği bir yolu uydurmak. İstemci
+  fonksiyonu ve hook'u yine de yazıldı (`editSelection`,
+  `useEditSelection`), çünkü davranışı — kota harcamaması — mock'ta
+  sınanıyor ve ekran indiği gün değişmeyecek. `F-031`.
+- **Emekli üretim ekranı halefe bağlantı veremiyor.** `status:
+  "superseded"` okunuyor ve kutu yerine not çiziliyor, ama "yenisini aç"
+  diyen bir bağlantı yok: telde emekliden halefe işaret yok ve geçmiş
+  emekli satırları listelemiyor. Aynı `F-031`.
+- **`supersededGenerationId` yalnız akışta taşınabiliyor.** Şema onu
+  `JobStatusResponse`'a koymuyor, yani **tipli olan tek geri düşüş**
+  (`GET /jobs/{id}`) onu taşıyamıyor. Bugün kimseyi engellemiyor —
+  düzenlemeyi gönderen ekran hangi üretimi gönderdiğini zaten biliyor —
+  ve mock akışta yayımlıyor. `contracts.ts` bir alan geri aldı, kuralını
+  çiğnemeden: tarif ettiği şey şemada `unknown` olan SSE yükü. `F-032`.
+- **`PATCH /profile/preferences` diye bir şey yok.** `B-091` öyle yazıyor;
+  şemada yalnız `PUT` var ve **şema kazanıyor**. Sonucu davranışsal:
+  "alanı göndermemek şablonun ayarı demek" **replace** anlamında da doğru,
+  ama form **bütün tercihleri** göndermek zorunda — yalnız `defaults`
+  gönderen bir gövde yazım stilini siler. `B-091`'in "sıfırlamak için
+  `null` gönderin" cümlesi de bu uçta geçmiyor: `AppearanceUpdate`'in
+  alanları nullable değil, ve `PUT`'ta atlamak zaten sıfırlamak.
+- **`Appearance` okunup doğrudan geri yazılamıyor.** springdoc kaydın
+  `isEmpty()`'sini `empty: boolean` diye yayımlıyor ve yazma şemasında o alan
+  yok. `draftFrom` onu eliyor; `SelectionEditRequest`'te de aynı sızıntı var.
+  `F-033`'ün ikinci maddesi.
+- **`EDIT_NOT_UNDERSTOOD` sık dönecek, o yüzden metni bir çıkış taşıyor.**
+  Mesaj ne yapılamayacağını **adıyla** sayar (yeniden yazma, ton, sayfa
+  boyu), çünkü "anlamadık" tek başına çıkmaz sokak. Kotanın iade
+  edildiği de yazıyor: kullanıcının soracağı ilk soru o.
+- **Mock'un "modeli" isteğin **şeklinden** karar veriyor.** Sihirli bir
+  dizge yerine "cümle bu profilin bir atomunu adıyla anıyor mu" — böylece
+  ürün kodu gerçek sunucunun yok sayacağı bir tetikleyici öğrenmiyor.
+  Eşleşme dört harften uzun sözcüklerde ve `en` locale'iyle katılıyor
+  (kural 11).
+- **`JobProgress` isteğe bağlı bir `onCompleted` aldı.** Düzenleme işi
+  bittiğinde üç şey birden bayatlıyor (emeklinin `status`'ü, geçmiş,
+  `total`) ve bunu bilen tek yer akışı dinleyen bileşen. İkinci bir
+  `EventSource` açmak, aynı işi iki yerden dinlemek olurdu.
+- **Görünüş formu taslağını effect'te değil render sırasında tohumluyor.**
+  Effect bir kare boyunca kimsenin sahip olmadığı değerleri gösterirdi;
+  lint kuralı (`react-hooks/set-state-in-effect`) da onu reddediyor. Sunucu
+  verisi store'a kopyalanmıyor — bu bir **yazı taslağı**, cache hâlâ
+  sunucunun dediğini tutuyor.
+- **Dokunulmamış bir kontrol sayı basmıyor.** "Şablonun kendi ayarı"
+  yazıyor, çünkü `modern`'in varsayılan vurgusu siyah değil (`B-092`) ve
+  bir değer basmak hiç görmediğimiz bir şablon hakkında iddia olurdu.
+  Slider yine de bir yerde durmak zorunda: aralığın ortasında duruyor ve
+  yanındaki yazı onun **seçilmiş** olmadığını söylüyor.
+- **§ 33.3'ün "yeniden hesaplanıyor…" göstergesi çizilmedi**, ve
+  `F-nnn` ile de istenmedi. `B-091` ekranda bir şey yapmanın gerekmediğini
+  söylüyor; göstergeyi istemek, kullanıcının beklemediği bir iş için
+  bekleme hissi üretmek olurdu. Bir geri bildirim gelirse açılır.
+- **Ayarlar ekranı artık anonim çağırana da bir şey gösteriyor.** Görünüş
+  profilin, profil ise anonim oturumun da var; "burada yönetilecek bir şey
+  yok" cümlesi bayatladı ve değiştirildi.
+- **`/unsubscribe` `(app)` altında**, oturum istemediği hâlde: sayfa bir
+  istemci bileşeni ve next-intl'in istemci sağlayıcısı orada. Alternatifi
+  tek sayfa için ikinci bir sağlayıcı ağacıydı. `searchParams` okuduğu
+  için dinamik; bütçe betiğinin prerender listesinde yok, **elle ölçüldü**.
+- **Mock'un e-posta tercihi `localStorage`'a da yazılıyor.** Modül durumu
+  sayfa kadar yaşıyor; sınanmaya değer yolculuk ise bir gezinmeyi
+  aşıyor (gelen kutusundan kapat, ayarlarda anahtarın uyduğunu gör).
+  `MOCK_SESSION_KEY`'in çözümü, aynı korumalı çifte toplanmış hâli.
+- **`DeleteAccount` testindeki kaydedici daraltıldı.** "Her hesap isteği"ni
+  saydığı için, ayarlara inen `GET /account` "hiçbir şey silinmedi"
+  kontrolünü hiçbir şey silmeyen bir istekle düşürüyordu. Artık yalnız
+  yazmaları sayıyor.
+- **Kapanış kapıları:** typecheck · 751 birim · 56 e2e · lint · prettier ·
+  bütçe (`npm run size`, hepsi tavanın altında) · üretim chunk'larında
+  `setupWorker` yok.
+
 ### Aşama ≤3 denetimi (2026-09-08)
 
 "Bir eksik kaldı mı" sorusuna karşı, backend ayaktayken. Bulunan tek şey bir
@@ -155,6 +246,11 @@ ACK'inde; burada yalnız **sapmalar ve kararlar** var.
 | **Profil başında dil eksenleri düzenlenemiyor** | `sourceLanguage`/`enabledLanguages` **içerik dili** ekseni (Bölüm 38.1), arayüz dili değil. Form ikisini de olduğu gibi geçiriyor ve ikisi de gövdede zorunlu (B-035). ⚠ **Gerekçesi bayatladı ve düzeltildi (2026-09-08):** satır "hangi diller sunulabilir `capabilities`'e bağlı ve o yayımlanmadı" diyordu — `allowedLanguages` yayımlanıyor ve okunuyor, gerçek uca karşı `["en","tr"]`. Bekleyen bağımlılık yok; kalan şey **çizilmemiş bir kontrol**, yani karar. Denetimde 8 satırın 7'si doğru çıktı, bu biri değil. |
 | **Bölüm düzeni seçtiren arayüz yok** | `sections.layout` beş değer alıyor (`B-073` ile `paragraph` da) ama hiçbir ekran onu göstermiyor ya da seçtirmiyor; sunucu her bölüm türü için doğrusunu zaten yazıyor. Çizilecekse beşinin de ICU adı ve About için `paragraph` varsayılanı gerekir — yarım hâli kullanıcıya anlamını bilmediği bir seçim verir. |
 | **Dark mode bağlı değil** | CLAUDE.md · *Deferred by Decision*. Yarım uygulamak kullanıcıya değiştiremeyeceği bir tema verir. |
+| **Elle aç/kapa arayüzü yok** | Hangi atomların tartıldığını yayımlayan uç yok (`F-031`). Profil atomlarından çizilse, tartılmamış atom `400` döndüğü için basılamayacak düğmeler olurdu. İstemci fonksiyonu hazır. |
+| **Emekli üretimden halefe bağlantı yok** | Telde işaret yok, geçmiş de emekli satırı listelemiyor. Not yazılıyor, bağlantı yazılmıyor — aynı `F-031`. |
+| **"Yeniden hesaplanıyor…" göstergesi yok** | § 33.3 istiyor, durumu yayımlayan uç yok, ve `B-091` ekranda bir şey gerekmediğini söylüyor. Beklenmeyen bir iş için bekleme hissi üretmek olurdu. |
+| **`format=source` düğmesi yok** | Uç bugün `400` dönüyor (`B-094`). Çizilse hata paneline basardı; mock reddi üretiyor ki bir gün çağıran olursa orada görülsün. |
+| **Başvurularda duruma göre süzme yok** | `B-093`: sayfalama gerektiğinde birlikte geliyor. Filtresi olmayan bir liste, filtresi olan bir ucın taklidinden iyidir. |
 
 ---
 
@@ -226,8 +322,9 @@ taşıyor; burada yalnız **nerede olduğu** var. Aşama 1'in profil değişmezl
   rotanın HTML dosyası yok, o yüzden `searchParams` okuyan her sayfa
   (`/login`, `/verify`, `/auth/*`, `/onboarding/review`) sayının dışında
   kalıyor ve elle ölçülüyor: `next start`, aynı gzip yöntemi.
-- **Bundle:** `/[locale]/profile` **252.3 / 83.9 KB**, `/[locale]/generate`
-  **219.5 / 51.1 KB**, `/[locale]/onboarding` **217.1 / 48.7 KB**,
-  `/[locale]/settings` **228.5 / 60.1 KB** (tavan `bundle-budget.json`:
-  280 / 105). Elle ölçülenler: review 252.2, sonuç 216.3, verify 212.5,
-  login 210.4 KB.
+- **Bundle (2026-09-11):** `/[locale]/profile` **253.2 / 84.9 KB**,
+  `/[locale]/settings` **240.0 / 71.7** (görünüş bölümü ile +11.5),
+  `/[locale]/generate` **222.9 / 54.5**, `/[locale]/onboarding` **219.8 /
+  51.5**, `/[locale]/applications` **215.6 / 47.2** (yeni),
+  `/[locale]/history` **214.3 / 46.0** (tavan `bundle-budget.json`: 280 /
+  105). Elle ölçülenler: sonuç 219.3, unsubscribe 213.6.
