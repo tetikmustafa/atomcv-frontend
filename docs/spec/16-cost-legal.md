@@ -66,7 +66,7 @@ Prompt caching + Batch API ile **%30-50 daha düşük** olabilir.
 
 **Gerçekçi ilk yıl beklentisi: €16-25/ay**
 
-**Kill-switch eşiği: $40/ay** (`DAILY_BUDGET_USD` ile günlük ~$1.33)
+**Kill-switch eşiği: $40/ay** (`ANOMALY_DAILY_BUDGET_USD` ile günlük ~$1.33)
 
 ### 56.5 Geliştirme sırasındaki maliyetler
 
@@ -244,6 +244,85 @@ söylüyormuş gibi duran bir etiket üretir.
 
 **Yeni bir alan bu üç ölçütten geçse bile buraya yazılmadan inmez.** Bu bölüm,
 istisnanın listesidir; listede olmayan alan istisna değildir.
+
+### 57.7 Yaşam döngüsü e-postaları — kapalı liste
+
+Aşama 4 bu maddeyi adıyla anıyordu (§ 55, `[B+F] Ürün`) ama hangi e-postaların
+gönderileceğini hiçbir yer tanımlamıyordu. Tanım burada, ve **liste kapalı**:
+listede olmayan bir e-posta gönderilmez, eklenmesi bu bölümün değişmesi demektir.
+
+| E-posta | Tetikleyici | Tercihe tabi mi? |
+|---|---|---|
+| **Hoş geldin** | hesabın **ilk başarılı girişi** (`last_seen_at` hâlâ null) | evet |
+| **Silme onayı** | hesap silme işlemi commit olduğunda | **hayır** — işlemsel |
+| ~~Hatırlatıcı, özet, duyuru~~ | — | gönderilmiyor |
+
+**Sihirli bağlantı bu listeye dahil değil** (§ 40.2): o bir kimlik doğrulama
+adımıdır, kişinin o an yaptığı bir eyleme cevap verir ve kapatılamaz.
+
+**Hoş geldin, satırın yazılmasında değil ilk girişte.** İlk taslakta tetikleyici
+"`users` satırı ilk kez yazıldığında" yazıyordu; **uygulanmadan önce yanlış
+olduğu görüldü.** § 40.4 hesap sayımını engellemek için sihirli bağlantı
+istendiğinde satırı *hemen* yaratıyor (`createAwaitingVerification`) — kişi
+hiçbir şey kanıtlamadan, hatta o adres ona ait olmadan. O tetikleyici, giriş
+kutusuna adresi yazılan **herkese** posta göndermek olurdu; § 40.5'in hız
+sınırları bunun tam da kötüye kullanımını frenliyor.
+
+Doğrusu **ilk başarılı giriş**: `last_seen_at` hâlâ null'ken bir oturum
+açılması. Hesap başına tam bir kez doğrudur ve iki yolda da aynı yerden geçer —
+sihirli bağlantının doğrulaması da (`markEmailVerified`, "bağlantıyı açmak
+kanıttır") OAuth de oturumu açmadan hemen önce `seen(...)` çağırır. Anonim
+çalışmanın hesaba bağlanması (§ 41.3) ayrı bir yol değildir; o da bir girişle
+olur.
+
+**Silme onayı işlemsel, ve iki kısıt taşıyor.** Adres **satır silinmeden önce**
+okunur — sonrası yok. Posta **işlem commit olduktan sonra** çıkar: geri alınan
+bir silmenin onayı, olmamış bir şeyin bildirimidir. § 57.4 verinin gittiğini
+söylemeyi zaten gerektiriyor; kişinin bunu kapatabilmesi, onu bilgilendirmemek
+için bir yol açardı.
+
+#### Tercih
+
+**`users.lifecycle_emails`**, `BOOLEAN NOT NULL DEFAULT true`. Kullanıcı
+düzeyinde, çünkü e-posta hesaba aittir: anonim profilin adresi yoktur ve
+`profiles.preferences` onu taşıyamaz.
+
+- **`GET` ve `PATCH /api/v1/account`.** İlk taslak alanı
+  `PUT /profile/preferences`'a koyuyordu; **uygulanırken yanlış olduğu
+  görüldü.** O uç profili *değiştirir* değil *değiştirir yerine koyar* ve
+  profilin kendi ETag'iyle korunur — yani bir CV'yi ilgilendiren sürüm
+  çakışması, e-postayı ilgilendiren bir değişikliği reddederdi. Üstelik
+  alanı göndermemek, replace anlamında onu kapatmak olurdu. Tercih hesaba
+  ait; adresi olan da hesap.
+- **Her tercihe tabi postada kapatma bağlantısı var**, ve oturum istemez —
+  gelen kutusundan tıklanır. `users.unsubscribe_token`: rastgele ve opak,
+  imzalı değil (doğrulaması sır istemesin diye), tek satıra bağlı, süresiz —
+  bir yıl önceki postaya da tıklanabilir.
+- **Bağlantı bir sayfaya iner, bir eyleme değil** (§ 40.3). Kurumsal ağ
+  geçitleri mesajdaki her adresi kimse okumadan çekiyor; çekilince kapatan bir
+  uç, hiç tıklamamış kişilerin postasını keserdi. Sayfa düğmeyi taşır,
+  `POST /api/v1/email/unsubscribe` işi yapar, ve **bilinmeyen jeton da 204
+  döner** — farklı cevap, jetonun canlı olup olmadığını söyleyen bir kâhin olurdu.
+- **Bastırma listesi (`EmailSuppressions`) tercihin üstünde.** Sert bounce almış
+  bir adrese, tercih açık olsa da gönderilmez.
+
+**Tercih pratikte hoş geldin postasını durdurmaz** ve bu bilinçli: hiç giriş
+yapmamış biri onu kapatmış olamaz. Tercihin asıl işi listeye sonradan eklenecek
+postalar; hoş geldin postasının taşıdığı kapatma bağlantısı da tercihi ilk kez
+ulaşılabilir kılan şeydir. Bu yüzden **o bağlantı zorunludur**, süsleme değil.
+
+#### Ortak kısıtlar
+
+- **Dil `users.locale`'dan gelir** (§ 32). E-posta, bizim hiçbir istemcimizin
+  olmadığı bir gelen kutusunda okunur; cümle çıkmadan önce yazılmalıdır — hata
+  kataloğunun kod gönderip istemciye çevirtme kalıbı burada geçmez.
+- **Metin ve HTML, her zaman ikisi birden** (§ 40.2'nin kararı).
+- **Gönderim hatası raporlanır, fırlatılmaz.** `EmailSender.send` bool döner;
+  bir postanın gitmemesi silmeyi ya da hesap açılışını geri almaz.
+- **Mutlak kural 4 burada da geçerli:** profil içeriği, atom metni ya da ilan
+  hiçbir yaşam döngüsü postasına girmez.
+
+---
 
 ---
 
