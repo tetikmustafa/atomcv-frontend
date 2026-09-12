@@ -27,6 +27,7 @@ export type MockAtom = Schemas['Atom'];
  */
 export type MockProfile = Omit<Schemas['Profile'], 'sourceLanguage'> & { sourceLanguage: string };
 export type MockSection = Schemas['Section'];
+export type MockVariant = Schemas['Variant'];
 export type MockEntry = Schemas['Entry'];
 
 export type ProfileFixture = {

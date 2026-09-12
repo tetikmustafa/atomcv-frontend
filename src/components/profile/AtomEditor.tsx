@@ -31,12 +31,19 @@ import { LockToggles, type LockToggle } from '@/components/profile/LockToggles';
 import { RichText } from '@/components/profile/RichText';
 import { TagInput } from '@/components/profile/TagInput';
 import { StaleWording } from '@/components/profile/StaleWording';
+import { AddWording } from '@/components/profile/AddWording';
 import { VariantTabs } from '@/components/profile/VariantTabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useAccountResolution } from '@/hooks/useAccountResolution';
 import { useAutosave } from '@/hooks/useAutosave';
-import { useAtom, useDeleteAtom, usePatchAtom, usePatchVariant } from '@/hooks/useProfile';
+import {
+  useAtom,
+  useDeleteAtom,
+  usePatchAtom,
+  usePatchVariant,
+  useProfile,
+} from '@/hooks/useProfile';
 import { useCapabilities } from '@/hooks/useSession';
 import { plainText } from '@/lib/content/plainText';
 import { parseRichContent, type Run } from '@/lib/content/richContent';
@@ -92,6 +99,9 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
 
   const patchAtom = usePatchAtom();
   const patchVariant = usePatchVariant();
+  // The content-language axis lives on the head, and every atom reads the
+  // same cached copy of it (Bölüm 38.1).
+  const { data: profile } = useProfile();
   const remove = useDeleteAtom();
 
   const variants = atom?.variants ?? [];
@@ -229,6 +239,31 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
       ) : (
         wordingField
       )}
+
+      {/*
+        `B-081`'s second item, and the reason it waited: the endpoint existed
+        from Stage 1 and nothing called it, so `canAddAlternatives` was a
+        capability with no control behind it.
+
+        Placed after the wording rather than inside the tab strip — an atom
+        with one wording has no strip, and that is precisely the atom somebody
+        wants to add a second wording to. Switching to the new tab is the
+        whole point of the callback: what was just written should be what is
+        on screen.
+      */}
+      <AddWording
+        atomId={atomId}
+        variants={variants}
+        languages={profile?.data.enabledLanguages ?? []}
+        onAdded={(variantId) => {
+          // The same flush a tab switch does, for the same reason: an
+          // unsaved draft belongs to the wording it was typed into, and
+          // `useAutosave` flushes on unmount into whichever is selected.
+          wording.flush();
+          setDraft(null);
+          setSelectedId(variantId);
+        }}
+      />
 
       {/*
         `canEditAtomControls` (§ 35.7). Hidden rather than disabled, and the

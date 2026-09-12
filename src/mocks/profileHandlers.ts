@@ -14,6 +14,7 @@ import { problem } from './problem';
 import {
   fixture,
   type MockAtom,
+  type MockVariant,
   type MockEntry,
   type MockProfile,
   type MockSection,
@@ -835,6 +836,89 @@ export const profileHandlers = [
   }),
 
   /** Wording. The whole content is sent; the atom's own version is untouched. */
+  /**
+   * A second wording for an atom (`B-081`).
+   *
+   * **One wording per language and tone**, and a second for the same pair is
+   * refused rather than left to a database constraint — the endpoint says so
+   * itself, and the client has to have somewhere to learn it. The neutral
+   * register counts as a tone: `en` with no tone and `en` formal are two
+   * different pairs.
+   *
+   * **No `If-Match`**, although the operation declares 412 and 428. Variants
+   * version independently of the atom that owns them and a new one has no
+   * version to be conditional on; the refusals belong to the sibling
+   * endpoints on the same path.
+   *
+   * Never primary unless it was asked for. A wording somebody has just
+   * started writing is not the one a CV should be built from.
+   */
+  http.post('*/api/v1/profile/atoms/:id/variants', async ({ request, params }) => {
+    const id = String(params.id);
+    const instance = `/api/v1/profile/atoms/${id}/variants`;
+    const atom = findAtom(id);
+
+    if (!atom) {
+      return HttpResponse.json(problem(404, 'RESOURCE_NOT_FOUND', instance), { status: 404 });
+    }
+
+    const body = (await request.json()) as {
+      content?: { runs?: { t?: string }[] };
+      language?: string;
+      tone?: string;
+      primary?: boolean;
+    };
+
+    const runs = body.content?.runs ?? [];
+    const empty = runs.length === 0 || runs.every((run) => (run.t ?? '').trim() === '');
+
+    if (empty) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['content'] }),
+        { status: 400 },
+      );
+    }
+
+    const language = body.language ?? fixture.profile.sourceLanguage;
+
+    const taken = (atom.variants ?? []).some(
+      (variant) => variant.language === language && variant.tone === body.tone,
+    );
+
+    if (taken) {
+      return HttpResponse.json(
+        problem(409, 'VALIDATION_FAILED', instance, [], { fields: ['language'] }),
+        { status: 409 },
+      );
+    }
+
+    const variant: MockVariant = {
+      id: crypto.randomUUID(),
+      primary: body.primary ?? false,
+      language,
+      ...(body.tone ? { tone: body.tone as MockVariant['tone'] } : {}),
+      content: { v: 1, runs: runs.map((run) => ({ t: run.t ?? '', m: [] })) },
+      plainText: runs.map((run) => run.t ?? '').join(''),
+      contentHash: 'seeded',
+      createdBy: 'user',
+      // Not stale: it is being written now, against the atom as it stands.
+      stale: false,
+      version: 0,
+    };
+
+    if (variant.primary) {
+      for (const other of atom.variants ?? []) other.primary = false;
+    }
+
+    atom.variants = [...(atom.variants ?? []), variant];
+    atom.variants.sort((a, b) => Number(b.primary) - Number(a.primary));
+
+    return HttpResponse.json(variant, {
+      status: 201,
+      headers: { ETag: `"${variant.version}"` },
+    });
+  }),
+
   http.patch('*/api/v1/profile/atoms/:id/variants/:variantId', async ({ request, params }) => {
     const id = String(params.id);
     const variantId = String(params.variantId);

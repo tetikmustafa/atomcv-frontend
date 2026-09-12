@@ -18,6 +18,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tansta
 import { profileKeys } from '@/lib/api/queryKeys';
 import type { Version } from '@/lib/api/etag';
 import {
+  addVariant,
   createAtom,
   createEntry,
   createSection,
@@ -47,6 +48,7 @@ import {
   type Section,
   type PreferencesUpdate,
   type ProfileUpdate,
+  type VariantWrite,
   type SectionCreate,
   type SectionPatch,
   type VariantPatch,
@@ -371,6 +373,43 @@ export function usePatchAtom() {
     },
 
     onSuccess: (atom) => writeAtomThrough(client, atom),
+  });
+}
+
+/**
+ * A second wording for an atom, in another language (§ 38.1, `B-081`).
+ *
+ * **Written through rather than invalidated.** The response is the new
+ * variant and it belongs to an atom already in the cache, so appending it is
+ * exact — unlike `useCreateAtom`, which invalidates because the collection
+ * refetch is what seeds the new atom's own entry. There is no entry to seed
+ * here: the wording lives inside an atom that has one.
+ *
+ * **Never optimistic.** The id and the version are the server's, and
+ * `AtomEditor` selects the new tab the moment it lands — selecting a
+ * temporary id would point the editor at a variant about to be renamed, and
+ * the next keystroke would save against a version that never existed.
+ *
+ * The atom's own version is not involved: variants version independently of
+ * the atom that owns them, which is why this endpoint takes no `If-Match`
+ * despite declaring the refusals for one.
+ */
+export function useAddVariant() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ atomId, body }: { atomId: string; body: VariantWrite }) =>
+      addVariant(atomId, body),
+
+    onSuccess: (variant, { atomId }) => {
+      // Appended, not sorted: the server returns variants primary-first and a
+      // new wording is never primary unless it was asked to be. Re-sorting
+      // here would be this file deciding an order the server owns.
+      updateAtomThrough(client, atomId, (atom) => ({
+        ...atom,
+        variants: [...(atom.variants ?? []), variant],
+      }));
+    },
   });
 }
 
