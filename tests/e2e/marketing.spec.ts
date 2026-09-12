@@ -105,3 +105,42 @@ test.describe('the privacy policy', () => {
     await expect(page.getByText(/with the link to you cut/)).toBeVisible();
   });
 });
+
+/**
+ * What a crawler sees, served rather than merely generated.
+ *
+ * The unit suite checks the shapes; only this can say the two metadata routes
+ * are actually reachable at the paths every crawler asks for, and that the
+ * private half of the product carries `noindex` where `robots.txt` alone
+ * would leave a linked URL eligible to be listed.
+ */
+test.describe('what the crawlers get', () => {
+  test('serves robots.txt with the product half disallowed', async ({ request }) => {
+    const response = await request.get('/robots.txt');
+    const body = await response.text();
+
+    expect(response.status()).toBe(200);
+    expect(body).toContain('Disallow: /en/profile');
+    expect(body).toContain('Disallow: /tr/settings');
+    // The marketing surface is the whole point of having a crawler here.
+    expect(body).not.toContain('Disallow: /en\n');
+  });
+
+  test('serves a sitemap that says which pages are translations of which', async ({ request }) => {
+    const body = await (await request.get('/sitemap.xml')).text();
+
+    expect(body).toContain('/en/legal/privacy');
+    expect(body).toContain('hreflang="tr"');
+    expect(body).toContain('hreflang="x-default"');
+    expect(body).not.toContain('/profile');
+  });
+
+  test('marks a person’s own screens noindex, and the landing page not', async ({ page }) => {
+    await page.goto('/en/settings');
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
+
+    await page.goto('/en');
+    await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+    await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
+  });
+});

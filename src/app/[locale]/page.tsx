@@ -1,7 +1,9 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { routing } from '@/lib/i18n/routing';
+import { absoluteUrl, alternatesFor } from '@/lib/seo';
 import { buttonVariants } from '@/components/ui/button';
 
 const FEATURE_KEYS = [
@@ -33,6 +35,38 @@ const FEATURE_KEYS = [
  * its own, which is the point of it being the thinnest part of the anonymous
  * funnel.
  */
+/**
+ * The only page of the product a stranger arrives at, so the only one whose
+ * metadata has a reader.
+ *
+ * The description is the same sentence the page opens with rather than a
+ * second one written for crawlers: a summary that differs from the page is
+ * how a search result stops matching what it leads to.
+ */
+export async function generateMetadata({ params }: PageProps<'/[locale]'>): Promise<Metadata> {
+  const { locale } = await params;
+
+  if (!hasLocale(routing.locales, locale)) notFound();
+  setRequestLocale(locale);
+
+  const t = await getTranslations('Landing');
+  const description = t('intro');
+
+  return {
+    // The site name, not "AtomCV — AtomCV": this page *is* the product, so it
+    // opts out of the template rather than filling it in.
+    title: { absolute: 'AtomCV' },
+    description,
+    alternates: alternatesFor(locale),
+    openGraph: {
+      title: 'AtomCV',
+      description,
+      url: absoluteUrl(locale),
+      locale,
+    },
+  };
+}
+
 export default async function LandingPage({ params }: PageProps<'/[locale]'>) {
   const { locale } = await params;
 

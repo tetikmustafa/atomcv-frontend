@@ -7,6 +7,7 @@ import { SiteFooter } from '@/components/layout/SiteFooter';
 import { SkipLink } from '@/components/layout/SkipLink';
 import { locales } from '@/lib/i18n/locales';
 import { routing } from '@/lib/i18n/routing';
+import { SITE_URL } from '@/lib/seo';
 import '@/styles/globals.css';
 
 const geistSans = Geist({
@@ -19,8 +20,32 @@ const geistMono = Geist_Mono({
   subsets: ['latin', 'latin-ext'],
 });
 
+/**
+ * What every page inherits.
+ *
+ * `metadataBase` is what turns the relative URLs below into absolute ones;
+ * without it Next resolves them against localhost and says so in the build
+ * log, which is easy to read past. The origin comes from the deployment
+ * (`src/lib/seo.ts`).
+ *
+ * The title is a **template**, so a page states its own name and the product
+ * is appended once. Before this each page that wanted the suffix wrote it
+ * out, which is two places for one decision — and the legal pages were the
+ * only two that had remembered.
+ *
+ * No `openGraph.images`: an image nobody has drawn is a 404 in every preview
+ * card, and a generated one is a design decision rather than a metadata one.
+ */
 export const metadata: Metadata = {
-  title: 'AtomCV',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: 'AtomCV',
+    template: '%s — AtomCV',
+  },
+  openGraph: {
+    siteName: 'AtomCV',
+    type: 'website',
+  },
 };
 
 export function generateStaticParams() {

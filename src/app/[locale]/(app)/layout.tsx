@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
@@ -21,6 +22,17 @@ import { routing } from '@/lib/i18n/routing';
  *
  * The auth guard belongs here too, once sessions exist.
  */
+/**
+ * Nothing under here is for a crawler, and `robots.txt` alone does not say
+ * so: it asks a crawler not to **fetch** the page, which leaves a URL somebody
+ * linked to eligible to be listed from the link alone. The header says not to
+ * **index** what was fetched anyway, and the two together are what keep one
+ * person's profile out of a result page.
+ */
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
+
 export default async function AppLayout({ children, params }: LayoutProps<'/[locale]'>) {
   const { locale } = await params;
 

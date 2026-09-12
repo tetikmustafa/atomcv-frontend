@@ -4,6 +4,7 @@ import { hasLocale } from 'next-intl';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { LegalDocument } from '@/components/layout/LegalDocument';
 import { routing } from '@/lib/i18n/routing';
+import { alternatesFor } from '@/lib/seo';
 
 /**
  * Sections required by Bölüm 57.1. "Who we share it with" is the one that
@@ -21,9 +22,27 @@ const SECTION_KEYS = [
   'contact',
 ] as const;
 
-export async function generateMetadata(): Promise<Metadata> {
+/**
+ * Indexable, and the only pages besides the landing one that are.
+ *
+ * The suffix comes from the root layout's title template now, rather than
+ * being written out here — the two copies of it were the reason the template
+ * was worth adding.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<'/[locale]/legal/privacy'>): Promise<Metadata> {
+  const { locale } = await params;
+
+  if (!hasLocale(routing.locales, locale)) notFound();
+  setRequestLocale(locale);
+
   const t = await getTranslations('Legal.privacy');
-  return { title: `${t('title')} — AtomCV` };
+
+  return {
+    title: t('title'),
+    alternates: alternatesFor(locale, '/legal/privacy'),
+  };
 }
 
 export default async function PrivacyPage({ params }: PageProps<'/[locale]/legal/privacy'>) {
