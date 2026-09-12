@@ -5,7 +5,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReviewGate } from '@/components/onboarding/ReviewGate';
-import { generations, TERMINAL_AT, type MockJob } from '@/mocks/generationFixture';
+import { generations, TERMINAL_AT, type MockImportOutcome } from '@/mocks/generationFixture';
 import { fixture } from '@/mocks/profileFixture';
 import { useEditorUiStore } from '@/stores/editorUiStore';
 import en from '@/messages/en.json';
@@ -22,7 +22,7 @@ vi.mock('@/lib/i18n/navigation', () => ({
 
 const JOB = 'job-1';
 
-type Warnings = NonNullable<NonNullable<MockJob['imported']>['warnings']>;
+type Warnings = NonNullable<MockImportOutcome['warnings']>;
 
 /**
  * An import that has already finished, put where the mock keeps jobs.
@@ -40,7 +40,6 @@ function seedImport(warnings: Warnings) {
   generations.jobs.push({
     jobId: JOB,
     kind: 'import',
-    generationId: '',
     startedAt: Date.now() - TERMINAL_AT - 1,
     outcome: 'completed',
     imported: {

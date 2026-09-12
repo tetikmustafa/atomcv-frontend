@@ -17,7 +17,7 @@
 
 import { http, HttpResponse } from 'msw';
 import type { Application } from '@/lib/api/endpoints/applications';
-import { generations } from './generationFixture';
+import { findGeneration } from './generationFixture';
 import { problem } from './problem';
 import { isAccount } from './sessionFixture';
 
@@ -93,10 +93,7 @@ export const applicationHandlers = [
       it is wrong. Anything the fixture has not made counts as somebody
       else's, which is the only version of "not yours" a mock can have.
     */
-    if (
-      body.generationId &&
-      !generations.jobs.some((job) => job.generationId === body.generationId)
-    ) {
+    if (body.generationId && !findGeneration(body.generationId)) {
       return HttpResponse.json(
         problem(400, 'VALIDATION_FAILED', APPLICATIONS, [], { fields: ['generationId'] }),
         { status: 400 },
@@ -148,10 +145,7 @@ export const applicationHandlers = [
 
     const body = (await request.json()) as Partial<Application> & { clearNotes?: boolean };
 
-    if (
-      body.generationId &&
-      !generations.jobs.some((job) => job.generationId === body.generationId)
-    ) {
+    if (body.generationId && !findGeneration(body.generationId)) {
       return HttpResponse.json(
         problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['generationId'] }),
         { status: 400 },

@@ -7,7 +7,7 @@ import { axe } from 'jest-axe';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GenerationResult } from '@/components/generation/GenerationResult';
 import { api } from '@/lib/api/client';
-import { generations } from '@/mocks/generationFixture';
+import { generationOf } from '@/mocks/generationFixture';
 import { signIn } from '@/mocks/sessionFixture';
 import { formats } from '@/lib/i18n/formats';
 import en from '@/messages/en.json';
@@ -54,7 +54,7 @@ async function generate() {
     acknowledgePreflight: false,
   });
 
-  return generations.jobs.find((candidate) => candidate.jobId === job.jobId)!.generationId;
+  return generationOf(job.jobId);
 }
 
 /**

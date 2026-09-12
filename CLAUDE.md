@@ -7,9 +7,7 @@ job-specific, ATS-optimized resumes and cover letters in seconds.
 
 This repository contains **only the frontend**. The backend lives in a
 separate repository (`atomcv-backend`, Java + Spring Boot). All business
-logic belongs there.
-
-During local development the backend runs at `http://localhost:8080`.
+logic belongs there. In local development it runs at `localhost:8080`.
 
 ### Documentation Access — Manual Only
 
@@ -60,11 +58,9 @@ any `gradlew`/`npm` script that only touches this repo's own working tree.
 
 ### Read on demand — never in full
 
-Same rule as backend: consult `docs/INDEX.md`, then `rg` before reading.
-
-Frontend-relevant spec files, most often:
-`spec/09-frontend.md` · `spec/08-api.md` · `spec/08b-api-contract.md` ·
-`spec/01-foundations.md` (product scenarios and edge cases)
+Once reading **has** been asked for: `docs/INDEX.md` routes it, then `rg` the
+range. Most often `spec/09-frontend.md`, `08-api.md`, `08b-api-contract.md`,
+`01-foundations.md`.
 
 ### ⚠️ `docs/spec/**` is a read-only copy
 
@@ -82,16 +78,11 @@ Need a spec change? Write an item in `docs/handoff/to-backend.md` instead.
 | `docs/handoff/**`               | shared       | both ways — the real channel |
 | `docs/notes/**`                 | this repo    | never synced                 |
 
-## Recording Deviations
+## Recording Deviations, and Asking the Backend
 
-Same format as backend, in `docs/notes/current.md`. Under 400 lines, archive per stage.
-
-Permanent deviations do **not** go into `spec/` from here — request the change via
-`docs/handoff/to-backend.md`.
-
-## Cross-Repo Communication
-
-`docs/handoff/to-backend.md`, items prefixed `F-nnn`. Same rules.
+Deviations go in `docs/notes/current.md`, same format as backend. A **spec**
+change is not ours to make: ask for it in `docs/handoff/to-backend.md` as an
+`F-nnn` item.
 
 ## Where the Standing Answers Live
 
@@ -140,18 +131,12 @@ development the same-origin illusion is preserved by a **rewrite** in
 `next.config.ts` (`/api/v1/*` to `http://localhost:8080/api/v1/*`), not by a
 route handler. This keeps `SameSite=Strict` cookies working and avoids CORS.
 
-**Client providers live in `[locale]/(app)/layout.tsx`, not the root layout.**
-The landing and legal pages are static marketing surface that fetches nothing;
-anything the app shell pulls in would otherwise be paid on first contact with
-the product, where the anonymous funnel is thinnest. Moving TanStack Query
-alone off the landing route saved 7 KB gzipped.
-
-`NextIntlClientProvider` is one of them. It serialises the **entire** message
-catalogue into the HTML, so at the root it shipped the full legal text to
-every landing visitor. Server components read translations from the request
-config without it. The cost of that placement: next-intl's `Link` and any
-client component calling `useTranslations` only work under `(app)` — outside
-it, use a plain anchor with an explicit locale prefix.
+**Client providers live in `[locale]/(app)/layout.tsx`, not the root
+layout**, so the landing and legal pages pay for none of them — that layout's
+own comment says what each one costs. The consequence to remember while
+writing code: next-intl's `Link` and any client component calling
+`useTranslations` only work under `(app)`; outside it, use a plain anchor with
+an explicit locale prefix.
 
 ## Routing Rules That Fail Quietly
 
@@ -185,16 +170,10 @@ synchronization bug waiting to happen. **Never hand-edit `api.d.ts`** —
 regenerate it.
 
 Where the client needs a shape the generated one does not give, **derive,
-never restate** — `Omit<…>` plus the narrowing, so the next `gen:api`
-surfaces a wire change as a typecheck failure. `src/types/domain.ts` and
-`richContent.ts` both do this. Two reasons it keeps being needed:
-
-- **springdoc marks little as required.** Where the contract guarantees a
-  field the schema leaves optional, `domain.ts` requires it so the error path
-  has no undefined branch.
-- **Closed enums must be re-opened.** A generated enum is a snapshot of the
-  day `gen:api` last ran. `ResolutionAction` stays open: an action the server
-  adds later has to render as a button, not crash the panel.
+never restate** — `Omit<…>` plus the narrowing, so the next `gen:api` surfaces
+a wire change as a typecheck failure. `src/types/domain.ts` does this and says
+why: springdoc marks little as required, and a generated enum is a snapshot
+rather than a promise.
 
 **Where the schema and the docs disagree, the schema wins** — but record which
 in `docs/notes/current.md`, because it is usually the schema that is
@@ -208,22 +187,16 @@ Playwright (e2e). One source of truth, no dev/test drift.
 
 - Enabled by `NEXT_PUBLIC_API_MOCKING=enabled` in `.env.local`. When the flag
   is off, MSW is never loaded and requests go to the real backend.
-- **The gate in `MockProvider` also keys on `NODE_ENV`, and that half is not
-  redundant.** `next build` reads `.env.local` too, so a developer with
-  mocking enabled locally once shipped the MSW runtime to production. Keep
-  both halves, and keep the `import()` inside the guarded branch — hoisting it
-  to module scope makes it reachable in the module graph and the chunk ships
-  again even though nothing calls it. Both mistakes have already been made
-  here; `npm run build` then grepping the chunks for `setupWorker` caught them.
-- Handlers encode **behavior**, not just example payloads: SSE phase
-  progression, `409` + `resolutions`, `412` conflict, `429` quota, anonymous
-  vs. authenticated `capabilities`.
+- **`MockProvider` guards on `NODE_ENV` as well as the flag, and keeps the
+  `import()` inside the guarded branch.** Both mistakes shipped MSW to
+  production once; the file says how each one did. `npm run build`, then grep
+  the chunks for `setupWorker`.
+- Handlers encode **behavior**, not example payloads — `handlers.ts` lists
+  which behaviours and why.
 
-**Time-boxed exception:** mock handlers are typed by `src/mocks/contracts.ts`,
-marked `SCAFFOLDING`. It is the only place where backend-shaped types may be
-hand-written, and nothing outside `src/mocks/` may import it. It empties **per
-type, as each endpoint is published**, not in one step — nothing in it may
-describe an endpoint the schema already covers.
+**Time-boxed exception:** `src/mocks/contracts.ts` is the only place
+backend-shaped types may be hand-written, and nothing outside `src/mocks/` may
+import it. Its own header carries the rules for emptying it.
 
 ## Absolute Rules — Never Violate
 
@@ -302,11 +275,8 @@ npm run gen:api      # regenerate API types (backend must be running)
 ./scripts/check-doc-sizes.sh   # rolling docs still within their limits
 ```
 
-**npm 11 is required**, and pinned in CI and the Dockerfile. The lock file
-records optional native packages the way npm 11 resolves them; npm 10 — which
-`node:22` still bundles — reads the same file as incomplete and fails
-`npm ci`. A local `npm ci` on Windows passes either way, so this only shows up
-on Linux.
+**npm 11 is required**, and pinned in CI and the Dockerfile; npm 10 fails
+`npm ci` on this lock file, and only on Linux. Both pins carry the reason.
 
 ## Testing
 
@@ -323,9 +293,8 @@ request escaping to the network in a test is a bug in the test.
   of violations. Axe cannot tell you a skip link left the tab order.
 - Assert ordering rather than an exact count at an instant when testing a
   stream. The count races it.
-- jsdom has no `ResizeObserver` and Radix reaches for one in anything that
-  measures itself; `tests/setup.ts` stubs it. Anything genuinely dependent on
-  measured size belongs in the Playwright suite.
+- Anything genuinely dependent on measured size belongs in the Playwright
+  suite — jsdom has no layout, and `tests/setup.ts` says what it stubs.
 
 ## Code Style
 
@@ -345,11 +314,9 @@ request escaping to the network in a test is a bug in the test.
   no domain either — which is why `NEXT_PUBLIC_SITE_URL` falls back to
   localhost. Canonical URLs, the hreflang map, `robots.txt` and
   `sitemap.xml` are all built from it, so the deploy has to set it.
-- **CI actions moved to `@v5`** (2026-09-12). The bump is a runner-runtime
-  change — the `v5` line of each action runs on node24 — and it is the one
-  change in this repository that **cannot be verified locally**: these jobs
-  only run on push. If a run fails on the action itself rather than on the
-  code, `@v4` is the revert.
+- **CI actions are on `@v5`** (2026-09-12) and that bump is the one change
+  here that cannot be verified locally — these jobs only run on push. `@v4`
+  is the revert.
 
 ## How We Work Together
 
@@ -368,10 +335,6 @@ full build records are `docs/notes/archive/stage-1.md`, `stage-2.md` and
 feedback and to the developer, so the step to work on is a decision, not a
 lookup.
 
-**The fit report shows counts and never a percentage** (§ 23.3 forbids one by
-name). Completeness is the opposite — a percentage by design. They live on
-different screens for a reason; do not unify them.
-
 A session that opens with "continue" starts here, in this order.
 Nothing below is summarised in this file: a second copy of the state drifts
 from the one that is real.
@@ -381,9 +344,8 @@ from the one that is real.
 2. **`docs/handoff/to-frontend.md`** — open `B-nnn` items from the backend.
    **Handle these before starting new work.**
 3. **`docs/notes/current.md`** — the invariants that span files, the
-   deliberate gaps that must not be "fixed" without asking, and the two
-   things Stage 3 handed forward unfinished. Short by design; the archive
-   holds the rest.
+   deliberate gaps that must not be "fixed" without asking, and what earlier
+   stages handed forward. Short by design; the archive holds the rest.
 4. **The step's plan** — `docs/INDEX.md` routes it. The frontend build order
    is `spec/15-repos-and-claude.md` § XI-B.9.2; Stage 4 is
    `spec/14-build-guide.md` § XI-A.7, and § 55 is the list it points at.
@@ -393,7 +355,5 @@ Close the step the way _Recording Deviations_ and _Cross-Repo Communication_
 describe: a record in `docs/notes/current.md`, an `F-nnn` item if the backend
 must act, `STATUS.md` marked — all in the same commit as the code.
 
-**When a stage closes:** move `docs/notes/current.md` to
-`docs/notes/archive/stage-<n>.md` and open a fresh one carrying only what the
-next stage still needs. `./scripts/check-doc-sizes.sh` says when a rolling
-file has outgrown its limit.
+**When a stage closes**, or when a rolling file outgrows its limit
+(`./scripts/check-doc-sizes.sh` says when): `docs/notes/archive/README.md`.

@@ -26,6 +26,8 @@ import { problem } from './problem';
 import { fixture } from './profileFixture';
 import {
   claimCoverLetterRejection,
+  findGeneration,
+  isGenerationJob,
   COVER_LETTER_LIMIT,
   coverLetterText,
   FIT_REPORT,
@@ -34,6 +36,8 @@ import {
   metricFor,
   phasesAfter,
   TERMINAL_AT,
+  type MockGenerationJob,
+  type MockImportOutcome,
   type MockJob,
 } from './generationFixture';
 import { challengeRefused } from './authFixture';
@@ -298,7 +302,7 @@ function crc32(bytes: Uint8Array): number {
  * would either skip the rest of that group or hand it out twice. Base64 so
  * nothing is tempted to read it — the client's job is to echo it back.
  */
-function historyCursor(job: MockJob): string {
+function historyCursor(job: MockGenerationJob): string {
   return btoa(`${job.startedAt}|${job.generationId}`);
 }
 
@@ -639,9 +643,9 @@ export const generationHandlers = [
         id += 1;
 
         if (job.outcome === 'completed') {
-          const payload: CompletedEvent | NonNullable<MockJob['imported']> =
+          const payload: CompletedEvent | MockImportOutcome =
             job.kind === 'import'
-              ? job.imported!
+              ? job.imported
               : {
                   generationId: job.generationId,
                   pageCount: 1,
@@ -712,7 +716,8 @@ export const generationHandlers = [
       screen states out loud, would say the same.
     */
     const rows = generations.jobs
-      .filter((job) => job.kind === 'generation' && !job.supersededBy)
+      .filter(isGenerationJob)
+      .filter((job) => !job.supersededBy)
       .sort((a, b) => b.startedAt - a.startedAt || b.generationId.localeCompare(a.generationId));
 
     let start = 0;
@@ -753,7 +758,7 @@ export const generationHandlers = [
 
   http.get('*/api/v1/generations/:generationId', ({ params }) => {
     const id = String(params.generationId);
-    const job = generations.jobs.find((candidate) => candidate.generationId === id);
+    const job = findGeneration(id);
 
     if (!job) return notFound(`/api/v1/generations/${id}`);
 
@@ -799,9 +804,9 @@ export const generationHandlers = [
   http.post('*/api/v1/generations/:generationId/selection', async ({ params, request }) => {
     const id = String(params.generationId);
     const instance = `${GENERATIONS}/${id}/selection`;
-    const source = generations.jobs.find((candidate) => candidate.generationId === id);
+    const source = findGeneration(id);
 
-    if (!source || source.kind !== 'generation') return notFound(instance);
+    if (!source) return notFound(instance);
     if (source.supersededBy) return supersededRefusal(instance);
 
     const body = ((await request.json()) ?? {}) as { include?: string[]; exclude?: string[] };
@@ -847,9 +852,9 @@ export const generationHandlers = [
   http.post('*/api/v1/generations/:generationId/edits', async ({ params, request }) => {
     const id = String(params.generationId);
     const instance = `${GENERATIONS}/${id}/edits`;
-    const source = generations.jobs.find((candidate) => candidate.generationId === id);
+    const source = findGeneration(id);
 
-    if (!source || source.kind !== 'generation') return notFound(instance);
+    if (!source) return notFound(instance);
     if (source.supersededBy) return supersededRefusal(instance);
 
     const body = ((await request.json()) ?? {}) as { instruction?: string };
@@ -922,7 +927,7 @@ export const generationHandlers = [
     const id = String(params.generationId);
     const instance = `/api/v1/generations/${id}/feedback`;
 
-    if (!generations.jobs.some((job) => job.generationId === id)) return notFound(instance);
+    if (!findGeneration(id)) return notFound(instance);
 
     const body = (await request.json()) as {
       rating?: unknown;
@@ -989,7 +994,7 @@ export const generationHandlers = [
     async ({ params, request }) => {
       const id = String(params.generationId);
       const instance = `/api/v1/generations/${id}/cover-letter/regenerate`;
-      const job = generations.jobs.find((candidate) => candidate.generationId === id);
+      const job = findGeneration(id);
 
       if (!job) return notFound(instance);
 
@@ -1095,7 +1100,7 @@ export const generationHandlers = [
       });
     }
 
-    if (!generations.jobs.some((job) => job.generationId === id)) return notFound(instance);
+    if (!findGeneration(id)) return notFound(instance);
 
     const day = new Date().toISOString().slice(0, 10);
 
@@ -1147,8 +1152,8 @@ function metric(name: string, attempted: number, limit: number): Schemas['Usage'
  * posting said. Re-deriving any of it would make the mock disagree with
  * itself two edits in.
  */
-function supersede(source: MockJob): MockJob {
-  const replacement: MockJob = {
+function supersede(source: MockGenerationJob): MockGenerationJob {
+  const replacement: MockGenerationJob = {
     ...source,
     jobId: crypto.randomUUID(),
     generationId: crypto.randomUUID(),

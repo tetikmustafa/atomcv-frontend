@@ -4,7 +4,7 @@ import { ApiError, isApiError } from '@/lib/api/errors';
 import { importCv } from '@/lib/api/endpoints/profile';
 import { createAtom, listAtoms, patchAtom } from '@/lib/api/endpoints/profile';
 import { requireChallenge } from '@/mocks/authFixture';
-import { generations } from '@/mocks/generationFixture';
+import { generationOf, generations } from '@/mocks/generationFixture';
 import { fixture } from '@/mocks/profileFixture';
 import { limitAtomsTo, signIn } from '@/mocks/sessionFixture';
 import type { components } from '@/types/api';
@@ -202,9 +202,7 @@ describe('a generation without an account', () => {
       acknowledgePreflight: false,
       coverLetter: false,
     });
-    const generationId = generations.jobs.find(
-      (candidate) => candidate.jobId === job.jobId,
-    )!.generationId;
+    const generationId = generationOf(job.jobId);
 
     const error = await refusal(
       api.post(`/generations/${generationId}/feedback`, { rating: 1, contentGranted: false }),
@@ -221,9 +219,7 @@ describe('a generation without an account', () => {
       acknowledgePreflight: false,
       coverLetter: false,
     });
-    const generationId = generations.jobs.find(
-      (candidate) => candidate.jobId === job.jobId,
-    )!.generationId;
+    const generationId = generationOf(job.jobId);
 
     const generation = await api.get<GenerationResponse>(`/generations/${generationId}`);
 

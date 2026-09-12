@@ -43,38 +43,62 @@ export type MockOutcome = 'completed' | 'failed';
  */
 export type MockFitReport = NonNullable<Schemas['GenerationResponse']['fitReport']>;
 
-export type MockJob = {
+/**
+ * What every job has, whichever kind of work it is.
+ *
+ * The two kinds were one type until Stage 4 closed: an import job carried a
+ * `generationId` of `''` because the field was required, which is a value
+ * that means nothing and reads like one that does. A union says instead that
+ * an import **has no generation** and a generation **has no import outcome**,
+ * and the compiler stops the two halves being read through each other.
+ */
+type MockJobCommon = {
   jobId: string;
+  /** Wall-clock ms, the origin of this job's schedule. */
+  startedAt: number;
+  outcome: MockOutcome;
   /**
-   * Which kind of work this is. It decides three things a job cannot be read
-   * without: the terminal payload, which allowance is charged, and which
-   * schedule the phases come from.
+   * The error this job reports when it fails. Carried on the job rather than
+   * read from the fixture at stream time: the job is created long before
+   * anyone subscribes, and a second job enqueued in between would otherwise
+   * hand this one its error.
    */
-  kind: 'generation' | 'import';
+  failure?: FailedEvent;
+  idempotencyKey?: string;
+};
+
+/**
+ * What an import wrote, and what it could not settle.
+ *
+ * Bound to the schema (`B-067`): these fields live on `JobStatusResponse`
+ * alongside the generation ones, so `GET /jobs/{id}` answers with them and a
+ * reload after extraction is no longer blind.
+ */
+export type MockImportOutcome = Omit<
+  Pick<
+    Schemas['JobStatusResponse'],
+    'profileId' | 'sectionCount' | 'atomCount' | 'warningCount' | 'detectedLanguage' | 'warnings'
+  >,
+  'warnings'
+> & {
+  /**
+   * The open code, not the generated union (`B-069`). The field is a `String`
+   * on the wire and the enum is its documentation, so a mock that could only
+   * emit today's six could not reproduce the case the client is written for:
+   * a stored row carrying a name this build has never seen.
+   */
+  warnings?: ImportWarning[];
+};
+
+export type MockImportJob = MockJobCommon & {
+  kind: 'import';
+  /** Required here, unlike the optional field the shared type used to carry. */
+  imported: MockImportOutcome;
+};
+
+export type MockGenerationJob = MockJobCommon & {
+  kind: 'generation';
   generationId: string;
-  /**
-   * What the import wrote, and what it could not settle. Present on an import
-   * job and only there.
-   *
-   * Bound to the schema now (`B-067`): these fields live on
-   * `JobStatusResponse` alongside the generation ones, so `GET /jobs/{id}`
-   * answers with them and a reload after extraction is no longer blind.
-   */
-  imported?: Omit<
-    Pick<
-      Schemas['JobStatusResponse'],
-      'profileId' | 'sectionCount' | 'atomCount' | 'warningCount' | 'detectedLanguage' | 'warnings'
-    >,
-    'warnings'
-  > & {
-    /**
-     * The open code, not the generated union (`B-069`). The field is a
-     * `String` on the wire and the enum is its documentation, so a mock that
-     * could only emit today's six could not reproduce the case the client is
-     * written for: a stored row carrying a name this build has never seen.
-     */
-    warnings?: ImportWarning[];
-  };
   /** Absent in general mode, exactly as the server omits it. */
   fitReport?: MockFitReport;
   /**
@@ -101,9 +125,6 @@ export type MockJob = {
    */
   roleTitle?: string;
   companyName?: string;
-  /** Wall-clock ms, the origin of this job's schedule. */
-  startedAt: number;
-  outcome: MockOutcome;
   /**
    * The generation that replaced this one (§ 24, `B-088`).
    *
@@ -124,15 +145,16 @@ export type MockJob = {
    * other.
    */
   supersededGenerationId?: string;
-  /**
-   * The error this job reports when it fails. Carried on the job rather than
-   * read from the fixture at stream time: the job is created long before
-   * anyone subscribes, and a second job enqueued in between would otherwise
-   * hand this one its error.
-   */
-  failure?: FailedEvent;
-  idempotencyKey?: string;
 };
+
+/**
+ * A job of either kind.
+ *
+ * `kind` is the discriminant, and it still decides the three things a job
+ * cannot be read without: the terminal payload, which allowance is charged,
+ * and which schedule the phases come from.
+ */
+export type MockJob = MockGenerationJob | MockImportJob;
 
 export type GenerationFixture = {
   jobs: MockJob[];
@@ -247,6 +269,47 @@ export const IMPORT_SCHEDULE = [
 export const TERMINAL_AT = 2000;
 
 type Step = { at: number; phase?: string; label?: string; pct: number; running?: true };
+
+/**
+ * The narrowing every reader of `generations.jobs` needs.
+ *
+ * The list holds both kinds, and almost everything that walks it wants one:
+ * the history, the download, the fit report and Faz G are all about
+ * generations, and the review screen is about imports. A predicate keeps that
+ * question in one place rather than as a `kind === ` scattered down the file.
+ */
+export function isGenerationJob(job: MockJob): job is MockGenerationJob {
+  return job.kind === 'generation';
+}
+
+export function isImportJob(job: MockJob): job is MockImportJob {
+  return job.kind === 'import';
+}
+
+/** The generation a document id belongs to, or nothing. */
+export function findGeneration(generationId: string): MockGenerationJob | undefined {
+  return generations.jobs.filter(isGenerationJob).find((job) => job.generationId === generationId);
+}
+
+/**
+ * The document a job made, for a caller that started one and holds its job id.
+ *
+ * Throws rather than returning `undefined`: every caller is a test that has
+ * just enqueued a generation, so an absence is a broken test rather than a
+ * state to handle — and the message says which job, which an `!` at the call
+ * site does not.
+ */
+export function generationOf(jobId: string | undefined): string {
+  // `undefined` is allowed in, because the 202 body declares `jobId` optional
+  // and every caller is holding one. Refusing it at the type would put a `!`
+  // at four call sites and say nothing about what went wrong.
+  const job = generations.jobs
+    .filter(isGenerationJob)
+    .find((candidate) => candidate.jobId === jobId);
+
+  if (!job) throw new Error(`No generation job ${String(jobId)} in the fixture`);
+  return job.generationId;
+}
 
 /** The frames this kind of job sends. */
 export function scheduleFor(job: MockJob): readonly Step[] {

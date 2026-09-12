@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { History } from '@/components/generation/History';
-import { generations, TERMINAL_AT, type MockJob } from '@/mocks/generationFixture';
+import { generations, TERMINAL_AT, type MockGenerationJob } from '@/mocks/generationFixture';
 import { server } from '@/mocks/node';
 import { signIn } from '@/mocks/sessionFixture';
 import { formats } from '@/lib/i18n/formats';
@@ -37,7 +37,7 @@ vi.mock('@/lib/i18n/navigation', () => ({
  * daily allowance the endpoint is right to enforce, and the test would then be
  * measuring the quota gate rather than the list.
  */
-function seedGenerations(count: number, shape: Partial<MockJob> = {}) {
+function seedGenerations(count: number, shape: Partial<MockGenerationJob> = {}) {
   for (let index = 0; index < count; index += 1) {
     generations.jobs.push({
       jobId: `job-${index}`,

@@ -15,7 +15,7 @@
 
 import { http, HttpResponse } from 'msw';
 import { challengeRefused } from './authFixture';
-import { generations, type MockJob } from './generationFixture';
+import { generations, type MockImportJob, type MockImportOutcome } from './generationFixture';
 import { accepted, resetsAt } from './generationHandlers';
 import { problem } from './problem';
 import { fixture } from './profileFixture';
@@ -50,7 +50,7 @@ function extensionOf(name: string) {
  * it then shows cannot disagree — a screen saying "24 items" above a list of
  * four is a bug this fixture would otherwise create.
  */
-function importResult(): NonNullable<MockJob['imported']> {
+function importResult(): MockImportOutcome {
   /*
     Two warnings, and the pair is the point (`B-067`): one that names a place
     and one that names none. The review screen has to open a section for the
@@ -63,7 +63,7 @@ function importResult(): NonNullable<MockJob['imported']> {
     its second job. The other is document-level, which is the shape the model
     produces for something it removed without being able to place.
   */
-  const warnings: NonNullable<MockJob['imported']>['warnings'] = [
+  const warnings: MockImportOutcome['warnings'] = [
     { code: 'ambiguous_date', sectionOrder: 0, entryOrder: 1 },
     { code: 'untranslatable_atom' },
   ];
@@ -222,12 +222,9 @@ export const importHandlers = [
       return HttpResponse.json(problem(422, 'EXTRACTION_EMPTY', IMPORT), { status: 422 });
     }
 
-    const job: MockJob = {
+    const job: MockImportJob = {
       jobId: `job-${generations.jobs.length + 1}`,
       kind: 'import',
-      // Unused by an import job and required by the type; the field belongs
-      // to the generation half of `MockJob` and splitting it is deferred.
-      generationId: '',
       imported: importResult(),
       startedAt: Date.now(),
       outcome: generations.nextOutcome,

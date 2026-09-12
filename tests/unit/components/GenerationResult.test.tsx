@@ -8,7 +8,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GenerationResult } from '@/components/generation/GenerationResult';
 import { api } from '@/lib/api/client';
 import { submitFeedback } from '@/lib/api/endpoints/generations';
-import { FIT_REPORT, generations, rejectNextCoverLetter } from '@/mocks/generationFixture';
+import {
+  FIT_REPORT,
+  generationOf,
+  generations,
+  rejectNextCoverLetter,
+} from '@/mocks/generationFixture';
 import { server } from '@/mocks/node';
 import { signIn } from '@/mocks/sessionFixture';
 import { formats } from '@/lib/i18n/formats';
@@ -58,7 +63,7 @@ const POSTING = [
 /** Makes a generation the way the product does, and returns its id. */
 async function generate(body: Record<string, unknown> = { acknowledgePreflight: false }) {
   const job = await api.post<AcceptedJob>('/generations', body);
-  return generations.jobs.find((candidate) => candidate.jobId === job.jobId)!.generationId;
+  return generationOf(job.jobId);
 }
 
 describe('a finished generation', () => {
