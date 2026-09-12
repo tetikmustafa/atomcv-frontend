@@ -341,9 +341,15 @@ request escaping to the network in a test is a bug in the test.
 
 ## Deferred by Decision
 
-- **`deploy.yml` is not written.** There is no server to deploy to yet.
-- **CI actions are on `@v4`**; moving to `@v5` is its own task, not a
-  drive-by edit.
+- **`deploy.yml` is not written.** There is no server to deploy to yet, and
+  no domain either — which is why `NEXT_PUBLIC_SITE_URL` falls back to
+  localhost. Canonical URLs, the hreflang map, `robots.txt` and
+  `sitemap.xml` are all built from it, so the deploy has to set it.
+- **CI actions moved to `@v5`** (2026-09-12). The bump is a runner-runtime
+  change — the `v5` line of each action runs on node24 — and it is the one
+  change in this repository that **cannot be verified locally**: these jobs
+  only run on push. If a run fails on the action itself rather than on the
+  code, `@v4` is the revert.
 
 ## How We Work Together
 
