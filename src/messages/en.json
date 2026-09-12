@@ -589,6 +589,11 @@
     "doneSettings": "If you signed in, you can turn them back on in <link>your settings</link>.",
     "noToken": "This link is missing the part that says who it is for. Open the link from the email itself rather than typing the address."
   },
+  "Theme": {
+    "label": "Colour theme",
+    "options": "{theme, select, system {Match my system} light {Light} dark {Dark} other {{theme}}}",
+    "announce": "{theme, select, system {Following your system theme.} light {Light theme.} dark {Dark theme.} other {{theme}}}"
+  },
   "errorValues": {
     "COVER_LETTER_REJECTED": {
       "unsupported_claim": "a claim your CV doesn't back up",

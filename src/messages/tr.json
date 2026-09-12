@@ -589,6 +589,11 @@
     "doneSettings": "Giriş yaptıysan <link>ayarlarından</link> tekrar açabilirsin.",
     "noToken": "Bu bağlantıda kimin için olduğunu söyleyen kısım eksik. Adresi elle yazmak yerine e-postadaki bağlantıyı aç."
   },
+  "Theme": {
+    "label": "Renk teması",
+    "options": "{theme, select, system {Sistemimi izle} light {Açık} dark {Koyu} other {{theme}}}",
+    "announce": "{theme, select, system {Sistem teması izleniyor.} light {Açık tema.} dark {Koyu tema.} other {{theme}}}"
+  },
   "errorValues": {
     "COVER_LETTER_REJECTED": {
       "unsupported_claim": "CV'nin desteklemediği bir iddia",

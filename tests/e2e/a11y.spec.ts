@@ -98,3 +98,42 @@ test.describe('accessibility', () => {
     expect(await violations(page)).toEqual([]);
   });
 });
+
+/**
+ * The same sweep in the dark theme.
+ *
+ * A second palette is a second set of contrast ratios, and nothing in the
+ * light run says anything about it — which is how a theme ships looking fine
+ * to whoever built it and failing for everyone who reads in the dark. It
+ * found one before it was even committed: red text on a tint of the same red
+ * over a near-black page cannot reach AA at any lightness, so the destructive
+ * button is solid there instead.
+ *
+ * A narrower list than the light sweep on purpose: the palette is shared, so
+ * what differs between screens is composition rather than colour, and three
+ * screens covering the marketing surface, a dense form and the settings is
+ * where every token actually appears.
+ */
+test.describe('accessibility in the dark theme', () => {
+  for (const screen of [
+    { path: '/en', name: 'the landing page', account: false },
+    { path: '/en/profile', name: 'the profile editor', account: true },
+    { path: '/en/settings', name: 'the settings screen', account: true },
+  ] as const) {
+    test(`${screen.name} has no WCAG A or AA violations`, async ({ page }) => {
+      if (screen.account) await asAccount(page);
+      else await seedSession(page, 'anonymous');
+
+      // Written before the first navigation, the way a returning reader's
+      // browser already has it — so the head script applies it before paint
+      // rather than the page being toggled after the fact.
+      await page.addInitScript(() => window.localStorage.setItem('atomcv-theme', 'dark'));
+
+      await page.goto(screen.path);
+      await expect(page.locator('main#main')).toBeVisible();
+      await expect(page.locator('html')).toHaveClass(/dark/);
+
+      expect(await violations(page)).toEqual([]);
+    });
+  }
+});

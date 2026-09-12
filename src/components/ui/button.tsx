@@ -16,8 +16,17 @@ const buttonVariants = cva(
           'bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground',
         ghost:
           'hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50',
+        /*
+          Tinted in light, solid in dark, and that is a measurement rather
+          than a taste. In dark, red text on a tenth of the same red over a
+          near-black page is 4.32:1 and on the hover tint 3.16 — both fail AA,
+          and raising the red does not help, because the background is made of
+          it. Decoupling the two is the only fix: the bright red becomes the
+          background and the page colour becomes the text, which is 6.84 at
+          rest and 6.26 on hover.
+        */
         destructive:
-          'bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40',
+          'bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive dark:text-background dark:hover:bg-destructive/90 dark:focus-visible:ring-destructive/40',
         link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {

@@ -250,6 +250,12 @@ describe an endpoint the schema already covers.
     tokens in JavaScript. All API calls use `credentials: 'include'`.
 11. **Never case a wire vocabulary with a locale-sensitive transform.** Use
     an explicit `en` locale or a plain map — the Turkish locale trap is real.
+12. **A colour pair is proved by arithmetic, not by the axe sweep.** The
+    palette is `oklch` and Tailwind's alpha modifiers compile to
+    `oklab(… / α)`; axe's contrast rule **drops** such a node — not a
+    violation, not even incomplete — so `bg-x/20` text can sit at 3.16:1 and
+    pass. `tests/unit/lib/palette.test.ts` measures the pairs, hover included.
+    Add the pair there when you paint a new one.
 
 ## Product Behaviors That Are Easy to Get Wrong
 
@@ -335,12 +341,6 @@ request escaping to the network in a test is a bug in the test.
 
 ## Deferred by Decision
 
-- **Dark mode is not wired up.** shadcn's init bound the dark variant to a
-  `.dark` class and dropped the `prefers-color-scheme` media query. Nothing
-  adds that class, so the app is light-only. A theme toggle **is planned** as
-  its own task — it needs a provider, persistence, and flash-before-hydration
-  handling. Until then, do not half-implement it by re-adding the media
-  query: that would give users a theme they cannot change.
 - **`deploy.yml` is not written.** There is no server to deploy to yet.
 - **CI actions are on `@v4`**; moving to `@v5` is its own task, not a
   drive-by edit.

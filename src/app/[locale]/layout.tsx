@@ -8,6 +8,7 @@ import { SkipLink } from '@/components/layout/SkipLink';
 import { locales } from '@/lib/i18n/locales';
 import { routing } from '@/lib/i18n/routing';
 import { SITE_URL } from '@/lib/seo';
+import { THEME_SCRIPT } from '@/lib/theme';
 import '@/styles/globals.css';
 
 const geistSans = Geist({
@@ -72,7 +73,27 @@ export default async function RootLayout({ children, params }: LayoutProps<'/[lo
     <html
       lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      /*
+        The head script below writes `class` and `style` on this element
+        before React sees it, so the server's markup and the client's first
+        pass disagree by design. Without this, React logs a hydration warning
+        about the one attribute it is supposed to find changed.
+      */
+      suppressHydrationWarning
     >
+      <head>
+        {/*
+          Blocking, inline, and before anything paints (`src/lib/theme.ts`).
+          A theme applied from React paints the light palette first and then
+          corrects itself — a white flash in a dark room, which is the reason
+          this task was held back rather than half-done.
+
+          `dangerouslySetInnerHTML` is the only way to emit a script body in
+          JSX, and the content is a module constant with no interpolation of
+          anything a user can reach.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       {/*
         There is no NextIntlClientProvider here. Server components read
         translations from the request config directly, and the provider

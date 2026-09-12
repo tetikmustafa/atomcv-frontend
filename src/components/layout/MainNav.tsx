@@ -14,6 +14,7 @@
 
 import { useTranslations } from 'next-intl';
 import { SessionControl } from '@/components/auth/SessionControl';
+import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { Link, usePathname } from '@/lib/i18n/navigation';
 
 /**
@@ -71,10 +72,11 @@ export function MainNav() {
       })}
 
       {/*
-        Pushed to the end and set apart from the routes: it is not a place to
-        go, and `aria-current` has nothing to say about it.
+        Pushed to the end and set apart from the routes: neither is a place to
+        go, and `aria-current` has nothing to say about either.
       */}
-      <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-4">
+        <ThemeToggle />
         <SessionControl />
       </div>
     </nav>
