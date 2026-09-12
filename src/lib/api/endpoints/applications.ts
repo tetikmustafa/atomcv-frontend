@@ -15,7 +15,7 @@
  */
 
 import { api } from '../client';
-import type { AcceptsAt, ReturnsAt } from '../operations';
+import type { Accepts, Returns } from '../operations';
 import type { Version } from '../etag';
 
 /**
@@ -28,10 +28,10 @@ import type { Version } from '../etag';
  * endpoint without a single compile error. The path is the server's to serve
  * and not to renumber.
  */
-export type Application = ReturnsAt<'/api/v1/applications', 'get'>[number];
+export type Application = Returns<'listApplications'>[number];
 
-export type ApplicationCreate = AcceptsAt<'/api/v1/applications', 'post'>;
-export type ApplicationUpdate = AcceptsAt<'/api/v1/applications/{applicationId}', 'patch'>;
+export type ApplicationCreate = Accepts<'createApplication'>;
+export type ApplicationUpdate = Accepts<'updateApplication'>;
 
 /**
  * The five states, closed and **freely traversable**.
@@ -93,8 +93,5 @@ export function patchApplication(id: string, body: ApplicationUpdate, version: V
  * from a stale screen is a row another tab had just changed.
  */
 export function deleteApplication(id: string, version: Version) {
-  return api.delete<ReturnsAt<'/api/v1/applications/{applicationId}', 'delete'>>(
-    `/applications/${id}`,
-    { version },
-  );
+  return api.delete<Returns<'deleteApplication'>>(`/applications/${id}`, { version });
 }

@@ -71,6 +71,16 @@ export const generationKeys = {
    */
   history: () => [...generationKeys.all, 'history'] as const,
   detail: (generationId: string) => [...generationKeys.all, generationId] as const,
+
+  /**
+   * What one generation weighed (`B-097`).
+   *
+   * Under the detail key rather than beside it, so retiring a generation
+   * drops both with one invalidation: the selection belongs to that
+   * generation and means nothing after it has been replaced.
+   */
+  selection: (generationId: string) =>
+    [...generationKeys.detail(generationId), 'selection'] as const,
 };
 
 /**

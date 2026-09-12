@@ -9,9 +9,9 @@
  */
 
 import { api } from '../client';
-import type { Returns, ReturnsAt, AcceptsAt } from '../operations';
+import type { Accepts, Returns } from '../operations';
 
-export type Usage = Returns<'usage', '*/*'>[number];
+export type Usage = Returns<'accountUsage', '*/*'>[number];
 
 /** The metrics the server counts. Closed, and the client renders each by name. */
 export type UsageMetric = 'generation' | 'profile_extract';
@@ -47,7 +47,7 @@ export function getUsage() {
  * not to.
  */
 export function deleteAccount() {
-  return api.delete<ReturnsAt<'/api/v1/account', 'delete'>>('/account');
+  return api.delete<Returns<'deleteAccount'>>('/account');
 }
 
 /* ---------------------------- account settings --------------------------- */
@@ -62,9 +62,9 @@ export function deleteAccount() {
  * email — and a body that left the field out would be turning it off. The
  * preference belongs to the account, which is also what has an address.
  */
-export type AccountSettings = ReturnsAt<'/api/v1/account', 'get', '*/*'>;
+export type AccountSettings = Returns<'accountSettings', '*/*'>;
 
-export type AccountSettingsUpdate = AcceptsAt<'/api/v1/account', 'patch'>;
+export type AccountSettingsUpdate = Accepts<'updateAccountSettings'>;
 
 export function getAccountSettings() {
   return api.get<AccountSettings>('/account');
@@ -91,10 +91,10 @@ export function updateAccountSettings(body: AccountSettingsUpdate) {
  * would be an oracle for which tokens are live. So there is no "invalid
  * link" state to render, and the page says the same thing either way.
  */
-export type UnsubscribeRequest = AcceptsAt<'/api/v1/email/unsubscribe', 'post'>;
+export type UnsubscribeRequest = Accepts<'unsubscribe'>;
 
 export function unsubscribe(token: string) {
-  return api.post<ReturnsAt<'/api/v1/email/unsubscribe', 'post'>>('/email/unsubscribe', {
+  return api.post<Returns<'unsubscribe'>>('/email/unsubscribe', {
     token,
   } satisfies UnsubscribeRequest);
 }

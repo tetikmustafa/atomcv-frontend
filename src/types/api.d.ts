@@ -15,18 +15,18 @@ export interface paths {
          * Read the profile head
          * @description Never answers 404. A user has exactly one profile, so an account that has none yet gets an empty one created on the spot — the client has no "not created yet" state to carry.
          */
-        get: operations["own"];
+        get: operations["readProfile"];
         /**
          * Replace the profile head
          * @description Requires `If-Match`. A field left out is cleared — this replaces the head rather than patching it. Preferences are not part of it and have their own endpoint.
          */
-        put: operations["replace"];
+        put: operations["replaceProfile"];
         post?: never;
         /**
          * Delete the profile and everything under it
          * @description Sections, entries, atoms and wordings go with it. The account stays: the next read gives an empty profile back. Requires If-Match — this is the one call that cannot be undone.
          */
-        delete: operations["delete"];
+        delete: operations["deleteProfile"];
         options?: never;
         head?: never;
         patch?: never;
@@ -238,7 +238,7 @@ export interface paths {
          *
          *     A row carries no posting and no letter, only whether                     there is a letter to open. The posting stays on the row                     (absolute rule 4).
          */
-        get: operations["list"];
+        get: operations["listGenerations"];
         put?: never;
         /**
          * Generate a CV against a job posting
@@ -262,7 +262,36 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * What this generation weighed, and what reached the page
+         * @description Bolum 24.4's toggle, as a list a screen can draw (F-031).
+         *
+         *     Every atom this generation ranked is here, the ones that
+         *     reached the page first and the ones that did not after
+         *     them, each with the text it competed as and an `onPage`
+         *     flag. **The ids are exactly the ids the edit endpoint
+         *     accepts** -- which is the reason this exists: an edit
+         *     refuses an atom this generation never weighed, so controls
+         *     drawn from today's profile would include buttons that
+         *     answer 400.
+         *
+         *     The text is what *this* CV said, not what the profile says
+         *     today: the wording Faz D wrote where there was one, and the
+         *     variant the selection named otherwise. Editing a bullet
+         *     afterwards does not rewrite the list of a CV already made.
+         *     A held-back line carries the profile's wording, because
+         *     this generation never printed one for it -- putting it back
+         *     runs Faz D over it and may word it differently.
+         *
+         *     Not capped. The sentence endpoint shows a model thirty
+         *     held-back lines because a prompt costs money; a person
+         *     scrolling their own history is not paying by the line.
+         *
+         *     An atom deleted from the profile since is absent rather
+         *     than listed: it cannot be put back, and asking to drop it
+         *     is already true.
+         */
+        get: operations["readSelection"];
         put?: never;
         /**
          * Keep or drop atoms by hand, and re-make the CV
@@ -298,7 +327,7 @@ export interface paths {
          *
          *     The comment is stored and never logged. It is not sent                     back either: you wrote it, you have it.
          */
-        post: operations["feedback"];
+        post: operations["recordFeedback"];
         delete?: never;
         options?: never;
         head?: never;
@@ -324,7 +353,7 @@ export interface paths {
          *
          *     What it does *not* do: reword a line, change the tone, or resize the page. A sentence asking for any of those is answered `EDIT_NOT_UNDERSTOOD` rather than guessed at — removing the wrong bullet is worse than saying nothing, because the person may not notice.
          */
-        post: operations["edit"];
+        post: operations["editBySentence"];
         delete?: never;
         options?: never;
         head?: never;
@@ -350,7 +379,7 @@ export interface paths {
          *
          *     **It can refuse.** A letter has no original to fall back                     on, so a draft that claims a skill the page does not carry,                     overstates the experience, or greets the wrong company is                     thrown away twice and then reported as                     `COVER_LETTER_REJECTED`. Another press is a different                     draft.
          */
-        post: operations["coverLetter"];
+        post: operations["regenerateCoverLetter"];
         delete?: never;
         options?: never;
         head?: never;
@@ -387,7 +416,7 @@ export interface paths {
          * Redeem a sign-in link
          * @description A POST, because the link in the email is not. Every refusal is the same refusal: expired, already used, wrong verifier and never existed are one answer, since telling them apart tells an attacker which half of a guess was right.
          */
-        post: operations["verify"];
+        post: operations["verifyMagicLink"];
         delete?: never;
         options?: never;
         head?: never;
@@ -413,7 +442,7 @@ export interface paths {
          *     `403 CHALLENGE_FAILED`, which is about the token in the
          *     request and not about the address in it.
          */
-        post: operations["request"];
+        post: operations["requestMagicLink"];
         delete?: never;
         options?: never;
         head?: never;
@@ -453,7 +482,7 @@ export interface paths {
          *
          *     A row whose `generationId` is null is one whose CV has been deleted — the record of applying survives the document. Do not offer a download for those.
          */
-        get: operations["list_1"];
+        get: operations["listApplications"];
         put?: never;
         /**
          * Record an application
@@ -461,7 +490,7 @@ export interface paths {
          *
          *     `generationId` must be one of your own generations. Somebody else's is a 400 rather than a 404: the field is wrong rather than the row missing.
          */
-        post: operations["create"];
+        post: operations["createApplication"];
         delete?: never;
         options?: never;
         head?: never;
@@ -580,7 +609,7 @@ export interface paths {
          *
          *     The CV is untouched. This forgets the record of applying, not the document.
          */
-        delete: operations["delete_1"];
+        delete: operations["deleteApplication"];
         options?: never;
         head?: never;
         /**
@@ -591,7 +620,7 @@ export interface paths {
          *
          *     `If-Match` is required (Bolum 35.6).
          */
-        patch: operations["update"];
+        patch: operations["updateApplication"];
         trace?: never;
     };
     "/api/v1/account": {
@@ -602,7 +631,7 @@ export interface paths {
             cookie?: never;
         };
         /** The account's own settings */
-        get: operations["settings"];
+        get: operations["accountSettings"];
         put?: never;
         post?: never;
         /**
@@ -615,11 +644,11 @@ export interface paths {
          *
          *     Answers 204 whether or not the account was still there: a second press is the same answer as the first.
          */
-        delete: operations["delete_2"];
+        delete: operations["deleteAccount"];
         options?: never;
         head?: never;
         /** Turn the optional emails on or off (Bolum 57.7) */
-        patch: operations["update_1"];
+        patch: operations["updateAccountSettings"];
         trace?: never;
     };
     "/api/v1/profile/export": {
@@ -633,7 +662,7 @@ export interface paths {
          * Export the whole profile
          * @description `?format=json` gives a nested copy in the shapes this API already publishes; `?format=markdown` gives the same content to read. Both are served as a download.
          */
-        get: operations["export"];
+        get: operations["exportProfile"];
         put?: never;
         post?: never;
         delete?: never;
@@ -655,7 +684,7 @@ export interface paths {
          *
          *     Polling this is the supported fallback for a progress stream that closed without a terminal event — a spinner over work that already finished is the one outcome the product refuses to produce.
          */
-        get: operations["status"];
+        get: operations["readJob"];
         put?: never;
         post?: never;
         delete?: never;
@@ -679,7 +708,7 @@ export interface paths {
          *
          *     `Last-Event-ID` is accepted and not replayed from: ids                     order the events of one stream, and the snapshot on                     connect does the catching up. If the stream ever closes                     without a terminal event, `GET /jobs/{jobId}` is the                     supported way to find out what happened.
          */
-        get: operations["stream"];
+        get: operations["streamJob"];
         put?: never;
         post?: never;
         delete?: never;
@@ -705,7 +734,7 @@ export interface paths {
          *
          *     Carries `feedback` when this person has judged it, so a                     reload shows the thumb they pressed rather than asking                     again, and so Bolum 48.4's 48-hour grant stays visible                     the day after it was given. Absent when they have not                     judged it; the comment never travels.
          */
-        get: operations["read"];
+        get: operations["readGeneration"];
         put?: never;
         post?: never;
         delete?: never;
@@ -729,7 +758,7 @@ export interface paths {
          *
          *     `format=docx` writes the same content as a Word                     document. **The page limit is approximate there** (Bolum                     22.6): the atoms are the ones that fitted a typeset page,                     and Word sets them in whatever room its own fonts take.                     Same CV, not a second promise -- say so next to the                     button.
          */
-        get: operations["download"];
+        get: operations["downloadGeneration"];
         put?: never;
         post?: never;
         delete?: never;
@@ -749,7 +778,7 @@ export interface paths {
          * Whether anyone is signed in, and what they may do
          * @description Answers for every caller, signed in or not — the client calls this first and decides what to render from `capabilities`. Never cached: it is the one response whose staleness shows the user a screen they are not entitled to.
          */
-        get: operations["session"];
+        get: operations["readSession"];
         put?: never;
         post?: never;
         delete?: never;
@@ -769,7 +798,7 @@ export interface paths {
          * Which providers this deployment can sign people in with
          * @description A provider with no credentials configured is absent rather than broken, so the client renders the buttons this list names and no others.
          */
-        get: operations["providers"];
+        get: operations["listAuthProviders"];
         put?: never;
         post?: never;
         delete?: never;
@@ -786,7 +815,7 @@ export interface paths {
             cookie?: never;
         };
         /** Begin signing in — redirects to the provider */
-        get: operations["start"];
+        get: operations["startOauth"];
         put?: never;
         post?: never;
         delete?: never;
@@ -803,7 +832,7 @@ export interface paths {
             cookie?: never;
         };
         /** Where the provider sends the browser back */
-        get: operations["callback"];
+        get: operations["oauthCallback"];
         put?: never;
         post?: never;
         delete?: never;
@@ -823,7 +852,7 @@ export interface paths {
          * Today's usage against today's limits
          * @description `resetsAt` is an absolute instant, not an hour: the day boundary is UTC and the client writes the sentence in the user's own locale. Counters roll over at UTC midnight, which is 03:00 in Turkey.
          */
-        get: operations["usage"];
+        get: operations["accountUsage"];
         put?: never;
         post?: never;
         delete?: never;
@@ -869,7 +898,6 @@ export interface components {
             lineSpacing?: number;
             fontFamily?: string;
             accentColor?: string;
-            empty?: boolean;
         };
         Contact: {
             name?: string;
@@ -1329,7 +1357,6 @@ export interface components {
         SelectionEditRequest: {
             include?: string[];
             exclude?: string[];
-            empty?: boolean;
         };
         /** @description A verdict on one generation */
         FeedbackRequest: {
@@ -1581,6 +1608,18 @@ export interface components {
             pageCount?: number;
             /**
              * Format: uuid
+             * @description The generation this one replaced, when the job was a Faz G
+             *     edit (Bolum 24.4). Absent on every other kind of job,
+             *     including an ordinary generation, which replaces nothing.
+             */
+            supersededGenerationId?: string;
+            /**
+             * @description How well the page answers the posting. Absent in general mode, where there was no posting to be relevant to.
+             * @enum {string}
+             */
+            matchLevel?: "WEAK" | "MODERATE" | "GOOD" | "STRONG";
+            /**
+             * Format: uuid
              * @description An import's profile, when one completed
              */
             profileId?: string;
@@ -1696,6 +1735,29 @@ export interface components {
             coverLetter?: string;
             /** @description What this person already said about it, and the 48-hour diagnostic permission if they opened one. Absent when they have not judged it. */
             feedback?: components["schemas"]["FeedbackResponse"];
+            /**
+             * Format: uuid
+             * @description The generation that replaced this one, present only when
+             *     `status` is `SUPERSEDED`. An edit writes a new CV and retires
+             *     the one it edited (Bolum 24.4); the retired one is still
+             *     readable and still downloadable -- the CV that was sent to an
+             *     employer does not stop existing -- and this is where the screen
+             *     showing it finds the newer one to link to.
+             */
+            supersededByGenerationId?: string;
+        };
+        /** @description One atom this generation weighed */
+        SelectionLine: {
+            /** Format: uuid */
+            atomId?: string;
+            text?: string;
+            onPage?: boolean;
+        };
+        /** @description The atoms a generation weighed, and which of them reached the page */
+        SelectionViewResponse: {
+            /** Format: uuid */
+            generationId?: string;
+            lines?: components["schemas"]["SelectionLine"][];
         };
         /** @description What the caller may do; the server still enforces all of it */
         CapabilitiesResponse: {
@@ -1761,7 +1823,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    own: {
+    readProfile: {
         parameters: {
             query?: never;
             header?: never;
@@ -1792,7 +1854,7 @@ export interface operations {
             };
         };
     };
-    replace: {
+    replaceProfile: {
         parameters: {
             query?: never;
             header?: {
@@ -1851,7 +1913,7 @@ export interface operations {
             };
         };
     };
-    delete: {
+    deleteProfile: {
         parameters: {
             query?: never;
             header?: {
@@ -2512,7 +2574,7 @@ export interface operations {
             };
         };
     };
-    list: {
+    listGenerations: {
         parameters: {
             query?: {
                 cursor?: string;
@@ -2590,6 +2652,37 @@ export interface operations {
             };
         };
     };
+    readSelection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                generationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The lines, page first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SelectionViewResponse"];
+                };
+            };
+            /** @description No such generation, or it belongs to someone else */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     editSelection: {
         parameters: {
             query?: never;
@@ -2643,7 +2736,7 @@ export interface operations {
             };
         };
     };
-    feedback: {
+    recordFeedback: {
         parameters: {
             query?: never;
             header?: never;
@@ -2696,7 +2789,7 @@ export interface operations {
             };
         };
     };
-    edit: {
+    editBySentence: {
         parameters: {
             query?: never;
             header?: never;
@@ -2760,7 +2853,7 @@ export interface operations {
             };
         };
     };
-    coverLetter: {
+    regenerateCoverLetter: {
         parameters: {
             query?: never;
             header?: never;
@@ -2846,7 +2939,7 @@ export interface operations {
             };
         };
     };
-    verify: {
+    verifyMagicLink: {
         parameters: {
             query?: never;
             header?: never;
@@ -2870,7 +2963,7 @@ export interface operations {
             };
         };
     };
-    request: {
+    requestMagicLink: {
         parameters: {
             query?: never;
             header?: never;
@@ -2910,7 +3003,7 @@ export interface operations {
             };
         };
     };
-    list_1: {
+    listApplications: {
         parameters: {
             query?: never;
             header?: never;
@@ -2930,7 +3023,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    createApplication: {
         parameters: {
             query?: never;
             header?: never;
@@ -3391,7 +3484,7 @@ export interface operations {
             };
         };
     };
-    delete_1: {
+    deleteApplication: {
         parameters: {
             query?: never;
             header?: {
@@ -3431,7 +3524,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    updateApplication: {
         parameters: {
             query?: never;
             header?: {
@@ -3488,7 +3581,7 @@ export interface operations {
             };
         };
     };
-    settings: {
+    accountSettings: {
         parameters: {
             query?: never;
             header?: never;
@@ -3508,7 +3601,7 @@ export interface operations {
             };
         };
     };
-    delete_2: {
+    deleteAccount: {
         parameters: {
             query?: never;
             header?: never;
@@ -3535,7 +3628,7 @@ export interface operations {
             };
         };
     };
-    update_1: {
+    updateAccountSettings: {
         parameters: {
             query?: never;
             header?: never;
@@ -3559,7 +3652,7 @@ export interface operations {
             };
         };
     };
-    export: {
+    exportProfile: {
         parameters: {
             query?: {
                 /**
@@ -3595,7 +3688,7 @@ export interface operations {
             };
         };
     };
-    status: {
+    readJob: {
         parameters: {
             query?: never;
             header?: never;
@@ -3626,7 +3719,7 @@ export interface operations {
             };
         };
     };
-    stream: {
+    streamJob: {
         parameters: {
             query?: never;
             header?: never;
@@ -3657,7 +3750,7 @@ export interface operations {
             };
         };
     };
-    read: {
+    readGeneration: {
         parameters: {
             query?: never;
             header?: never;
@@ -3688,7 +3781,7 @@ export interface operations {
             };
         };
     };
-    download: {
+    downloadGeneration: {
         parameters: {
             query?: {
                 format?: string;
@@ -3739,7 +3832,7 @@ export interface operations {
             };
         };
     };
-    session: {
+    readSession: {
         parameters: {
             query?: never;
             header?: never;
@@ -3759,7 +3852,7 @@ export interface operations {
             };
         };
     };
-    providers: {
+    listAuthProviders: {
         parameters: {
             query?: never;
             header?: never;
@@ -3779,7 +3872,7 @@ export interface operations {
             };
         };
     };
-    start: {
+    startOauth: {
         parameters: {
             query?: {
                 next?: string;
@@ -3801,7 +3894,7 @@ export interface operations {
             };
         };
     };
-    callback: {
+    oauthCallback: {
         parameters: {
             query?: {
                 code?: string;
@@ -3825,7 +3918,7 @@ export interface operations {
             };
         };
     };
-    usage: {
+    accountUsage: {
         parameters: {
             query?: never;
             header?: never;

@@ -49,9 +49,9 @@ export type Section = Schemas['Section'];
 export type Entry = Schemas['Entry'];
 export type Atom = Schemas['Atom'];
 export type Variant = Schemas['Variant'];
-export type ProfileExport = Returns<'export'>;
+export type ProfileExport = Returns<'exportProfile'>;
 
-export type ProfileUpdate = Accepts<'replace'>;
+export type ProfileUpdate = Accepts<'replaceProfile'>;
 export type PreferencesUpdate = Accepts<'replacePreferences'>;
 
 /**
@@ -72,11 +72,13 @@ export type Preferences = NonNullable<Profile['preferences']>;
  * template change its own defaults later and take a profile that never
  * overrode them along with it.
  *
- * Derived through `PreferencesUpdate` rather than from the read shape on
- * purpose: `Appearance` (the read) carries an `empty` boolean that
- * `AppearanceUpdate` does not, because springdoc publishes the record's
- * `isEmpty()` as a property. Writing a value read straight back would send a
- * field the write schema does not declare.
+ * Derived through `PreferencesUpdate` rather than from the read shape: the
+ * write schema is what a write must satisfy, and the two drifted apart once
+ * already — springdoc published the record's `isEmpty()` as an `empty`
+ * property on the read alone, so a value read straight back sent a field the
+ * write did not declare. Fixed at the source (`B-099`, § 35.8.2); deriving
+ * from the write is what would have made it a typecheck failure instead of a
+ * sifting step in the form.
  */
 export type AppearanceUpdate = NonNullable<
   NonNullable<PreferencesUpdate['defaults']>['appearance']
@@ -180,7 +182,7 @@ export function replacePreferences(body: PreferencesUpdate, version: Version) {
 }
 
 export function deleteProfile(version: Version) {
-  return api.delete<Returns<'delete'>>('/profile', { version });
+  return api.delete<Returns<'deleteProfile'>>('/profile', { version });
 }
 
 /* ------------------------------- sections ------------------------------ */
@@ -323,7 +325,7 @@ export function deleteVariant(atomId: string, variantId: string, version: Versio
  * response types honest, since one is parsed and the other is not.
  */
 export function exportProfileAsJson() {
-  return api.get<Returns<'export'>>(`/profile/export${query({ format: 'json' })}`);
+  return api.get<Returns<'exportProfile'>>(`/profile/export${query({ format: 'json' })}`);
 }
 
 export function exportProfileAsMarkdown() {

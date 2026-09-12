@@ -15,6 +15,7 @@ import {
   editByInstruction,
   editSelection,
   getGeneration,
+  getSelection,
   listGenerations,
   regenerateCoverLetter,
   startGeneration,
@@ -26,6 +27,7 @@ import {
   type GenerationRequest,
   type InstructionEdit,
   type SelectionEdit,
+  type SelectionView,
 } from '@/lib/api/endpoints/generations';
 import { getUsage, type Usage } from '@/lib/api/endpoints/account';
 import { accountKeys, generationKeys } from '@/lib/api/queryKeys';
@@ -211,8 +213,10 @@ export function useGenerationHistory() {
  * - the history no longer lists it, and `total` no longer counts it
  *   (`B-088`), so both the list and the number the deletion screen states are
  *   stale;
- * - nothing points from the retired row to the one that replaced it, so
- *   there is no cache entry to write — only ones to drop.
+ * - the retired row now names its successor (`B-097`), and that value
+ *   arrives with the refetch rather than being computed here: the terminal
+ *   event names the generation that **was** edited, which this screen
+ *   already knows.
  *
  * Invalidated rather than written: none of the three values is in hand, and
  * the history is a paged query whose first page is the only one that carries
@@ -226,6 +230,26 @@ export function useGenerationEdited(generationId: string) {
     void queryClient.invalidateQueries({ queryKey: generationKeys.history() });
     void queryClient.invalidateQueries({ queryKey: generationKeys.count() });
   }, [queryClient, generationId]);
+}
+
+/**
+ * The lines this generation weighed (`B-097`).
+ *
+ * Its own query rather than a field on the result, because it is its own
+ * endpoint and the result screen is drawn without it: the toggle is opened,
+ * and a reader who never opens it should not pay for the list.
+ *
+ * **Never written into, only dropped.** An edit does not change this
+ * generation's selection — it makes a new generation with a new one — so
+ * there is no newer value to put here, and `useGenerationEdited` invalidating
+ * the detail key takes this with it.
+ */
+export function useSelection(generationId: string, enabled = true) {
+  return useQuery<SelectionView>({
+    queryKey: generationKeys.selection(generationId),
+    queryFn: () => getSelection(generationId),
+    enabled,
+  });
 }
 
 /**

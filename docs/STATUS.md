@@ -3,7 +3,7 @@
 > İki repo da okur ve kendi satırlarını günceller. **Kural: 60 satırı geçmez.**
 > Ayrıntı repo-yerel `notes/current.md`'de.
 
-**2026-09-12** · **sıra backend'de** — `F-031`…`F-033` açık; frontend'de backend bekleyen iş yok
+**2026-09-12** · **iki tarafta da açık madde yok** — `B-097`…`B-099` geldikleri gün karşılandı
 
 ## Backend — `atomcv-backend`
 
@@ -16,7 +16,7 @@
 
 **Ekleme — § 57.7 yaşam döngüsü e-postalarını tanımladı**, çünkü inşa kılavuzu maddeyi adlandırıp bırakıyordu. Liste **kapalı**: hoş geldin (ilk başarılı girişte, tercihe tabi) ve silme onayı (işlemsel, kapatılamaz — § 57.4 söylemeyi zorunlu kılıyor). Tercih `users.lifecycle_emails`, kapatma bağlantısı satırdaki opak bir jetonla ve **bir sayfaya** iniyor: § 40.3'ün ön-getirmesi, uca inen bir bağlantıyı hiç tıklamamış kişilerin postasını kesen bir şeye çevirirdi. Spec **uygulanmadan önce iki kez düzeltildi**: satır tetikleyicisi giriş kutusuna adresi yazılan herkese posta gönderirdi (§ 40.4 satırı hemen yaratıyor), ve tercihi `PUT /profile/preferences`'a koymak bir CV çakışmasının e-posta ayarını reddetmesi olurdu.
 
-**Düzeltme — `.env.example` hiçbir şeyin okumadığı bir harcama limiti sunuyordu.** `DAILY_BUDGET_USD`'yi spec dört yerde anıyor ve yayın kontrol listesinde bir maddesi var; kod `ANOMALY_DAILY_BUDGET_USD` okuyor. Operatörün ayarladığı sayı hiçbir şey yapmıyordu; kurtaran tek şey varsayılanın daha düşük olması. `EnvExampleTest` iki kuralı tutuyor: örnekte okunmayan ad olamaz, varsayılanı olmayan ad eksik olamaz.
+**Frontend'in üç maddesi geldikleri gün kapandı (2026-09-12).** `GET /generations/{id}/selection` bu üretimin tarttığı satırları **metniyle** yayımlıyor ve `GenerationResponse` `supersededByGenerationId` taşıyor (`F-031` — `B-088`'in arayüzünü bekleten tek şeydi). `JobStatusResponse` `supersededGenerationId` **ve** `matchLevel` kazandı (`F-032`; ikincisi istenmemişti ve birebir aynı kusurdu — worker'ın `result`'ına yazılan anahtar akışta var, tipte yoktu). 33 ucun hepsi açık bir `operationId` aldı, `empty` iki şemadan kalktı (`F-033`) — ve muhafız isimler değil, `_<sayı>` ile biten bir `operationId` görünce düşen test. Frontend'e `B-097`-`B-099`.
 
 **Sayfa garantisi: üçünün de tuttuğu gerçek derleyiciye karşı doğrulandı** — yedi golden profil, hepsi %3 içinde. Genişletme **beş kusur** çıkardı ve beşi de aynı cümleydi: *sayfanın dizdiği ama ölçümün hiç görmediği bir şey.* Listeden sonraki bölüm başlığı; sabit sanılan başlık bloğu (V13 `profiles.header_costs`, artık ölçülüyor); `\resumeItem`'ın iki ayrı kaçak boşluğu; compact'in aynı boşluğu iki kez yazması. **İkisi kullanıcıya ulaşmıştı** — compact'te ve modern'de birer profil ikinci sayfaya taşıyordu. `B-095` açıldı, düzeltildi, kapandı. **Şablon sürümleri yükseldi** (`classic:v6`, `compact:v2`, `modern:v3`); sürüm yalnız ölçüm anahtarlarında geçiyor, API'de değil.
 
@@ -24,7 +24,7 @@
 
 **Geliştiricide:** VPS/restore (**restore sonrası anonim satırları silmek**, § 49.4); OAuth, Turnstile ve `B-083`'ün challenge'ı gerçek uca karşı denenmedi; GitHub entegrasyonu (§ 31.8) gerçek bir OAuth uygulaması istiyor.
 
-**Test:** 1712 birim · 529 entegrasyon · latex 141 — 0 hata
+**Test:** 1722 birim · 539 entegrasyon · latex 141 — 0 hata
 
 ## Frontend — `atomcv-frontend`
 
@@ -55,6 +55,6 @@ _Kapandı 09-09: model `openai/gpt-5.6-sol`; `emphasis` kalın, bedeli sıfır; 
 
 ## Sonraki senkronizasyon noktası
 
-**Sıra backend'de, ve frontend'de backend bekleyen başka iş yok.** Üç madde açık: `F-031` (seçim durumu + halef id'si — `B-088`'in arayüzünü bekleten tek şey), `F-032` (`supersededGenerationId` `JobStatusResponse`'ta yok), `F-033` (numaralı `operationId`'ler ve `isEmpty()` sızıntısı).
+**Üçü de kapandı (2026-09-12).** `gen:api` yeniden koşuldu ve 26 operasyon adı yeni adlarına bağlandı (`B-099`; yol üzerinden bağlayan iki yardımcı silindi, gerekçeleri kalmadı). `JobStatus` iki yeni alanı tipli taşıyor ve mock'ta terminal yük tek yerde üretiliyor (`B-098`). **Faz G'nin elle aç/kapa arayüzü indi** (`B-097`): `GET /selection`'dan çizilen liste, yalnız yeri değişen satırları gönderen bir kaydet, ve emekliden halefe bağlantı. Sonuç rotası 219.3 → **224.4 KB** (tavan 280).
 
 **Frontend'de kalanlar karar, kod değil:** analitik (ölçümü alacak bir dağıtım istiyor), bölüm düzeni ve dil ekseni kontrolleri, diğer diller, `docs/spec/`'in İngilizceye çevrilmesi.

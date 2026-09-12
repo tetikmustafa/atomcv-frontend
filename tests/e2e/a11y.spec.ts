@@ -96,6 +96,17 @@ test.describe('accessibility', () => {
     });
 
     expect(await violations(page)).toEqual([]);
+
+    /*
+      And again with the hand toggle open (`B-097`). It is a panel the closed
+      sweep above cannot see at all, and its switches are the densest run of
+      labelled controls on the screen. Swept here rather than only in jsdom
+      because axe reads computed styles, and jsdom has no layout to compute.
+    */
+    await page.getByRole('button', { name: 'Choose the lines by hand' }).click();
+    await expect(page.getByRole('switch').first()).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
   });
 });
 

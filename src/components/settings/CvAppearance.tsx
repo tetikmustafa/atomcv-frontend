@@ -74,11 +74,10 @@ type Draft = {
 };
 
 function draftFrom(defaults: Preferences['defaults']): Draft {
-  // `empty` is springdoc publishing the record's `isEmpty()`; the write
-  // schema does not declare it, so it must not travel back.
-  const stored: Record<string, unknown> = { ...(defaults?.appearance ?? {}) };
-  delete stored.empty;
-  const appearance = stored as AppearanceUpdate;
+  // Read straight back, no longer sifted: `Appearance` used to carry an
+  // `empty` the write schema did not declare, and the server has stopped
+  // publishing it (`B-099`, § 35.8.2).
+  const appearance: AppearanceUpdate = { ...(defaults?.appearance ?? {}) };
 
   return {
     ...(defaults?.templateId ? { templateId: defaults.templateId } : {}),

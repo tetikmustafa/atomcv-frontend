@@ -37,6 +37,7 @@ import {
   phasesAfter,
   TERMINAL_AT,
   type MockGenerationJob,
+  type MockSelectionLine,
   type MockImportOutcome,
   type MockJob,
 } from './generationFixture';
@@ -490,6 +491,10 @@ export const generationHandlers = [
       jobId: `job-${generations.jobs.length + 1}`,
       kind: 'generation',
       generationId: `gen-${generations.jobs.length + 1}`,
+      // Frozen here rather than read back off the profile later (`B-097`):
+      // what this CV printed is what the toggle screen has to show, and the
+      // atom behind a line can be reworded the minute after.
+      selection: weigh(),
       // No posting, no report: § 23.3's counts are counts *against a posting*
       // (`B-041`).
       ...(jobDescription === '' ? {} : { fitReport: FIT_REPORT }),
@@ -574,9 +579,7 @@ export const generationHandlers = [
         jobId: job.jobId,
         status: 'completed',
         pct: 100,
-        ...(job.kind === 'generation'
-          ? { generationId: job.generationId, pageCount: 1 }
-          : job.imported),
+        ...(job.kind === 'generation' ? completedOutcome(job) : job.imported),
       });
     }
 
@@ -644,20 +647,7 @@ export const generationHandlers = [
 
         if (job.outcome === 'completed') {
           const payload: CompletedEvent | MockImportOutcome =
-            job.kind === 'import'
-              ? job.imported
-              : {
-                  generationId: job.generationId,
-                  pageCount: 1,
-                  matchLevel: job.fitReport?.level ?? 'STRONG',
-                  // Only on a Faz G job, and only on the stream: the schema
-                  // does not publish it, so `GET /jobs/{id}` cannot carry it
-                  // without claiming a field the generated type denies
-                  // (`F-031`).
-                  ...(job.supersededGenerationId
-                    ? { supersededGenerationId: job.supersededGenerationId }
-                    : {}),
-                };
+            job.kind === 'import' ? job.imported : completedOutcome(job);
 
           controller.enqueue(encoder.encode(sseFrame('completed', payload, id)));
         } else {
@@ -772,6 +762,11 @@ export const generationHandlers = [
         : job.outcome === 'completed'
           ? 'completed'
           : 'failed',
+      // Only on a retired row, which is the only place it means anything
+      // (`B-097`). The edge runs the other way in the database — the edit
+      // writes the new row naming the old — and this is the direction a
+      // screen needs: the reader is looking at the one that was replaced.
+      ...(job.supersededBy ? { supersededByGenerationId: job.supersededBy } : {}),
       pageCount: 1,
       createdAt: new Date(job.startedAt).toISOString(),
       ...(job.fitReport ? { fitReport: job.fitReport } : {}),
@@ -785,6 +780,33 @@ export const generationHandlers = [
       // Absent until somebody judges it (`B-065`). This is the half that
       // makes `accessedAt` readable the day after the permission was given.
       ...(feedbackBody(id) ? { feedback: feedbackBody(id) } : {}),
+    });
+  }),
+
+  /**
+   * What this generation weighed (§ 24.4, `B-097`).
+   *
+   * The list the toggle screen is drawn from, and the whole of the endpoint:
+   * **every id here is one the edit endpoint accepts**, which is what makes
+   * a button on it pressable. On-page lines first, then the ones the budget
+   * held back in the order they competed.
+   *
+   * No score travels with a line. § 23.3's objection to a percentage holds
+   * for a number beside a bullet too, and the order already says what the
+   * ranking was.
+   *
+   * A retired generation still answers: the screen that shows one is the
+   * screen that explains why its toggles are gone.
+   */
+  http.get('*/api/v1/generations/:generationId/selection', ({ params }) => {
+    const id = String(params.generationId);
+    const job = findGeneration(id);
+
+    if (!job) return notFound(`${GENERATIONS}/${id}/selection`);
+
+    return HttpResponse.json<Schemas['SelectionViewResponse']>({
+      generationId: job.generationId,
+      lines: job.selection,
     });
   }),
 
@@ -823,9 +845,14 @@ export const generationHandlers = [
     // The three refusals the endpoint names, and `params.fields` carries the
     // offending ids rather than the field names: the server says which atom
     // was wrong, which is the only thing a screen could act on.
+    //
+    // "Unknown" is measured against **this generation's** lines, not against
+    // the profile (`B-097`). An atom that exists but was never weighed here
+    // is exactly the 400 the endpoint is documented to answer, and a mock
+    // that accepted it would hide the reason the read endpoint had to exist.
     const both = include.filter((atomId) => exclude.includes(atomId));
     const unknown = [...include, ...exclude].filter(
-      (atomId) => !fixture.atoms.some((atom) => atom.id === atomId),
+      (atomId) => !source.selection.some((line) => line.atomId === atomId),
     );
 
     if (both.length > 0 || unknown.length > 0) {
@@ -837,7 +864,7 @@ export const generationHandlers = [
       );
     }
 
-    return accepted(supersede(source));
+    return accepted(supersede(source, { include, exclude }));
   }),
 
   /**
@@ -908,6 +935,11 @@ export const generationHandlers = [
       );
     }
 
+    // No toggle moves here, and that is honest rather than lazy: the server
+    // resolves the model's line numbers into the same include/exclude the
+    // hand toggle sends (§ 24.2), and this mock has no model to get numbers
+    // from. What it does encode is the part a screen can see — the edited
+    // generation is retired and a new one takes its place.
     return accepted(supersede(source));
   }),
 
@@ -1152,9 +1184,24 @@ function metric(name: string, attempted: number, limit: number): Schemas['Usage'
  * posting said. Re-deriving any of it would make the mock disagree with
  * itself two edits in.
  */
-function supersede(source: MockGenerationJob): MockGenerationJob {
+function supersede(
+  source: MockGenerationJob,
+  change: { include: string[]; exclude: string[] } = { include: [], exclude: [] },
+): MockGenerationJob {
   const replacement: MockGenerationJob = {
     ...source,
+    // The edit applies to the **selection state**, never to the document, so
+    // the new generation is the old selection with the toggles moved
+    // (§ 24.4). Re-weighing here would make the page limit a fresh promise
+    // instead of the one that was already kept.
+    selection: source.selection.map((line) => ({
+      ...line,
+      onPage: change.include.includes(line.atomId)
+        ? true
+        : change.exclude.includes(line.atomId)
+          ? false
+          : line.onPage,
+    })),
     jobId: crypto.randomUUID(),
     generationId: crypto.randomUUID(),
     startedAt: Date.now(),
@@ -1237,6 +1284,53 @@ function frame(step: PhaseEvent): PhaseEvent {
     ...(step.label ? { label: step.label } : {}),
     pct: step.pct,
     ...(step.detail ? { detail: step.detail } : {}),
+  };
+}
+
+/**
+ * Which atoms a new generation weighs, and which of them reach the page.
+ *
+ * A stand-in for Faz B and Faz C the way `namesAnAtom` stands in for the
+ * model: it decides on the profile rather than on a magic value, so the
+ * screen cannot be written against an arrangement the server never produces.
+ * Importance is the ranking, the ones at or above the middle fit, and the
+ * rest are what the budget held back — so the fixture always has both states
+ * and the order is the one they competed in.
+ *
+ * The text is the primary wording's, copied now. That is the snapshot the
+ * endpoint promises: § 24.2 numbers the lines this CV printed.
+ */
+function weigh(): MockSelectionLine[] {
+  return fixture.atoms
+    .map((atom) => ({
+      atomId: atom.id ?? '',
+      text: (atom.variants ?? []).find((variant) => variant.primary)?.plainText ?? '',
+      onPage: (atom.importance ?? 0) >= 0.5,
+      importance: atom.importance ?? 0,
+    }))
+    .sort((a, b) => Number(b.onPage) - Number(a.onPage) || b.importance - a.importance)
+    .map(({ atomId, text, onPage }) => ({ atomId, text, onPage }));
+}
+
+/**
+ * What a finished generation job says, on **both** transports (`B-098`).
+ *
+ * The stream sends this as the terminal event and `GET /jobs/{id}` spreads
+ * the same object into its body, because § 35.3 makes them the same thing: a
+ * key the worker writes into `result` is a field on `JobStatusResponse`. Two
+ * of these fields used to be on the stream alone — the schema published
+ * neither, so the poll dropped them and a reconnect lost the answer (`F-032`).
+ * Written once here so the mock cannot drift back into two payloads.
+ *
+ * `matchLevel` is absent in general mode, where there was no posting to be
+ * relevant to, and `supersededGenerationId` on anything but a Faz G edit.
+ */
+function completedOutcome(job: MockGenerationJob): CompletedEvent {
+  return {
+    generationId: job.generationId,
+    pageCount: 1,
+    ...(job.fitReport?.level ? { matchLevel: job.fitReport.level } : {}),
+    ...(job.supersededGenerationId ? { supersededGenerationId: job.supersededGenerationId } : {}),
   };
 }
 

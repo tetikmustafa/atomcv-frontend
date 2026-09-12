@@ -25,6 +25,7 @@
  *     time.
  */
 
+import type { JobStatus } from '@/lib/api/endpoints/jobs';
 import type { ProblemDetail, Resolution } from '@/types/domain';
 
 /**
@@ -48,24 +49,28 @@ export type PhaseEvent = {
   detail?: string;
 };
 
-export type CompletedEvent = {
-  generationId: string;
-  pageCount: number;
-  /** Over the counts, not a percentage — § 23.3 forbids one by name. */
-  matchLevel: NonNullable<import('@/types/api').components['schemas']['FitReport']['level']>;
-  /**
-   * The generation an edit replaced (`B-088`). Present on the terminal event
-   * of a Faz G job and on no other.
-   *
-   * **It is on the stream and not on `JobStatusResponse`**, which is not a
-   * choice of ours: the schema does not publish the field at all, so the
-   * fallback poll — the one transport that is typed — cannot carry it.
-   * `F-031` asks for it. Nothing in the client depends on it today, because a
-   * screen that sent the edit already knows which generation it sent it
-   * about; what it is for is the screen that does not.
-   */
-  supersededGenerationId?: string;
-};
+/**
+ * Every field derived, none of them restated (`B-098`).
+ *
+ * The terminal event is the job's raw `result` map, and § 35.3 now makes that
+ * a promise in the other direction: **a key the worker writes into `result`
+ * is a field on `JobStatusResponse`**. So the payload has no shape of its own
+ * left to hand-write — only a narrowing of the poll's, saying which of its
+ * fields a completed generation actually carries.
+ *
+ * `matchLevel` and `supersededGenerationId` were the last two written out
+ * here by hand. Both were on the stream and neither was in any type, so the
+ * fallback poll dropped them and a client that read them did not compile
+ * (`F-032`). What replaced the copies is the same file the client binds to.
+ */
+type Terminal = Pick<
+  JobStatus,
+  'generationId' | 'pageCount' | 'matchLevel' | 'supersededGenerationId'
+>;
+
+export type CompletedEvent = Required<Pick<Terminal, 'generationId' | 'pageCount'>> &
+  /** Absent in general mode, and on every job that is not a Faz G edit. */
+  Pick<Terminal, 'matchLevel' | 'supersededGenerationId'>;
 
 /*
  * `ImportCompletedEvent` was here and is gone (`B-067`).

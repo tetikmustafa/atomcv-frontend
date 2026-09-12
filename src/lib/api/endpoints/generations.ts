@@ -52,7 +52,7 @@ export function startGeneration(body: GenerationRequest, idempotencyKey: string)
  * produces, so the default media type is the right one. Getting it wrong is
  * not subtle — `Returns` resolves to `never` and every field access fails.
  */
-export type Generation = Returns<'read'>;
+export type Generation = Returns<'readGeneration'>;
 
 /**
  * Faz F's coverage report (§ 23.3).
@@ -130,10 +130,10 @@ export function downloadGeneration(generationId: string, format: DownloadFormat 
  * draft that overstates is thrown away and reported as
  * `422 COVER_LETTER_REJECTED`. Another press is a different draft.
  */
-export type CoverLetterRequest = Accepts<'coverLetter'>;
+export type CoverLetterRequest = Accepts<'regenerateCoverLetter'>;
 
 export function regenerateCoverLetter(generationId: string, body: CoverLetterRequest) {
-  return api.post<Returns<'coverLetter'>>(
+  return api.post<Returns<'regenerateCoverLetter'>>(
     `/generations/${generationId}/cover-letter/regenerate`,
     body,
   );
@@ -160,9 +160,34 @@ export function regenerateCoverLetter(generationId: string, body: CoverLetterReq
  * wrong one resolves to `never` rather than to a wrong field, which is the
  * whole reason `Returns` takes the media type.
  */
-export type AcceptedEdit = Returns<'edit'>;
+export type AcceptedEdit = Returns<'editBySentence'>;
 
 export type SelectionEdit = Accepts<'editSelection'>;
+
+/**
+ * What a generation weighed, and which of it reached the page (`B-097`).
+ *
+ * The list the hand toggle is drawn from. **Every id it carries is one
+ * `editSelection` accepts** — that equivalence is the whole endpoint, and
+ * the reason a screen cannot be built from the profile's atoms instead: an
+ * atom this generation never weighed is a `400`, so those buttons could not
+ * be pressed.
+ *
+ * `text` is **what this CV printed**, not what the atom says today. The two
+ * drift the moment the profile is edited, and a line showing the newer
+ * wording would offer to remove a sentence that is not on the page.
+ *
+ * No score comes with a line: § 23.3's objection to a percentage holds for a
+ * number beside a bullet, and the order is the ranking — on-page lines
+ * first, then the ones the page budget held back.
+ */
+export type SelectionView = Returns<'readSelection'>;
+
+export type SelectionLine = NonNullable<SelectionView['lines']>[number];
+
+export function getSelection(generationId: string) {
+  return api.get<SelectionView>(`/generations/${generationId}/selection`);
+}
 
 /**
  * Keeping or dropping atoms by hand.
@@ -172,19 +197,15 @@ export type SelectionEdit = Accepts<'editSelection'>;
  * warns about the quota here would be warning about a charge that does not
  * happen.
  *
- * **No screen calls this yet, and the gap is the server's** (`F-031`).
- * Drawing a toggle per bullet needs to know which atoms this generation
- * weighed and which of them reached the page, and nothing publishes that:
- * `GET /generations/{id}` carries the fit report and the letter, not the
- * selection. An atom this generation never weighed is a `400` rather than a
- * no-op, so a screen built from the profile's atoms instead would offer
- * buttons that cannot be pressed.
+ * The body is a pair of id lists, and both are optional — but sending
+ * neither is a `400`, because a 202 that changed nothing would hand back the
+ * same document and read as a bug. Ids come from `getSelection`.
  */
 export function editSelection(generationId: string, body: SelectionEdit) {
   return api.post<AcceptedEdit>(`/generations/${generationId}/selection`, body);
 }
 
-export type InstructionEdit = Accepts<'edit'>;
+export type InstructionEdit = Accepts<'editBySentence'>;
 
 /**
  * The same change, asked for in a sentence.
@@ -232,9 +253,9 @@ export const INSTRUCTION_MAX_LENGTH = 500;
  * (`B-065`), the generated type now says what the wire says, and the
  * narrowing came off. What the client sends never changed.
  */
-export type FeedbackRequest = Accepts<'feedback'>;
+export type FeedbackRequest = Accepts<'recordFeedback'>;
 
-export type Feedback = Returns<'feedback'>;
+export type Feedback = Returns<'recordFeedback'>;
 
 /**
  * Records it, or changes it.
@@ -256,7 +277,7 @@ export function submitFeedback(generationId: string, body: FeedbackRequest) {
 
 /* -------------------------------- history ------------------------------ */
 
-export type GenerationPage = Returns<'list'>;
+export type GenerationPage = Returns<'listGenerations'>;
 export type GenerationSummary = NonNullable<GenerationPage['items']>[number];
 
 /**

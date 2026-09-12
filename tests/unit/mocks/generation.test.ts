@@ -17,6 +17,7 @@ type JobStatus = components['schemas']['JobStatusResponse'];
 type Usage = components['schemas']['Usage'];
 type GenerationResponse = components['schemas']['GenerationResponse'];
 type GenerationPage = components['schemas']['GenerationPage'];
+type SelectionView = components['schemas']['SelectionViewResponse'];
 
 /** Reads as a posting: two distinct signal words and more than forty of them. */
 const POSTING = [
@@ -435,6 +436,11 @@ describe('editing a finished generation', () => {
    * An atom this generation never weighed is refused rather than ignored:
    * ignoring it would answer 202 and hand back the same document, which is
    * indistinguishable from a bug.
+   *
+   * "Never weighed" is measured against the **generation's** lines rather
+   * than against the profile (`B-097`). That is the whole reason the read
+   * endpoint had to exist: a screen drawn from today's atoms would offer
+   * buttons that answer 400.
    */
   it('refuses an unknown atom and an atom named on both sides', async () => {
     const generationId = await finished();
@@ -459,10 +465,14 @@ describe('editing a finished generation', () => {
   /**
    * The terminal event names the generation that **was** edited, so a screen
    * holding the old id learns where it went without re-reading the history.
-   * It travels on the stream only: the schema does not publish it, so the
-   * fallback poll cannot carry it (`F-031`).
+   *
+   * **And the poll says the same** (`B-098`). It used to travel on the stream
+   * alone, because the schema published neither this nor `matchLevel`: a
+   * stream that dropped took the answer with it, and a client reading either
+   * field did not compile (`F-032`). Both transports are asserted together
+   * here, because one of them carrying it is exactly the bug.
    */
-  it('names the replaced generation on the terminal event', async () => {
+  it('names the replaced generation on the terminal event and on the poll', async () => {
     const generationId = await finished();
     const accepted = await api.post<AcceptedJob>(`/generations/${generationId}/edits`, {
       instruction: NAMES_AN_ATOM,
@@ -470,10 +480,131 @@ describe('editing a finished generation', () => {
 
     const frames = await readStream(accepted.streamUrl!);
     const completed = frames.find((candidate) => candidate.event === 'completed')!;
+    const polled = await api.get<JobStatus>(`/jobs/${accepted.jobId}`);
 
     expect((completed.data as { supersededGenerationId?: string }).supersededGenerationId).toBe(
       generationId,
     );
+    expect(polled.supersededGenerationId).toBe(generationId);
+    expect(polled.matchLevel).toBe((completed.data as { matchLevel?: string }).matchLevel);
+  });
+
+  /**
+   * General mode has no posting to be relevant to, so there is no level to
+   * report — absent rather than a floor value, on both transports. A default
+   * of `WEAK` would read as a bad match where there was nothing to match.
+   */
+  it('sends no match level where there was no posting', async () => {
+    const job = await api.post<AcceptedJob>('/generations', { acknowledgePreflight: false });
+    const frames = await readStream(job.streamUrl!);
+    const completed = frames.find((candidate) => candidate.event === 'completed')!;
+
+    expect((completed.data as { matchLevel?: string }).matchLevel).toBeUndefined();
+    expect((await api.get<JobStatus>(`/jobs/${job.jobId}`)).matchLevel).toBeUndefined();
+  });
+
+  /**
+   * `B-097`. The list the hand toggle is drawn from, and the endpoint that
+   * made drawing one possible at all.
+   */
+  describe('what a generation weighed', () => {
+    it('publishes every line, on-page ones first', async () => {
+      const generationId = await finished();
+
+      const view = await api.get<SelectionView>(`/generations/${generationId}/selection`);
+      const lines = view.lines ?? [];
+
+      expect(view.generationId).toBe(generationId);
+      expect(lines.length).toBe(fixture.atoms.length);
+
+      // Ordering rather than an exact arrangement: the promise is "on the page
+      // first, then what the budget held back", and a count would pass on a
+      // list that was sorted the other way round.
+      const held = lines.findIndex((line) => line.onPage !== true);
+      expect(held).toBeGreaterThan(0);
+      expect(lines.slice(held).every((line) => line.onPage !== true)).toBe(true);
+    });
+
+    /**
+     * The equivalence the endpoint exists for: every id it publishes is one the
+     * edit endpoint takes. A screen cannot be written against half of it.
+     */
+    it('publishes only ids the edit endpoint accepts', async () => {
+      const generationId = await finished();
+      const view = await api.get<SelectionView>(`/generations/${generationId}/selection`);
+
+      const held = (view.lines ?? []).find((line) => line.onPage !== true)!;
+      const accepted = await api.post<AcceptedJob>(`/generations/${generationId}/selection`, {
+        include: [held.atomId],
+      });
+
+      expect(accepted.jobId).toBeTruthy();
+    });
+
+    /**
+     * § 24.4: the edit applies to the **selection state**, so the generation it
+     * makes carries the old selection with the toggles moved rather than a
+     * fresh weighing. It is what keeps the page limit true after twenty edits,
+     * and what lets a second edit see what the first one did.
+     */
+    it('carries the selection into the generation an edit makes', async () => {
+      const generationId = await finished();
+      const before = await api.get<SelectionView>(`/generations/${generationId}/selection`);
+      const held = (before.lines ?? []).find((line) => line.onPage !== true)!;
+
+      const accepted = await api.post<AcceptedJob>(`/generations/${generationId}/selection`, {
+        include: [held.atomId],
+      });
+      await readStream(accepted.streamUrl!);
+      const replacement = (await api.get<JobStatus>(`/jobs/${accepted.jobId}`)).generationId!;
+
+      const after = await api.get<SelectionView>(`/generations/${replacement}/selection`);
+      const moved = (after.lines ?? []).find((line) => line.atomId === held.atomId);
+
+      expect(moved?.onPage).toBe(true);
+      expect(after.lines?.length).toBe(before.lines?.length);
+    });
+
+    /**
+     * The text is the one **this** CV printed. A list drawn from today's
+     * profile would offer to remove a sentence that is not on the page, and
+     * § 24.2 numbers these lines for the model on the same grounds.
+     */
+    it('keeps the wording the CV printed after the atom is reworded', async () => {
+      const generationId = await finished();
+      const before = await api.get<SelectionView>(`/generations/${generationId}/selection`);
+      const first = (before.lines ?? [])[0]!;
+
+      const atom = fixture.atoms.find((candidate) => candidate.id === first.atomId)!;
+      const primary = (atom.variants ?? []).find((variant) => variant.primary)!;
+      primary.plainText = 'Something else entirely';
+
+      const after = await api.get<SelectionView>(`/generations/${generationId}/selection`);
+
+      expect(after.lines?.[0]?.text).toBe(first.text);
+      expect(after.lines?.[0]?.text).not.toBe('Something else entirely');
+    });
+
+    /**
+     * A retired generation still answers: the screen that shows one has to say
+     * why its toggles are gone, and it reads the same list to do it.
+     */
+    it('names the generation that replaced a retired one', async () => {
+      const generationId = await finished();
+      const accepted = await api.post<AcceptedJob>(`/generations/${generationId}/edits`, {
+        instruction: NAMES_AN_ATOM,
+      });
+      await readStream(accepted.streamUrl!);
+      const replacement = (await api.get<JobStatus>(`/jobs/${accepted.jobId}`)).generationId!;
+
+      const retired = await api.get<GenerationResponse>(`/generations/${generationId}`);
+      const newest = await api.get<GenerationResponse>(`/generations/${replacement}`);
+
+      expect(retired.supersededByGenerationId).toBe(replacement);
+      // Only on a retired row: the newest one has nothing after it, and a
+      // self-reference or an empty string would both draw a link to nowhere.
+      expect(newest.supersededByGenerationId).toBeUndefined();
+    });
   });
 });
 

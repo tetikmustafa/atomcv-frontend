@@ -19,7 +19,20 @@ const push = vi.fn();
 
 vi.mock('@/lib/i18n/navigation', () => ({
   useRouter: () => ({ push, replace: vi.fn() }),
-  Link: ({ children }: { children: ReactNode }) => children,
+  Link: ({
+    children,
+    href,
+    ...rest
+  }: {
+    children: ReactNode;
+    href: string;
+    className?: string;
+    'data-testid'?: string;
+  }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
   usePathname: () => '/generations/gen-1',
 }));
 
@@ -141,7 +154,30 @@ describe('changing a finished resume in words', () => {
 
     expect(await screen.findByTestId('superseded-note')).toBeInTheDocument();
     expect(screen.queryByLabelText(en.Result.editLabel)).not.toBeInTheDocument();
+    // Neither half of Faz G is offered on a retired row: both answer 409.
+    expect(screen.queryByRole('button', { name: en.Result.selectionOpen })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Download PDF' })).toBeEnabled();
+  });
+
+  /**
+   * `B-097`. The note could say a newer resume existed and not say where:
+   * nothing on the wire pointed from a retired generation to its successor,
+   * and the history does not list retired rows, so there was nothing to read
+   * the answer off. `supersededByGenerationId` is that pointer.
+   */
+  it('links a retired generation to the one that replaced it', async () => {
+    signIn();
+    const generationId = await generate();
+
+    const accepted = await api.post<AcceptedJob>(`/generations/${generationId}/edits`, {
+      instruction: 'take out the query monitor bullet',
+    });
+    const replacement = generationOf(accepted.jobId);
+
+    render(<GenerationResult generationId={generationId} />, { wrapper: Wrapper });
+
+    const link = await screen.findByTestId('superseded-link');
+    expect(link).toHaveAttribute('href', `/generations/${replacement}`);
   });
 
   it('has no accessibility violations', async () => {

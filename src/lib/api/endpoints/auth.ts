@@ -8,7 +8,7 @@
 import { API_BASE_URL, api } from '../client';
 import type { Accepts, Returns } from '../operations';
 
-type RawSession = Returns<'session', '*/*'>;
+type RawSession = Returns<'readSession', '*/*'>;
 type RawCapabilities = NonNullable<RawSession['capabilities']>;
 
 /**
@@ -50,7 +50,7 @@ export type Session = Required<Omit<RawSession, 'capabilities'>> & {
  * neither of those. Telling somebody who uploaded a CV ten minutes ago that
  * there was nothing to move would be the product lying about its own outage.
  */
-export type ProfileUpgrade = NonNullable<Returns<'verify', '*/*'>['profileUpgrade']>;
+export type ProfileUpgrade = NonNullable<Returns<'verifyMagicLink', '*/*'>['profileUpgrade']>;
 
 /**
  * The current session, anonymous or not.
@@ -89,7 +89,7 @@ export function logout() {
  * one deployment and works on the next.
  */
 export function getProviders() {
-  return api.get<Returns<'providers', '*/*'>>('/auth/providers');
+  return api.get<Returns<'listAuthProviders', '*/*'>>('/auth/providers');
 }
 
 /**
@@ -112,7 +112,7 @@ export function oauthStartUrl(provider: string, next: string) {
   return `${API_BASE_URL}/auth/oauth/${encodeURIComponent(provider)}/start?${query}`;
 }
 
-export type MagicLinkRequest = Accepts<'request'>;
+export type MagicLinkRequest = Accepts<'requestMagicLink'>;
 
 /**
  * Asks for a sign-in link.
@@ -136,7 +136,7 @@ export function requestMagicLink(body: MagicLinkRequest) {
   return api.post<void>('/auth/magic-link', body);
 }
 
-export type VerifyRequest = Accepts<'verify'>;
+export type VerifyRequest = Accepts<'verifyMagicLink'>;
 
 /**
  * Redeems a sign-in link.
@@ -155,5 +155,5 @@ export type VerifyRequest = Accepts<'verify'>;
  * promised (`B-054`).
  */
 export function verifyMagicLink(body: VerifyRequest) {
-  return api.post<Returns<'verify', '*/*'>>('/auth/verify', body);
+  return api.post<Returns<'verifyMagicLink', '*/*'>>('/auth/verify', body);
 }

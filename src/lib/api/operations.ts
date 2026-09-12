@@ -7,9 +7,19 @@
  * so a change to the wrapper — a list that starts arriving inside an
  * envelope, a body that gains a field — is a typecheck failure rather than a
  * runtime surprise. It caught one the day it was written (`reorder*`).
+ *
+ * **An operation id is a name again** (`B-099`). springdoc used to number the
+ * ones whose controller method name was not unique — `delete_1`, `update_1`,
+ * `list_1` — and the number was *positional*: adding the applications
+ * controller moved account deletion from `delete_1` to `delete_2` and nothing
+ * failed to compile, because both answer 204 and both resolve to `void`. Four
+ * endpoints were bound through their path for that one reason, and those
+ * bindings are gone: § 35.8.1 makes `@Operation(operationId = …)` mandatory
+ * and the backend's CI fails on an id ending in `_<number>`, so the hazard is
+ * caught where it is created rather than worked around here.
  */
 
-import type { operations, paths } from '@/types/api';
+import type { operations } from '@/types/api';
 
 /**
  * The one success response an operation declares.
@@ -45,29 +55,6 @@ export type Returns<Op extends keyof operations, Media extends string = 'applica
 >;
 
 /**
- * The same, for an operation named by its **path and method** instead of by
- * its id.
- *
- * springdoc numbers an operation id when the controller method name is not
- * unique across the application — `delete_1`, `update_1`, `list_1` — and the
- * number is **positional**. Adding the applications controller moved account
- * deletion from `delete_1` to `delete_2`, and nothing failed to compile:
- * both answer 204, so both resolve to `void`. A binding that silently means
- * a different endpoint is exactly what this module exists to prevent, so an
- * operation whose id carries a number is bound through its path, which the
- * server cannot renumber.
- *
- * Named ids stay on `Returns`: they are the schema's own stable names, and
- * rewriting forty call sites would trade one hazard for a diff nobody can
- * review.
- */
-export type ReturnsAt<
-  Path extends keyof paths,
-  Method extends keyof paths[Path],
-  Media extends string = 'application/json',
-> = Body<paths[Path][Method], Media>;
-
-/**
  * What a call sends.
  *
  * `NonNullable` because an endpoint whose body is **entirely** optional
@@ -88,8 +75,3 @@ type Sends<Op> =
     : never;
 
 export type Accepts<Op extends keyof operations> = Sends<operations[Op]>;
-
-/** `Accepts`, by path and method. See `ReturnsAt` for why both exist. */
-export type AcceptsAt<Path extends keyof paths, Method extends keyof paths[Path]> = Sends<
-  paths[Path][Method]
->;

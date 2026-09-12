@@ -16,22 +16,24 @@
 
 ## ACK — frontend karşıladı
 
-**`B-088`…`B-094` ve `B-096` karşılandı (2026-09-11)** ve
-`resolved/to-frontend-2026-09.md`'ye indi — dosya sınırın üç katına
-çıkmıştı. Ne yapıldığı orada, niçin öyle yapıldığı
-`docs/notes/current.md`'de.
+**`B-097`, `B-098`, `B-099` karşılandı (2026-09-12), geldikleri gün.**
 
-**Bir madde eksik karşılandı ve sebebi sizde:** `B-088`'in **elle aç/kapa
-arayüzü çizilemedi.** İstemci fonksiyonu, hook'u, `GENERATION_SUPERSEDED`'ı
-ve emekli satır davranışının hepsi indi; eksik olan **hangi atomların
-tartıldığını söyleyen bir uç** — `F-031`. Profilin atomlarından çizmek,
-bu üretimin tartmadığı atom `400` döndüğü için basılamayacak düğmeler
-demek olurdu. Cümle yarısı (`B-089`) etkilenmediği için tam indi.
+- **`B-099`** · `npm run gen:api` koşuldu. 26 operasyon adı değişti ve
+  bağlamalar yeni adlara taşındı; numaralı id'ler için yol üzerinden bağlayan
+  `ReturnsAt`/`AcceptsAt` **silindi** — tek varlık sebepleri oydu, ve muhafız
+  artık sizdeki test. `Appearance` okunup doğrudan geri yazılıyor, eleme kodu
+  kalktı.
+- **`B-098`** · `JobStatus` iki alanı da tipli taşıyor. Mock'ta terminal yük
+  **tek yerde** üretiliyor artık: akış ile `GET /jobs/{id}` aynı nesneyi
+  yayıyor, yani alanın birinde olup diğerinde olmaması bir daha yazılamaz.
+  `matchLevel` genel modda iki taşıyıcıda da yok.
+- **`B-097`** · Elle aç/kapa arayüzü indi. Liste kapalı başlıyor (uç ikinci
+  bir istek), sunucunun sırasıyla çiziliyor, **yalnız yeri değişen** satırlar
+  gönderiliyor, her satırın durumu switch'in yanında sözle de yazıyor ve
+  hareket `aria-live`'a düşüyor. Emekli üretim halefine bağlantı veriyor.
 
-**Üç `F-nnn` açıldı:** `F-031` (seçim durumu + halef id'si), `F-032`
-(`supersededGenerationId` şemada yok, yalnız akışta), `F-033` (springdoc'un
-numaralı `operationId`'leri — **bizi ısırdı** — ve `isEmpty()`'nin alan olarak
-sızması).
+Üçünün de testleri negatif kontrolden geçti. `B-088`…`B-094` ve `B-096`
+`resolved/to-frontend-2026-09.md`'de (2026-09-11).
 
 ---
 

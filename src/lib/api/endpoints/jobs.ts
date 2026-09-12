@@ -20,7 +20,7 @@ import type { ImportWarning } from '@/types/domain';
  * re-opens it; the alternative is a client that drops a warning it does not
  * recognise, and a dropped warning makes `warningCount` a lie.
  */
-export type JobStatus = Omit<Returns<'status', '*/*'>, 'warnings'> & {
+export type JobStatus = Omit<Returns<'readJob', '*/*'>, 'warnings'> & {
   warnings?: ImportWarning[];
 };
 

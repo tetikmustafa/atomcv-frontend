@@ -145,7 +145,31 @@ export type MockGenerationJob = MockJobCommon & {
    * other.
    */
   supersededGenerationId?: string;
+  /**
+   * What this generation weighed, and which of it reached the page
+   * (`B-097`, § 24.4).
+   *
+   * **A snapshot, not a view of the profile.** The text is the one this CV
+   * printed; the atom it came from may have been reworded since, and a list
+   * drawn from today's profile would number the wrong lines — which is the
+   * same reason § 24.2 reads the model's lines off the selection state.
+   *
+   * It travels through an edit with the toggles applied, so a second edit
+   * sees what the first one did. Held on the job because the job is what the
+   * fixture has; on the server it belongs to the generation.
+   */
+  selection: MockSelectionLine[];
 };
+
+/**
+ * One atom a generation weighed.
+ *
+ * Derived, because the endpoint publishes it now: the fields are the
+ * schema's and only the order is ours. `onPage` false is an atom the page
+ * budget held back — it competed and lost, which is exactly what makes it
+ * offerable as a toggle.
+ */
+export type MockSelectionLine = Required<Schemas['SelectionLine']>;
 
 /**
  * A job of either kind.

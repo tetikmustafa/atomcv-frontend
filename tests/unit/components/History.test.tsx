@@ -48,6 +48,10 @@ function seedGenerations(count: number, shape: Partial<MockGenerationJob> = {}) 
       startedAt: Date.now() - TERMINAL_AT - index * 1000,
       outcome: 'completed',
       contentLanguage: 'en',
+      // Nothing here reads it; a generation always weighed something, so the
+      // field is not optional and a row without one would be a shape the
+      // server cannot produce.
+      selection: [],
       ...shape,
     });
   }

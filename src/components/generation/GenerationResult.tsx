@@ -18,6 +18,7 @@ import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { CoverLetter } from '@/components/generation/CoverLetter';
 import { EditRequest } from '@/components/generation/EditRequest';
 import { Feedback } from '@/components/generation/Feedback';
+import { SelectionEditor } from '@/components/generation/SelectionEditor';
 import { FitReport } from '@/components/generation/FitReport';
 import { Button } from '@/components/ui/button';
 import { Link } from '@/lib/i18n/navigation';
@@ -152,23 +153,46 @@ export function GenerationResult({ generationId }: { generationId: string }) {
       )}
 
       {/*
-        Faz G (`B-088`, `B-089`). A generation that has already been edited is
-        retired, and editing it again is a `409` — so the box is replaced by
-        the sentence that says why, rather than left on screen to be pressed
-        into an error.
+        Faz G, both halves (`B-088`, `B-089`, `B-097`). A generation that has
+        already been edited is retired, and editing it again is a `409` — so
+        both boxes are replaced by the sentence that says why, rather than
+        left on screen to be pressed into an error.
 
-        The note cannot link to the resume that replaced this one: nothing on
-        the wire points from a retired generation to its successor (`F-031`).
-        What it can say is that this one still downloads, which is the promise
-        that matters — a CV already sent to an employer does not stop existing
-        because a newer one was made.
+        The note links to the resume that replaced this one now
+        (`supersededByGenerationId`, `B-097`); before, the wire carried no
+        pointer from a retired generation to its successor and the history
+        does not list one, so the screen could say a newer one existed and not
+        say where. What it still says is that this one downloads, which is the
+        promise that matters — a CV already sent to an employer does not stop
+        existing because a newer one was made.
       */}
       {data.status === 'superseded' ? (
-        <p data-testid="superseded-note" className="text-muted-foreground text-sm">
-          {t('supersededNote')}
-        </p>
+        <div className="flex flex-col gap-2">
+          <p data-testid="superseded-note" className="text-muted-foreground text-sm">
+            {t('supersededNote')}
+          </p>
+          {data.supersededByGenerationId && (
+            <Link
+              data-testid="superseded-link"
+              href={`/generations/${data.supersededByGenerationId}`}
+              className="w-fit text-sm underline underline-offset-4"
+            >
+              {t('supersededLink')}
+            </Link>
+          )}
+        </div>
       ) : (
-        <EditRequest generationId={generationId} />
+        <>
+          <EditRequest generationId={generationId} />
+          {/*
+            The hand toggle, under the sentence box rather than beside it:
+            they do the same thing — an edit to the selection state — and the
+            difference the reader has to weigh is what each costs. Closed
+            until asked for, because the list is a second request and most
+            readers never open it.
+          */}
+          <SelectionEditor generationId={generationId} />
+        </>
       )}
 
       {/*

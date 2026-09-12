@@ -45,6 +45,35 @@ Aşama ≤3 denetimi, `B-088`…`B-096`, ve backend beklemeyen beş iş (SEO,
 a11y taraması, tema, `canAddAlternatives`, bağımlılıklar). Burada yalnız
 **hâlâ geçerli olanlar** var.
 
+### `B-097`-`B-099` — backend'in üç cevabı, geldikleri gün (2026-09-12)
+
+İkisi kasıtlı boşluktu ve ikisi de listeden **indi**: elle aç/kapa arayüzü ve
+emekliden halefe bağlantı. Üçüncüsü şema hijyeni.
+
+**`gen:api` iki kez koşuldu, ve birincisi bayat bir sunucuya karşıydı.**
+8080'de duran süreç işin ortasından bir derlemeydi: `/selection`'ın `GET`'i
+yoktu, `operationId`'ler hâlâ numaralıydı, ve `GenerationResponse` ile
+`FitReport` şemadan **tamamen düşmüştü** — `GET /generations/{id}`'in 200'ü
+`content: {}`. Commit edilseydi sonuç ekranının iki tipini silerdi. Ders,
+`docs/notes` ölçeğinde kalıcı: **`gen:api`'nin çıktısı, derlemenin taze
+olduğunu kanıtlamaz.** Üretimden sonra `git diff`'e bakılır ve *silinen* bir
+şema, eklenen bir alandan daha çok şey söyler.
+
+**Bağlama artık isimle.** 26 operasyon adı değişti; `ReturnsAt`/`AcceptsAt`
+silindi, çünkü tek varlık sebepleri numaralı id'lerdi ve § 35.8.1 artık her
+uçta açık bir ad zorunlu kılıyor — muhafız isim değil, backend CI'ında
+`_<sayı>` gören test. Gerekçesi bayatlamış bir yardımcıyı bırakmak, onu
+silmekten pahalı.
+
+**İki düğme aynı adı taşıyordu** ve bunu test buldu: toggle'ın kaydet
+düğmesiyle cümle kutusununki ikisi de "Make the change" idi. Aynı ekranda
+aynı erişilebilir adı taşıyan iki düğme bir kusurdur — metin ayrıldı ("Apply
+these lines"), kopyalama değil.
+
+**Sonuç rotası 219.3 → 224.4 KB** (elle ölçüldü, `next start`, aynı gzip
+yöntemi). Panel kapalı başlıyor, yani listeyi açmayan kimse ikinci isteği
+ödemiyor.
+
 ## Kasıtlı boşluklar — sorulmadan "düzeltilmez"
 
 | Boşluk | Neden böyle |
@@ -56,8 +85,6 @@ a11y taraması, tema, `canAddAlternatives`, bağımlılıklar). Burada yalnız
 | **Sözcükleme tek başına silinemiyor** | Sunucuda iki ayrı kural var (B-036); silinmek istenen şey madde. Uç fonksiyonu ve iki reddi de üreten mock duruyor. |
 | **Profil başında dil eksenleri düzenlenemiyor** | `sourceLanguage`/`enabledLanguages` **içerik dili** ekseni (Bölüm 38.1), arayüz dili değil. Form ikisini de olduğu gibi geçiriyor ve ikisi de gövdede zorunlu (B-035). ⚠ **Gerekçesi bayatladı ve düzeltildi (2026-09-08):** satır "hangi diller sunulabilir `capabilities`'e bağlı ve o yayımlanmadı" diyordu — `allowedLanguages` yayımlanıyor ve okunuyor, gerçek uca karşı `["en","tr"]`. Bekleyen bağımlılık yok; kalan şey **çizilmemiş bir kontrol**, yani karar. Denetimde 8 satırın 7'si doğru çıktı, bu biri değil. |
 | **Bölüm düzeni seçtiren arayüz yok** | `sections.layout` beş değer alıyor (`B-073` ile `paragraph` da) ama hiçbir ekran onu göstermiyor ya da seçtirmiyor; sunucu her bölüm türü için doğrusunu zaten yazıyor. Çizilecekse beşinin de ICU adı ve About için `paragraph` varsayılanı gerekir — yarım hâli kullanıcıya anlamını bilmediği bir seçim verir. |
-| **Elle aç/kapa arayüzü yok** | Hangi atomların tartıldığını yayımlayan uç yok (`F-031`). Profil atomlarından çizilse, tartılmamış atom `400` döndüğü için basılamayacak düğmeler olurdu. İstemci fonksiyonu hazır. |
-| **Emekli üretimden halefe bağlantı yok** | Telde işaret yok, geçmiş de emekli satırı listelemiyor. Not yazılıyor, bağlantı yazılmıyor — aynı `F-031`. |
 | **"Yeniden hesaplanıyor…" göstergesi yok** | § 33.3 istiyor, durumu yayımlayan uç yok, ve `B-091` ekranda bir şey gerekmediğini söylüyor. Beklenmeyen bir iş için bekleme hissi üretmek olurdu. |
 | **`format=source` düğmesi yok** | Uç bugün `400` dönüyor (`B-094`). Çizilse hata paneline basardı; mock reddi üretiyor ki bir gün çağıran olursa orada görülsün. |
 | **Başvurularda duruma göre süzme yok** | `B-093`: sayfalama gerektiğinde birlikte geliyor. Filtresi olmayan bir liste, filtresi olan bir ucın taklidinden iyidir. |
@@ -114,6 +141,19 @@ taşıyor; burada yalnız **nerede olduğu** var. Aşama 1'in profil değişmezl
   içerme kontrolünü uyguluyor, `roleTitle` kasten kuralın dışında.
 - **Mock'ta "hesap mı" sorusu `isAccount()`'a sorulur.** Modül bayrağı
   tarayıcıda yanlış cevap verir.
+- **Seçim listesi bir enstantanedir, profilin görünümü değil.** `text` o CV'nin
+  bastığı metindir; bugünkü profilden çizilen bir liste sayfada olmayan bir
+  cümleyi kaldırmayı teklif eder. Mock da üretim anında donduruyor, ve
+  düzenleme listeyi yeniden tartmıyor — toggle'ları taşıyor.
+- **Yalnız yeri değişen satır gönderilir.** İki kez basılmış bir switch
+  sunucunun koyduğu yerdedir; onu göndermek "bunu kendisiyle değiştir" demek
+  olur, ki uç `202` cevaplayıp aynı belgeyi geri verir — § 24.4'ün üretmeyi
+  reddettiği tek sonuç. Ekran bu yüzden **taşınanları** tutuyor, listenin bir
+  kopyasını değil.
+- **Terminal yük tek yerde üretilir** (`completedOutcome`). § 35.3 artık işin
+  `result`'ına yazılan her anahtarın `JobStatusResponse`'ta bir alan olduğunu
+  söylüyor, yani akış ile poll aynı nesneyi yaymalı; iki ayrı gövde yazmak
+  `F-032`'nin kusurunu geri getirmenin yoludur.
 
 ---
 
@@ -137,4 +177,4 @@ taşıyor; burada yalnız **nerede olduğu** var. Aşama 1'in profil değişmezl
   `/[locale]/generate` **222.9 / 54.5**, `/[locale]/onboarding` **219.8 /
   51.5**, `/[locale]/applications` **215.6 / 47.2** (yeni),
   `/[locale]/history` **214.3 / 46.0** (tavan `bundle-budget.json`: 280 /
-  105). Elle ölçülenler: sonuç 219.3, unsubscribe 213.6.
+  105). Elle ölçülenler: sonuç **224.4** (elle toggle ile, 2026-09-12), unsubscribe 213.6.
