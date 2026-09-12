@@ -3,7 +3,7 @@
 > İki repo da okur ve kendi satırlarını günceller. **Kural: 60 satırı geçmez.**
 > Ayrıntı repo-yerel `notes/current.md`'de.
 
-**2026-09-11** · **sıra backend'de** — `B-088`…`B-094`, `B-096` ACK; `F-031`…`F-033` açık
+**2026-09-12** · **sıra backend'de** — `F-031`…`F-033` açık; frontend'de backend bekleyen iş yok
 
 ## Backend — `atomcv-backend`
 
@@ -33,14 +33,17 @@
 | Aşama 0-2 — iskelet, profil editörü, üretim akışı + SSE | ✅ |
 | Aşama 3 — **bütün dilimler** | ✅ |
 | Aşama 4 — `B-071`-`B-074`, `B-085`-`B-087`, `B-088`-`B-094`, `B-096` | ✅ |
+| Aşama 4 — SEO, a11y denetimi, tema, `canAddAlternatives`, bağımlılıklar | ✅ |
 
-**Aşama 4'ün sekizi karşılandı (2026-09-11).** Faz G'nin **cümle kutusu** (`B-089`) sonuç ekranında ve düzenleme yeni bir üretime taşıyor; emekli üretim okunur ve indirilir kalıyor, geçmiş ve `total` onu saymıyor. **Üç şablon + Katman B** ayarlarda, dokunulmamış her alan "şablonun kendi ayarı" diyor. **`/applications`** rotası nav'da, dört uç ve `If-Match`. **DOCX** düğmesi ve § 22.6'nın cümlesi. **`/unsubscribe`** sayfası — basılmadan kapatmıyor — ve ayarlarda e-posta anahtarı.
+**Aşama 4'ün sekizi karşılandı (2026-09-11).** Faz G'nin cümle kutusu, üç şablon + Katman B, `/applications`, DOCX, `/unsubscribe` — satır satır `handoff/resolved/to-frontend-2026-09.md`'de. **Tek eksik bilerek:** `B-088`'in elle aç/kapa arayüzü çizilmedi, çünkü hangi atomların tartıldığını söyleyen uç yok (`F-031`); istemci fonksiyonu ve `GENERATION_SUPERSEDED` indi. **`gen:api` bir sessiz kusur açığa çıkardı:** springdoc `DELETE /account`'u `delete_2`'ye kaydırdı ve `delete_1` başvuru silmeye geçti; ikisi de 204 döndüğü için typecheck sustu — numaralı id'li her uç artık **yoluyla** bağlanıyor (`F-033`).
 
-**Eksik kalan bir şey var ve bilerek:** `B-088`'in **elle aç/kapa arayüzü** çizilmedi. Hangi atomların tartıldığını söyleyen uç yok, ve profilden çizmek basılamayacak düğmeler demek olurdu — `F-031`. İstemci fonksiyonu, hook'u ve `GENERATION_SUPERSEDED` indi.
+**Backend beklemeyen beş iş de indi (2026-09-12).** **SEO** (`robots.txt`, `sitemap.xml`, canonical + hreflang, `noindex`) — alan adı yok, `NEXT_PUBLIC_SITE_URL` dağıtımda ayarlanacak. **axe taraması** on bir ekranda, açık ve koyu; ilk koşuşta iki gerçek kontrast hatası buldu. **Tema** üç durumlu, flash yok, landing hâlâ 0.0 KB kendi JS'i. **`canAddAlternatives`** üç aşama sonra bir kontrole kavuştu.
 
-**`gen:api` bir sessiz kusur açığa çıkardı:** springdoc `DELETE /account`'u `delete_1`'den `delete_2`'ye kaydırdı ve `delete_1` **başvuru silmeye** geçti; ikisi de 204 döndüğü için typecheck sustu. `operations.ts` artık numaralı id'li her ucu **yoluyla** bağlıyor. `F-033` kaynağını istiyor.
+**⚠ axe paleti görmüyor.** Token'lar `oklch`, Tailwind'in alfası `oklab(… / α)`'ya derleniyor, ve axe böyle bir arka planlı düğümü **ne ihlal ne `incomplete`** sayar — düşürür. Koyu temada 3.16'da duran bir düğme taramayı sessizce geçti. `palette.test.ts` artık çiftleri hesapla ölçüyor, hover dahil. Backend'in kendi a11y/kontrast denetimi varsa aynı tuzağa bakmaya değer.
 
-**Test:** 751 birim · 56 e2e · **bundle** profil 253.2 / ayarlar 240.0 / üretim 222.9 / onboarding 219.8 / başvurular 215.6 / geçmiş 214.3 KB.
+**Güvenlik:** `next` 16.3.0 iki **kritik** RCE uyarısının aralığındaydı (Windows sunucu; AVIF/görüntü optimizasyonu). 16.3.5'e çıkıldı, kalan yedisi geliştirme zinciriydi, **sıfır açık**. CI action'ları `@v5` — yalnız push'ta doğrulanabilir.
+
+**Test:** 805 birim · 75 e2e · **bundle** profil 254.7 / ayarlar 241.0 / üretim 223.3 / onboarding 220.8 / başvurular 216.0 / geçmiş 214.8 / landing 168.8 KB.
 
 ## Açık kararlar
 
@@ -52,6 +55,6 @@ _Kapandı 09-09: model `openai/gpt-5.6-sol`; `emphasis` kalın, bedeli sıfır; 
 
 ## Sonraki senkronizasyon noktası
 
-**Sıra backend'de.** Üç madde açık: `F-031` (seçim durumu + halef id'si — `B-088`'in arayüzünü bekleten tek şey), `F-032` (`supersededGenerationId` `JobStatusResponse`'ta yok), `F-033` (numaralı `operationId`'ler ve `isEmpty()`'nin alan olarak sızması).
+**Sıra backend'de, ve frontend'de backend bekleyen başka iş yok.** Üç madde açık: `F-031` (seçim durumu + halef id'si — `B-088`'in arayüzünü bekleten tek şey), `F-032` (`supersededGenerationId` `JobStatusResponse`'ta yok), `F-033` (numaralı `operationId`'ler ve `isEmpty()` sızıntısı).
 
-**Frontend'de Aşama 4'ten kalanlar:** analitik (Umami) ve SEO — ikisi de backend beklemiyor, sıra geliştiricinin kararında.
+**Frontend'de kalanlar karar, kod değil:** analitik (ölçümü alacak bir dağıtım istiyor), bölüm düzeni ve dil ekseni kontrolleri, diğer diller, `docs/spec/`'in İngilizceye çevrilmesi.

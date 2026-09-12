@@ -210,6 +210,72 @@ kararlar**.
   bütçe (`npm run size`, hepsi tavanın altında) · üretim chunk'larında
   `setupWorker` yok.
 
+### Backend beklemeyen beş iş (2026-09-12)
+
+`B-088`…`B-096` kapandıktan sonra kalan, **hiçbir `F-nnn`'e bağlı olmayan**
+işler. Önce ölçüldü: notların listesi iki yerde bayatlamıştı —
+*performans bütçeleri CI'da* zaten vardı (`ci.yml` `size:check`
+çalıştırıyor), ve `addVariant`'ın yalnız çağıranı değil **hook'u da**
+yoktu.
+
+- **SEO hiç yoktu, ve tamamı bizimdi.** `robots.ts`, `sitemap.ts`,
+  canonical + hreflang (`x-default` dahil), başlık şablonu, açık grafik.
+  `robots.txt` **bir izin üzerine kurulu ret listesi**: pazarlama yüzü üç
+  sayfa, gerisi birinin kendi ekranı — tarama yapan bir bot orada boş bir
+  kabuk, kendisi için açılmış bir anonim oturum ve birinin hız limitinde bir
+  satır buluyor. Dil × segment çarpımı **üretiliyor**: `/en/profile`'ı elle
+  yazmak, sonradan eklenen bir dilin taranabilir kalmasının yolu.
+  `noindex` ayrıca `(app)` ve `(auth)` layout'larında, çünkü `robots.txt`
+  **çekmemeyi** rica ediyor — birinin link verdiği bir URL yine de listelenir.
+- **Alan adı yok, ve bu bir karar değil bir boşluk.** `NEXT_PUBLIC_SITE_URL`
+  yoksa localhost'a düşüyor; uydurma bir alan adı yazmak, kimsenin
+  kaydetmediği bir hostu **başkasının sitesini** gösteren bir sitemap'e
+  çevirirdi. Dağıtım ayarlayacak.
+- **axe taraması ilk koşuşta iki gerçek hata buldu**, ikisi de eşiğin hemen
+  altında ve ikisi de shadcn varsayılanı: `muted-foreground` `muted` üzerinde
+  4.34, destructive düğme kendi /10'u üzerinde 4.39 — **hover'da 4.01**, ki
+  oraya hiçbir otomatik denetim bakmıyor. Beyaz üzerinde ikisi de geçtiği
+  için üç aşama fark edilmediler: jsdom'un hesaplanmış rengi yok, yani
+  bileşen paketi onları **göremezdi**.
+- **⚠ axe'in yapısal bir kör noktası var, ve palet tam oraya düşüyor.**
+  Tüm token'lar `oklch` ve Tailwind'in alfa değiştiricileri
+  `oklab(… / α)`'ya derleniyor; çalışan sunucuya karşı ölçüldü: axe böyle
+  bir arka planı olan düğümü **ne ihlal ne `incomplete`** sayar — düşürür.
+  Karanlık temada 3.16'da duran bir düğme taramayı sessizce geçti; negatif
+  kontrol **iki kez** geçtiği için fark edildi. `tests/unit/lib/palette.test.ts`
+  bu boşluğu kapatıyor: stylesheet'ten token'ları okuyup ürünün gerçekten
+  boyadığı her çifti ölçüyor, hover dahil, ve dönüşümü **axe'in kendi
+  ürettiği** 4.34'e karşı doğruluyor. Mutlak kural 12 bundan çıktı.
+- **Negatif kontrolün kendisi bir kez yalan söyledi:** `next dev` düzenlemeyi
+  henüz derlememişken koştuğu için "geçti" dedi. Kontrolü tekrarlamadan
+  önce sayfayı bir kez çekmek gerekiyor.
+- **`canAddAlternatives` üç aşama boştaydı.** Artık `AddWording` var, ve
+  önemli olan yeri: **ifade, varyant yaratılmadan önce yazılıyor.** Yenisini
+  mevcut bir ifadenin metniyle tohumlamak hızlı olurdu ve bayat-ifade
+  altsisteminin tam da var olma sebebi olan hatayı üretirdi: İngilizce metin
+  taşıyan bir Türkçe varyant, Türkçe bir CV'de İngilizce cümle basar ve
+  **hiçbir şey bunu söylemez** — sunucu bir ifadeyi atom altından değişince
+  bayat işaretliyor, hiç yazılmamış olunca değil.
+- **Tema üç durumlu ve flash yok.** Sınıfı ilk boyamadan önce **engelleyen
+  bir inline script** yazıyor; React'i bekleyen her çözüm önce açığı basıp
+  sonra düzeltir, ki bu karanlık bir odada beyaz bir flash. Script mantığın
+  **ikinci kopyası**, o yüzden birim testi ikisini aynı vakalara karşı
+  koşuyor — drift, birinin odasında titremek yerine burada düşüyor.
+  Toggle yalnız uygulama nav'ında: landing ve legal kendi JS'ini
+  taşımadığı kararla duruyor (bütçe teyit etti: **0.0 KB own**) ve head
+  script'i her yerde çalıştığı için sistemi yine de izliyorlar.
+- **Next 16.3.0 iki **kritik** RCE uyarısının aralığındaydı** (Windows
+  sunucular; AVIF ile görüntü optimizasyonu). 16.3.5'e çıkıldı, kesin pin
+  korundu; kalan yedi uyarı geliştirme zinciriydi ve `npm audit fix` kapattı.
+  **Sıfır açık.** Bağımlılık yükseltmesinin gerektirdiği gibi doğrulandı:
+  typecheck · 805 birim · 75 e2e · build · bütçe · MSW sızıntı grep'i.
+- **CI action'ları `@v5`, ve bu buradaki tek doğrulanamayan değişiklik** —
+  o işler yalnız push'ta koşuyor. Bir koşu kodda değil action'da düşerse
+  geri dönüş `@v4`.
+- **Kapanış kapıları:** typecheck · 805 birim · 75 e2e · lint · prettier ·
+  bütçe (landing 168.8 / **0.0**, profil 254.7 / 85.9 — tavan 280 / 105) ·
+  üretim chunk'larında `setupWorker` yok · `npm audit` sıfır.
+
 ### Aşama ≤3 denetimi (2026-09-08)
 
 "Bir eksik kaldı mı" sorusuna karşı, backend ayaktayken. Bulunan tek şey bir
@@ -245,7 +311,6 @@ kararlar**.
 | **Sözcükleme tek başına silinemiyor** | Sunucuda iki ayrı kural var (B-036); silinmek istenen şey madde. Uç fonksiyonu ve iki reddi de üreten mock duruyor. |
 | **Profil başında dil eksenleri düzenlenemiyor** | `sourceLanguage`/`enabledLanguages` **içerik dili** ekseni (Bölüm 38.1), arayüz dili değil. Form ikisini de olduğu gibi geçiriyor ve ikisi de gövdede zorunlu (B-035). ⚠ **Gerekçesi bayatladı ve düzeltildi (2026-09-08):** satır "hangi diller sunulabilir `capabilities`'e bağlı ve o yayımlanmadı" diyordu — `allowedLanguages` yayımlanıyor ve okunuyor, gerçek uca karşı `["en","tr"]`. Bekleyen bağımlılık yok; kalan şey **çizilmemiş bir kontrol**, yani karar. Denetimde 8 satırın 7'si doğru çıktı, bu biri değil. |
 | **Bölüm düzeni seçtiren arayüz yok** | `sections.layout` beş değer alıyor (`B-073` ile `paragraph` da) ama hiçbir ekran onu göstermiyor ya da seçtirmiyor; sunucu her bölüm türü için doğrusunu zaten yazıyor. Çizilecekse beşinin de ICU adı ve About için `paragraph` varsayılanı gerekir — yarım hâli kullanıcıya anlamını bilmediği bir seçim verir. |
-| **Dark mode bağlı değil** | CLAUDE.md · *Deferred by Decision*. Yarım uygulamak kullanıcıya değiştiremeyeceği bir tema verir. |
 | **Elle aç/kapa arayüzü yok** | Hangi atomların tartıldığını yayımlayan uç yok (`F-031`). Profil atomlarından çizilse, tartılmamış atom `400` döndüğü için basılamayacak düğmeler olurdu. İstemci fonksiyonu hazır. |
 | **Emekli üretimden halefe bağlantı yok** | Telde işaret yok, geçmiş de emekli satırı listelemiyor. Not yazılıyor, bağlantı yazılmıyor — aynı `F-031`. |
 | **"Yeniden hesaplanıyor…" göstergesi yok** | § 33.3 istiyor, durumu yayımlayan uç yok, ve `B-091` ekranda bir şey gerekmediğini söylüyor. Beklenmeyen bir iş için bekleme hissi üretmek olurdu. |
