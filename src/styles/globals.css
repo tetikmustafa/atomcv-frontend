@@ -62,10 +62,32 @@
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  /*
+    Darkened from shadcn's 0.556, and the reason is measurable rather than
+    aesthetic: at 0.556 this is #737373, which on `--muted` (#f5f5f5) is
+    **4.34:1** and fails WCAG AA for normal text by a hair. It passes on
+    white, which is why it went unnoticed for three stages — every secondary
+    sentence on a tinted panel was the failing case, and jsdom has no computed
+    colour, so the component suite could not see it. Found by the axe sweep in
+    `tests/e2e/a11y.spec.ts` the first time it ran.
+
+    0.535 is #6d6d6d: 4.74 on `--muted`, 5.17 on white. Do not restore the
+    default.
+  */
+  --muted-foreground: oklch(0.535 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
+  /*
+    Same measurement, same conclusion. shadcn's 0.577 is #e7000b, and the
+    destructive button paints this colour on a tenth of itself
+    (`bg-destructive/10 text-destructive`) — 4.39:1, and **4.01 on hover**,
+    where the background goes to /20 and no automated check looks.
+
+    0.510 is #ce0000: 5.31 on /10, 4.83 on the hover state, 5.55 on the error
+    panel's /5, 5.79 on white. Every state it is actually painted in clears
+    AA, including the one a sweep cannot reach.
+  */
+  --destructive: oklch(0.51 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
