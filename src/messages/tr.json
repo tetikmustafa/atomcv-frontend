@@ -210,6 +210,45 @@
     },
     "openSourceNote": "MIT lisanslı, ücretsiz ve açık kaynak. Tek kişi tarafından yürütülüyor ve hizmet garantisi yok — kapatılması halinde en az 30 gün önceden bildirilir."
   },
+  "HowItWorks": {
+    "title": "AtomCV nasıl çalışıyor",
+    "intro": "Mesleki geçmişin bir belge değil, yapılandırılmış bir veri kümesi. CV ise onun kısıtlar altında üretilmiş tek bir görünümü — ikisi ayrıldığında aynı profil, kimse elle dosya düzenlemeden başka bir ilana cevap verebiliyor.",
+    "stepsHeading": "Dört adım",
+    "steps": {
+      "profile": {
+        "title": "Profili bir kez kuruyorsun",
+        "body": "Geçmişinin her satırı kendi maddesi olarak saklanıyor: neyle ilgili olduğu ve senin için ne kadar önemli olduğuyla. Elindeki CV’yi yükleyerek başlayabilir ya da buraya yazabilirsin. Henüz ortada bir belge yok."
+      },
+      "posting": {
+        "title": "İlanı yapıştırıyorsun",
+        "body": "İlan, işin gerçekten ne istediği için okunuyor — adlandırdığı yetkinlikler, anlattığı sorumluluklar. Profilinde hiçbir şey değişmiyor ve okuma senin hakkında değil, ilan hakkında."
+      },
+      "selection": {
+        "title": "Maddelerin sıralanıyor, sonra sayfaya sığacak şekilde seçiliyor",
+        "body": "Her madde ilana karşı puanlanıyor ve sayfaya sığanlar tahminle değil ölçümle seçiliyor. Sayfaya giremeyenler yerinde duruyor, hem de giremedikleri sebebiyle birlikte — istediğini elle geri koyabilirsin."
+      },
+      "document": {
+        "title": "Sonuçtan bir belge diziliyor",
+        "body": "Seçilen maddeler bir şablona yerleştirilip derleniyor. PDF, Word dosyası, HTML kopya ya da LaTeX kaynağı alıyorsun — istediysen bir de ön yazı."
+      }
+    },
+    "questionsHeading": "En çok sorulan üç şey",
+    "questions": {
+      "pageLimit": {
+        "title": "Sayfa sınırı nasıl garanti edilebiliyor?",
+        "body": "Çünkü tahmin edilmiyor, ölçülüyor. Her madde bir kez dizilip yüksekliği kaydedildiği için, sayfaya neyin sığdığı hiçbir şey derlenmeden önce aritmetik. Zayıf bir profilin bir sayfadan kısa CV üretebilmesinin sebebi de bu: doldurmak, yapmadığın bir işi uydurmak olurdu."
+      },
+      "invention": {
+        "title": "CV’mi bir dil modeli mi yazıyor?",
+        "body": "Hayır. Model ilanı okuyor ve bir satırın birden fazla sürümünü yazdıysan senin yazdığın sürümler arasından seçiyor. Kendi cümlesini hiç yazmıyor, ve ardından gelen denetimler senin öne sürmediğin bir sayıyı ya da iddiayı ekleyen her şeyi reddediyor."
+      },
+      "ats": {
+        "title": "Başvuru takip sistemleri okuyabilecek mi?",
+        "body": "Şablonlar tek kolon ve görsel değil gerçek metin — o sistemlerin temiz çıkardığı biçim bu. Etiketlediğin yetkinlikler eşleştirmenin okuduğu şey, yani bir sistemin bulduğu şey senin orada olduğunu söylediğin şey oluyor."
+      }
+    },
+    "cta": "Profil kurmaya başla"
+  },
   "Editor": {
     "save": {
       "saving": "Kaydediliyor…",
@@ -510,25 +549,25 @@
     "editSubmit": "Değişikliği yap",
     "editSending": "Üzerinde çalışılıyor…",
     "supersededNote": "Bu CV’nin daha yeni bir sürümü üretildi, o yüzden değiştirilecek olan artık bu değil. Bu sürüm olduğu gibi duruyor ve indirilebiliyor — bir işverene gönderilmiş bir CV için gereken de bu.",
-    "supersededLink": "Yenisini a\u00e7",
-    "selectionTitle": "Sat\u0131rlar\u0131 elle se\u00e7",
-    "selectionIntro": "Bu \u00f6zge\u00e7mi\u015fin tart\u0131ld\u0131\u011f\u0131 b\u00fct\u00fcn sat\u0131rlar. A\u00e7\u0131k olanlar sayfada; kalanlar\u0131 sayfa uzunlu\u011fu geri tuttu.",
-    "selectionSnapshot": "Buradaki metin bu \u00f6zge\u00e7mi\u015fin bast\u0131\u011f\u0131 metindir. Sonras\u0131nda profilini d\u00fczenlemen, \u00e7oktan \u00fcretilmi\u015f bir \u00f6zge\u00e7mi\u015fte yazan\u0131 de\u011fi\u015ftirmez.",
-    "selectionOpen": "Sat\u0131rlar\u0131 elle se\u00e7",
-    "selectionClose": "Sat\u0131rlar\u0131 oldu\u011fu gibi b\u0131rak",
-    "selectionLoading": "Sat\u0131rlar getiriliyor\u2026",
-    "selectionEmpty": "Bu \u00f6zge\u00e7mi\u015fte se\u00e7ilecek sat\u0131r yok.",
+    "supersededLink": "Yenisini aç",
+    "selectionTitle": "Satırları elle seç",
+    "selectionIntro": "Bu özgeçmişin tartıldığı bütün satırlar. Açık olanlar sayfada; kalanları sayfa uzunluğu geri tuttu.",
+    "selectionSnapshot": "Buradaki metin bu özgeçmişin bastığı metindir. Sonrasında profilini düzenlemen, çoktan üretilmiş bir özgeçmişte yazanı değiştirmez.",
+    "selectionOpen": "Satırları elle seç",
+    "selectionClose": "Satırları olduğu gibi bırak",
+    "selectionLoading": "Satırlar getiriliyor…",
+    "selectionEmpty": "Bu özgeçmişte seçilecek satır yok.",
     "selectionOnPage": "Sayfada",
     "selectionHeldBack": "Geri tutuldu",
     "selectionHeldBackReason": "{reason, select,\n  BUDGET {Sayfada bundan önce yer bitti. Açarsan altındaki bir maddeyi düşürerek yer açılır — ya da daha yüksek bir sayfa sınırıyla yeniden üret.}\n  INACTIVE {Bu madde profilinde kapalı, yani hiç tartılmadı.}\n  EXCLUDED_BY_DIRECTIVE {Bunu bu CV'den sen çıkardın. Açarsan geri gelir — profiline hiç dokunulmadı.}\n  ENTRY_BELOW_MINIMUM {Ait olduğu kaydın basılmaya değecek kadar satırı kalmadı, o yüzden kayıt bütün olarak düştü.}\n  other {Sayfaya giremedi.}\n}",
     "selectionHeldBackProfile": "Profil düzenleyiciyi aç",
     "selectionMatched": "Bu satırın taşıdığı ilan terimleri",
-    "selectionCost": "Bunun bir bedeli yok \u2014 yeni bir metin yaz\u0131lm\u0131yor, ayn\u0131 sat\u0131rlar yeniden diziliyor. \u015eu anki \u00f6zge\u00e7mi\u015fin duruyor ve inmeye devam ediyor; de\u011fi\u015fiklik yenisini \u00fcretiyor.",
-    "selectionChanged": "{count, plural, =0 {Hen\u00fcz bir \u015fey de\u011fi\u015fmedi.} =1 {Bir sat\u0131r de\u011fi\u015fti.} other {# sat\u0131r de\u011fi\u015fti.}}",
+    "selectionCost": "Bunun bir bedeli yok — yeni bir metin yazılmıyor, aynı satırlar yeniden diziliyor. Şu anki özgeçmişin duruyor ve inmeye devam ediyor; değişiklik yenisini üretiyor.",
+    "selectionChanged": "{count, plural, =0 {Henüz bir şey değişmedi.} =1 {Bir satır değişti.} other {# satır değişti.}}",
     "selectionOn": "{line} sayfada olacak.",
-    "selectionOff": "{line} sayfa d\u0131\u015f\u0131nda kalacak.",
-    "selectionSubmit": "Bu sat\u0131rlar\u0131 uygula",
-    "selectionSending": "Uygulan\u0131yor\u2026",
+    "selectionOff": "{line} sayfa dışında kalacak.",
+    "selectionSubmit": "Bu satırları uygula",
+    "selectionSending": "Uygulanıyor…",
     "downloading": "Dosya hazırlanıyor…",
     "again": "Bir tane daha oluştur",
     "announceDownloaded": "İndirme başladı",
@@ -600,6 +639,7 @@
     "none": "Bugünlük hakkın kalmadı"
   },
   "Footer": {
+    "howItWorks": "Nasıl çalışıyor",
     "privacy": "Gizlilik",
     "terms": "Kullanım Şartları",
     "sourceCode": "Kaynak kodu"

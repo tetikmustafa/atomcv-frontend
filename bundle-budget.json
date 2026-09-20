@@ -13,7 +13,10 @@
     "the editor is reached by a committed user after a deliberate action.",
     "",
     "  marketing - landing and legal. Server components, currently 0 KB of own",
-    "              code. ownKb is derived: totalKb minus sharedKb.",
+    "              code. ownKb is derived: totalKb minus sharedKb. /how-it-works",
+    "              joined them in D14: it is outside (app), ships 0.0 KB of its",
+    "              own, and is held to the marketing ceiling rather than left",
+    "              to the strict default this file gives an unmatched route.",
     "  app       - editor and generation routes. dnd-kit, React Hook Form and Zod",
     "              live here.",
     "",
@@ -24,7 +27,7 @@
   "sharedKb": 175,
   "classes": {
     "marketing": {
-      "match": ["^/[a-z]{2}$", "^/[a-z]{2}/legal(/|$)"],
+      "match": ["^/[a-z]{2}$", "^/[a-z]{2}/how-it-works$", "^/[a-z]{2}/legal(/|$)"],
       "totalKb": 200,
       "ownKb": 25
     },

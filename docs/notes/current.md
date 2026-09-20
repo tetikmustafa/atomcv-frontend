@@ -121,72 +121,60 @@ frontend'in kendi kararı:
 
 ### Kapanan dilimlerin kaydı → `archive/stage-4.md`
 
-D1…D12 oraya indi (2026-09-20), 400 satır sınırı yüzünden. Burada
+D1…D13 oraya indi (2026-09-20), 400 satır sınırı yüzünden. Burada
 yalnız **hâlâ geçerli olan** kalıyor; bir dilimde neyin neden öyle yapıldığını
 arıyorsan `rg -n "D1 kapandı" docs/notes/archive/`.
 
-### D13 kapandı — kasıtlı boşlukların dördü, biri gerekçesiyle kalıyor (2026-09-20)
+### D14 kapandı — açık kaynak yüzeyi, ve dağıtımın bekleyenleri (2026-09-20)
 
-**Bir boşluk "artık yapabiliriz" diye değil, "gerekçesi bayatladı" diye
-kapanıyor.** Dördünde de bayatlayan şey bir cümleydi.
+**`README` "Stage 0 — skeleton" diyordu.** Üç aşama geride kalmıştı, ve bu
+açık kaynak bir repoda **ilk okunan** dosya: durum satırı yanlışsa geri kalan
+her şey de şüpheli okunur. Bugünkü hâli yazıldı — spec'in tarif ettiği her
+ekran var ve gerçek uca bağlı — **ve dağıtılmadığı da yazıldı**, beş ölçümsüz
+şeyi adıyla sayarak.
 
-**Bölüm düzeni seçici.** Gerekçe "beşinin de ICU adı ve About için
-`paragraph` varsayılanı gerekir" idi ve hâlâ doğru — ama `two_column`
-telden kalktığı için artık **dört**, ve dördünün de adı yazıldı. Öneri türü
-izliyor (§ 33.4.1), **kişi bir seçim yapana kadar**: `paragraph` seçip sonra
-türü düzelten biri karar vermiştir, üstüne yazmak formun kendini daha iyi
-bilir sanması olurdu. Öneri bir **olay** anında kuruluyor, `kind`'ı izleyen
-bir effect'te değil — effect state'e tepki veren state olurdu ve lint de öyle
-diyor.
+**`CONTRIBUTING` ve `SECURITY` indi.** İkincisi bir şeyi açıkça söylüyor:
+**dağıtım yok**, yani bugün işe yarayan rapor vahşi doğada gözlenmiş bir şey
+değil, koştuğunda önemli *olacak* bir kusur. İkisi de kapsam dışını sayıyor,
+çünkü bir katkıcının en pahalı öğrenme şekli yazdıktan sonra öğrenmek.
 
-**Profil başındaki dil eksenleri.** Gerekçe "`allowedLanguages` yayımlanmıyor"
-idi; `B-081`'den beri yayımlanıyor. Geriye kalan çizilmemiş bir kontroldü —
-kasıtlı boşluğun fark edilmemiş boşluğa dönüşme şekli tam olarak bu.
-**Kaynak dil kapatılamıyor**: `enabledLanguages` onu içermek zorunda, yoksa
-sunucu gövdeyi reddediyor. Kutu **yok edilmiyor, devre dışı bırakılıp sebebi
-söyleniyor** — yük taşımaya başlayınca kaybolan bir kontrol hiçbir şey
-öğretmez.
+**`.env.example` denetlendi ve iki değişken silindi.** `NEXT_PUBLIC_APP_NAME`
+hiçbir yerde okunmuyordu; `NEXT_PUBLIC_SENTRY_DSN` "Aşama 3'te doldurulacak"
+diye yazılmış ve hiç bağlanmamıştı. **Kodun yok saydığı bir değişkeni listeleyen
+bir örnek dosya, onu atlayandan kötüdür**: biri ayarlar, hiçbir şey olmaz, ve
+özelliğin kapalı mı bozuk mu olduğunu ayırt edemez.
 
-**Tek sözcüklemenin silinmesi.** Gerekçe "silinmek istenen şey madde" idi:
-olağan durumda doğru, iki sözcüklemeli bir atomda hiç doğru değil. Uç ve iki
-reddi zaten yazılıydı, eksik olan düğmeydi. Sunucunun iki reddi ekranda **tek
-koşula** indi — `primary` değilse başka biri vardır — yani birincil olan da,
-tek olan da kontrolü hiç göstermiyor.
+**Blog yerine tek sayfa, ve bu bir kısayol değil karar.** Blog bir hattır;
+yazılacak içeriği olmayan bir hat hiçbir şey indeksletmez ve bakım maliyeti
+getirir. Arama motorunun kullanabileceği şey, insanın geldiği soruyu cevaplayan
+bir sayfa — sayfa sınırı nasıl **garanti** ediliyor, bir dil modelinin iş
+uydurmasını ne engelliyor — ve yazılacak tam olarak bir tane var.
+`/how-it-works` `(app)` dışında: sağlayıcı yok, kendi JS'i yok, ve
+`PUBLIC_PATHS`'e girdiği için sitemap ile hreflang haritasına da girdi.
 
-**Mark-farkında editör, ve bu dördünün en büyüğü.** Mutlak kural 4 bileşeni
-adıyla sayıyordu; uyarı bir köprüydü. **Hangi editörün çizileceğine içerik
-karar veriyor**: marksız bir cümle tek alan, marklı bir cümle parça listesi.
-İşaretsiz içeriği parça listesine sarmak tören olurdu; marklı içeriği düz
-alanda düzenlemek ise markı silmek — uyarının var olma sebebi.
+**Yazılmayan iki şey ve sebebi.** Analitik ve `deploy.yml`. Ölçümü alacak bir
+yer yokken huni ölçen kod yazmak, çalıştığını hiç görmeyeceğimiz bir şeyi
+bakım yüküne çevirmek olurdu — ve `SECURITY.md` bunu bir güvenlik olgusu
+olarak da söylüyor: üçüncü taraf script yok, Turnstile dışında.
 
-**Dönüşüm kaydetme yolundan editöre taşındı.** `useAutosave` bir string
-taşıyordu ve "tek marksız run"a çevirme **save**'de oluyordu: yani her yazma
-markları siliyordu, hangi editör üretmiş olursa olsun. Dönüşüm, markları
-temsil **edemeyen** editöre ait.
+### Dağıtım günü — sırayla denenecekler
 
-**Taslak geçersiz olabilir, run olamaz.** `link` bir `href` ister ve
-`createRun` ikisinde de fırlatıyor — içerik için doğru, kutunun
-işaretlendiği an için yanlış. Yarım hâl taslakta duruyor, satırda söyleniyor,
-ve `onChange` yalnız bütün içerikle çağrılıyor. Alternatif, saniyeler sonra
-sunucunun reddetmesi: P8'in önlemek için var olduğu şekil.
+Kod tarafında hiçbiri beklemiyor; hepsi **ölçüm** bekliyor.
 
-**Üç gerçek kusur yazarken çıktı.** (1) Seed **kimlikle** karşılaştırılıyordu;
-`runs` her render'da yeniden ayrıştırıldığı için alan bir karakter alıp
-kaydedilmiş cümleye geri dönüyordu — değere göre karşılaştırıldı, negatif
-kontrolü var. (2) Grup adı `<h3>` ile veriliyordu: marklı atom başına bir
-başlık, iki yüz tanesi bölümünkinin altında. Başlık değil `<span>`, çünkü
-`aria-labelledby` her elemanla çalışıyor. (3) `role="group"` sarmalayıcısı
-kayıt gruplarıyla çakışıyordu; ad **listeye** taşındı.
-
-**Bir ICU etiketi de çakıştı:** `marks.organization` "Organisation" idi ve
-kayıt formunun kendi alanıyla aynı; "Employer or school" oldu.
-
-**`pageCount < maxPages` notu kapanmadı ve sebebi ölçüldü.** Verdikt
-"kapanıyor" diyordu; `GenerationResponse` `maxPages` **yayımlamıyor**, ve
-profilin bugünkü tercihiyle karşılaştırmak o üretimin neyle yapıldığını değil
-bugün neyin ayarlı olduğunu söylerdi. `F-039` bunu istiyor.
-
-**Ölçüm:** 965 birim testi yeşil; `/profile` **257.2 → 258.6 KB** (tavan 280).
+1. **`NEXT_PUBLIC_SITE_URL`'i ayarla.** Canonical, hreflang, `robots.txt` ve
+   `sitemap.xml` hepsi ondan kuruluyor; ayarlanmazsa localhost'a düşüyor.
+2. **CSP'yi gözle** (`B-100`). Politika `default-src 'self'` idi ve
+   Turnstile'ın script'iyle iframe'ini sessizce blokluyordu — düzeltildi, ve
+   düzeldiğinin tek kanıtı widget'ın çizilmesi.
+3. **OAuth sıçraması** (`B-048`), **sihirli bağlantının Turnstile'ı**
+   (`B-050`), **`B-083`'ün challenge'ı.** Üçü de bugüne kadar yalnız mock'a
+   karşı doğrulandı. `B-100` üçünün önündeki kapıyı açtı, yani sıra bu.
+4. **Yayımlanan gizlilik sayfasını `ProcessorAudit`'in açılış satırına karşı
+   oku** (`B-076`'dan kalan tek şey).
+5. **Analitik kararı yeniden açılır.** Umami, huni ölçümü — artık ölçümü
+   alacak bir yer var.
+6. **`deploy.yml`.** CI action'ları `@v5` ve bu yalnız push'ta doğrulanabilir;
+   `@v4` revert.
 
 ### Aşama 3'ten devrolan açıklar
 

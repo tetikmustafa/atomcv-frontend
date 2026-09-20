@@ -10,6 +10,69 @@
 
 ---
 
+### D13 kapandı — kasıtlı boşlukların dördü, biri gerekçesiyle kalıyor (2026-09-20)
+
+**Bir boşluk "artık yapabiliriz" diye değil, "gerekçesi bayatladı" diye
+kapanıyor.** Dördünde de bayatlayan şey bir cümleydi.
+
+**Bölüm düzeni seçici.** Gerekçe "beşinin de ICU adı ve About için
+`paragraph` varsayılanı gerekir" idi ve hâlâ doğru — ama `two_column`
+telden kalktığı için artık **dört**, ve dördünün de adı yazıldı. Öneri türü
+izliyor (§ 33.4.1), **kişi bir seçim yapana kadar**: `paragraph` seçip sonra
+türü düzelten biri karar vermiştir, üstüne yazmak formun kendini daha iyi
+bilir sanması olurdu. Öneri bir **olay** anında kuruluyor, `kind`'ı izleyen
+bir effect'te değil — effect state'e tepki veren state olurdu ve lint de öyle
+diyor.
+
+**Profil başındaki dil eksenleri.** Gerekçe "`allowedLanguages` yayımlanmıyor"
+idi; `B-081`'den beri yayımlanıyor. Geriye kalan çizilmemiş bir kontroldü —
+kasıtlı boşluğun fark edilmemiş boşluğa dönüşme şekli tam olarak bu.
+**Kaynak dil kapatılamıyor**: `enabledLanguages` onu içermek zorunda, yoksa
+sunucu gövdeyi reddediyor. Kutu **yok edilmiyor, devre dışı bırakılıp sebebi
+söyleniyor** — yük taşımaya başlayınca kaybolan bir kontrol hiçbir şey
+öğretmez.
+
+**Tek sözcüklemenin silinmesi.** Gerekçe "silinmek istenen şey madde" idi:
+olağan durumda doğru, iki sözcüklemeli bir atomda hiç doğru değil. Uç ve iki
+reddi zaten yazılıydı, eksik olan düğmeydi. Sunucunun iki reddi ekranda **tek
+koşula** indi — `primary` değilse başka biri vardır — yani birincil olan da,
+tek olan da kontrolü hiç göstermiyor.
+
+**Mark-farkında editör, ve bu dördünün en büyüğü.** Mutlak kural 4 bileşeni
+adıyla sayıyordu; uyarı bir köprüydü. **Hangi editörün çizileceğine içerik
+karar veriyor**: marksız bir cümle tek alan, marklı bir cümle parça listesi.
+İşaretsiz içeriği parça listesine sarmak tören olurdu; marklı içeriği düz
+alanda düzenlemek ise markı silmek — uyarının var olma sebebi.
+
+**Dönüşüm kaydetme yolundan editöre taşındı.** `useAutosave` bir string
+taşıyordu ve "tek marksız run"a çevirme **save**'de oluyordu: yani her yazma
+markları siliyordu, hangi editör üretmiş olursa olsun. Dönüşüm, markları
+temsil **edemeyen** editöre ait.
+
+**Taslak geçersiz olabilir, run olamaz.** `link` bir `href` ister ve
+`createRun` ikisinde de fırlatıyor — içerik için doğru, kutunun
+işaretlendiği an için yanlış. Yarım hâl taslakta duruyor, satırda söyleniyor,
+ve `onChange` yalnız bütün içerikle çağrılıyor. Alternatif, saniyeler sonra
+sunucunun reddetmesi: P8'in önlemek için var olduğu şekil.
+
+**Üç gerçek kusur yazarken çıktı.** (1) Seed **kimlikle** karşılaştırılıyordu;
+`runs` her render'da yeniden ayrıştırıldığı için alan bir karakter alıp
+kaydedilmiş cümleye geri dönüyordu — değere göre karşılaştırıldı, negatif
+kontrolü var. (2) Grup adı `<h3>` ile veriliyordu: marklı atom başına bir
+başlık, iki yüz tanesi bölümünkinin altında. Başlık değil `<span>`, çünkü
+`aria-labelledby` her elemanla çalışıyor. (3) `role="group"` sarmalayıcısı
+kayıt gruplarıyla çakışıyordu; ad **listeye** taşındı.
+
+**Bir ICU etiketi de çakıştı:** `marks.organization` "Organisation" idi ve
+kayıt formunun kendi alanıyla aynı; "Employer or school" oldu.
+
+**`pageCount < maxPages` notu kapanmadı ve sebebi ölçüldü.** Verdikt
+"kapanıyor" diyordu; `GenerationResponse` `maxPages` **yayımlamıyor**, ve
+profilin bugünkü tercihiyle karşılaştırmak o üretimin neyle yapıldığını değil
+bugün neyin ayarlı olduğunu söylerdi. `F-039` bunu istiyor.
+
+**Ölçüm:** 965 birim testi yeşil; `/profile` **257.2 → 258.6 KB** (tavan 280).
+
 ### D12 kapandı — şablon kapasitesi ve adlandırılmış görünüm setleri (2026-09-20)
 
 `F-038`'in iki ucu telde duruyordu ve hiçbir şey okumuyordu.

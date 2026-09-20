@@ -22,6 +22,15 @@ export async function SiteFooter() {
   return (
     <footer className="border-border text-muted-foreground border-t px-8 py-6 text-sm">
       <nav className="mx-auto flex max-w-3xl flex-wrap gap-x-6 gap-y-2">
+        {/*
+          First in the row, because it is the only one here a reader might
+          want rather than need: the other two are obligations and a
+          repository. It is also the only route on this page that is not a
+          dead end for somebody deciding whether to try the product (D14).
+        */}
+        <a href={`/${locale}/how-it-works`} className={LINK_CLASS}>
+          {t('howItWorks')}
+        </a>
         <a href={`/${locale}/legal/privacy`} className={LINK_CLASS}>
           {t('privacy')}
         </a>

@@ -36,7 +36,7 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3
  * than what is out, and a route added later is private until someone says
  * otherwise.
  */
-export const PUBLIC_PATHS = ['', '/legal/privacy', '/legal/terms'] as const;
+export const PUBLIC_PATHS = ['', '/how-it-works', '/legal/privacy', '/legal/terms'] as const;
 
 /**
  * The first segment of every route that is somebody's own.

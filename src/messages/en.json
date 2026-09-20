@@ -210,6 +210,45 @@
     },
     "openSourceNote": "Free and open source under the MIT licence. Run by one person, with no service guarantee — if it is ever shut down, notice comes at least 30 days in advance."
   },
+  "HowItWorks": {
+    "title": "How AtomCV works",
+    "intro": "Your professional history is a structured dataset, not a document. A resume is one view of it, produced under constraints — and once the two are separated, the same profile can answer a different posting without anyone rewriting a file by hand.",
+    "stepsHeading": "The four steps",
+    "steps": {
+      "profile": {
+        "title": "You build a profile once",
+        "body": "Every line of your history is stored as its own item, with what it is about and how much it matters to you. Upload a CV to start from what you already have, or write it here. Nothing is a document yet."
+      },
+      "posting": {
+        "title": "You paste a posting",
+        "body": "The posting is read for what the work actually asks for — the skills it names, the responsibilities it describes. Nothing about your profile changes, and the reading is about the advert rather than about you."
+      },
+      "selection": {
+        "title": "Your items are ranked, then chosen to fit",
+        "body": "Each item is scored against the posting, and the ones that fit the page are chosen by measurement rather than by guesswork. What did not fit is still there, with the reason it did not — and you can put any of it back by hand."
+      },
+      "document": {
+        "title": "A document is typeset from the result",
+        "body": "The chosen items are set into a template and compiled. You get a PDF, a Word file, an HTML copy or the LaTeX source — and a covering letter if you asked for one."
+      }
+    },
+    "questionsHeading": "The three questions people ask",
+    "questions": {
+      "pageLimit": {
+        "title": "How can a page limit be guaranteed?",
+        "body": "Because it is measured rather than estimated. Every item has been typeset once and its height recorded, so what fits a page is arithmetic before anything is compiled. That is also why a thin profile can produce a resume shorter than a page: padding it would be inventing work you have not done."
+      },
+      "invention": {
+        "title": "Does a language model write my resume?",
+        "body": "No. A model reads the posting and, where you have written more than one version of a line, chooses between the versions you wrote. It never writes a sentence of its own, and the checks that follow refuse anything that added a number or a claim you did not make."
+      },
+      "ats": {
+        "title": "Will an applicant tracking system read it?",
+        "body": "The templates are single-column with real text rather than images, which is what those systems extract cleanly. The skills you label are the ones the matching reads, so what a system finds is what you said was there."
+      }
+    },
+    "cta": "Start building a profile"
+  },
   "Editor": {
     "save": {
       "saving": "Saving…",
@@ -516,19 +555,19 @@
     "selectionSnapshot": "The wording here is what this resume printed. Editing your profile afterwards does not change what is on a resume already made.",
     "selectionOpen": "Choose the lines by hand",
     "selectionClose": "Leave the lines as they are",
-    "selectionLoading": "Fetching the lines\u2026",
+    "selectionLoading": "Fetching the lines…",
     "selectionEmpty": "There are no lines to choose from on this resume.",
     "selectionOnPage": "On the page",
     "selectionHeldBack": "Held back",
     "selectionHeldBackReason": "{reason, select,\n  BUDGET {The page ran out of room before this one. Switching it on makes room by dropping something below it — or generate again with a higher page limit.}\n  INACTIVE {This item is switched off in your profile, so nothing was weighing it.}\n  EXCLUDED_BY_DIRECTIVE {You took this out of this resume. Switching it on puts it back — your profile was never changed.}\n  ENTRY_BELOW_MINIMUM {Its entry did not have enough lines left to be worth printing, so the whole entry came out.}\n  other {It did not reach the page.}\n}",
     "selectionHeldBackProfile": "Open the profile editor",
     "selectionMatched": "Terms from the posting this line carries",
-    "selectionCost": "This costs nothing \u2014 no writing is done, the same lines are set again. The resume you have now is kept and still downloads; the change makes a new one.",
+    "selectionCost": "This costs nothing — no writing is done, the same lines are set again. The resume you have now is kept and still downloads; the change makes a new one.",
     "selectionChanged": "{count, plural, =0 {Nothing changed yet.} =1 {One line changed.} other {# lines changed.}}",
     "selectionOn": "{line} will be on the page.",
     "selectionOff": "{line} will be left off.",
     "selectionSubmit": "Apply these lines",
-    "selectionSending": "Applying\u2026",
+    "selectionSending": "Applying…",
     "downloading": "Preparing the file…",
     "again": "Generate another",
     "announceDownloaded": "Download started",
@@ -600,6 +639,7 @@
     "none": "None left today"
   },
   "Footer": {
+    "howItWorks": "How it works",
     "privacy": "Privacy",
     "terms": "Terms",
     "sourceCode": "Source code"
