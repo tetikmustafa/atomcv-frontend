@@ -43,8 +43,9 @@ I will run it myself.
 - `git push`, `git merge`, `git rebase`, anything touching a remote or moving
   `main`
 - `gh pr create`, `gh pr merge`, `gh pr review`
-- `scripts/sync-spec.sh`, `scripts/sync-handoff.sh`, or any script under
-  `scripts/` whose job is repo-to-repo sync
+- `scripts/sync-handoff.sh`, or any script under `scripts/` whose job is
+  repo-to-repo sync. (**`sync-spec.sh` lives in `atomcv-backend`**; `INDEX.md`
+  names it as if it were here — backend-owned, so the fix is `F-042`.)
 - Anything under `docker-compose.prod.yml` or touching the deploy pipeline
 - Database migrations against anything other than the local dev database
 - Any command that deletes data (`git clean -fdx`, `docker volume rm`, etc.)

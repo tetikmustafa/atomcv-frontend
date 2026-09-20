@@ -26,16 +26,21 @@ the profile editor with its labels, importance and locks; CV import and its
 mandatory review; job-specific generation with a live progress stream;
 the result screen with its coverage report, its hand toggles and its natural
 language edits; downloads as PDF, Word, HTML or LaTeX source; history,
-application tracking, settings and account deletion. Anonymous use is fully
-functional and only narrower — English only, preset templates, nothing kept
-afterwards.
+application tracking, settings and account deletion. The settings also hold
+what every generation starts from — the page limit, the language a CV comes
+out in, the register it is written in — and an export that hands you the whole
+profile as JSON or Markdown, which is the portability the privacy policy
+promises. Anonymous use is fully functional and only narrower — English only,
+preset templates, nothing kept afterwards.
 
 **It has not been deployed.** There is no server and no domain yet, so
-`NEXT_PUBLIC_SITE_URL` falls back to localhost and five things are written
+`NEXT_PUBLIC_SITE_URL` falls back to localhost and four things are written
 but unmeasured: the OAuth round trip, the Turnstile challenge, the content
-security policy, the published privacy page against the processor list, and
-analytics — which is not written at all, deliberately, because there is
-nowhere to send it.
+security policy, and the published privacy page against the processor list.
+Two more are not written at all, deliberately and for the same reason —
+analytics and error reporting both need somewhere to send to, and code that
+has never run against a real collector is a maintenance cost rather than a
+measurement.
 
 **Development runs against [MSW](https://mswjs.io) mocks** by default, which
 is also what the test suites run against. The handlers encode behaviour

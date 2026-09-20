@@ -56,6 +56,11 @@ try {
   // Strip a byte-order mark. Windows editors and PowerShell's `Set-Content`
   // add one, and JSON.parse rejects it with an error that says nothing about
   // encoding.
+  //
+  // The committed file has none — it carried one until it was measured, and
+  // this line was what kept CI green over it. It stays anyway: the next
+  // editor to touch the file can put one back, and this is cheaper than
+  // finding out from a parse error that names a character nobody can see.
   budget = JSON.parse(readFileSync(BUDGET_FILE, 'utf8').replace(/^﻿/, ''));
 } catch (error) {
   console.error(`Cannot read ${BUDGET_FILE}: ${error.message}`);
