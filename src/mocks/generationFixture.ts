@@ -168,8 +168,19 @@ export type MockGenerationJob = MockJobCommon & {
  * schema's and only the order is ours. `onPage` false is an atom the page
  * budget held back — it competed and lost, which is exactly what makes it
  * offerable as a toggle.
+ *
+ * **`Required<>` over the whole schema was wrong from the moment `B-108`
+ * landed**, and wrong in a way a mock is uniquely placed to hide: the two
+ * fields it added are absent rather than empty, and their absence *means*
+ * something. `matchedKeywords: []` beside a chosen line reads as "nothing
+ * matched", and `heldBackReason` on a line that is on the page names a
+ * reason for something that did not happen. A fixture that cannot express
+ * absence cannot produce the state the screen has to handle.
  */
-export type MockSelectionLine = Required<Schemas['SelectionLine']>;
+export type MockSelectionLine = Required<
+  Pick<Schemas['SelectionLine'], 'atomId' | 'text' | 'onPage'>
+> &
+  Pick<Schemas['SelectionLine'], 'matchedKeywords' | 'heldBackReason'>;
 
 /**
  * A job of either kind.

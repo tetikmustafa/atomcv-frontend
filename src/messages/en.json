@@ -11,7 +11,6 @@
     "ALL_PROVIDERS_UNAVAILABLE": "None of the AI providers answered. Nothing was lost — your profile is untouched.",
     "COMPILATION_FAILED": "The document didn't come out. {detail}",
     "PAGE_LIMIT_EXCEEDED": "Your content came to {actual, plural, =1 {one page} other {# pages}} and the limit is {limit, plural, =1 {one} other {#}}. It was already shortened as far as it goes.",
-    "REWRITE_VALIDATION_FAILED": "A rewrite changed something it shouldn't have, so it was thrown away and your own wording kept.",
     "COVER_LETTER_REJECTED": "That draft didn't pass our own check, so we didn't keep it: {issues}. Asking again usually produces one that does.",
     "EMBEDDING_UNAVAILABLE": "Skill matching is unavailable right now.",
     "GENERATION_PAUSED": "Generation is paused for now. Nothing else is affected — your profile stays open to read, edit and export.",
@@ -28,7 +27,6 @@
     "PROFILE_QUOTA_EXCEEDED": "{caller, select,\n  account {You've reached today's limit of {limit, plural, =1 {one profile} other {# profiles}}.}\n  anonymous {No more CVs can be read from this network right now. Without an account the allowance is counted per network, so it may not have been you who used it.}\n  other {No more CVs can be read right now — today's limit of {limit, plural, =1 {one profile} other {# profiles}} has been reached.}\n} It renews {resetsAt, date, short} at {resetsAt, time, short}.",
     "ANONYMOUS_SESSION_EXPIRED": "This session ended, two hours after your last activity here.",
     "ATOM_LIMIT_EXCEEDED": "You're at {current, number} of {limit, plural, =1 {one item} other {# items}}.",
-    "NO_ANONYMOUS_PROFILE": "There's no unsaved profile to claim.",
     "PROFILE_ALREADY_EXISTS": "This account already has a profile.",
     "GENERATION_ARTIFACT_EXPIRED": "That file is past its 14 days and has been deleted. Everything it was built from is still here, so it can be made again.",
     "CSRF_TOKEN_INVALID": "That request couldn't be verified. Reload the page and try again.",
@@ -59,6 +57,8 @@
     "paste_full_posting": "Paste the full posting",
     "continue_as_general_cv": "Build a general resume instead",
     "switch_to_manual_form": "Enter it by hand",
+    "upload_another_file": "Choose a different file",
+    "choose_language": "Set the language myself",
     "retry": "Try again",
     "complete_profile": "Open the profile editor"
   },
@@ -89,7 +89,7 @@
     "shown": "Showing {shown, number} of {total, plural, =1 {one resume} other {# resumes}}.",
     "pages": "{count, plural, =1 {one page} other {# pages}}",
     "withLetter": "with a covering letter",
-    "status": "{status, select, failed {This one did not finish.} superseded {Replaced by a later version.} other {}}",
+    "status": "{status, select, superseded {Replaced by a later version.} other {}}",
     "open": "Open the resume: {facts}",
     "more": "Show older",
     "loadingMore": "Fetching…"

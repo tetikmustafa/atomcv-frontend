@@ -207,16 +207,25 @@ describe('the history', () => {
   });
 
   /**
-   * A generation that did not finish has no document behind it, so its row is
-   * not a link: the only thing that screen could show is an error the label
-   * already gave.
+   * This asserted that a failed run was listed **and** not linked, which was
+   * the right shape for a row that existed. `B-116` says it never did:
+   * `selection_state` is `NOT NULL`, so a run that falls over before the
+   * selection writes no generation at all, and `status: 'failed'` left both
+   * read shapes with V17.
+   *
+   * So the assertion inverts rather than disappears. The failure is still
+   * reported — on the **job**, whose status keeps `failed` — and this screen
+   * is not where it is reported. Listing it here would put a row in front of
+   * somebody for a document that cannot be fetched, which is the journey the
+   * old version of this test was written to prevent in the first place.
    */
-  it('does not offer a way into a generation that failed', async () => {
+  it('leaves a run that failed out of the history entirely', async () => {
     signIn();
     seedGenerations(1, { outcome: 'failed' });
     renderHistory();
 
-    expect(await screen.findByText(/did not finish/)).toBeInTheDocument();
+    // The empty state, not a row without a link.
+    expect(await screen.findByText(en.History.empty)).toBeInTheDocument();
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 

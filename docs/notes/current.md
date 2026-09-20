@@ -21,6 +21,140 @@ Aşama 3 iki tarafta da kapandı (2026-09-02): on üç dilim, açık `B-nnn` de
 `F-nnn` de yok, ve dağıtım isteyen ikisi dışında her yol gerçek uca karşı
 ölçüldü.
 
+### Kapanış sırası — karar 2026-09-20
+
+**Bir kereliğine sabit bir sıra var.** § XI-A.7 "sabit sıra yok" diyor ve bu
+hâlâ doğru; aşağıdaki, o serbestliğin bir kez kullanılmasıdır: on yedi açık
+madde, şemanın dokümanı geçtiği dört nokta ve § 55'in kalan `[F]` kalemleri
+tek bir listeye dizildi ki "bitti" denebilecek bir son olsun.
+
+**Verilen dört karar.** Kapsam **§ 55'in `[F]` kalemlerinin tamamı** — kasıtlı
+boşluklar dahil, büyüme ve açık kaynak dahil. **VPS bu turda alınmıyor**, yani
+ölçüm isteyen her şey D14'te toplanıyor ve kod onsuz yazılmıyor. **`B-110`
+bağlanıyor** (D2). Sıra önce yazıldı, sonra koşulacak.
+
+**Ölçüm — bu listenin başlangıç noktası, 2026-09-20.** `npm run gen:api`
+koşuldu (`api.d.ts` 964 satır), **821 birim testinin hepsi yeşil**, ve
+`typecheck` **sekiz** hata veriyor. Sekizi de aşağıda bir dilime bağlı;
+başka hiçbir yerde kırık yok.
+
+| # | Dilim | Kapattığı |
+|---|---|---|
+| D1 | Şemanın açtığı sekiz kırık + iki bayat çeviri anahtarı | `B-111`, `B-112`, `B-116` |
+| D2 | `errorCatalogue.test` üretilen tabloyu ayrıştırır | `B-110` |
+| D3 | `EXTRACTION_TIMEOUT` metni 503'ten ayrılır; `archive` dalı; iki yeni çözüm anahtarı ve davranışı | `B-113`, `B-114` |
+| D4 | `StaleWording` anonimde çizilmez | `B-115`'in tek eksiği |
+| D5 | İndirme: `html` + `source` | `B-105` |
+| D6 | Üretim isteği: `emphasize`, `note`, `customizationId` | `B-104` + F-034 |
+| D7 | Arşivleme | `B-102` |
+| D8 | Seçim gerekçeleri: `matchedKeywords`, `heldBackReason` ×4 | `B-108` |
+| D9 | Atom etiketleri | `B-103` |
+| D10 | `auto` çevirinin üç sonucu | `B-107` |
+| D11 | GitHub içe aktarımı | `B-106` |
+| D12 | Şablon kapasitesi + adlandırılmış özelleştirmeler | F-035, F-036 |
+| D13 | Kasıtlı boşlukların kapananları | aşağıdaki tablo |
+| D14 | Açık kaynak ve büyüme | § 55 `[F]` |
+
+**Sıranın gerekçesi.** D1-D4 bugünkü kırığı kapatır ve hiçbir yeni yüzey
+açmaz — CI yeşile dönmeden yeni ekran çizmek, kırığı iki katına çıkarmaktır.
+D5-D8 telde **zaten var olan** alanları okur, yani en ucuz getiri. D9-D12
+yeni ekran ister. D13-D14 karar ve metin ağırlıklı, ve ikisi de kodun geri
+kalanı otururken yazılmalı.
+
+**Dört `F-nnn` D6'dan önce açılır** — üçü doküman düzeltmesi, biri soru:
+`POST /generations` **`note` alanı geldi** ve `B-104` "gelmedi ve bilerek"
+diyor (F-034); **`GET /templates`** ve **`/customizations`** hiçbir maddede
+adlandırılmadı (F-035, F-036); `customizationId` de öyle. Dördü de
+`gen:api`'nin bulduğu şeyler, bir maddenin değil — **şema dokümanı geçti**,
+ve bu, `B-101`'in bağlamak istediği muhafızın yokluğunun ta kendisi.
+
+**Ucu olmayan üç iş `F-nnn` olarak kalır, D13'e girmez:** § 37.5'in arka plan
+iş göstergesi, § 33.3'ün "yeniden hesaplanıyor"u, ve ürün dokümanının saydığı
+ATS uyumluluk doğrulaması. Üçünün de bugün yayımlanan bir durumu yok. **Dördü
+`keep_top_pinned`** — sunucu bu çözümü gönderebiliyor, `ErrorPanel` onu
+bilerek çizmiyor, çünkü basıldığında dolduracağı istek alanı yok. Çizilmemesi
+doğru ama kalıcı değil: mutlak kural 7 sunucunun gönderdiği bir çözümün düğme
+olmasını istiyor, yani burada ya alan gelir ya çözüm kalkar.
+
+**D13 — kasıtlı boşlukların verdikti.** Aşağıdaki tablonun gerekçeleri
+duruyor; değişen, hangilerinin artık kapatılacağı. Bir boşluğu kapatmaya
+"gerekçesi bayatladı" dendiği için karar veriliyor, "artık yapabiliriz"
+dendiği için değil.
+
+| Boşluk | Verdikt |
+|---|---|
+| Mark'ları düşüren metin düzenleme | **Kapanıyor.** Mutlak kural 4 zaten bileşeni adıyla sayıyor; uyarı bir köprüydü, şablon değil |
+| Sözcükleme tek başına silinemiyor | **Kapanıyor.** `deleteVariant` uçta ve `endpoints/profile.ts`'te var, iki reddi de mock üretiyor, yalnız düğme yok |
+| Profil başında dil eksenleri | **Kapanıyor.** Gerekçesi 2026-09-08'de bayatladı; `allowedLanguages` yayımlanıyor ve okunuyor |
+| Bölüm düzeni seçici | **Kapanıyor**, ve `two_column` kalktığı için artık dört değer. Dördünün ICU adı ve About için `paragraph` varsayılanı ile — yarısı bu boşluğun kendisiydi |
+| "Bir sayfadan kısa CV" notu | **Kapanıyor, ama sinyal değişti.** Sunucu hâlâ "sayfa dolmadı" demiyor; `pageCount < maxPages` ise belge *istenenden* kısa demektir, ve o sayılabilir bir olgu. Not bunu söyler, doluluğu değil |
+| `format=source` düğmesi | D5'te kapanıyor — uç artık `400` dönmüyor |
+| PDF önizlemesi | **Kalıyor.** Ölçülmüş karar ve ölçümü değiştiren bir şey olmadı |
+| Başvurularda duruma göre süzme | **Kalıyor.** `B-093`'ün gerekçesi aynen geçerli; tek sayfanın üstünde istemci süzgeci, süzdüğünü sandığı şeyi süzmez |
+
+**D14'ün ikiye ayrıldığı yer.** `README` (bugün hâlâ "Stage 0 — skeleton"
+diyor), `CONTRIBUTING`, `SECURITY` ve `.env.example` denetimi dağıtım
+istemiyor ve yazılır. **Analitik, `deploy.yml` ve `NEXT_PUBLIC_SITE_URL`
+istiyor** — bunlar yazılmaz, aşağıdaki dağıtım kontrol listesine geçer.
+Ölçümü alacak bir yer yokken huni ölçen kod yazmak, çalıştığını hiç
+görmeyeceğimiz bir şeyi bakım yüküne çevirmek olurdu.
+
+**§ 55'in iki büyüme kalemi kapsam dışı bırakıldı, ve ikisi de kendi
+gerekçesiyle** — `handoff/to-backend.md`'ye `F-nnn` gitmiyor, ikisi de
+frontend'in kendi kararı:
+
+- **Blog yazılmayacak.** Yerine **tek bir statik "nasıl çalışıyor"
+  sayfası**: sayfa garantisini ve atom modelini anlatan, çevrilmiş, kendi JS'i
+  olmayan bir pazarlama sayfası. SEO getirisi blogun çoğu, bakım yükü yok —
+  bir blog, yazılacak içeriği olmayan bir hattır, ve boş hat SEO getirmez.
+  Sayfa `(app)` dışında kalır, yani landing'in 0.0 KB'ı korunur ve
+  next-intl'in `Link`'i yerine açık locale önekli `<a>` kullanılır.
+- **Üçüncü arayüz dili eklenmeyecek.** 495 anahtar, ve sayı asıl maliyet
+  değil: her ICU dalı — `UNPARSEABLE_JOB_DESCRIPTION`'ın yedi reason'ı,
+  `OAUTH_FAILED`'ın yedisi, `FEATURE_REQUIRES_ACCOUNT`'ın beşi,
+  `COVER_LETTER_REJECTED`'ın altısı — elle doğrulanmak zorunda, ve
+  `errorCatalogue.test` her birini ayrı cümle olmaya zorluyor. Kullanıcısı
+  olmayan bir dil, yazılan her yeni mesajda ödenen bir vergidir. **İçerik dili
+  ekseni bundan ayrı** ve değişmiyor: `allowedLanguages` backend'in, bugün
+  `["en","tr"]`, ve `auto` ilanı takip ediyor (`B-107`).
+
+### D1 kapandı — şemanın açtığı sekiz kırık (2026-09-20)
+
+**`failed` ve `cancelled` birer dal değil, birer yokluktu.** `B-116`'nın
+gerekçesi yapısal ve ikisi de aynı cümleden çıkıyor: `selection_state`
+`NOT NULL`, yani seçimden önce düşen bir koşunun yazacak **generation satırı
+yok** — arıza **işin** üstünde yaşıyor, ki `JobStatusResponse.status`
+`failed`'i hâlâ taşıyor. `cancelled`'ı ise hiçbir uç üretmiyor.
+
+Bunun mock'a maliyeti göründüğünden büyüktü. Geçmiş listesi başarısız bir işi
+`status: 'failed'` ile **satır olarak** yayımlıyordu ve `GET /generations/{id}`
+onu buluyordu; ikisi de veritabanının tutamayacağı bir şeyi tarif ediyor. Mock
+artık başarısız koşuyu listeden düşürüyor ve tekil okumada **404** veriyor.
+Ekran tarafında `History`'nin "bitmemişse bağlantı değil" dalı silindi —
+kalan tek koşul `generationId` yokluğu, ve `superseded` **bilerek dışarıda**:
+değiştirilmiş bir üretim belgesi olan bitmiş bir üretimdir.
+
+**Testin kendisi tersine çevrildi, silinmedi.** "Başarısız üretime yol
+açmıyor" artık "başarısız koşu geçmişte hiç yok" diyor; eski hâli doğru
+şekilli ama var olmayan bir satır hakkındaydı.
+
+**İki muhafız eklendi.** `endpoints/jobs.ts`'te `TERMINAL` artık yayımlanan
+enum'a karşı **sınıflandırma** kontrolü taşıyor: her durum ya terminal ya
+uçuşta, üçüncüsü derlemeyi düşürüyor. `cancelled` geri geldiği gün — iptal bir
+özellik — bu, sessizce asılı kalan bir akış yerine bir typecheck hatası olur.
+`MockSelectionLine`'ın `Required<>`'ı da daraltıldı: `B-108`'in iki alanı
+**yokluğuyla** anlam taşıyor (`matchedKeywords: []` "hiçbir şey eşleşmedi"
+diye okunur), ve yokluğu ifade edemeyen bir fixture ekranın karşılaşacağı
+durumu üretemez.
+
+**İki bayat çeviri anahtarı silindi** (`REWRITE_VALIDATION_FAILED`,
+`NO_ANONYMOUS_PROFILE`) ve `History.status`'ın `failed` dalı da. `B-111`'in
+korktuğu "on beş eksik mesaj" **çıkmadı** — 41 kodun 41'i yazılıydı, iki dil
+birebir senkrondu; gerçek bulgu fazlalıktı. `B-114`'ün iki yeni eylemi
+**etiket olarak** indi, davranışları D3'te.
+
+**Ölçüm:** 821 birim testi yeşil, typecheck temiz, lint temiz.
+
 ### Aşama 3'ten devrolan açıklar
 
 - ~~**Gizlilik politikasının sağlayıcı listesi eksik.**~~ **Bayat çıktı

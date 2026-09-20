@@ -11,7 +11,6 @@
     "ALL_PROVIDERS_UNAVAILABLE": "Yapay zekâ sağlayıcılarının hiçbiri yanıt vermedi. Hiçbir şey kaybolmadı, profiline dokunulmadı.",
     "COMPILATION_FAILED": "Belge oluşturulamadı. {detail}",
     "PAGE_LIMIT_EXCEEDED": "İçeriğin {actual, plural, =1 {bir sayfa} other {# sayfa}} tuttu, sınır ise {limit, plural, =1 {bir} other {#}}. İçerik gidebildiği kadar kısaltıldı.",
-    "REWRITE_VALIDATION_FAILED": "Bir yeniden yazım dokunmaması gereken bir şeyi değiştirdi; o yüzden atıldı ve senin ifaden korundu.",
     "COVER_LETTER_REJECTED": "Bu taslak kendi denetimimizden geçmedi, o yüzden saklanmadı: {issues}. Tekrar istemek genellikle geçen bir mektup üretiyor.",
     "EMBEDDING_UNAVAILABLE": "Yetkinlik eşleştirme şu anda kullanılamıyor.",
     "GENERATION_PAUSED": "Üretim şimdilik duraklatıldı. Başka bir şey etkilenmedi — profilini okumaya, düzenlemeye ve dışa aktarmaya devam edebilirsin.",
@@ -28,7 +27,6 @@
     "PROFILE_QUOTA_EXCEEDED": "{caller, select,\n  account {Bugünkü {limit, plural, =1 {bir profil} other {# profil}} sınırına ulaştın.}\n  anonymous {Şu an bu ağdan daha fazla CV okunamıyor. Hesap olmadan hak ağ başına sayılıyor, yani onu harcayan sen olmayabilirsin.}\n  other {Şu an daha fazla CV okunamıyor — bugünkü {limit, plural, =1 {bir profil} other {# profil}} sınırına ulaşıldı.}\n} {resetsAt, date, short} {resetsAt, time, short}’te yenilenir.",
     "ANONYMOUS_SESSION_EXPIRED": "Bu oturum, buradaki son işleminden iki saat sonra sona erdi.",
     "ATOM_LIMIT_EXCEEDED": "Sınır {limit, plural, =1 {bir madde} other {# madde}}; şu anda {current, number} tane var.",
-    "NO_ANONYMOUS_PROFILE": "Sahiplenilecek kaydedilmemiş bir profil yok.",
     "PROFILE_ALREADY_EXISTS": "Bu hesabın zaten bir profili var.",
     "GENERATION_ARTIFACT_EXPIRED": "Bu dosyanın 14 günü doldu ve silindi. Oluşturulduğu her şey duruyor, yeniden üretilebilir.",
     "CSRF_TOKEN_INVALID": "Bu istek doğrulanamadı. Sayfayı yenileyip tekrar dene.",
@@ -59,6 +57,8 @@
     "paste_full_posting": "İlanın tamamını yapıştır",
     "continue_as_general_cv": "Bunun yerine genel CV oluştur",
     "switch_to_manual_form": "Elle gir",
+    "upload_another_file": "Başka bir dosya seç",
+    "choose_language": "Dili kendim seçeyim",
     "retry": "Tekrar dene",
     "complete_profile": "Profil düzenleyiciyi aç"
   },
@@ -89,7 +89,7 @@
     "shown": "{total, plural, =1 {Tek CV} other {# CV}} içinden {shown, number} tanesi gösteriliyor.",
     "pages": "{count, plural, =1 {bir sayfa} other {# sayfa}}",
     "withLetter": "ön yazısıyla",
-    "status": "{status, select, failed {Bu üretim tamamlanmadı.} superseded {Daha yeni bir sürümle değiştirildi.} other {}}",
+    "status": "{status, select, superseded {Daha yeni bir sürümle değiştirildi.} other {}}",
     "open": "CV'yi aç: {facts}",
     "more": "Daha eskilerini göster",
     "loadingMore": "Getiriliyor…"

@@ -705,8 +705,17 @@ export const generationHandlers = [
       would read as twenty-one resumes — and `total`, which the deletion
       screen states out loud, would say the same.
     */
+    /*
+      `outcome === 'completed'` is a third filter rather than a status mapped
+      onto the row, and `B-116` is why: `selection_state` is `NOT NULL`, so a
+      run that falls over before the selection never writes a generation at
+      all. The failure lives on the **job**, which still reports `failed`.
+      This listed such runs with `status: 'failed'` until the value left the
+      wire — a row for something the database cannot hold.
+    */
     const rows = generations.jobs
       .filter(isGenerationJob)
+      .filter((job) => job.outcome === 'completed')
       .filter((job) => !job.supersededBy)
       .sort((a, b) => b.startedAt - a.startedAt || b.generationId.localeCompare(a.generationId));
 
@@ -730,9 +739,9 @@ export const generationHandlers = [
     return HttpResponse.json<Schemas['GenerationPage']>({
       items: page.map((job) => ({
         generationId: job.generationId,
-        status: job.outcome === 'completed' ? 'completed' : 'failed',
+        status: 'completed',
         createdAt: new Date(job.startedAt).toISOString(),
-        ...(job.outcome === 'completed' ? { pageCount: 1 } : {}),
+        pageCount: 1,
         ...(job.roleTitle ? { roleTitle: job.roleTitle } : {}),
         ...(job.companyName ? { companyName: job.companyName } : {}),
         ...(job.fitReport?.level ? { matchLevel: job.fitReport.level } : {}),
@@ -750,18 +759,21 @@ export const generationHandlers = [
     const id = String(params.generationId);
     const job = findGeneration(id);
 
-    if (!job) return notFound(`/api/v1/generations/${id}`);
+    /*
+      A failed run is **not found** rather than found and failed (`B-116`).
+      Nothing wrote a generation row for it — the selection it would be keyed
+      by never happened — so the id in the URL names something that does not
+      exist, and 404 is the honest answer. The reader who followed a link here
+      from a job that failed is told what the job already told them.
+    */
+    if (!job || job.outcome !== 'completed') return notFound(`/api/v1/generations/${id}`);
 
     return HttpResponse.json<Schemas['GenerationResponse']>({
       generationId: job.generationId,
       // Still readable and still downloadable once it has been edited, and
       // that is the point of keeping it (`B-088`) — what changes is that it
       // is no longer the one to edit.
-      status: job.supersededBy
-        ? 'superseded'
-        : job.outcome === 'completed'
-          ? 'completed'
-          : 'failed',
+      status: job.supersededBy ? 'superseded' : 'completed',
       // Only on a retired row, which is the only place it means anything
       // (`B-097`). The edge runs the other way in the database — the edit
       // writes the new row naming the old — and this is the direction a

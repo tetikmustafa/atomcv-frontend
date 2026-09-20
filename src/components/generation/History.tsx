@@ -150,12 +150,18 @@ function Row({ row }: { row: GenerationSummary }) {
   const className = 'border-border flex flex-col gap-1 rounded-md border px-3 py-2';
 
   /*
-    A generation that did not finish has no document to open, so its row is
-    not a link. Linking it would offer a screen whose only possible content is
-    an error — the reader learns the same thing from the label, without the
-    journey.
+    This tested `status === 'failed'` as well until `B-116`, and the branch
+    was unreachable for a structural reason rather than an accidental one:
+    `selection_state` is `NOT NULL`, so a run that falls over before the
+    selection has no row to be listed as, and the failure lives on the **job**
+    instead. The value left the wire with V17.
+
+    What is left is the row without an id, which stays as it was: there is
+    nothing to link to. `superseded` is deliberately **not** in here — a
+    replaced generation is a finished one with a document, and refusing to
+    open it would hide the very thing the reader came back for.
   */
-  if (row.status === 'failed' || !row.generationId) {
+  if (!row.generationId) {
     return <div className={className}>{body}</div>;
   }
 

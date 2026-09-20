@@ -31,10 +31,6 @@ const PARAMS = {
   ALL_PROVIDERS_UNAVAILABLE: { tried: ['anthropic', 'openai'] },
   COMPILATION_FAILED: { detail: 'Undefined control sequence.', rawSourceAvailable: true },
   PAGE_LIMIT_EXCEEDED: { actual: 2, limit: 1 },
-  REWRITE_VALIDATION_FAILED: {
-    atomId: '661a39b9-41b7-4ad8-a886-1054768029a6',
-    issues: ['metric lost', 'technology added'],
-  },
   // `issues` is a **closed** vocabulary of six (`B-063` confirmed it), so the
   // message names them — see the block at the bottom of this file. The values
   // here stay raw because this is the wire payload; `useErrorMessage` turns
@@ -70,7 +66,6 @@ const PARAMS = {
   PROFILE_QUOTA_EXCEEDED: { limit: 3, resetsAt: '2026-08-16T00:00:00Z' },
   ANONYMOUS_SESSION_EXPIRED: {},
   ATOM_LIMIT_EXCEEDED: { limit: 60, current: 60 },
-  NO_ANONYMOUS_PROFILE: {},
   PROFILE_ALREADY_EXISTS: {},
   GENERATION_ARTIFACT_EXPIRED: {},
   CSRF_TOKEN_INVALID: {},
@@ -125,6 +120,18 @@ const RESOLUTION_PARAMS = {
   continue_as_general_cv: {},
   continue_anyway: {},
   switch_to_manual_form: {},
+  // `B-114`. Deliberately **not** `retry`, and the distinction is the whole
+  // item: the same encrypted file fails in the same place every time, so a
+  // retry button offers a door that is known to be locked. What the reader
+  // needs is the file picker, because the copy they can open may already be
+  // on their machine.
+  upload_another_file: {},
+  // Parameterless here although `LANGUAGE_UNDETECTED` carries
+  // `detectedCandidates`: the candidates belong to the **error**, not to the
+  // action, and the label is a verb either way. At most one candidate comes
+  // back — the model returns a language, not a ranking — so the question on
+  // screen is "this one, or another?" rather than a menu.
+  choose_language: {},
   retry: {},
   complete_profile: {},
 } satisfies Record<KnownResolutionAction, Record<string, unknown>>;
@@ -572,9 +579,12 @@ describe('PAGE_LIMIT_EXCEEDED', () => {
  * none of them, because `Intl.ListFormat` joins whatever it is handed and
  * `unsupported_claim and cliche` is not a sentence.
  *
- * The other `issues` in the catalogue — `REWRITE_VALIDATION_FAILED`'s — are
- * free text a validator wrote, which is why the vocabulary table is keyed by
- * **code** rather than by param name.
+ * The vocabulary table is keyed by **code** rather than by param name, and
+ * that was not over-engineering: `REWRITE_VALIDATION_FAILED` carried an
+ * `issues` of its own that was free text a validator wrote, so the two lists
+ * shared a name and nothing else. That code left the catalogue with `B-112` —
+ * no path ever produced it — and the keying outlives it, because the next
+ * code to reuse a param name will not announce itself either.
  */
 describe.each(CATALOGUES)('the six reasons a letter is refused (%s)', (locale, messages) => {
   const ISSUES = [
