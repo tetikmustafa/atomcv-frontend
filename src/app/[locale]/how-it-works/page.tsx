@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { routing } from '@/lib/i18n/routing';
-import { absoluteUrl, alternatesFor } from '@/lib/seo';
+import { absoluteUrl, alternatesFor, APP_NAME } from '@/lib/seo';
 import { buttonVariants } from '@/components/ui/button';
 
 /**
@@ -44,14 +44,14 @@ export async function generateMetadata({
   setRequestLocale(locale);
 
   const t = await getTranslations('HowItWorks');
-  const description = t('intro');
+  const description = t('intro', { appName: APP_NAME });
 
   return {
-    title: t('title'),
+    title: t('title', { appName: APP_NAME }),
     description,
     alternates: alternatesFor(locale, '/how-it-works'),
     openGraph: {
-      title: t('title'),
+      title: t('title', { appName: APP_NAME }),
       description,
       url: absoluteUrl(locale, '/how-it-works'),
       locale,
@@ -74,8 +74,10 @@ export default async function HowItWorksPage({ params }: PageProps<'/[locale]/ho
     <main id="main" tabIndex={-1} className="flex-1 outline-none">
       <div className="mx-auto flex max-w-3xl flex-col gap-12 px-8 py-16">
         <header className="flex flex-col gap-4">
-          <h1 className="text-4xl font-semibold tracking-tight">{t('title')}</h1>
-          <p className="text-muted-foreground max-w-prose">{t('intro')}</p>
+          <h1 className="text-4xl font-semibold tracking-tight">
+            {t('title', { appName: APP_NAME })}
+          </h1>
+          <p className="text-muted-foreground max-w-prose">{t('intro', { appName: APP_NAME })}</p>
         </header>
 
         <section aria-labelledby="steps-heading" className="flex flex-col gap-6">

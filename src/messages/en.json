@@ -186,7 +186,7 @@
   },
   "Landing": {
     "tagline": "Build your profile once, generate a tailored resume for every job posting.",
-    "intro": "Your professional history is structured data, not a document. AtomCV keeps it that way, then produces a resume for each posting from that data — inside a page limit that is calculated rather than hoped for.",
+    "intro": "Your professional history is structured data, not a document. {appName} keeps it that way, then produces a resume for each posting from that data — inside a page limit that is calculated rather than hoped for.",
     "cta": "Start building your profile",
     "featuresHeading": "What makes it different",
     "features": {
@@ -214,7 +214,7 @@
     "openSourceNote": "Free and open source under the MIT licence. Run by one person, with no service guarantee — if it is ever shut down, notice comes at least 30 days in advance."
   },
   "HowItWorks": {
-    "title": "How AtomCV works",
+    "title": "How {appName} works",
     "intro": "Your professional history is a structured dataset, not a document. A resume is one view of it, produced under constraints — and once the two are separated, the same profile can answer a different posting without anyone rewriting a file by hand.",
     "stepsHeading": "The four steps",
     "steps": {
@@ -673,7 +673,7 @@
     "terms": {
       "title": "Terms of Use",
       "noGuarantee": "No employment guarantee",
-      "noGuaranteeBody": "AtomCV helps you present the experience you already have. It does not promise interviews or offers.",
+      "noGuaranteeBody": "{appName} helps you present the experience you already have. It does not promise interviews or offers.",
       "estimate": "The fit report is an estimate",
       "estimateBody": "It shows how well your resume reflects the terms used in a posting. It does not reproduce the behaviour of any particular applicant tracking system, and real hiring decisions depend on far more than keyword coverage.",
       "accuracy": "You are responsible for accuracy",
@@ -698,15 +698,6 @@
     "deleteConfirmTitle": "Delete your account?",
     "deleteConfirmBody": "This deletes your profile — {sections, plural, =1 {one section} other {# sections}} and {atoms, plural, =1 {one item} other {# items}} — along with {generations, plural, =0 {every resume you generate} =1 {the one resume you have generated} other {all # resumes you have generated}} and the documents they made, anything still queued, your usage counters and your email preferences. It cannot be undone.\n\nTwo things stay. Our record of what your generations cost is kept with the link to you cut, so it no longer shows anyone. And if your address ever bounced or reported us, that record stays with the address rather than with the account — deleting it would let us write to you again after being told not to.\n\nThe AI providers may hold their own short-lived logs on their side. The privacy policy says which.",
     "deleteConfirmAction": "Delete everything",
-    "export": {
-      "title": "Take your data with you",
-      "intro": "Everything in your profile, as a file you keep. Nothing is deleted by doing this — it is a copy.",
-      "json": "Download JSON",
-      "markdown": "Download Markdown",
-      "preparing": "Preparing the file…",
-      "formats": "JSON is the complete copy, meant to be read by another program. Markdown is the readable one, for pasting somewhere else — it leaves out the parts only this app uses.",
-      "announceStarted": "Download started"
-    },
     "generationDefaults": {
       "title": "How your CV is written",
       "intro": "What every generation starts from. You can leave all of it alone — these are defaults, not a step you have to take.",
@@ -732,6 +723,15 @@
       "save": "Save",
       "saving": "Saving…",
       "saved": "Saved."
+    },
+    "export": {
+      "title": "Take your data with you",
+      "intro": "Everything in your profile, as a file you keep. Nothing is deleted by doing this — it is a copy.",
+      "json": "Download JSON",
+      "markdown": "Download Markdown",
+      "preparing": "Preparing the file…",
+      "formats": "JSON is the complete copy, meant to be read by another program. Markdown is the readable one, for pasting somewhere else — it leaves out the parts only this app uses.",
+      "announceStarted": "Download started"
     }
   },
   "Appearance": {
