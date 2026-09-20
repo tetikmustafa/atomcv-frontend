@@ -98,3 +98,41 @@ sınırlarını doğruladı — ve **üç fark buldu**: registry'nin sayıları 
 tablosundan farklı, `POST /customizations` atlanmış alanları şablonun
 kendisinden **çözüyor**, ve bilinmeyen bir `customizationId` reddedilmiyor
 (`F-040`).
+
+
+---
+
+## Backend'in dört cevabı — `B-117`…`B-119` (2026-09-21)
+
+`F-037`…`F-040`'ın karşılığıydılar ve **üçü bir arada karşılandı.** Niye
+öyle yapıldığı `docs/notes/current.md`'de.
+
+**Önce bir bulgu: `:8080`'de koşan derleme bayattı.** `npm run gen:api`
+şemayı **hiç değiştirmedi** — ne `maxPages` ne `language` içindeydi. Tipler
+backend reposunun kökündeki `openapi.json`'dan üretildi; CI'ın
+`contract-check`'i de `main`'den aynı dosyayı çekiyor.
+
+### B-117 · `F-038`'in dört şeyi
+**Kod yazdırmadı:** dördü de D6 ve D12'de inmişti — `note` ve
+`customizationId` istekte, şablon listesi `GET /templates`'ten (sabit
+listeden değil), `/customizations`'ın dört ucu ve 20 tavanı ekranda.
+Maddenin asıl söylediği doğruydu: muhafız eksikti, kapsam değil.
+
+### B-118 · `maxPages`, ve bayat bir `customizationId`
+Sonuç ekranı `pageCount`'u **o üretimin** sınırına karşı okuyor; alan yoksa
+not yok, çünkü eksik bir alan "sınır bir sayfaydı" demek değil. Geçmiş
+satırında **tek olgu** ("bir sayfa — izin verilen 2"), rozet değil. `404`'te
+ekran cerrahi: paneli sunucunun metni çiziyor, ekran yalnız ölü seçimi
+düşürüp listeyi tazeliyor — onarım, hata arayüzü değil (kural 7).
+
+### B-119 · `choose_language` artık çiziliyor
+Düğme `LANGUAGE_UNDETECTED`'da çiziliyor, cevap bir sonraki
+`POST /profile/import`'un `language` alanında gidiyor. Seçicinin listesinin
+**iki yarısı da sunucunun**: reddin `detectedCandidates`'i önce, sonra
+`capabilities.allowedLanguages`. Beyan dosya değişinde düşüyor. `B-114`'ün
+"çizilmiyor" kaydı böylece tersine döndü — **kural değil, olgu değişti**:
+taşıyamadığı cevabı olan bir çözüm hâlâ düşüyor (`keep_top_pinned`).
+Yokluğunu doğrulayan test silinmedi, yerine geçeni yazıldı.
+
+**Geriye kalan:** `language`'ın `400`'ünün kapı sırasındaki yeri ölçülemedi
+(`F-041`), ve `B-101`'in `contract-check`'i artık CI'da.

@@ -222,6 +222,61 @@ describe('a finished generation', () => {
   });
 
   /**
+   * `B-118`, `F-039`. A thin profile may produce a CV shorter than it was
+   * allowed to be, and that is correct output: padding it would be inventing
+   * work nobody did. Said once, as a note — never a warning, and nothing
+   * offers to make it longer.
+   *
+   * The limit read is **this generation's** (`maxPages` on the response), not
+   * the profile's setting of today, which is the whole reason the field was
+   * asked for: a CV made under one page must not be called short because the
+   * preference has since been raised.
+   */
+  describe('when the CV came out under its page limit', () => {
+    it('says so, against the limit that generation was made under', async () => {
+      // Two allowed, one produced: the mock's documents are one page.
+      const generationId = await generate({ acknowledgePreflight: false, maxPages: 2 });
+
+      render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+      const note = await screen.findByTestId('length-note');
+
+      expect(note).toHaveTextContent('It came to one page where 2 were allowed');
+      expect(note).toHaveTextContent('Nothing was padded');
+    });
+
+    it('stays quiet when the document filled its limit', async () => {
+      // The profile's default is one page, and one page came out.
+      const generationId = await generate();
+
+      render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+      await screen.findByRole('button', { name: 'Download PDF' });
+      expect(screen.queryByTestId('length-note')).not.toBeInTheDocument();
+    });
+
+    /**
+     * A generation written before the limit was recorded carries no
+     * `maxPages`, and the server sends nothing rather than a plausible
+     * default. An absence is not a limit of one — drawing the note off a
+     * guessed number would tell somebody their CV is short against a rule
+     * that was never applied to it.
+     */
+    it('draws nothing where the generation does not carry a limit', async () => {
+      const generationId = await generate();
+      const job = generations.jobs.find(
+        (candidate) => candidate.kind === 'generation' && candidate.generationId === generationId,
+      );
+      if (job?.kind === 'generation') delete job.maxPages;
+
+      render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+      await screen.findByRole('button', { name: 'Download PDF' });
+      expect(screen.queryByTestId('length-note')).not.toBeInTheDocument();
+    });
+  });
+
+  /**
    * `B-042`. `auto` resolves to the posting's language only when the profile
    * can actually be written in it; when it cannot, the document stays in the
    * profile's language and the two tags disagree. The reader pasted an

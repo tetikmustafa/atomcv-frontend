@@ -7,15 +7,17 @@
  * it. Getting that order wrong is invisible until a 12 MB PNG is refused for
  * being a PNG and the reader shrinks it.
  *
- * Two of the checks are keyed on the **file name**, and that is a limit of a
- * mock rather than a shape of the API: nothing here can parse a PDF to find
- * out whether it is encrypted or a scan. The extension, the size and the
- * emptiness checks are the real rules, applied to the real file.
+ * Three of the checks are keyed on the **file name**, and that is a limit of
+ * a mock rather than a shape of the API: nothing here can parse a PDF to find
+ * out whether it is encrypted, a scan, or written in a language the model
+ * cannot place. The extension, the size and the emptiness checks are the real
+ * rules, applied to the real file.
  */
 
 import { http, HttpResponse } from 'msw';
 import { challengeRefused } from './authFixture';
 import { generations, type MockImportJob, type MockImportOutcome } from './generationFixture';
+import type { FailedEvent } from './contracts';
 import { accepted, resetsAt } from './generationHandlers';
 import { problem } from './problem';
 import { fixture } from './profileFixture';
@@ -43,6 +45,35 @@ function extensionOf(name: string) {
 }
 
 /**
+ * The `language` gate (`B-119`): every ISO 639-1 code the runtime knows, and
+ * nothing else.
+ *
+ * The server checks against the codes **the JDK** knows, so the two lists are
+ * not guaranteed to be the same list — what the mock reproduces is the
+ * behaviour the client is written against: a code nobody knows is refused,
+ * loudly, rather than ignored. Ignoring it is the thing `B-119` rules out,
+ * because an ignored declaration is written into the profile as its language
+ * and every generation after it is made in a language that does not exist.
+ *
+ * `fallback: 'none'` is what makes this a test rather than an echo —
+ * `DisplayNames` otherwise hands back the code it was given.
+ */
+function knownLanguage(code: string) {
+  // `toLowerCase`, never `toLocaleLowerCase` (rule 11).
+  const normalised = code.trim().toLowerCase();
+  if (!/^[a-z]{2}$/.test(normalised)) return false;
+
+  try {
+    return (
+      new Intl.DisplayNames(['en'], { type: 'language', fallback: 'none' }).of(normalised) !==
+      undefined
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
  * What extraction reports back, counted off the profile the mock already
  * holds.
  *
@@ -50,7 +81,7 @@ function extensionOf(name: string) {
  * it then shows cannot disagree — a screen saying "24 items" above a list of
  * four is a bug this fixture would otherwise create.
  */
-function importResult(): MockImportOutcome {
+function importResult(declared?: string): MockImportOutcome {
   /*
     Two warnings, and the pair is the point (`B-067`): one that names a place
     and one that names none. The review screen has to open a section for the
@@ -74,7 +105,11 @@ function importResult(): MockImportOutcome {
     atomCount: fixture.atoms.length,
     // The server's own promise: the same number as `warnings.length`.
     warningCount: warnings.length,
-    detectedLanguage: fixture.profile.sourceLanguage,
+    // A declared language is not detected, it is taken (`B-119`). The field
+    // still reports what the profile ended up in, which is the answer the
+    // reader gave — the review screen says "read as Turkish" either way, and
+    // whether a model or a person decided that is not its question.
+    detectedLanguage: declared ?? fixture.profile.sourceLanguage,
     warnings,
   };
 }
@@ -150,6 +185,9 @@ export const importHandlers = [
       );
     }
 
+    const declaredPart = form.get('language');
+    const declared = typeof declaredPart === 'string' ? declaredPart.trim().toLowerCase() : '';
+
     /*
       **This order was measured, not derived** (2026-08-30, against the running
       backend). It is not the order § 31.2 reads in, and the difference is
@@ -157,6 +195,8 @@ export const importHandlers = [
 
         413 — Spring's own multipart limit, which fires before the controller
               is entered at all, so it beats every rule written inside one;
+        400 — `language`, checked as the controller binds its parameters,
+              which is still before it has looked at anything;
         409 — the profile check, which the controller reaches before it has
               looked at the file;
         415 and the 422s — the file's own gates.
@@ -173,6 +213,30 @@ export const importHandlers = [
       return HttpResponse.json(
         problem(413, 'DOCUMENT_TOO_LARGE', IMPORT, [], { limitBytes: LIMIT_BYTES }),
         { status: 413 },
+      );
+    }
+
+    /*
+      `language` — the `choose_language` answer (`B-119`, § 31.6.1), and its
+      place here **was measured** (2026-09-21, against the running backend,
+      once the deployment carrying the field was up).
+
+      Three probes, and the middle one is the reason this block moved: an
+      11 MB upload with `language=zz` comes back `413`, a `.png` with the same
+      `language=zz` comes back **`400` naming `language`** rather than `415`,
+      and the same `.png` without it comes back `409`. So the declaration is
+      checked where the controller binds its parameters — after Spring's
+      multipart limit, before the profile and the format.
+
+      It matters because each of those is a different screen. A mock refusing
+      the `.png` for being a `.png` would have the client written against the
+      wrong one of them, which is exactly what the 413/409/415 measurement
+      behind this block found the first time (`B-051`).
+    */
+    if (declared !== '' && !knownLanguage(declared)) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', IMPORT, [], { fields: ['language'] }),
+        { status: 400 },
       );
     }
 
@@ -241,13 +305,43 @@ export const importHandlers = [
       );
     }
 
+    /*
+      **The one refusal in here that a request can turn off** (`B-119`).
+
+      It fails in the worker rather than at the gate, which is the whole shape
+      of `F-037`: by the time the model cannot tell what the CV is written in,
+      the `202` is long since answered and there is no half-written profile to
+      put the answer on. So it arrives as a `failed` event carrying the
+      server's one guess and the action that spends it.
+
+      **A declared language skips detection**, so the same file uploaded again
+      with `language` set gets through. Weighting the guess instead would let
+      the second attempt land on the same refusal, which is the loop the item
+      was raised about — and a mock that only nudged a threshold would let a
+      client be written against a promise the server does not make.
+
+      Keyed on the file name, like `encrypted` and `scanned` above and for the
+      same reason: nothing here reads a document to find out.
+    */
+    const undetectable = name.includes('undetected') && declared === '';
+
+    const languageFailure: FailedEvent = {
+      code: 'LANGUAGE_UNDETECTED',
+      // One candidate, never a menu: the question the screen then asks is
+      // "this one, or another language?".
+      params: { detectedCandidates: ['tr'] },
+      resolutions: [{ action: 'choose_language' }],
+    };
+
+    const failure = undetectable ? languageFailure : generations.nextFailure;
+
     const job: MockImportJob = {
       jobId: `job-${generations.jobs.length + 1}`,
       kind: 'import',
-      imported: importResult(),
+      imported: importResult(declared === '' ? undefined : declared),
       startedAt: Date.now(),
-      outcome: generations.nextOutcome,
-      ...(generations.nextFailure ? { failure: generations.nextFailure } : {}),
+      outcome: undetectable ? 'failed' : generations.nextOutcome,
+      ...(failure ? { failure } : {}),
       ...(key ? { idempotencyKey: key } : {}),
     };
 

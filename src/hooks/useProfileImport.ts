@@ -28,6 +28,15 @@ export type ImportAttempt = {
    * token is current.
    */
   challengeToken?: string;
+  /**
+   * The answer to `choose_language`, as an ISO 639-1 code (`B-119`).
+   *
+   * Per attempt like the token, and for the same reason it is not held here:
+   * it belongs to the upload the reader declared it for. Sending it skips
+   * detection server-side, so it must not survive into an upload of a
+   * different file that nobody declared anything about.
+   */
+  language?: string;
 };
 
 /**
@@ -73,11 +82,12 @@ export function useImportCv() {
   }, []);
 
   return useMutation({
-    mutationFn: ({ file, replace, challengeToken }: ImportAttempt) =>
+    mutationFn: ({ file, replace, challengeToken, language }: ImportAttempt) =>
       importCv(file, {
         idempotencyKey: keyFor(file),
         ...(replace ? { replace } : {}),
         ...(challengeToken ? { challengeToken } : {}),
+        ...(language ? { language } : {}),
       }),
     onSuccess: () => {
       attempt.current = null;

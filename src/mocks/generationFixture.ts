@@ -109,6 +109,18 @@ export type MockGenerationJob = MockJobCommon & {
   contentLanguage?: string;
   postingLanguage?: string;
   /**
+   * The page limit **this** generation was made under (`B-118`, `F-039`) —
+   * what the request asked for, or the profile's default when it asked for
+   * nothing.
+   *
+   * Frozen onto the job for the same reason the selection above is: the
+   * preference can be raised a minute later, and a document must not be
+   * called short against a limit it was never built to. Optional here too,
+   * because the server sends nothing for a row written before the limit was
+   * recorded, and a screen that reads an absence has to be able to meet one.
+   */
+  maxPages?: number;
+  /**
    * What the history row is labelled with (`B-070`) — the two names Faz A
    * reads off the posting, and the whole of § 57.6's exception to absolute
    * rule 4.

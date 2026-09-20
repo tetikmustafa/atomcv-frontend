@@ -531,6 +531,17 @@ export function exportProfileAsMarkdown() {
  * counters of § 44.1 say *how much* rather than *who*. Omitted rather than
  * sent empty where there is none — an empty value is a **failure**, while an
  * absent one is what a deployment with no Turnstile secret expects.
+ *
+ * **`language` is where a `choose_language` answer travels** (`B-119`,
+ * `F-037`). The refusal that offers that action comes out of the worker, so
+ * there is no half-written profile to put the answer on: the next upload
+ * carries it instead, and carrying it **skips detection** rather than tipping
+ * a threshold — a field that only nudged the guess would let the second
+ * attempt land on the same refusal, which is the loop `F-037` was about.
+ *
+ * A code the server does not know is `400 VALIDATION_FAILED` with
+ * `fields: ["language"]`, not a silent fallback, so nothing here filters the
+ * value first: the screen offers codes it got from the server.
  */
 export function importCv(
   file: File,
@@ -538,11 +549,13 @@ export function importCv(
     idempotencyKey,
     replace = false,
     challengeToken,
-  }: { idempotencyKey: string; replace?: boolean; challengeToken?: string },
+    language,
+  }: { idempotencyKey: string; replace?: boolean; challengeToken?: string; language?: string },
 ) {
   const form = new FormData();
   form.append('file', file);
   if (challengeToken) form.append('challengeToken', challengeToken);
+  if (language) form.append('language', language);
 
   return api.post<Returns<'importCv', '*/*'>>(
     `/profile/import${query({ mode: replace ? 'replace' : undefined })}`,

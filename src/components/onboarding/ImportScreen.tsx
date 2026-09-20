@@ -17,7 +17,7 @@
  */
 
 import { useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { ProgressBar } from '@/components/feedback/ProgressBar';
@@ -25,7 +25,9 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useJobStream } from '@/hooks/useJob';
 import { useImportCv, useProfileReplaced } from '@/hooks/useProfileImport';
-import { useIsAnonymous } from '@/hooks/useSession';
+import { useCapabilities, useIsAnonymous } from '@/hooks/useSession';
+import { toErrorLike } from '@/lib/errors/errorLike';
+import { languageName } from '@/lib/i18n/languageNames';
 import { useRouter } from '@/lib/i18n/navigation';
 import { announce } from '@/stores/announcerStore';
 import { useEffect } from 'react';
@@ -44,24 +46,43 @@ const HANDLED = [
   'retry',
   'switch_to_manual_form',
   'upload_another_file',
+  'choose_language',
 ] as const;
 
 /**
- * **`choose_language` is deliberately not in that list** (`B-114`, `F-037`).
+ * **`choose_language` joined that list when the field did** (`B-119`,
+ * `F-037`).
  *
- * The server offers it beside `LANGUAGE_UNDETECTED`, and the screen would be
- * right to ask the question — one candidate comes back, so it is "this one,
- * or another?" rather than a menu. What is missing is somewhere to put the
- * answer: `POST /profile/import` publishes `mode` and nothing else, and the
- * multipart body carries the file and the challenge token. An answer with no
- * field to travel in is a button that reopens the same refusal.
+ * It was dropped for a year of items because the answer had nowhere to
+ * travel: `POST /profile/import` published `mode` and nothing else, so the
+ * button would have reopened the same refusal. The multipart body now carries
+ * `language`, and a declared language **skips detection** rather than
+ * weighting it — which is what makes the second attempt a different question
+ * instead of the same one.
  *
- * Dropping it is the policy `ErrorPanel` already documents and the same call
- * made for `keep_top_pinned`. The label stays in the catalogue, because the
- * vocabulary is the server's; what waits on `F-037` is the field.
+ * What is still true is the rule that kept it out: a resolution this screen
+ * cannot carry out is dropped rather than drawn. `keep_top_pinned` is still
+ * dropped, and for the reason this one no longer is.
  */
 function canResolve(action: Resolution['action']) {
   return (HANDLED as readonly string[]).includes(action);
+}
+
+/**
+ * The server's guesses, off the refusal that offered the button.
+ *
+ * `detectedCandidates` belongs to the **error**, not to the resolution — the
+ * resolution carries an action and nothing else — so the panel's `onResolve`
+ * is not where this can be read from, and the failure travels beside it.
+ *
+ * At most one comes back, which is what makes the question askable at all:
+ * "this one, or another language?" rather than a menu of near-misses.
+ */
+function candidatesOf(failure: unknown): string[] {
+  const value = toErrorLike(failure).params?.detectedCandidates;
+  return Array.isArray(value)
+    ? value.filter((code): code is string => typeof code === 'string')
+    : [];
 }
 
 export function ImportScreen() {
@@ -83,13 +104,48 @@ export function ImportScreen() {
   const [challengeToken, setChallengeToken] = useState<string>();
   const [attempt, setAttempt] = useState(0);
 
+  /**
+   * The `choose_language` answer, and the fact that it is being asked for
+   * (`B-119`).
+   *
+   * One piece of state rather than two: the chooser exists *because* an
+   * answer is owed, and a selected language with no question behind it would
+   * be a declaration nobody made. It is cleared whenever the file changes —
+   * a language declared about one CV says nothing about the next.
+   */
+  const [declaring, setDeclaring] = useState<{ offered: string[]; language: string } | null>(null);
+
   const anonymous = useIsAnonymous();
+  const capabilities = useCapabilities();
+  const locale = useLocale();
 
   const start = useImportCv();
 
   function spendChallenge() {
     setChallengeToken(undefined);
     setAttempt((n) => n + 1);
+  }
+
+  /**
+   * What the chooser may offer: the server's guess, then the languages a
+   * profile of this caller's may be written in.
+   *
+   * **Both halves are the server's** — `detectedCandidates` off the refusal
+   * and `capabilities.allowedLanguages` off the session — and neither is a
+   * constant here. An anonymous session is English-only (§ 9), so a hardcoded
+   * list would offer a language the profile could not then hold; the guess
+   * goes first because it is the answer the reader is most likely to confirm.
+   *
+   * The guess is kept even where it is outside `allowedLanguages`: the server
+   * read that language out of the file, and dropping it would leave the
+   * reader confirming something they can see is wrong.
+   */
+  function openChooser(candidates: string[]) {
+    const allowed = capabilities?.allowedLanguages ?? [];
+    const offered = [...candidates, ...allowed.filter((code) => !candidates.includes(code))];
+    const first = offered[0];
+
+    return first === undefined ? null : { offered, language: first };
   }
 
   function submit(replace = false) {
@@ -103,6 +159,9 @@ export function ImportScreen() {
         // empty value as a failed challenge, and a deployment without a
         // secret lets an absent one through (`B-083`).
         ...(challengeToken ? { challengeToken } : {}),
+        // Only ever what the reader chose after the server asked (`B-119`).
+        // Absent is the ordinary upload, where detection does its job.
+        ...(declaring ? { language: declaring.language } : {}),
       },
       {
         onSuccess: (accepted) => {
@@ -118,8 +177,36 @@ export function ImportScreen() {
     );
   }
 
-  function resolve(resolution: Resolution) {
+  function resolve(resolution: Resolution, failure?: unknown) {
     switch (resolution.action) {
+      case 'choose_language': {
+        /*
+          `B-119`. The refusal came out of the worker, so there is nothing
+          half-written to answer on: the answer rides the **next** upload, and
+          that upload is the same file one question later.
+
+          Back to the form rather than a control on the progress view: the
+          file picker, the challenge and the upload button all live there, and
+          the reader is about to use all three. The file is deliberately kept.
+        */
+        const chooser = openChooser(candidatesOf(failure));
+
+        // Nothing to offer means no question to ask, and the panel that is
+        // already on screen is more use than an empty select. Unreachable
+        // while the refusal carries its candidates, which is every time the
+        // server offers this action.
+        if (!chooser) return;
+
+        setJob(null);
+        start.reset();
+        setDeclaring(chooser);
+        // The panel that asked the question is unmounted by this, and the
+        // control that answers it is a screen away from where the focus is.
+        // Said politely: nothing went wrong, a question was asked.
+        announce(t('languageHint'), 'polite');
+        return;
+      }
+
       case 'replace_profile':
         // The same request, one question later — `?mode=replace` is consent,
         // and it is only ever sent because the server offered this button.
@@ -160,6 +247,9 @@ export function ImportScreen() {
         setFile(null);
         setJob(null);
         start.reset();
+        // A different file is a different document: whatever was declared
+        // about the refused one says nothing about the next (`B-119`).
+        setDeclaring(null);
         if (input.current) {
           input.current.value = '';
           input.current.click();
@@ -198,6 +288,7 @@ export function ImportScreen() {
             setJob(null);
             setFile(null);
             start.reset();
+            setDeclaring(null);
           }}
         />
         {challenge}
@@ -220,16 +311,62 @@ export function ImportScreen() {
           id="cv-file"
           name="file"
           type="file"
-          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+          onChange={(event) => {
+            setFile(event.target.files?.[0] ?? null);
+            // The declaration was about the file being replaced (`B-119`).
+            setDeclaring(null);
+          }}
           className="file:border-border file:bg-background text-sm file:mr-3 file:rounded-md file:border file:px-3 file:py-1.5 file:text-sm"
         />
         <p className="text-muted-foreground text-sm">{t('fileHint')}</p>
       </div>
 
+      {/*
+        The `choose_language` answer, asked for only because the server
+        offered the action (`B-119`, `F-037`).
+
+        A select rather than free text: the server refuses a code it does not
+        know with `400 VALIDATION_FAILED`, and the reader typing `tr-TR` into
+        a box would meet that refusal without ever being told what a valid
+        answer looks like. The names come from `Intl.DisplayNames` in the
+        interface language — this is a question about the document, asked of
+        the person, so it is the one place the two axes meet (rule 9).
+      */}
+      {declaring && (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="cv-language">{t('languageLabel')}</Label>
+          <p id="cv-language-hint" className="text-muted-foreground text-sm">
+            {t('languageHint')}
+          </p>
+          <select
+            id="cv-language"
+            name="language"
+            value={declaring.language}
+            aria-describedby="cv-language-hint"
+            onChange={(event) =>
+              setDeclaring((current) =>
+                current === null ? current : { ...current, language: event.target.value },
+              )
+            }
+            className="border-border bg-background w-fit rounded-md border px-3 py-1.5 text-sm"
+          >
+            {declaring.offered.map((code) => (
+              <option key={code} value={code}>
+                {languageName(code, locale) ?? code}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {challenge}
 
       {start.error && (
-        <ErrorPanel error={start.error} onResolve={resolve} canResolve={canResolve} />
+        <ErrorPanel
+          error={start.error}
+          onResolve={(resolution) => resolve(resolution, start.error)}
+          canResolve={canResolve}
+        />
       )}
 
       <Button type="submit" disabled={!file || start.isPending} className="w-fit">
@@ -256,7 +393,11 @@ function ImportProgress({
 }: {
   jobId: string;
   streamUrl?: string;
-  onResolve: (resolution: Resolution) => void;
+  /**
+   * The failure travels with the resolution: `detectedCandidates` is on the
+   * error rather than on the action, and `choose_language` needs it (`B-119`).
+   */
+  onResolve: (resolution: Resolution, failure?: unknown) => void;
   onStartOver: () => void;
 }) {
   const t = useTranslations('Onboarding');
@@ -305,7 +446,11 @@ function ImportProgress({
           again, and it says so by carrying `retry` (`B-051`). Nothing is
           invented — the panel draws what arrived.
         */}
-        <ErrorPanel error={progress.failure} onResolve={onResolve} canResolve={canResolve} />
+        <ErrorPanel
+          error={progress.failure}
+          onResolve={(resolution) => onResolve(resolution, progress.failure)}
+          canResolve={canResolve}
+        />
         <Button type="button" variant="outline" size="sm" className="w-fit" onClick={onStartOver}>
           {t('chooseAnother')}
         </Button>

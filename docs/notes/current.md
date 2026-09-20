@@ -180,6 +180,46 @@ bastığını doğruluyor — birisi makul görünen bir sayıyı koda gömdüğ
 **`B-100`…`B-116` ACK'lendi ve indi.** `to-frontend.md` 347 → **43 satır**;
 satır satır kayıt `resolved/to-frontend-2026-09.md`'de.
 
+### `B-117`…`B-119` — backend'in üç cevabı (2026-09-21)
+
+**`B-117` kod yazdırmadı:** dördü de D6 ve D12'de inmişti (`note`,
+`customizationId`, `GET /templates`, `/customizations` + 20 tavanı).
+
+**Sapma — tipler koşan sunucudan değil, backend'in commit'li şemasından
+üretildi.** `:8080`'deki derleme bayattı: `npm run gen:api` `api.d.ts`'i **hiç
+değiştirmedi**, ne `maxPages` ne `language` içindeydi. Kaynak
+`../atomcv-backend/openapi.json` (CI'ın `contract-check`'i de `main`'den onu
+çekiyor). **Bayat bir sunucu, eksik bir şemadan ayırt edilemez** — ikisi de
+"alan yok" der, ve dokümanın yanıldığı sonucuna götürür. Ayırt eden şey,
+şemanın **iki kopyasının** olması oldu.
+
+**`B-119` bir politikayı tersine çevirdi, kuralı değil.** `B-114` kaydı
+"`choose_language` çizilmiyor" diyor ve gerekçesi *cevabın gidecek alanı yok*
+idi; alan geldi, düğme çizildi. Yokluğunu doğrulayan test silinmedi,
+**yerine geçeni yazıldı** — o test zaten "alan indiği gün bu düğme borçtur"
+demek için vardı. Dropping kuralı yerinde: `keep_top_pinned` hâlâ düşüyor.
+Seçicinin listesi **iki yarısı da sunucunun**: reddin `detectedCandidates`'i
+önce (onaylanması en olası cevap), sonra `capabilities.allowedLanguages`.
+Beyan **dosya değişince düşer** — bir CV hakkında verilen cevap ötekini
+bağlamaz, üstelik beyan tespiti atlattığı için sessizce yanlış dil yazardı.
+
+**`B-118`'in notu yalnız üretimin kendi sınırına karşı çiziliyor.** `maxPages`
+yoksa not yok: eksik bir alan "sınır bir sayfaydı" demek değil. Satırda da
+**tek olgu** — sayfa sayısının yanına "kısa" rozeti aynı şeyi ikinci kez, ve
+doğru çıkmış bir belgeden daha yüksek sesle söylerdi. Bayat bir
+`customizationId`'nin `404`'ünde ekran **cümle yazmıyor**: paneli sunucunun
+metni çiziyor, ekranın yaptığı yalnız ölü seçimi düşürüp listeyi tazelemek —
+onarım, hata arayüzü değil (kural 7). Onarılmazsa bir sonraki basış aynı ölü
+id'yi yollar, yani çıkış değil döngü olur.
+
+**Kapı sırası ölçüldü, madde açılmadı.** Backend yeniden başlayınca üç sonda:
+11 MB + `language=zz` → **`413`**; `.png` + `language=zz` → **`400`,
+`fields:["language"]`** (`415` değil); aynı `.png` dilsiz → **`409`**. Sıra
+**413 → `400` → 409 → 415**; mock `language`'ı 413'ün önüne koymuştu,
+düzeltildi. Sorulacak değil bakılacak bir şeydi — `B-051`'de kapı sırası bir
+kez varsayılmış ve yanlış çıkmıştı. Aynı koşuda `gen:api` commit'li şemadan
+üretilenle **bayt bayt aynı** dosyayı verdi, yani yukarıdaki sapma kapandı.
+
 ### Dağıtım günü — sırayla denenecekler
 
 Kod tarafında hiçbiri beklemiyor; hepsi **ölçüm** bekliyor.

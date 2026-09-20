@@ -122,6 +122,36 @@ describe('the history', () => {
     expect(await screen.findByText(/Nothing here yet/)).toBeInTheDocument();
   });
 
+  /**
+   * `B-118`, `F-039`. The summary carries the limit that generation was made
+   * under, so a row reads the way the result screen reads — as one fact
+   * rather than a badge repeating it.
+   *
+   * The count stands alone where the row carries no limit: a generation
+   * written before it was recorded has none, and the server sends nothing
+   * rather than a plausible one.
+   */
+  it('reads the page count against the limit that row was made under', async () => {
+    signIn();
+    seedGenerations(1, { maxPages: 2 });
+    seedGenerations(1, { generationId: 'gen-old' });
+    renderHistory();
+
+    const rows = await screen.findAllByRole('listitem');
+
+    // Found by the generation each row opens rather than by position: both
+    // were seeded at the same instant, so "newest first" does not separate
+    // them and the order between the two is not what is being asserted.
+    const rowFor = (id: string) =>
+      rows.find(
+        (row) => within(row).getByRole('link').getAttribute('href') === `/generations/${id}`,
+      );
+
+    expect(rowFor('gen-00')).toHaveTextContent('one page of 2 allowed');
+    expect(rowFor('gen-old')).toHaveTextContent('one page');
+    expect(rowFor('gen-old')).not.toHaveTextContent('allowed');
+  });
+
   it('lists what the account has made, newest first, each one openable', async () => {
     signIn();
     seedGenerations(3);

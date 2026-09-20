@@ -97,12 +97,37 @@ export function GenerationResult({ generationId }: { generationId: string }) {
   const postingLang = primaryLanguage(data.postingLanguage);
   const languagesDiffer = Boolean(contentLang && postingLang && contentLang !== postingLang);
 
+  /*
+    `B-118`, `F-039`: a thin profile may produce a CV shorter than it was
+    allowed to be, and that is correct output rather than a fault. It is said
+    once, quietly, because a reader who sees one page where two were allowed
+    otherwise wonders what went missing — and because the alternative people
+    reach for is padding, which would be inventing work nobody did.
+
+    **`maxPages` is the limit this document was built to**, not the profile's
+    setting of today: a CV made under a one-page limit must not be called
+    short because the preference has since been raised. The server sends it
+    for exactly that reason, and sends nothing at all for a generation written
+    before the limit was recorded — so an absent one draws no note rather than
+    a guessed one.
+
+    Not a warning and not a prompt: nothing offers to make it longer.
+  */
+  const shorterThanAllowed =
+    data.pageCount !== undefined && data.maxPages !== undefined && data.pageCount < data.maxPages;
+
   return (
     <div className="flex flex-col gap-4">
       <p>
         {t('ready')}
         {data.pageCount !== undefined ? ` ${t('pages', { count: data.pageCount })}` : ''}
       </p>
+
+      {shorterThanAllowed && (
+        <p data-testid="length-note" className="text-muted-foreground text-sm">
+          {t('lengthNote', { pages: data.pageCount!, limit: data.maxPages! })}
+        </p>
+      )}
 
       {languagesDiffer && (
         <p data-testid="language-note" className="text-muted-foreground text-sm">

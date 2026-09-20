@@ -385,6 +385,11 @@ function generationBody(job: MockGenerationJob): Schemas['GenerationResponse'] {
     // Same reading as in the summary above (`B-102`).
     ...(job.archived ? { archived: true } : {}),
     pageCount: 1,
+    // Read against `pageCount` and against nothing else (`B-118`): one page
+    // under a two-page limit is a document shorter than it was allowed to be,
+    // which is a note rather than a fault. Absent on a row written before the
+    // limit was recorded, and absent rather than guessed.
+    ...(job.maxPages === undefined ? {} : { maxPages: job.maxPages }),
     createdAt: new Date(job.startedAt).toISOString(),
     ...(job.fitReport ? { fitReport: job.fitReport } : {}),
     // `B-042`. Omitted rather than blank, the way `F-010` settled it.
@@ -565,6 +570,25 @@ export const generationHandlers = [
       });
     }
 
+    /*
+      A named appearance set that is not this profile's (`B-118`, `F-040`).
+
+      **At the gate, not in the worker**, and that is the whole item: the
+      check used to run after the `202`, so a set deleted in another tab cost
+      a generation to find out about — measured here, by spending one. A set
+      belonging to somebody else is not found either, which is the same answer
+      as a set that never existed and deliberately so: a `403` would confirm
+      the id names something.
+
+      Ahead of the quota gate, with the challenge and the bounds above.
+    */
+    if (
+      body.customizationId !== undefined &&
+      !fixture.customizations.some((saved) => saved.id === body.customizationId)
+    ) {
+      return HttpResponse.json(problem(404, 'RESOURCE_NOT_FOUND', GENERATIONS), { status: 404 });
+    }
+
     // § 44.3: the brake runs ahead of the quota, so a paused deployment does
     // not spend anyone's allowance on a request it is going to refuse.
     if (generations.paused) {
@@ -638,6 +662,15 @@ export const generationHandlers = [
       );
     }
 
+    /*
+      `B-118`. The request's limit, or the profile's when it named none —
+      resolved **here**, at the moment the generation is made, and then kept
+      on the job. Reading it back off the preferences at render time is the
+      bug the field exists to prevent: a CV made under a one-page limit would
+      be called short the day somebody raises the setting to two.
+    */
+    const limit = body.maxPages ?? fixture.profile.preferences?.defaults?.maxPages;
+
     const job: MockJob = {
       jobId: `job-${generations.jobs.length + 1}`,
       kind: 'generation',
@@ -678,6 +711,7 @@ export const generationHandlers = [
       */
       ...(jobDescription === '' ? {} : { roleTitle: 'Senior Backend Engineer' }),
       ...(namesTheEmployer(jobDescription) ? { companyName: MOCK_COMPANY } : {}),
+      ...(limit === undefined ? {} : { maxPages: limit }),
       startedAt: Date.now(),
       outcome: generations.nextOutcome,
       ...(generations.nextFailure ? { failure: generations.nextFailure } : {}),
@@ -893,6 +927,9 @@ export const generationHandlers = [
         status: 'completed',
         createdAt: new Date(job.startedAt).toISOString(),
         pageCount: 1,
+        // The same pair as the full response carries, so a row reads the same
+        // way (`B-118`).
+        ...(job.maxPages === undefined ? {} : { maxPages: job.maxPages }),
         ...(job.roleTitle ? { roleTitle: job.roleTitle } : {}),
         ...(job.companyName ? { companyName: job.companyName } : {}),
         ...(job.fitReport?.level ? { matchLevel: job.fitReport.level } : {}),

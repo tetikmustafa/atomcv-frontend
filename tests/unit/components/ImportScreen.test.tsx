@@ -184,23 +184,71 @@ describe('uploading a CV', () => {
   });
 
   /**
-   * `F-037`. The server offers `choose_language` beside
-   * `LANGUAGE_UNDETECTED` and the screen would be right to ask — but
-   * `POST /profile/import` publishes `mode` and nothing else, so the answer
-   * has nowhere to travel. Drawing it would reopen the same refusal.
+   * `B-119`, and the test it replaces asserted the opposite.
    *
-   * Asserted rather than left to a comment: the day the field lands, this
-   * test is what says the button is now owed.
+   * `choose_language` was dropped for as long as the answer had nowhere to
+   * travel: `POST /profile/import` published `mode` and nothing else, so the
+   * button would have reopened the same refusal. `F-037` asked for the field
+   * and got it — the multipart body now carries `language`, and a declared
+   * language **skips detection** rather than weighting it.
+   *
+   * The refusal comes out of the **worker**, not the gate: by the time the
+   * model cannot place the language there is no half-written profile to
+   * answer on, which is why the answer rides the next upload.
    */
-  it('does not draw a language choice it has nowhere to send', async () => {
+  it('asks which language, and sends the answer with the next upload', async () => {
     await renderImport();
-    await upload(cv('encrypted-cv.pdf'));
 
-    const panel = await screen.findByRole('alert');
+    const bodies: Promise<FormData>[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (request.url.includes('/profile/import')) bodies.push(request.clone().formData());
+    });
 
-    expect(
-      within(panel).queryByRole('button', { name: en.resolutions.choose_language }),
-    ).toBeNull();
+    await upload(cv('undetected-cv.pdf'));
+
+    const panel = await screen.findByRole('alert', {}, { timeout: 4000 });
+    await userEvent.click(
+      within(panel).getByRole('button', { name: en.resolutions.choose_language }),
+    );
+
+    /*
+      The server's one guess is offered first — it is the answer the reader is
+      most likely to confirm — and the languages the session allows follow it.
+      Both halves are the server's: `detectedCandidates` off the refusal,
+      `allowedLanguages` off the session, and an anonymous one is English-only.
+    */
+    const chooser = screen.getByLabelText(en.Onboarding.languageLabel) as HTMLSelectElement;
+    expect([...chooser.options].map((option) => option.value)).toEqual(['tr', 'en']);
+
+    // The file is deliberately still selected: this is the same document, one
+    // question later.
+    await userEvent.click(screen.getByRole('button', { name: en.Onboarding.upload }));
+    await waitFor(() => expect(bodies).toHaveLength(2));
+
+    expect((await bodies[0]!).get('language')).toBeNull();
+    expect((await bodies[1]!).get('language')).toBe('tr');
+  });
+
+  /**
+   * The declaration belongs to the document it was made about (`B-119`).
+   *
+   * Carrying it into a different file would declare a language nobody said
+   * anything about — and since a declared language skips detection, the
+   * second CV would be read as the first one's language without being asked.
+   */
+  it('forgets the declared language when another file is chosen', async () => {
+    await renderImport();
+    await upload(cv('undetected-cv.pdf'));
+
+    const panel = await screen.findByRole('alert', {}, { timeout: 4000 });
+    await userEvent.click(
+      within(panel).getByRole('button', { name: en.resolutions.choose_language }),
+    );
+
+    await screen.findByLabelText(en.Onboarding.languageLabel);
+    await userEvent.upload(screen.getByLabelText(en.Onboarding.fileLabel), cv('another-cv.pdf'));
+
+    expect(screen.queryByLabelText(en.Onboarding.languageLabel)).toBeNull();
   });
 });
 

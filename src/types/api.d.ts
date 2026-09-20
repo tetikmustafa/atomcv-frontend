@@ -109,6 +109,8 @@ export interface paths {
          *     Answers 202 with a job to follow. Everything that can be decided about the file itself is decided before that: an unreadable format, an oversized file, an encrypted PDF, a scan with no text in it, and a document that yielded nothing are all refused synchronously, because each of them is something the person acts on at once.
          *
          *     Send `Idempotency-Key`. An upload is the request a flaky connection repeats most easily, and profile extraction has the smallest daily allowance in the product.
+         *
+         *     `language` is where a `choose_language` answer goes (F-037). The refusal that offers that action comes out of the worker, so there is no half-written profile to put the answer on — the next upload carries it instead, and carrying it skips detection, so a second attempt cannot fail the same way.
          */
         post: operations["importCv"];
         delete?: never;
@@ -327,6 +329,8 @@ export interface paths {
          *     The preflights are synchronous. A posting that does not                     read as one and a profile with nothing in it are both                     refused here, on the spot, rather than accepted and failed                     thirty seconds later.
          *
          *     `Idempotency-Key` is honoured: the same key from the same                     user answers with the job it already made, so a double                     click produces one CV and not two.
+         *
+         *     A `customizationId` is checked here too, and a stale one                     is a `404` rather than a document rendered with something                     else. A set deleted in another tab is the ordinary way to                     hold one (F-040).
          */
         post: operations["generate"];
         delete?: never;
@@ -1798,6 +1802,20 @@ export interface components {
              * @description How many pages the compiled document came to
              */
             pageCount?: number;
+            /**
+             * Format: int32
+             * @description The page limit this generation was made under -- the number the
+             *     request asked for, or the profile's default when it asked for
+             *     none. Read it against `pageCount`: a document that came out
+             *     under its limit is shorter than it was allowed to be, which is
+             *     a fact worth a note rather than a reason to pad.
+             *
+             *     Not the profile's preference of today. That is what is set now,
+             *     and `increase_page_limit` changes it; this is what *this*
+             *     document was built to. Absent for a generation written before
+             *     the limit was recorded, and absent rather than guessed.
+             */
+            maxPages?: number;
             /** Format: date-time */
             createdAt?: string;
             fitReport?: components["schemas"]["FitReport"];
@@ -2183,6 +2201,11 @@ export interface components {
              * @description How many pages the compiled document came to; absent while it is unfinished or failed
              */
             pageCount?: number;
+            /**
+             * Format: int32
+             * @description The page limit this generation was made under, so a row can be read against it the same way the full response is (F-039). Absent for a generation written before the limit was recorded.
+             */
+            maxPages?: number;
             /**
              * @description The role the posting was for, as Faz A read it; absent in general mode and when the posting named none
              * @example Backend Engineer
@@ -2607,6 +2630,11 @@ export interface operations {
                      * @description The CV. PDF, DOCX, TEX, TXT or MD, up to ten megabytes.
                      */
                     file?: string;
+                    /**
+                     * @description What the CV is written in, ISO 639-1. Send it to answer a `choose_language` resolution from a previous upload's `422 LANGUAGE_UNDETECTED`: detection is then skipped and this is the language the profile gets, so the second upload cannot land on the same refusal. Omit it and the language is detected, which is the ordinary case. Not a code we know is `400 VALIDATION_FAILED`.
+                     * @example tr
+                     */
+                    language?: string;
                     /** @description What the challenge widget produced. Required for a caller with no account and ignored for one with an account: this is the most expensive single call the product makes. Absent or blank is refused with `403 CHALLENGE_FAILED`. */
                     challengeToken?: string;
                 };
@@ -2622,7 +2650,7 @@ export interface operations {
                     "*/*": components["schemas"]["AcceptedJobResponse"];
                 };
             };
-            /** @description VALIDATION_FAILED - the body carried no `file` part */
+            /** @description VALIDATION_FAILED - the body carried no `file` part, or `language` was not an ISO 639-1 code */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3240,6 +3268,15 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AcceptedJobResponse"];
+                };
+            };
+            /** @description RESOURCE_NOT_FOUND - the `customizationId` is not one of this profile's saved sets */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
                 };
             };
             /** @description UNPARSEABLE_JOB_DESCRIPTION or INSUFFICIENT_PROFILE */

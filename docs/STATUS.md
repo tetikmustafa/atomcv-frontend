@@ -3,7 +3,7 @@
 > İki repo da okur ve kendi satırlarını günceller. **Kural: 60 satırı geçmez.**
 > Ayrıntı repo-yerel `notes/current.md`'de.
 
-**2026-09-20** · **frontend'e on yedi madde açık** — `B-100`…`B-116`, denetimlerden, hiçbiri henüz ACK'lenmedi
+**2026-09-21** · **`B-117`…`B-119` karşılandı ve arşivlendi** — iki kanal da boş; açık madde yok. Kapı sırası ve şema **gerçek uca karşı ölçüldü** (413 → `400` → 409 → 415; `gen:api` backend'in commit'li şemasıyla birebir)
 
 ## Backend — `atomcv-backend`
 
@@ -11,6 +11,7 @@
 |---|---|
 | Aşama 0-3 — hesap, MVP, anonim akış (kapanış denetimi 08-28) | ✅ |
 | Aşama 4 — buradan yapılabilecek maddelerin hepsi | ✅ |
+| Frontend'in dört maddesi — `F-037`…`F-040` | ✅ geldikleri gün |
 
 **Aşama 4 + altı denetim.** **Faz G** (`B-088`, `B-089`), **üç şablon** (`B-090`, `B-092`), **Katman B** (`B-091`), **başvuru takibi** (`B-093`), **DOCX** (`B-094`), **yaşam döngüsü e-postaları** (`B-096`). Sonra spec **altı kez** koda karşı denetlendi (09-15 → 09-20) ve her turun ekseni değişti: ad kodda var mı (1-2) · yazılmış sayılan tasarım (3) · kümeler tam mı (4) · telde bir ucu var mı (5) · **iki belge aynı şeyi mi anlatıyor, ve ertelenmiş bir işin koşulu geçti mi (6)**. Altısının da bulduğu her şey ya yazıldı ya gerekçesiyle `spec/`'e kaydedildi; anlatılar `notes/archive/denetim-*.md`'de, özet tablo `notes/current.md`'de.
 
@@ -20,7 +21,9 @@
 
 **Geliştiricide:** VPS ve restore testi (§ 49.4); OAuth, Turnstile, `B-083`'ün challenge'ı gerçek uca karşı denenmedi. **Admin teşhis ucu** (§ 41.4) ve **R2** (§ 57.4) bilerek yok; ikincisini bir tuzak tel tutuyor. **Yerelde iki şey bekliyor:** `make db-reset` (migration yorumları düzenlendi, checksum'lar değişti; üstelik `V17` indi) ve **`make record`** — `job_analysis` v3'e çıktığı için o prompt'un fixture'ları ıskalanıyor ve `local-fake` sentetik cevaba düşüyor. `scripts/dev-record.sh` ilanı kendi taşıyor; senden istediği tek şey bir CV dosyası.
 
-**Test:** 1917 birim · 580 entegrasyon · latex 145 — 0 hata; artı elle koşulan `embeddingTest` ve `llmEval` (para harcar)
+**`F-037`…`F-040` karşılandı (2026-09-20, PR #208).** Bayat bir `customizationId` worker'ın içinde çözülüyordu, yani `202` alıp farklı geometriyle basıyordu — artık kapıda ve **kotanın önünde** `404` (`F-040`). `GenerationResponse` ve `GenerationSummary` `maxPages` yayımlıyor; **kolon gerekmedi**, `storedOptions` onu `options`'a hep yazıyormuş (`F-039`). `POST /profile/import` `language` alıyor ve gönderildiğinde **tespiti tamamen atlıyor** — "eşik düşükse kullan" ikinci yüklemenin aynı reddi almasına izin verirdi (`F-037`). `F-038`'in dört şeyi zaten koddaydı: bayat olan `B-104`'tü, `note` Faz D'ye gerçekten ulaşıyor. Frontend'e `B-117`…`B-119`, **üçü de `npm run gen:api` istiyor.**
+
+**Test:** 1928 birim · 582 entegrasyon · latex 145 — 0 hata; artı elle koşulan `embeddingTest` ve `llmEval` (para harcar). PR #208'in yedi kontrolü de geçti, `latexTest` dahil. Beş yeni muhafız **düşerken görüldü** (§ 51.7).
 
 ## Frontend — `atomcv-frontend`
 
@@ -30,7 +33,7 @@
 | Aşama 3 — **bütün dilimler** | ✅ |
 | Aşama 4 — `B-071`-`B-074`, `B-085`-`B-087`, `B-088`-`B-094`, `B-096` | ✅ |
 | Aşama 4 — SEO, a11y denetimi, tema, `canAddAlternatives`, bağımlılıklar | ✅ |
-| Aşama 4 — kapanış sırası D1…D14, `B-100`…`B-116` dahil | ✅ tamamı |
+| Aşama 4 — kapanış sırası D1…D14, `B-100`…`B-116`, `B-117`…`B-119` | ✅ tamamı |
 
 **Aşama 4'ün sekizi karşılandı (2026-09-11).** Faz G'nin cümle kutusu, üç şablon + Katman B, `/applications`, DOCX, `/unsubscribe` — satır satır `handoff/resolved/to-frontend-2026-09.md`'de. **Tek eksik bilerek:** `B-088`'in elle aç/kapa arayüzü çizilmedi, çünkü hangi atomların tartıldığını söyleyen uç yok (`F-031`); istemci fonksiyonu ve `GENERATION_SUPERSEDED` indi. **`gen:api` bir sessiz kusur açığa çıkardı:** springdoc `DELETE /account`'u `delete_2`'ye kaydırdı ve `delete_1` başvuru silmeye geçti; ikisi de 204 döndüğü için typecheck sustu — numaralı id'li her uç artık **yoluyla** bağlanıyor (`F-033`).
 
@@ -40,7 +43,7 @@
 
 **Güvenlik:** `next` 16.3.0 iki **kritik** RCE uyarısının aralığındaydı (Windows sunucu; AVIF/görüntü optimizasyonu). 16.3.5'e çıkıldı, kalan yedisi geliştirme zinciriydi, **sıfır açık**. CI action'ları `@v5` — yalnız push'ta doğrulanabilir.
 
-**Test:** 965 birim · 77 e2e · **bundle** profil 258.6 / ayarlar 243.8 / üretim 227.4 / onboarding 221.2 / başvurular 216.6 / geçmiş 215.5 / landing ve nasıl-çalışıyor 168.8 KB (tavan: pazarlama 200, uygulama 280) · `npm audit` sıfır açık
+**Test:** 971 birim · 77 e2e · **bundle** profil 258.6 / ayarlar 243.8 / üretim 227.5 / onboarding 221.6 / başvurular 216.6 / geçmiş 215.5 / landing ve nasıl-çalışıyor 168.8 KB (tavan: pazarlama 200, uygulama 280) · `npm audit` sıfır açık
 
 ## Açık kararlar
 
@@ -50,6 +53,8 @@ _Daha önce kapandı 09-09: model `openai/gpt-5.6-sol`; `emphasis` kalın, bedel
 
 ## Sonraki senkronizasyon noktası
 
-**Sırada `B-100`…`B-116` var (2026-09-20).** On yedisi de denetimlerden ve hiçbiri ACK'lenmedi, yani `to-frontend.md` sınırı üç kattan fazla geçti — bu bir arşivleme değil koordinasyon meselesi. **Önce `npm run gen:api`**: dört turda şema değişti, sonuncusunda `Resolution.action` iki değer kazandı ve üç enum daraldı. Başlıcaları: `B-100` (CSP — dağıtımda görülmeli), `B-101` (`contract-check`'in URL'i), `B-103` (etiketler), `B-108` (`heldBackReason` dört ayrı cümle istiyor), **`B-111`** (çeviri dosyalarınız yanlış tablodan yazılmış olabilir), **`B-114`** (dört çıkarım reddi artık çözüm taşıyor — iki yeni ICU anahtarı), **`B-115`** (§ 37.6'nın iki düğmesi çalışıyor, spec "çizmeyin" diyordu), **`B-116`** (`failed`, `cancelled`, `two_column` telden kalktı).
+**Üçü de karşılandı (2026-09-21).** `B-117` kod yazdırmadı — dördü de D6/D12'de inmişti. `B-118`: sonuç ekranı ve geçmiş satırı `pageCount`'u **o üretimin** `maxPages`'ine karşı okuyor (alan yoksa not yok), bayat bir `customizationId`'nin `404`'ünde ölü seçim düşüyor ve liste tazeleniyor. `B-119`: `choose_language` artık çiziliyor, cevap bir sonraki yüklemenin `language`'ında gidiyor; seçicinin listesinin iki yarısı da sunucunun. **`gen:api` şemayı değiştirmedi — çünkü `:8080`'deki derleme bayattı**; tipler backend'in commit'li `openapi.json`'ından üretildi, CI'ın `contract-check`'inin çektiği dosyadan. Yeniden başlatılan sunucuya karşı `gen:api` **bayt bayt aynı** dosyayı verdi, ve `language`'ın kapıdaki yeri üç sondayla ölçüldü — **413 → `400` → 409 → 415**, mock düzeltildi. **Açık madde yok; sıra backend'in bir sonraki turunda.**
 
-**Frontend'den dört madde açık: `F-037` (`choose_language`'ın dolduracağı alan yok), `F-038` (şemada olup hiçbir maddede adlandırılmayan dört şey), `F-039` (`maxPages` üretimde yayımlanmıyor) ve `F-040` (bilinmeyen bir `customizationId` 202 alıyor — gerçek uca karşı ölçüldü).** Kapanış sırası D1…D14 bitti ve **`B-100`…`B-116` ACK'lendi**: `to-frontend.md` 347 → 43 satır, satır satır `resolved/to-frontend-2026-09.md`'de. `B-101`'in `contract-check`'i CI'da ve `main/openapi.json`'ı çekiyor — yerelde koşuldu, backend'in commit'li şeması bizim tiplerimizle birebir. Yeni yüzeyin hepsi **gerçek uca karşı** doğrulandı (MSW kapalı, 2026-09-20); üç fark çıktı ve üçü de mock'a ya da `F-040`'a yazıldı.
+**Açık duran tek şey `B-101`'in `contract-check`'i** ve ikimizde de yapılmadı. `F-038`'in dört boşluğunu tam olarak o yakalardı; bu tur onları elle kapattı, muhafızı değil.
+
+**Frontend'den dört madde açılmıştı — `F-037`, `F-038`, `F-039`, `F-040`; dördü de aynı gün karşılandı (yukarı bak), `B-117`…`B-119` bekliyor.** Kapanış sırası D1…D14 bitti ve **`B-100`…`B-116` ACK'lendi**: `to-frontend.md` 347 → 43 satır, satır satır `resolved/to-frontend-2026-09.md`'de. `B-101`'in `contract-check`'i CI'da ve `main/openapi.json`'ı çekiyor — yerelde koşuldu, backend'in commit'li şeması bizim tiplerimizle birebir. Yeni yüzeyin hepsi **gerçek uca karşı** doğrulandı (MSW kapalı, 2026-09-20); üç fark çıktı ve üçü de mock'a ya da `F-040`'a yazıldı.

@@ -8,7 +8,7 @@ import { GenerateScreen } from '@/components/generation/GenerateScreen';
 import { failNextJob, gateRefusal } from '@/mocks/generationFixture';
 import { server } from '@/mocks/node';
 import { signIn } from '@/mocks/sessionFixture';
-import { createCustomization } from '@/lib/api/endpoints/profile';
+import { createCustomization, deleteCustomization } from '@/lib/api/endpoints/profile';
 import en from '@/messages/en.json';
 
 const push = vi.fn();
@@ -221,6 +221,41 @@ describe('starting a generation', () => {
 
       await waitFor(() => expect(bodies).toHaveLength(1));
       expect(await sent(0)).toHaveProperty('customizationId');
+    });
+
+    /**
+     * `B-118`, `F-040`. A set deleted in another tab is the ordinary way to
+     * hold a stale id, and the check now runs **at the gate** rather than in
+     * the worker — so finding out costs a round trip instead of one of the
+     * day's generations.
+     *
+     * What the screen owes is the repair, not a sentence of its own: the
+     * panel draws the server's message, and the dead selection is dropped so
+     * that pressing Generate again is a different request rather than the
+     * same refusal.
+     */
+    it('drops a saved set the server says is gone', async () => {
+      const user = userEvent.setup();
+      signIn();
+      const saved = await createCustomization({ name: 'Roomy', baseTemplateId: 'classic' });
+
+      render(<GenerateScreen />, { wrapper });
+      await user.click(screen.getByRole('button', { name: en.Generation.directives.show }));
+
+      const chooser = await screen.findByLabelText(en.Generation.directives.appearanceLabel);
+      await user.selectOptions(chooser, 'Roomy');
+
+      // Deleted somewhere else entirely, which is what the item is about.
+      await deleteCustomization(saved.id!);
+
+      await user.click(screen.getByRole('button', { name: 'Generate' }));
+
+      await screen.findByRole('alert');
+      // Cleared, so the next press does not send the same dead id — and the
+      // refetched list no longer offers it.
+      await waitFor(() =>
+        expect(screen.queryByLabelText(en.Generation.directives.appearanceLabel)).toBeNull(),
+      );
     });
 
     /**

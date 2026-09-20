@@ -20,6 +20,7 @@
  */
 
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
@@ -31,6 +32,8 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useStartGeneration } from '@/hooks/useGeneration';
 import { useCanWriteCoverLetter, useIsAnonymous } from '@/hooks/useSession';
+import { toErrorLike } from '@/lib/errors/errorLike';
+import { appearanceKeys } from '@/lib/api/queryKeys';
 import { Link, useRouter } from '@/lib/i18n/navigation';
 import type { GenerationRequest } from '@/lib/api/endpoints/generations';
 import type { Resolution } from '@/types/domain';
@@ -108,6 +111,7 @@ export function GenerateScreen() {
 
   const anonymous = useIsAnonymous();
   const canWriteCoverLetter = useCanWriteCoverLetter();
+  const queryClient = useQueryClient();
 
   const start = useStartGeneration();
 
@@ -164,13 +168,43 @@ export function GenerateScreen() {
       // publish which layer turned a request away, so there is no telling a
       // refusal that spent the token from one that did not. A fresh token
       // always works; a discarded good one costs a second.
-      onError: spendChallenge,
+      onError: (error) => {
+        spendChallenge();
+        forgetMissingCustomization(error);
+      },
     });
   }
 
   function spendChallenge() {
     setChallengeToken(undefined);
     setAttempt((n) => n + 1);
+  }
+
+  /**
+   * Drops a saved appearance set the server has just said it does not have
+   * (`B-118`, `F-040`).
+   *
+   * **Not error UI, and the difference matters to rule 7.** Nothing here
+   * renders anything or invents a way forward — the panel still draws the
+   * server's own sentence and the server's own resolutions. What this repairs
+   * is the two pieces of state that would otherwise be wrong: a selection
+   * naming a set that is gone, and a cached list still offering it. Left
+   * alone, the next press sends the same dead id and meets the same refusal,
+   * which is the loop rather than the way out.
+   *
+   * The set is only ever missing because it was deleted somewhere else — the
+   * other tab, or the settings screen — so the list is refetched rather than
+   * edited here: the server owns what is in it.
+   *
+   * `RESOURCE_NOT_FOUND` on this request can mean nothing else. It is checked
+   * at the gate now, ahead of the quota, so finding out costs a round trip
+   * rather than one of the day's generations.
+   */
+  function forgetMissingCustomization(error: unknown) {
+    if (toErrorLike(error).code !== 'RESOURCE_NOT_FOUND') return;
+
+    setCustomizationId('');
+    void queryClient.invalidateQueries({ queryKey: appearanceKeys.customizations() });
   }
 
   /**

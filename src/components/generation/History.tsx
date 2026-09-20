@@ -110,9 +110,29 @@ function Row({ row }: { row: GenerationSummary }) {
   const locale = useLocale();
 
   const when = row.createdAt ? format.dateTime(new Date(row.createdAt), 'short') : '';
+
+  /*
+    `B-118`, `F-039`: the summary carries `maxPages` so a row reads the way the
+    result screen reads, and this is the row's version of it — one fact, not a
+    second one. A badge saying "short" beside the page count would be the same
+    thing said twice, and louder than a document that came out correct
+    deserves.
+
+    The limit is **this generation's**, which is the whole reason the field was
+    asked for: a CV made under a one-page limit must not be relabelled the day
+    the preference is raised to two. Absent on a row written before the limit
+    was recorded, and then the count stands alone rather than against a guess.
+  */
+  const pages =
+    row.pageCount === undefined
+      ? null
+      : row.maxPages !== undefined && row.pageCount < row.maxPages
+        ? t('pagesUnderLimit', { count: row.pageCount, limit: row.maxPages })
+        : t('pages', { count: row.pageCount });
+
   const facts = [
     when,
-    row.pageCount === undefined ? null : t('pages', { count: row.pageCount }),
+    pages,
     row.matchLevel ? fit('level', { level: row.matchLevel }) : null,
     languageName(row.contentLanguage, locale),
     row.hasCoverLetter ? t('withLetter') : null,
