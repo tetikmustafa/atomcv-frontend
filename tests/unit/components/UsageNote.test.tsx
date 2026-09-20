@@ -37,16 +37,15 @@ describe('the usage note', () => {
   });
 
   /**
-   * `profile_extract` always arrives — a missing entry would mean the metric
-   * does not exist, never that nothing was used (`B-039`). Drawing it is a
-   * different question: profile import is Stage 3, and a counter for
-   * something the product cannot do is noise.
+   * Both metrics always arrive — a missing entry would mean the metric does
+   * not exist, never that nothing was used (`B-039`). Which one is drawn is
+   * the screen.s question, and each screen asks about one of them.
    */
   it('draws only the metric this screen is about', async () => {
     render(<UsageNote />, { wrapper: wrapperFor('en') });
 
-    await waitFor(() => expect(screen.getByTestId('usage-note')).toBeInTheDocument());
-    expect(screen.getByTestId('usage-note')).not.toHaveTextContent('Profile imports');
+    await waitFor(() => expect(screen.getByTestId('usage-note-generation')).toBeInTheDocument());
+    expect(screen.getByTestId('usage-note-generation')).not.toHaveTextContent('Profile imports');
   });
 
   /**
@@ -62,7 +61,9 @@ describe('the usage note', () => {
     await waitFor(() =>
       expect(screen.getByTestId('usage-count')).toHaveTextContent('None left today'),
     );
-    expect(screen.getByTestId('usage-note')).not.toHaveTextContent(`of ${QUOTA.generation}`);
+    expect(screen.getByTestId('usage-note-generation')).not.toHaveTextContent(
+      `of ${QUOTA.generation}`,
+    );
   });
 
   it('says nothing at all until it knows', () => {
