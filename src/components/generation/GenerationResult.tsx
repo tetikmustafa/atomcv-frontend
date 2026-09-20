@@ -24,7 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from '@/lib/i18n/navigation';
 import { languageName } from '@/lib/i18n/languageNames';
 import { useDownloadGeneration, useGenerationResult } from '@/hooks/useGeneration';
-import type { DownloadFormat } from '@/lib/api/endpoints/generations';
+import { DOWNLOAD_EXTENSION, type DownloadFormat } from '@/lib/api/endpoints/generations';
 import { useCanWriteCoverLetter, useIsAnonymous } from '@/hooks/useSession';
 import { announce } from '@/stores/announcerStore';
 
@@ -63,7 +63,10 @@ export function GenerationResult({ generationId }: { generationId: string }) {
           const anchor = document.createElement('a');
 
           anchor.href = url;
-          anchor.download = filename ?? `atomcv-${generationId}.${format}`;
+          // `DOWNLOAD_EXTENSION` rather than `format`: the query value names a
+          // format and the file is a `.tex`, so interpolating would save
+          // something called `atomcv-<id>.source` that nothing opens.
+          anchor.download = filename ?? `atomcv-${generationId}.${DOWNLOAD_EXTENSION[format]}`;
           anchor.click();
 
           URL.revokeObjectURL(url);
@@ -113,11 +116,16 @@ export function GenerationResult({ generationId }: { generationId: string }) {
 
       <div className="flex flex-wrap items-center gap-3">
         {/*
-          Two formats, one endpoint (`B-094`). Both buttons go out of service
-          while either is fetching — they are the same request to the same
-          document — but only the one that was pressed says so, because a
-          second button announcing "preparing" is a claim about work nobody
-          asked for.
+          Four formats, one endpoint (`B-094`, `B-105`). Every button goes out
+          of service while any of them is fetching — they are the same request
+          to the same document — but only the one that was pressed says so,
+          because a second button announcing "preparing" is a claim about work
+          nobody asked for.
+
+          The order is what people want, not what the endpoint lists. PDF is
+          the product; Word is what some ATS ask for; HTML is for pasting into
+          a form; the source is for the one reader in a hundred who wants to
+          see the LaTeX, and it sits last and quietest for that reason.
         */}
         <Button type="button" onClick={() => save('pdf')} disabled={download.isPending}>
           {pending === 'pdf' ? t('downloading') : t('download')}
@@ -132,17 +140,43 @@ export function GenerationResult({ generationId }: { generationId: string }) {
           {pending === 'docx' ? t('downloading') : t('downloadDocx')}
         </Button>
 
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => save('html')}
+          disabled={download.isPending}
+        >
+          {pending === 'html' ? t('downloading') : t('downloadHtml')}
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => save('source')}
+          disabled={download.isPending}
+        >
+          {pending === 'source' ? t('downloading') : t('downloadSource')}
+        </Button>
+
         <Link href="/generate" className="text-sm underline underline-offset-4">
           {t('again')}
         </Link>
       </div>
 
       {/*
-        § 22.6, and the backend asked for it by name: the page limit is exact
-        in the PDF and approximate in Word, because the atoms are the ones
-        that fitted a **typeset** page and Word sets them in whatever room its
-        own fonts take. Nothing claims a page count for the DOCX, here or on
-        the wire, so the sentence is the only place the difference is said.
+        § 22.6, and the backend asked for both halves by name. The page limit
+        is exact in the PDF, **approximate** in Word — the atoms are the ones
+        that fitted a typeset page and Word sets them in whatever room its own
+        fonts take — and in HTML it does not apply **at all**, because there
+        is no page to exceed.
+
+        The two are said separately rather than folded into "the limit is only
+        for the PDF". "Roughly one page" and "there is no such thing as a
+        page here" are different promises, and a reader who pastes the HTML
+        into a form needs the second one rather than the first.
+
+        Nothing claims a page count for any of the three, here or on the wire,
+        so this sentence is the only place the difference is stated.
       */}
       <p className="text-muted-foreground text-sm">{t('formatNote')}</p>
 

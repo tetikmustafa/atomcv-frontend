@@ -107,6 +107,56 @@ describe('a finished generation', () => {
     await waitFor(() => expect(requested).toContain('?format=docx'));
   });
 
+  /**
+   * `B-105`. `format=source` sat in § 35.3's map from the first draft and
+   * answered `400 VALIDATION_FAILED`, and the HTML renderer's package was
+   * empty — so neither button was drawn, which was right: a download button
+   * that opens an error panel is worse than one that was never there. Both
+   * are served now.
+   */
+  it.each([
+    ['Download HTML', '?format=html'],
+    ['Download the LaTeX source', '?format=source'],
+  ])('asks for %s as the query the server reads', async (name, query) => {
+    const generationId = await generate({ jobDescription: POSTING, acknowledgePreflight: false });
+    const user = userEvent.setup();
+
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+    await screen.findByRole('button', { name: 'Download PDF' });
+
+    const requested: string[] = [];
+    server.events.on('request:start', ({ request }) => {
+      const url = new URL(request.url, 'http://localhost');
+      if (url.pathname.endsWith('/download')) requested.push(url.search);
+    });
+
+    await user.click(screen.getByRole('button', { name }));
+
+    await waitFor(() => expect(requested).toContain(query));
+  });
+
+  /**
+   * The half of `B-105` that is a sentence rather than a button.
+   *
+   * The screen states a page count two lines above, and the limit means three
+   * different things across the four formats: exact in the PDF, approximate
+   * in Word, and **inapplicable** in HTML, which has no page to exceed. The
+   * last one is not a weaker version of the second — a reader pasting the
+   * HTML into a form needs to know the number does not describe it at all.
+   */
+  it('says the page limit does not apply to the HTML at all', async () => {
+    const generationId = await generate({ jobDescription: POSTING, acknowledgePreflight: false });
+
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+    await screen.findByRole('button', { name: 'Download PDF' });
+
+    const note = screen.getByText(en.Result.formatNote);
+
+    expect(note).toHaveTextContent(/HTML has no pages at all/);
+    // And Word's is still the *approximate* claim, not the same one.
+    expect(note).toHaveTextContent(/run a little over there/);
+  });
+
   it('shows countable facts and never a percentage', async () => {
     const generationId = await generate({ jobDescription: POSTING, acknowledgePreflight: false });
 

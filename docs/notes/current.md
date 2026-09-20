@@ -158,6 +158,37 @@ kararı sabitleyip hem hiçbir şey ölçmeyebiliyor. Tersine çevrildi.
 
 **Ölçüm:** 892 birim testi yeşil, typecheck ve lint temiz.
 
+### D5 kapandı — dört biçim, üç farklı sayfa iddiası (2026-09-20)
+
+`B-105` iki şeyi birden indirdi: `format=source` ilk taslaktan beri § 35.3'ün
+haritasındaydı ve `400` dönüyordu, HTML renderer'ın paketi de boştu. İkisi de
+serviste, yani iki yeni düğme.
+
+**Sayfa sınırı artık üç şey söylüyor ve üçü ayrı cümle.** PDF'te **kesin**,
+Word'de **yaklaşık** (atomlar dizilmiş bir sayfaya sığanlar, Word onları kendi
+fontlarının aldığı yerde diziyor), HTML'de **hiç geçerli değil** — Word'ün
+zayıf hâli değil: aşılacak bir sayfa yok. "Aşağı yukarı bir sayfa" ile "burada
+sayfa diye bir şey yok" farklı vaatler, ve HTML'i bir forma yapıştıran kişiye
+lazım olan ikincisi. Ekran iki satır yukarıda bir sayfa sayısı söylüyor, yani
+bu cümle o sayının neyi kapsamadığını söyleyen tek yer.
+
+**`DOWNLOAD_EXTENSION` bir kolaylık değil.** Query değeri bir **biçim** adı,
+dosya ise `.tex`: `format` interpolate edilseydi tarayıcı
+`atomcv-<id>.source` diye kaydederdi ve kişinin makinesinde onu açan hiçbir
+şey olmazdı. Aynı harita mock'un `Content-Disposition`'ında da var, ve testin
+asıl iddiası o.
+
+**`source` `text/plain` olarak servis ediliyor**, `application/x-tex`'in
+yazımlarından biri olarak değil: bu **bakılacak** LaTeX, ve tarayıcının
+bilinmeyen tür sayıp indirdiği bir medya tipi, açacağı bir tipten kötü. Ters
+yöne LaTeX göndermek zaten yasak — okumayı zararsız kılan da bu.
+
+**Bilinmeyen biçimin reddi duruyor** ve gerekçesi ilk yazıldığı günkü: sessiz
+bir PDF'e düşüş, hiç servis edilmeyen bir biçimin düğmesine PDF döndürürdü ve
+kimse dosyayı açana kadar fark etmezdi. Test `rtf` ile soruyor.
+
+**Ölçüm:** 897 birim testi yeşil, typecheck ve lint temiz.
+
 ### Aşama 3'ten devrolan açıklar
 
 - ~~**Gizlilik politikasının sağlayıcı listesi eksik.**~~ **Bayat çıktı
@@ -223,7 +254,7 @@ yöntemi). Panel kapalı başlıyor, yani listeyi açmayan kimse ikinci isteği
 | **Profil başında dil eksenleri düzenlenemiyor** | `sourceLanguage`/`enabledLanguages` **içerik dili** ekseni (Bölüm 38.1), arayüz dili değil. Form ikisini de olduğu gibi geçiriyor ve ikisi de gövdede zorunlu (B-035). ⚠ **Gerekçesi bayatladı ve düzeltildi (2026-09-08):** satır "hangi diller sunulabilir `capabilities`'e bağlı ve o yayımlanmadı" diyordu — `allowedLanguages` yayımlanıyor ve okunuyor, gerçek uca karşı `["en","tr"]`. Bekleyen bağımlılık yok; kalan şey **çizilmemiş bir kontrol**, yani karar. Denetimde 8 satırın 7'si doğru çıktı, bu biri değil. |
 | **Bölüm düzeni seçtiren arayüz yok** | `sections.layout` beş değer alıyor (`B-073` ile `paragraph` da) ama hiçbir ekran onu göstermiyor ya da seçtirmiyor; sunucu her bölüm türü için doğrusunu zaten yazıyor. Çizilecekse beşinin de ICU adı ve About için `paragraph` varsayılanı gerekir — yarım hâli kullanıcıya anlamını bilmediği bir seçim verir. |
 | **"Yeniden hesaplanıyor…" göstergesi yok** | § 33.3 istiyor, durumu yayımlayan uç yok, ve `B-091` ekranda bir şey gerekmediğini söylüyor. Beklenmeyen bir iş için bekleme hissi üretmek olurdu. |
-| **`format=source` düğmesi yok** | Uç bugün `400` dönüyor (`B-094`). Çizilse hata paneline basardı; mock reddi üretiyor ki bir gün çağıran olursa orada görülsün. |
+| ~~**`format=source` düğmesi yok**~~ | **Kapandı, D5 (2026-09-20).** Gerekçesi "uç `400` dönüyor" idi ve `B-105` ikisini birden indirdi — `source` da `html` de. İki aşama boyunca çizilmemesi doğruydu: bir indirme düğmesinin hata paneli açması, hiç çizilmemiş olmasından kötüdür. |
 | **Başvurularda duruma göre süzme yok** | `B-093`: sayfalama gerektiğinde birlikte geliyor. Filtresi olmayan bir liste, filtresi olan bir ucın taklidinden iyidir. |
 
 ---

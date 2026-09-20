@@ -65,6 +65,36 @@ export const DOCX_MEDIA_TYPE =
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 /**
+ * What each format is served as (`B-105`).
+ *
+ * `source` goes out as `text/plain` rather than one of the `application/x-tex`
+ * spellings, and the reason is the reader: this is LaTeX to **look at**, and
+ * a media type a browser treats as a download of an unknown kind is worse
+ * than one it will open. Nobody is allowed to send LaTeX the other way, which
+ * is what makes reading it back harmless.
+ */
+const DOWNLOAD_MEDIA_TYPE = {
+  pdf: 'application/pdf',
+  docx: DOCX_MEDIA_TYPE,
+  html: 'text/html',
+  source: 'text/plain',
+} as const;
+
+type DownloadFormat = keyof typeof DOWNLOAD_MEDIA_TYPE;
+
+/** Kept beside the media types, for the reason `DOWNLOAD_EXTENSION` exists. */
+const DOWNLOAD_EXTENSION: Record<DownloadFormat, string> = {
+  pdf: 'pdf',
+  docx: 'docx',
+  html: 'html',
+  source: 'tex',
+};
+
+function isDownloadFormat(value: string): value is DownloadFormat {
+  return value in DOWNLOAD_MEDIA_TYPE;
+}
+
+/**
  * § 18.1's signal vocabulary, both languages. At least **two distinct**
  * signals are wanted: a posting that writes "experience" nine times has said
  * one thing, not nine.
@@ -279,6 +309,54 @@ function onePageDocx(): Uint8Array {
   }
 
   return zip;
+}
+
+/**
+ * One self-contained file: no stylesheet, no font, no script, nothing
+ * fetched. That is the endpoint's promise and it is the half worth encoding
+ * here — a fixture that linked a stylesheet would let a screen be written
+ * against a document the server does not produce.
+ */
+function onePageHtml(): string {
+  return [
+    '<!doctype html>',
+    '<html lang="en">',
+    '<head><meta charset="utf-8"><title>AtomCV</title></head>',
+    '<body><h1>Ada Lovelace</h1><p>Engineered ETL pipelines.</p></body>',
+    '</html>',
+  ].join('\n');
+}
+
+/**
+ * The LaTeX the PDF was compiled from, in outline.
+ *
+ * Deliberately not valid enough to compile: nothing in the product compiles
+ * it, and a fixture that looked compilable would invite somebody to try. What
+ * it has to be is recognisably TeX, so the dev harness shows a file a reader
+ * would accept as the source.
+ */
+function onePageSource(): string {
+  return [
+    '\\documentclass[10pt]{article}',
+    '% atomcv: classic, v6',
+    '\\begin{document}',
+    '\\section*{Ada Lovelace}',
+    'Engineered ETL pipelines.',
+    '\\end{document}',
+  ].join('\n');
+}
+
+function downloadBody(format: DownloadFormat): Uint8Array | string {
+  switch (format) {
+    case 'docx':
+      return onePageDocx();
+    case 'html':
+      return onePageHtml();
+    case 'source':
+      return onePageSource();
+    case 'pdf':
+      return onePagePdf();
+  }
 }
 
 /** The one zip field a reader actually verifies. */
@@ -1118,24 +1196,32 @@ export const generationHandlers = [
     // for JSON — which the API client did, by default — is a **406**, and it
     // was measured against the running backend rather than guessed at.
     const accept = request.headers.get('Accept') ?? '*/*';
-    const produced = format === 'docx' ? DOCX_MEDIA_TYPE : 'application/pdf';
-
-    if (!accept.includes(produced) && !accept.includes('*/*')) {
-      return HttpResponse.json(problem(406, 'NOT_ACCEPTABLE', instance), { status: 406 });
-    }
 
     /*
-      § 35.3's map has a third value and nothing serves it, so `format=source`
-      is a `400` rather than a quiet PDF (`B-094`). Encoded here because it is
-      the refusal a client is most likely to write against by accident: a
-      silent fallback would make a "download the source" button produce a PDF,
-      and nobody would notice until somebody opened it.
+      `source` was a `400` here until `B-105`, and the refusal was faithful:
+      the value had been in § 35.3's map since the first draft with nothing
+      serving it, and the HTML renderer's package was empty. Both landed.
+
+      The `400` stays for everything else, and for the same reason it was
+      encoded in the first place — a silent fallback to PDF would let a button
+      for a format nobody serves produce a PDF, and nobody would notice until
+      they opened the file.
     */
-    if (format !== 'pdf' && format !== 'docx') {
+    if (!isDownloadFormat(format)) {
       return HttpResponse.json(
         problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['format'] }),
         { status: 400 },
       );
+    }
+
+    const produced = DOWNLOAD_MEDIA_TYPE[format];
+
+    // Content negotiation, because the real server does it and refusing here
+    // is the only way a client learns before production. Asking this endpoint
+    // for JSON — which the API client did, by default — is a **406**, and it
+    // was measured against the running backend rather than guessed at.
+    if (!accept.includes(produced) && !accept.includes('*/*')) {
+      return HttpResponse.json(problem(406, 'NOT_ACCEPTABLE', instance), { status: 406 });
     }
 
     if (generations.expired.includes(id)) {
@@ -1148,10 +1234,13 @@ export const generationHandlers = [
 
     const day = new Date().toISOString().slice(0, 10);
 
-    return new HttpResponse(format === 'docx' ? onePageDocx() : onePagePdf(), {
+    return new HttpResponse(downloadBody(format), {
       headers: {
         'Content-Type': produced,
-        'Content-Disposition': `attachment; filename="atomcv-cv-${day}.${format}"`,
+        // The **extension**, not the format name: `source` is a `.tex`, and a
+        // `Content-Disposition` naming `atomcv-cv-2026-09-20.source` would be
+        // saved under a name nothing opens.
+        'Content-Disposition': `attachment; filename="atomcv-cv-${day}.${DOWNLOAD_EXTENSION[format]}"`,
         'Cache-Control': 'no-store',
       },
     });
