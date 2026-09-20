@@ -10,6 +10,113 @@
 
 ---
 
+### D1 kapandı — şemanın açtığı sekiz kırık (2026-09-20)
+
+**`failed` ve `cancelled` birer dal değil, birer yokluktu.** `B-116`'nın
+gerekçesi yapısal ve ikisi de aynı cümleden çıkıyor: `selection_state`
+`NOT NULL`, yani seçimden önce düşen bir koşunun yazacak **generation satırı
+yok** — arıza **işin** üstünde yaşıyor, ki `JobStatusResponse.status`
+`failed`'i hâlâ taşıyor. `cancelled`'ı ise hiçbir uç üretmiyor.
+
+Bunun mock'a maliyeti göründüğünden büyüktü. Geçmiş listesi başarısız bir işi
+`status: 'failed'` ile **satır olarak** yayımlıyordu ve `GET /generations/{id}`
+onu buluyordu; ikisi de veritabanının tutamayacağı bir şeyi tarif ediyor. Mock
+artık başarısız koşuyu listeden düşürüyor ve tekil okumada **404** veriyor.
+Ekran tarafında `History`'nin "bitmemişse bağlantı değil" dalı silindi —
+kalan tek koşul `generationId` yokluğu, ve `superseded` **bilerek dışarıda**:
+değiştirilmiş bir üretim belgesi olan bitmiş bir üretimdir.
+
+**Testin kendisi tersine çevrildi, silinmedi.** "Başarısız üretime yol
+açmıyor" artık "başarısız koşu geçmişte hiç yok" diyor; eski hâli doğru
+şekilli ama var olmayan bir satır hakkındaydı.
+
+**İki muhafız eklendi.** `endpoints/jobs.ts`'te `TERMINAL` artık yayımlanan
+enum'a karşı **sınıflandırma** kontrolü taşıyor: her durum ya terminal ya
+uçuşta, üçüncüsü derlemeyi düşürüyor. `cancelled` geri geldiği gün — iptal bir
+özellik — bu, sessizce asılı kalan bir akış yerine bir typecheck hatası olur.
+`MockSelectionLine`'ın `Required<>`'ı da daraltıldı: `B-108`'in iki alanı
+**yokluğuyla** anlam taşıyor (`matchedKeywords: []` "hiçbir şey eşleşmedi"
+diye okunur), ve yokluğu ifade edemeyen bir fixture ekranın karşılaşacağı
+durumu üretemez.
+
+**İki bayat çeviri anahtarı silindi** (`REWRITE_VALIDATION_FAILED`,
+`NO_ANONYMOUS_PROFILE`) ve `History.status`'ın `failed` dalı da. `B-111`'in
+korktuğu "on beş eksik mesaj" **çıkmadı** — 41 kodun 41'i yazılıydı, iki dil
+birebir senkrondu; gerçek bulgu fazlalıktı. `B-114`'ün iki yeni eylemi
+**etiket olarak** indi, davranışları D3'te.
+
+**Ölçüm:** 821 birim testi yeşil, typecheck temiz, lint temiz.
+
+### D2 kapandı — katalog testi üretilen tabloya bağlandı (2026-09-20)
+
+`B-110`'un teklifi alındı. `errorCatalogue.test.ts` artık
+`docs/error-catalogue.md`'yi **veri olarak** okuyor ve kendi `PARAMS`'ıyla üç
+şeyi karşılaştırıyor: kod kümesi, kod başına parametre **adları**, ve her
+adın **tipi**. Zincirin ikinci halkası bağlandı — backend bir kod eklediğinde
+`ErrorCatalogueDocumentTest` orada, bu test burada düşüyor.
+
+**Sayılar da denetlendi ve `B-111`'in ikisi de yanlıştı.** Madde "27'ye karşı
+enum'da 41" diyordu; ölçüldü: **enum 40, katalog 40, ve ikisi birebir aynı.**
+Bizim tarafta bir eylem gerektirmiyor, ama bir sayıyı doğru sanmakla ölçmek
+arasındaki farkın kaydı olsun.
+
+**Tip karşılaştırması tek yönlü.** Soru "`PARAMS` yalan mı söylüyor" — "tek
+doğru bu mu" değil. `integer` 2.3'ü reddediyor, `number` 1'i kabul ediyor:
+daraltan taraf katalog. `timestamp` telde bir metin, çünkü `Date` teli
+geçemez — `formatErrorParams` onu çeviren tek yer.
+
+**`Vite`'ın bir kuralına çarpıldı ve kayda değer.** `new URL(yol,
+import.meta.url)` Vite'ta bir **varlık referansıdır**; kalıp derleme anında
+yeniden yazılıyor ve `fileURLToPath` elinde çıplak bir `/docs/…` buluyor,
+sonra fırlatıyor. Dizin önce alınırsa kuralın eşleşeceği bir şey kalmıyor.
+
+**Boş yere geçmenin yolu kapatıldı.** Her kontrol ayrıştırılmış satırlar
+üzerinde dönüyor, yani hiçbir şey eşleştirmeyen bir ayrıştırıcı hepsini tek
+satır okumadan geçerdi — biçim değişikliğinin yaratacağı hatanın ta kendisi,
+ve başarıya benzeyen tek hata. `read the file` bunun için var, ve okunamayan
+bir satır artık atlanmıyor, **fırlatıyor**: kırkta otuz dokuzu ayrıştıran bir
+biçim değişikliği eşiği geçerdi.
+
+**Negatif kontrol yapıldı, üç yönde** (Aşama 2'nin dersi): yanlış tip →
+tip kontrolü düştü; katalogda ad değişikliği → ad kontrolü düştü; tablo
+biçimi bozuldu → `read the file` düştü.
+
+**Ölçüm:** 880 birim testi yeşil (D1'de 821'di), typecheck ve lint temiz.
+
+### D3 kapandı — dört reddin çıkış yolu, iki metnin ayrılması (2026-09-20)
+
+**`B-114`'ün asıl bulgusu mock'un sadakatiydi.** Dört çıkarım reddi boş bir
+`resolutions` dizisiyle geliyordu ve mock bunu **sadakatle** üretiyordu — yani
+"cümle var, düğme yok" hâli defalarca bakıldı ve hiç görülmedi. Üçü artık
+çözüm taşıyor; `switch_to_manual_form` sözlükte üretensiz duruyordu.
+
+**`upload_another_file` bir `retry` değil ve fark maddenin tamamı.** Şifreli
+dosya her seferinde aynı yerde düşüyor, yani tekrar düğmesi kilitli olduğu
+bilinen bir kapı açıyor. Seçilen dosya **önce temizleniyor**: seçici kapatılıp
+Yükle'ye basılabilseydi, kaçınmak için yazılan tekrar geri gelirdi.
+
+**`choose_language` çizilmiyor ve bu `F-037`.** Sunucu onu gönderiyor, ekranın
+soruyu sorması doğru, ama cevabın gideceği alan yok: `POST /profile/import`
+yalnız `mode` yayımlıyor, gövde `file` ve `challengeToken` taşıyor. Üstelik kod
+**işten** geliyor (§ 08b, Adım 3.4), yani red anında yazılmış bir profil de
+yok. `ErrorPanel`'in politikası — taşıyamadığını düşür — `keep_top_pinned`'de
+verilen kararın aynısı, ve mutlak kural 7 ile sürtündüğü için madde açıldı.
+**Düğmenin çizilmediği bir testle sabitlendi**: alan indiği gün o test
+düğmenin artık borç olduğunu söyleyecek.
+
+**İki metin ayrıldı, çünkü `B-113` sunucuda ayırmıştı.** 504 aynı dosyayla
+tekrar denemeye davet ediyor, 503 denemenin yardımcı olmayacağını söylüyor —
+ikisi kullanıcıdan **zıt** şeyler istiyor ve ikisi de "bir şeyler ters gitti"
+deseydi ayrım ekrana giderken kaybolurdu. Üç kontrol: 504 tekrar diyor mu,
+503 yardımcı olmaz diyor mu, ikisi aynı cümle değil mi.
+
+**`FEATURE_REQUIRES_ACCOUNT` beşinci dalını aldı** (`archive`) ve cümlesi
+"hesap gerekiyor"dan fazlasını söylüyor: anonim oturumun üretimleri profiliyle
+gidiyor, yani işaretin saklayacağı bir şey **yok** — kontrol esirgenmiş değil,
+anlamsız.
+
+**Ölçüm:** 891 birim testi yeşil, typecheck ve lint temiz.
+
 ### `B-071`-`B-074` kapandı (2026-09-08)
 
 Backend'in kapanış sonrası dilimlerinden gelen dört madde. İkisi kod işi

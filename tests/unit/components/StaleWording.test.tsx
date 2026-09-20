@@ -5,9 +5,11 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AtomEditor } from '@/components/profile/AtomEditor';
+import { getSession } from '@/lib/api/endpoints/auth';
 import { listAtoms, type Atom } from '@/lib/api/endpoints/profile';
-import { profileKeys } from '@/lib/api/queryKeys';
+import { profileKeys, sessionKeys } from '@/lib/api/queryKeys';
 import { server } from '@/mocks/node';
+import { signIn } from '@/mocks/sessionFixture';
 import en from '@/messages/en.json';
 
 /*
@@ -26,11 +28,21 @@ vi.mock('@/lib/i18n/navigation', () => ({
 /**
  * `atom-2` is the fixture's two-wording atom, and its Turkish wording is
  * § 32.2's third row: the source moved on **and** the person wrote this one.
+ *
+ * **Signed in, and that is not scaffolding** (`B-115`, D4). Translation is
+ * not queued for an anonymous session, so neither row this component draws
+ * would be true there — and an anonymous profile is English-only anyway, so
+ * nothing is derived and nothing can go stale. Reading the session rather
+ * than seeding the flag keeps the branch measured against the answer the
+ * product would get.
  */
-async function renderEditor() {
+async function renderEditor({ account = true } = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+
+  if (account) signIn();
+  await client.prefetchQuery({ queryKey: sessionKeys.current(), queryFn: getSession });
 
   const atoms = await listAtoms();
   for (const atom of atoms) client.setQueryData(profileKeys.atom(atom.id!), atom);
@@ -162,5 +174,34 @@ describe('a wording whose source has moved on', () => {
     expect(screen.getByRole('tab', { name: /Turkish/ })).toHaveTextContent(
       en.Editor.variants.staleBadge,
     );
+  });
+
+  /**
+   * `B-115` · 4. Anonymously, translation is not queued at all: that session
+   * has no id to own a job with and no second language to translate into.
+   *
+   * So both rows would be untrue there, each in its own way — "being
+   * refreshed" names work that will not happen, and the regenerate button
+   * sends a patch the server accepts while queueing nothing. The reader would
+   * be told their sentence is about to be replaced and then watch it not be.
+   *
+   * The badge is a separate claim and stays: the row really is out of date,
+   * whoever is reading it.
+   */
+  it('says nothing about staleness to an anonymous session', async () => {
+    await renderEditor({ account: false });
+    await openTurkish();
+
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: /Turkish/ })).toHaveTextContent(
+        en.Editor.variants.staleBadge,
+      ),
+    );
+
+    expect(screen.queryByTestId('stale-yours')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refreshing')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: en.Editor.variants.staleRegenerate }),
+    ).not.toBeInTheDocument();
   });
 });
