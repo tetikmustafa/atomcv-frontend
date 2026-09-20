@@ -703,6 +703,32 @@
       "preparing": "Dosya hazırlanıyor…",
       "formats": "JSON tam kopya, başka bir program okusun diye. Markdown okunabilir olan, başka bir yere yapıştırmak için — yalnız bu uygulamanın kullandığı kısımları dışarıda bırakır.",
       "announceStarted": "İndirme başladı"
+    },
+    "generationDefaults": {
+      "title": "CV nasıl yazılsın",
+      "intro": "Her üretimin başladığı yer. Hiçbirine dokunmayabilirsin — bunlar varsayılan, atman gereken bir adım değil.",
+      "maxPagesLabel": "Sayfa sınırı",
+      "maxPagesHint": "Bir CV kaç sayfa olabilir. Sınır umut edilen değil hesaplanan bir şey: içerik ona sığacak şekilde seçiliyor. Bizimkini kullanmak için boş bırak.",
+      "maxPagesRange": "{min} ile {max} arasında tam bir sayı seç.",
+      "cvLanguageLabel": "CV dili",
+      "cvLanguageHint": "CV hangi dilde yazılsın. Bu, bu düğmelerin dili değil; profilinin yazıldığı dil de değil — belgenin çıktığı dil.",
+      "coverLetterLanguageLabel": "Cover letter dili",
+      "followPosting": "İlanı izle",
+      "toneLabel": "Üslup",
+      "toneUnset": "Tercihim yok",
+      "tones": {
+        "formal": "Resmi",
+        "casual": "Samimi",
+        "technical": "Teknik"
+      },
+      "emphasizeMetrics": "Sayı ve sonuç varsa öne al",
+      "conciseSentences": "Cümleleri kısa tut",
+      "customInstructionsLabel": "Eklemek istediğin",
+      "customInstructionsHint": "Nasıl görünmek istediğine dair bir iki cümle — \"liderlik deneyimimi öne çıkar\" gibi. Yalnız yeniden yazım adımına ulaşır, başka hiçbir yere.",
+      "customInstructionsLeft": "{remaining, plural, =0 {Karakter hakkın kalmadı} other {# karakter kaldı}}",
+      "save": "Kaydet",
+      "saving": "Kaydediliyor…",
+      "saved": "Kaydedildi."
     }
   },
   "Appearance": {

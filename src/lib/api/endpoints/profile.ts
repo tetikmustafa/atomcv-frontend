@@ -100,6 +100,50 @@ export const APPEARANCE_RANGES = {
 } as const;
 
 /**
+ * How the CV is written, rather than how it looks (§ 14.3).
+ *
+ * Derived through the write shape for the same reason `AppearanceUpdate` is:
+ * this is what a write has to satisfy, and the read and write schemas have
+ * come apart before.
+ */
+export type WritingStyleUpdate = NonNullable<PreferencesUpdate['writingStyle']>;
+
+/**
+ * The three registers the server accepts, as a list to draw.
+ *
+ * `satisfies` rather than a hand-written union: the values come out of the
+ * generated type, so a register the server adds or renames is a typecheck
+ * failure here instead of a radio nobody can pick.
+ */
+export const WRITING_TONES = [
+  'formal',
+  'casual',
+  'technical',
+] as const satisfies readonly NonNullable<WritingStyleUpdate['tone']>[];
+
+/**
+ * § 35's validation bounds for the two preference fields that carry one.
+ *
+ * Hand-written for the same reason as `APPEARANCE_RANGES`: neither
+ * `minimum`/`maximum` nor `maxLength` survives into a TypeScript type. The
+ * server refuses anything outside them with a `400 VALIDATION_FAILED`, so
+ * these keep a control from offering a value that cannot be saved — they do
+ * not stand in for the check.
+ */
+export const MAX_PAGES_RANGE = { min: 1, max: 10 } as const;
+export const CUSTOM_INSTRUCTIONS_MAX = 1000;
+
+/**
+ * "Follow the posting" (§ 14.3).
+ *
+ * Not a language code, and deliberately the default: a preference that names
+ * a language is a decision and beats the posting, while this one says there
+ * is no decision to apply. Sent as a value rather than as an omission because
+ * an omitted field on a `PUT` means "cleared", which is a third thing.
+ */
+export const LANGUAGE_FOLLOWS_POSTING = 'auto';
+
+/**
  * § 33.2's warning, not a block: 9pt is legal and the reader is told what it
  * costs rather than stopped.
  */
