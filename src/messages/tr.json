@@ -272,6 +272,22 @@
       "completenessLabel": "Profil tamamlanma oranı",
       "completeness": "Profil: {percent} tamamlandı"
     },
+    "github": {
+      "title": "GitHub'dan proje ekle",
+      "intro": "Bir hesabın herkese açık depolarını okuyup kayda değer olanları sunuyoruz. Hiçbir şey bağlanmıyor, hiçbir izin istenmiyor ve sen bir şey seçmeden hiçbir şey yazılmıyor.",
+      "usernameLabel": "GitHub kullanıcı adı",
+      "usernamePlaceholder": "octocat",
+      "usernameHint": "Boş bırakırsan profilindeki hesap okunur — CV'nin bir işverene gösterdiği hesap.",
+      "look": "Neler var, bak",
+      "looking": "Bakılıyor…",
+      "empty": "Bu hesaptan sunulacak bir şey yok. Ya eklemeye değer herkese açık deposu yok, ya da şu an okunamadı.",
+      "willMerge": "Zaten yazdığın bir projeyle birleşir: dillerini ve bağlantısını ekler, cümlelerine dokunmaz.",
+      "willAdd": "Yeni bir proje ekler; ilk satırı GitHub'ın kendi açıklaması olur.",
+      "add": "{count, plural, =1 {Bir projeyi} other {# projeyi}} ekle",
+      "adding": "Ekleniyor…",
+      "announceFound": "{count, plural, =0 {Sunulacak bir şey yok} =1 {Bir proje sunuluyor} other {# proje sunuluyor}}",
+      "announceApplied": "{count, plural, =0 {Hiçbir şey eklenmedi} =1 {Bir proje eklendi} other {# proje eklendi}}"
+    },
     "atomTags": {
       "label": "Etiketler",
       "hint": "Bu maddenin neyle ilgili olduğu, kendi sözcüklerinle. Eşleştirme bunları ilana karşı okuyor; yani buradaki bir etiket kendine not değil, bir skorlama kararı.",

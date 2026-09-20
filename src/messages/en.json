@@ -272,6 +272,22 @@
       "completenessLabel": "Profile completeness",
       "completeness": "Profile: {percent} complete"
     },
+    "github": {
+      "title": "Add projects from GitHub",
+      "intro": "We read the public repositories of one account and offer the significant ones. Nothing is connected, nothing is authorised and nothing is written until you pick something.",
+      "usernameLabel": "GitHub username",
+      "usernamePlaceholder": "octocat",
+      "usernameHint": "Leave it empty to use the account already on your profile — the one your CV shows an employer.",
+      "look": "See what is there",
+      "looking": "Looking…",
+      "empty": "Nothing to offer from that account. Either it has no public repositories worth adding, or it could not be read just now.",
+      "willMerge": "Merges into a project you have already written about: adds its languages and the link, and leaves your sentences alone.",
+      "willAdd": "Adds a new project, with GitHub's own description as its first line.",
+      "add": "Add {count, plural, =1 {one project} other {# projects}}",
+      "adding": "Adding…",
+      "announceFound": "{count, plural, =0 {Nothing on offer} =1 {One project on offer} other {# projects on offer}}",
+      "announceApplied": "{count, plural, =0 {Nothing was added} =1 {One project added} other {# projects added}}"
+    },
     "atomTags": {
       "label": "Labels",
       "hint": "What this item is about, in your own words. Matching reads these against the posting, so a label here is a scoring decision rather than a note to yourself.",

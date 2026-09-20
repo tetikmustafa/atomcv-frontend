@@ -11,6 +11,7 @@
 import { useTranslations } from 'next-intl';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { CompletenessBar } from '@/components/profile/CompletenessBar';
+import { GitHubImport } from '@/components/profile/GitHubImport';
 import { ProfileHead } from '@/components/profile/ProfileHead';
 import { SectionList } from '@/components/profile/SectionList';
 import { useProfile } from '@/hooks/useProfile';
@@ -43,6 +44,20 @@ export function ProfileEditor() {
       </header>
 
       <SectionList />
+
+      {/*
+        Last, and below the sections rather than beside the head (`B-106`).
+
+        It is a way of **adding** to a profile, like the CV upload, and the
+        one difference decides the placement: the upload builds a profile
+        somebody has none of, so it lives on onboarding. This adds projects to
+        one that already exists, and the reader has to be able to see what is
+        there before deciding what is missing.
+
+        Drawn for everybody. Nothing about it is an account feature: only
+        public data is read, and the capabilities block gates nothing here.
+      */}
+      <GitHubImport />
     </div>
   );
 }

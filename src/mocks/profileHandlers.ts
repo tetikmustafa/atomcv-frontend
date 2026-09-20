@@ -20,6 +20,9 @@ import {
   type MockSection,
 } from './profileFixture';
 import { currentMaxAtoms, isAccount, TEMPLATES } from './sessionFixture';
+import type { components } from '@/types/api';
+
+type Schemas = components['schemas'];
 
 /**
  * Skill names the dictionary folds into one (`B-077`).
@@ -141,6 +144,42 @@ function completenessOf(selfDescription: string | undefined): number {
 function findAtom(id: string): MockAtom | undefined {
   return fixture.atoms.find((atom) => atom.id === id);
 }
+
+/**
+ * What a public GitHub account has on offer (`B-106`, § 31.8).
+ *
+ * **One of each kind**, and that is the whole reason this is a list rather
+ * than a single row: a suggestion carrying `matchedEntryId` is a **merge**
+ * onto a project already written about — it adds languages and a link and
+ * leaves the person's sentences alone — while one without becomes a **new
+ * project** with GitHub's own description as its first line. Those do
+ * different things to somebody's own writing, and a fixture with only one of
+ * them would let the screen be written as though there were one outcome.
+ *
+ * `matchedEntryId` points at a real entry in this fixture, so the merge case
+ * names something that exists rather than a uuid nobody can look up.
+ */
+const GITHUB_SUGGESTIONS = [
+  {
+    name: 'query-monitor',
+    description: 'Watches slow queries and says which index would have helped',
+    url: 'https://github.com/elifyildirim/query-monitor',
+    stars: 900,
+    skills: ['go', 'postgres'],
+    matchedEntryId: 'entry-getir',
+    confidence: 0.82,
+    merge: true,
+  },
+  {
+    name: 'ingest-bench',
+    description: 'A small benchmark for streaming ingestion pipelines',
+    url: 'https://github.com/elifyildirim/ingest-bench',
+    stars: 41,
+    skills: ['kafka', 'java'],
+    confidence: 0.55,
+    merge: false,
+  },
+] satisfies Schemas['GitHubSuggestion'][];
 
 export const profileHandlers = [
   /** The head. Never 404s, and its version travels only as an ETag. */
@@ -1196,5 +1235,71 @@ export const profileHandlers = [
 
     atom!.variants = atom!.variants?.filter((candidate) => candidate.id !== variantId);
     return new HttpResponse(null, { status: 204 });
+  }),
+
+  /**
+   * What a public GitHub account has that this profile does not (`B-106`).
+   *
+   * The shapes that matter to a screen are the ones encoded here:
+   *
+   * - **a merge and a new project are different suggestions**, and the fixture
+   *   carries one of each. A list with only new projects would let the screen
+   *   be written as though there were one outcome, and the two do different
+   *   things to somebody's own sentences.
+   * - **an empty list is one state, not four.** An account that does not
+   *   exist, a GitHub that will not answer and one with nothing significant
+   *   in it all come back the same way, because none of them is something a
+   *   person can act on.
+   * - **the refusal is a `400` with `username`**, and only when the request
+   *   names no account *and the profile names none either*. A screen that
+   *   required the field would be enforcing something the endpoint does not.
+   */
+  http.post('*/api/v1/profile/github/suggestions', async ({ request }) => {
+    const instance = '/api/v1/profile/github/suggestions';
+    const body = (await request.json().catch(() => ({}))) as { username?: unknown };
+    const username =
+      typeof body.username === 'string' && body.username.trim() !== ''
+        ? body.username.trim()
+        : (fixture.profile.contact?.github ?? '');
+
+    if (username === '') {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['username'] }),
+        { status: 400 },
+      );
+    }
+
+    // A name a test can use to reach the state that is not an error and not a
+    // list either. Every other name answers with the fixture.
+    if (username === 'nobody') return HttpResponse.json([]);
+
+    return HttpResponse.json(GITHUB_SUGGESTIONS);
+  }),
+
+  /**
+   * Writes the ones that were picked.
+   *
+   * **One transaction, and a repository the account no longer has is skipped
+   * rather than refused** — the list is a moment old and a repository can be
+   * renamed between reading it and choosing it. So `applied` can be smaller
+   * than what was asked for, and a screen that assumed the two were equal
+   * would report a number nobody promised.
+   */
+  http.post('*/api/v1/profile/github/apply', async ({ request }) => {
+    const instance = '/api/v1/profile/github/apply';
+    const body = (await request.json().catch(() => ({}))) as { repositories?: unknown };
+    const asked = Array.isArray(body.repositories) ? body.repositories.map(String) : [];
+
+    if (asked.length === 0) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['repositories'] }),
+        { status: 400 },
+      );
+    }
+
+    const known: string[] = GITHUB_SUGGESTIONS.map((suggestion) => suggestion.name);
+    const applied = asked.filter((name) => known.includes(name)).length;
+
+    return HttpResponse.json({ applied });
   }),
 ];

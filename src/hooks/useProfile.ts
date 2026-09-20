@@ -19,6 +19,7 @@ import { profileKeys } from '@/lib/api/queryKeys';
 import type { Version } from '@/lib/api/etag';
 import {
   addVariant,
+  applyGitHubSuggestions,
   createAtom,
   createEntry,
   createSection,
@@ -38,6 +39,7 @@ import {
   reorderSections,
   replacePreferences,
   replaceProfile,
+  suggestFromGitHub,
   tagAtom,
   untagAtom,
   type Atom,
@@ -862,6 +864,44 @@ export function useDeleteAtom() {
 
   return useMutation({
     mutationFn: (id: string) => deleteAtom(id, versionOf(client, id)),
+    onSuccess: () => invalidateWholeProfile(client),
+  });
+}
+
+/* -------------------------------- github ------------------------------- */
+
+/**
+ * Asking what a GitHub account has (`B-106`).
+ *
+ * **A mutation rather than a query**, although it reads: it is a `POST` that
+ * spends one of five an hour, so it must happen when somebody presses a
+ * button and never because a component mounted. A `useQuery` would refetch on
+ * focus and burn the allowance on a tab switch.
+ *
+ * Nothing is written, so nothing is invalidated.
+ */
+export function useGitHubSuggestions() {
+  return useMutation({
+    mutationFn: (username?: string) => suggestFromGitHub(username),
+  });
+}
+
+/**
+ * Writing the ones that were picked.
+ *
+ * **The whole profile is invalidated**, not a corner of it: an apply can add
+ * projects and merge into existing entries in one transaction, so sections,
+ * entries and atoms may all have moved — and `invalidateWholeProfile` is the
+ * call that exists for exactly this, never `profileKeys.all` (that key is
+ * also the prefix of the per-atom keys, and there is no endpoint behind
+ * those).
+ */
+export function useApplyGitHubSuggestions() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ repositories, username }: { repositories: string[]; username?: string }) =>
+      applyGitHubSuggestions(repositories, username),
     onSuccess: () => invalidateWholeProfile(client),
   });
 }

@@ -44,7 +44,14 @@ function initial(): ProfileFixture {
     profileVersion: 1,
     profile: {
       headline: 'Senior Backend Engineer',
-      contact: { name: 'Elif Yıldırım', email: 'elif@example.com' },
+      /*
+        `github` is here because the suggestion endpoint reads it when the
+        request names no account (`B-106`), and that is the path most people
+        take: the account the CV shows an employer is the one to look at.
+        A fixture without it would make the empty-username case a `400`, which
+        is a different state entirely.
+      */
+      contact: { name: 'Elif Yıldırım', email: 'elif@example.com', github: 'elifyildirim' },
       sourceLanguage: 'en',
       enabledLanguages: ['en'],
       /*

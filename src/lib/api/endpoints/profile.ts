@@ -316,6 +316,61 @@ export function deleteVariant(atomId: string, variantId: string, version: Versio
   });
 }
 
+/* -------------------------------- github ------------------------------- */
+
+/**
+ * What a public GitHub account has that this profile does not (`B-106`,
+ * § 31.8).
+ *
+ * **Two calls, and the first one writes nothing.** "Offered, never added
+ * automatically" is the rule, and the split is how it is kept: the
+ * suggestions endpoint reads and returns, and nothing reaches the profile
+ * until a second request names the repositories by hand.
+ *
+ * **The path is `/profile/github`, not `/ingestion/github`** — the same call
+ * `F-029` made for the CV upload: this is something that happens *to a
+ * profile*, and the resource it belongs under is the profile.
+ *
+ * **No permission is asked for and no token is kept.** Only public data is
+ * read, which is why neither is needed — and the screen should not imply
+ * otherwise by asking somebody to connect an account.
+ *
+ * `username` is optional: absent, the account named in the profile's own
+ * contact block is read, which is the one the CV shows an employer anyway.
+ *
+ * **Five an hour** (`429 RATE_LIMITED`), because GitHub's own budget is
+ * shared by the whole deployment rather than by one person.
+ */
+export type GitHubSuggestion = NonNullable<Returns<'suggestFromGitHub'>[number]>;
+
+export function suggestFromGitHub(username?: string) {
+  return api.post<Returns<'suggestFromGitHub'>>(
+    '/profile/github/suggestions',
+    username ? { username } : {},
+  );
+}
+
+/**
+ * Writes the ones that were picked.
+ *
+ * **One transaction**: half an import is not a smaller import, it is a
+ * profile somebody has to work out the state of. A repository the account no
+ * longer has is skipped rather than refused — the list is a moment old, and a
+ * repository can be renamed between reading it and choosing it.
+ *
+ * The username is sent again rather than remembered server-side, so the two
+ * calls stay independent: the second one is not a continuation of a session
+ * the first one opened.
+ */
+export type GitHubApplyResult = Returns<'applyGitHubSuggestions'>;
+
+export function applyGitHubSuggestions(repositories: string[], username?: string) {
+  return api.post<GitHubApplyResult>('/profile/github/apply', {
+    repositories,
+    ...(username ? { username } : {}),
+  });
+}
+
 /* --------------------------------- tags -------------------------------- */
 
 /**
