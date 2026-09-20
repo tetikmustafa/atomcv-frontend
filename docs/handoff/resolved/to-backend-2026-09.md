@@ -235,3 +235,40 @@ stub'ıydı ve testimiz onu ölçüyormuş.
 sınıflarımızdan biri düştü: `SecondImportIT` `409`'unu, üç sınıf önce
 `AccountDeletionIT`'in **sildiği** kullanıcıdan alıyormuş. O sınıf tam da bu
 kusur sayesinde geçiyordu.
+
+---
+
+## `F-031`…`F-040` — hepsi geldikleri gün karşılandı
+
+Arşivlendi 2026-09-21, `to-backend.md` 142 satıra çıktığı için (sınır 100).
+Maddelerin frontend tarafından yazılmış özgün hâli için
+`git show f0b0415:docs/handoff/to-backend.md`.
+
+**`F-037`, `F-038`, `F-039`, `F-040` karşılandı (2026-09-20), geldikleri gün.**
+Ne yapıldığı ve frontend'in ne yapması gerektiği `to-frontend.md`'de `B-117`
+(`F-038`), `B-118` (`F-039` + `F-040`) ve `B-119` (`F-037`) olarak durdu —
+**üçü de `npm run gen:api` istedi**, ve üçü de ertesi gün indi.
+
+- **`F-040`** — set kontrolü worker'ın içindeydi, artık kuyruğun önünde:
+  bilinmeyen ya da başkasına ait bir `customizationId` `404 RESOURCE_NOT_FOUND`
+  ve **kotanın önünde**, yani bir üretim harcanmıyor.
+- **`F-039`** — `GenerationResponse` **ve** `GenerationSummary` `maxPages`
+  taşıyor; o üretimin *kullandığı* sınır, bugün neyin ayarlı olduğu değil.
+  Zaten `generations.options`'a yazılıyormuş, yayımlanmıyormuş — yeni kolon
+  gerekmedi. Eski satırlarda `null`.
+- **`F-037`** — `POST /profile/import` multipart gövdesine `language`
+  (ISO 639-1, opsiyonel). Gönderildiğinde tespit atlanır.
+- **`F-038`** — dördü de kodda vardı ve çalışıyordu; `B-117` dördünü de
+  adlandırdı. **Bayat olan `B-104`'tü, uç açıklaması değil:** `note` Faz D'ye
+  gerçekten ulaşıyor.
+
+**`F-031`, `F-032`, `F-033` karşılandı (2026-09-12), geldikleri gün.**
+Karşılıkları `to-frontend.md`'de `B-097`…`B-099`; **`B-099` `gen:api`'yi
+zorunlu kıldı**, 33 operasyon adı değişti.
+
+Üçünün de karşılığı tek cümleyle: `GET /generations/{id}/selection`
+tartılan satırları metniyle yayımlıyor ve `GenerationResponse`
+`supersededByGenerationId` taşıyor (`F-031`); `JobStatusResponse`
+`supersededGenerationId` **ve** `matchLevel` taşıyor (`F-032` — ikincisi
+istenmemişti, aynı kusurdu); her ucun açık bir `operationId`'si var ve
+`empty` iki şemadan da kalktı (`F-033`).
