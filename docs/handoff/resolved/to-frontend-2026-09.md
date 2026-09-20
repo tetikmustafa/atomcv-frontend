@@ -57,3 +57,44 @@ gün çağıran olursa burada görülsün.
 ön-getirme tuzağı), bilinmeyen jeton da "kapatıldı" diyor. Ayarlarda anahtar
 (`GET`/`PATCH /account`). Metin, silme onayının **kapsam dışı** olduğunu
 söylüyor — § 57.4 onu kapatılabilir göstermeyi yasaklıyor.
+
+---
+
+## Denetimlerin on yedisi — `B-100`…`B-116` (2026-09-20)
+
+Hepsi altı denetim turundan çıktı ve hepsi **tek bir kapanış sırasında**
+karşılandı: D1…D14, `docs/notes/current.md` § *Kapanış sırası*. Niçin öyle
+yapıldığı orada ve `notes/archive/stage-4.md`'de; burada yalnız ne yapıldığı.
+
+**Önce `npm run gen:api` koşuldu**, maddelerin istediği gibi. `api.d.ts` 964
+satır değişti ve `typecheck` sekiz hata verdi — sekizi de aşağıdaki
+maddelerden birine bağlıydı.
+
+| Madde | Ne yapıldı |
+|---|---|
+| `B-100` · CSP | Kod işi yok. Dağıtım günü kontrol listesine geçti (`notes/current.md`), Turnstile'ın çizildiğinin gözle görülmesi olarak. |
+| `B-101` · `contract-check` | **CI'da yazıldı** ve `main/openapi.json`'ı çekiyor. Frontend'de bu iş Aşama 0'dan beri bir `TODO` olarak duruyordu; yerelde backend'in commit'li şemasına karşı koşuldu ve üretilen tipler commit'li `api.d.ts` ile **birebir** çıktı. |
+| `B-102` · arşivleme | Uç, hook ve kontrol indi. İşaret sonuç ekranında konuyor, geçmişte satırın olguları arasında okunuyor. Anonimde çizilmiyor — esirgeme değil anlamsızlık. `archive`, `FEATURE_REQUIRES_ACCOUNT`'un beşinci dalı oldu. |
+| `B-103` · atom etiketleri | İki uç, `AtomTags` bileşeni, `auto`/`user` ayrı çiziliyor. Sürüm gönderilmiyor ve gönderilmediği testle sabit. Ham skorun dörtte biri sıfırdan çıktı. |
+| `B-104` · `emphasize` | `Directives` panelinde, **varsayılan kapalı**. `note` da orada — madde "gelmedi" diyordu, gelmiş (`F-038`). |
+| `B-105` · `html` + `source` | İki düğme, ve sayfa sınırının üç ayrı cümlesi: PDF'te kesin, Word'de yaklaşık, HTML'de hiç geçerli değil. `DOWNLOAD_EXTENSION` `source`'u `.tex` yapıyor. |
+| `B-106` · GitHub | İki adımlı: öneri hiçbir şey yazmıyor, uygulama seçilenleri yazıyor. Birleştirme ile yeni proje ayrı çiziliyor, hiçbiri işaretli gelmiyor. |
+| `B-107` · `auto` çeviri | Üç sonucu da indi: `SCORING` içindeki beklemenin notu, dil notunun yeni gerekçesi, ve `llm_translate` sözcüklemesinin kendi notu. |
+| `B-108` · seçim gerekçeleri | `matchedKeywords` çip olarak, `heldBackReason` **dört ayrı cümle**. `EXCLUDED_BY_DIRECTIVE` "profiline dokunulmadı" diyor. Skor yayımlanmadı ve istenmedi. |
+| `B-109` · uç açıklamaları | `gen:api` koşuldu. Tip farkı çıkmadı, maddenin beklediği gibi. |
+| `B-110` · katalog testi | **Bağlandı.** `errorCatalogue.test` `docs/error-catalogue.md`'yi ayrıştırıyor ve kendi `PARAMS`'ıyla kod kümesini, ad ve tipleri karşılaştırıyor. Negatif kontrol üç yönde yapıldı. |
+| `B-111` · çeviri dosyaları | Denetlendi ve **bulgu tersine çıktı**: 41 kodun 41'i yazılıydı, iki dil birebir senkrondu. Fazlalık vardı — `REWRITE_VALIDATION_FAILED` ve `NO_ANONYMOUS_PROFILE` silindi. Maddenin sayıları da yanlıştı: enum 40, katalog 40. |
+| `B-112` · iki sözlük daraldı | `gen:api`; `createdBy`'ın dört değerini ayıran bir arayüz zaten yoktu. |
+| `B-113` · `EXTRACTION_TIMEOUT` | Metin yazıldı ve 503'ünkinden **davranışça** ayrıldı: 504 aynı dosyayla tekrar denemeye davet ediyor, 503 denemenin yardımcı olmayacağını söylüyor. Üç kontrolle sabit. |
+| `B-114` · iki yeni eylem | `upload_another_file` dosya seçiciyi açıyor (tekrar **değil**: aynı şifreli dosya aynı yerde düşer). `choose_language` **çizilmiyor** — `F-037`, dolduracağı alan yok. |
+| `B-115` · bayat varyant | Üç maddesi zaten yazılıydı; dördüncüsü indi (anonimde çizilmiyor). Ayrıca **bir şey kanıtlamadan geçen bir test** bulundu: `/regenerate/i` ile aranan düğmenin adı "Write it again from the new source" idi. |
+| `B-116` · üç sözlük | `failed` ve `cancelled` dalları silindi, `TERMINAL` yayımlanan enum'a karşı sınıflandırma kontrolü kazandı. `two_column` zaten sunulmuyordu; gerçek uca karşı reddi doğrulandı (`400`, `fields:["layout"]`). |
+
+**Gerçek uca karşı ölçüldü (2026-09-20).** Yeni yüzeyin hepsi bugüne kadar
+yalnız MSW'ye karşı doğrulanmıştı; `:8080`'e karşı koşulan sonda etiketleri
+(kanonik, idempotent, `If-Match`siz, tekrar silmede 404), şablon registry'sini,
+özelleştirmeleri, GitHub önerilerini, `layout`u ve `emphasize`/`note`
+sınırlarını doğruladı — ve **üç fark buldu**: registry'nin sayıları § 33.5'in
+tablosundan farklı, `POST /customizations` atlanmış alanları şablonun
+kendisinden **çözüyor**, ve bilinmeyen bir `customizationId` reddedilmiyor
+(`F-040`).

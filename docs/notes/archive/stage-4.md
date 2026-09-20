@@ -10,6 +10,38 @@
 
 ---
 
+### D14 kapandı — açık kaynak yüzeyi, ve dağıtımın bekleyenleri (2026-09-20)
+
+**`README` "Stage 0 — skeleton" diyordu.** Üç aşama geride kalmıştı, ve bu
+açık kaynak bir repoda **ilk okunan** dosya: durum satırı yanlışsa geri kalan
+her şey de şüpheli okunur. Bugünkü hâli yazıldı — spec'in tarif ettiği her
+ekran var ve gerçek uca bağlı — **ve dağıtılmadığı da yazıldı**, beş ölçümsüz
+şeyi adıyla sayarak.
+
+**`CONTRIBUTING` ve `SECURITY` indi.** İkincisi bir şeyi açıkça söylüyor:
+**dağıtım yok**, yani bugün işe yarayan rapor vahşi doğada gözlenmiş bir şey
+değil, koştuğunda önemli *olacak* bir kusur. İkisi de kapsam dışını sayıyor,
+çünkü bir katkıcının en pahalı öğrenme şekli yazdıktan sonra öğrenmek.
+
+**`.env.example` denetlendi ve iki değişken silindi.** `NEXT_PUBLIC_APP_NAME`
+hiçbir yerde okunmuyordu; `NEXT_PUBLIC_SENTRY_DSN` "Aşama 3'te doldurulacak"
+diye yazılmış ve hiç bağlanmamıştı. **Kodun yok saydığı bir değişkeni listeleyen
+bir örnek dosya, onu atlayandan kötüdür**: biri ayarlar, hiçbir şey olmaz, ve
+özelliğin kapalı mı bozuk mu olduğunu ayırt edemez.
+
+**Blog yerine tek sayfa, ve bu bir kısayol değil karar.** Blog bir hattır;
+yazılacak içeriği olmayan bir hat hiçbir şey indeksletmez ve bakım maliyeti
+getirir. Arama motorunun kullanabileceği şey, insanın geldiği soruyu cevaplayan
+bir sayfa — sayfa sınırı nasıl **garanti** ediliyor, bir dil modelinin iş
+uydurmasını ne engelliyor — ve yazılacak tam olarak bir tane var.
+`/how-it-works` `(app)` dışında: sağlayıcı yok, kendi JS'i yok, ve
+`PUBLIC_PATHS`'e girdiği için sitemap ile hreflang haritasına da girdi.
+
+**Yazılmayan iki şey ve sebebi.** Analitik ve `deploy.yml`. Ölçümü alacak bir
+yer yokken huni ölçen kod yazmak, çalıştığını hiç görmeyeceğimiz bir şeyi
+bakım yüküne çevirmek olurdu — ve `SECURITY.md` bunu bir güvenlik olgusu
+olarak da söylüyor: üçüncü taraf script yok, Turnstile dışında.
+
 ### D13 kapandı — kasıtlı boşlukların dördü, biri gerekçesiyle kalıyor (2026-09-20)
 
 **Bir boşluk "artık yapabiliriz" diye değil, "gerekçesi bayatladı" diye

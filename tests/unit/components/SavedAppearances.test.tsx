@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CvAppearance } from '@/components/settings/CvAppearance';
 import { getSession } from '@/lib/api/endpoints/auth';
-import { getProfile } from '@/lib/api/endpoints/profile';
+import { getProfile, listTemplates } from '@/lib/api/endpoints/profile';
 import { profileKeys, sessionKeys } from '@/lib/api/queryKeys';
 import { server } from '@/mocks/node';
 import { signIn } from '@/mocks/sessionFixture';
@@ -67,15 +67,23 @@ const nameField = () => screen.getByLabelText(en.Appearance.presets.nameLabel);
  */
 describe('what the CV looks like', () => {
   it('says what each template holds, so nobody picks blind', async () => {
+    /*
+      Read off the endpoint rather than written down here, and the reason is a
+      measurement: the registry publishes 53 for classic where § 33.5's table
+      says ~54, because the table is written as an approximation "for the
+      catalogue" and the endpoint exists to give the measured answer. A test
+      carrying either number would pin a figure rather than the claim — which
+      is that the screen prints **what the server said**, and would fail the
+      day somebody hardcoded a plausible one.
+    */
+    const registry = await listTemplates();
     await renderAppearance();
 
-    // The registry's numbers, not invented ones: classic ~54, compact ~64.
-    expect(await screen.findByTestId('template-capacity-classic')).toHaveTextContent(
-      'About 54 lines a page',
-    );
-    expect(screen.getByTestId('template-capacity-compact')).toHaveTextContent(
-      'About 64 lines a page',
-    );
+    for (const template of registry) {
+      expect(await screen.findByTestId(`template-capacity-${template.id}`)).toHaveTextContent(
+        `About ${template.approximateLinesPerPage} lines a page`,
+      );
+    }
   });
 
   /**
@@ -90,9 +98,11 @@ describe('what the CV looks like', () => {
     await screen.findByTestId('template-capacity-classic');
 
     const classic = screen.getByRole('radio', { name: 'Classic' });
+    const registry = await listTemplates();
+    const lines = registry.find((template) => template.id === 'classic')?.approximateLinesPerPage;
 
     expect(classic).toBeInTheDocument();
-    expect(classic).toHaveAccessibleDescription('About 54 lines a page');
+    expect(classic).toHaveAccessibleDescription(`About ${lines} lines a page`);
   });
 });
 

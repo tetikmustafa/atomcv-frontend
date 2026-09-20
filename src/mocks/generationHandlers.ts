@@ -546,22 +546,23 @@ export const generationHandlers = [
     */
     const emphasize = body.emphasize ?? [];
 
-    if (
-      emphasize.length > 10 ||
-      emphasize.some((term) => term.length > 60) ||
-      (body.note ?? '').length > 500
-    ) {
-      return HttpResponse.json(
-        problem(400, 'VALIDATION_FAILED', GENERATIONS, [], {
-          fields: [
-            ...(emphasize.length > 10 || emphasize.some((term) => term.length > 60)
-              ? ['emphasize']
-              : []),
-            ...((body.note ?? '').length > 500 ? ['note'] : []),
-          ],
-        }),
-        { status: 400 },
-      );
+    /*
+      **The field names are the server's, indexed where the server indexes
+      them** — measured on 2026-09-20: too many terms comes back as
+      `emphasize`, one term that is too long as `emphasize[0]`. The first
+      draft here said `emphasize` for both, which is the difference between a
+      sentence naming the list and one naming the entry in it.
+    */
+    const fields = [
+      ...(emphasize.length > 10 ? ['emphasize'] : []),
+      ...emphasize.flatMap((term, index) => (term.length > 60 ? [`emphasize[${index}]`] : [])),
+      ...((body.note ?? '').length > 500 ? ['note'] : []),
+    ];
+
+    if (fields.length > 0) {
+      return HttpResponse.json(problem(400, 'VALIDATION_FAILED', GENERATIONS, [], { fields }), {
+        status: 400,
+      });
     }
 
     // § 44.3: the brake runs ahead of the quota, so a paused deployment does

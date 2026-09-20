@@ -52,9 +52,49 @@ jobs:
       - name: Bundle budget
         run: npm run size:check
 
-      # TODO(stage-1): once the backend publishes an OpenAPI schema, run
-      # `npm run gen:api:ci` here and fail on a diff against the committed
-      # src/types/api.d.ts — Bölüm 35.8's contract drift check.
+  # The guard whose absence let the schema get ahead of the documentation
+  # (`B-101`, and `F-038` is what that cost). It stood as a TODO from Stage 0
+  # until `openapi.json` reached the backend's repository root.
+  #
+  # **`main`, not `build`.** The backend's own job pointed at
+  # `.../build/openapi.json` -- a generated, gitignored path -- so the URL was
+  # a permanent 404 and the check took its "skipping" branch every time. A
+  # guard that skips is worse than no guard: it reports success.
+  #
+  # The committed copy is verified against the published schema by
+  # `OpenApiDocumentIT` on every backend PR, so this is comparing against
+  # something that cannot itself be stale.
+  contract:
+    name: Contract drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm install -g npm@11.6.2
+      - run: npm ci
+
+      # `--fail-with-body` so a 404 fails the step rather than writing an
+      # error page into the file and letting the generator make types out of
+      # it. Silence is the failure mode this whole job exists to remove.
+      - name: Fetch the backend's published schema
+        run: |
+          curl --fail-with-body --silent --show-error --location \
+            --output openapi.json \
+            https://raw.githubusercontent.com/tetikmustafa/atomcv-backend/main/openapi.json
+
+      - name: Regenerate and compare
+        run: |
+          npm run gen:api:ci
+          if ! git diff --quiet -- src/types/api.d.ts; then
+            echo "::error::src/types/api.d.ts is behind the backend's schema. Run 'npm run gen:api' against a running backend and commit the result."
+            git --no-pager diff -- src/types/api.d.ts
+            exit 1
+          fi
 
   e2e:
     name: End-to-end

@@ -11,11 +11,46 @@
 
 ## OPEN
 
-> **Dosya 100 satırı geçti ve bu bir arşivleme değil koordinasyon meselesi**
-> — `to-frontend.md`'nin aynı durumu. `F-037`, `F-038` ve `F-039`'un hiçbiri
-> `ACK` almadı, yani taşınabilecek madde yok. Üçü de kapanış sırasından
-> (D1…D14) çıktı ve üçü de bir **soru** taşıyor: ikisi telin bir alanı,
-> biri iki dokümanın çeliştiği bir nokta.
+> **Dosya 100 satırı geçti ve bu bir arşivleme değil koordinasyon meselesi.**
+> `F-037`…`F-040`'ın hiçbiri `ACK` almadı, yani taşınabilecek madde yok.
+>
+> Bu, `to-frontend.md`'nin aynı durumuydu — 347 satır, hiçbiri karşılanmamış —
+> ve o dosya 2026-09-20'de **43 satıra indi**, çünkü on yedisi de karşılandı.
+> Buradaki dördü de aynı yoldan gider: ikisi telin bir alanını istiyor
+> (`F-037`, `F-039`), biri iki dokümanın çeliştiği bir noktayı soruyor
+> (`F-038`), biri de gerçek uca karşı ölçülmüş bir davranış farkını
+> bildiriyor (`F-040`).
+
+### F-040 · Var olmayan bir `customizationId` **kabul ediliyor** (202)
+
+**Since:** frontend `feat/stage-4-closing` · gerçek uca karşı ölçüm 2026-09-20
+
+**Neden:** uç açıklaması *"başkasına ait bir set bulunamaz"* diyor. Ölçüldü:
+hiç var olmayan bir uuid ile `POST /generations` **202** dönüyor ve iş
+kuyruğa giriyor — presumably profilin çalışma ayarlarıyla.
+
+```
+POST /api/v1/generations  {"acknowledgePreflight":true,"coverLetter":false,
+                           "customizationId":"11111111-1111-1111-1111-111111111111"}
+→ 202 {"jobId":"5e241689-…","status":"queued","streamUrl":"…"}
+```
+
+**Bu `B-116`'nın `two_column`'uyla aynı şekil** ve maddenin kendi cümlesi
+tarif ediyor: *"kişi bir düzen seçiyor, hiçbir şey söylenmiyor, ve belgesi
+başkasını basıyordu."* Burada da kişi kaydettiği bir seti seçiyor, id bayat
+oluyor (başka bir sekmede silinmiş olabilir — silme uçu var ve uyarısız),
+ve **farklı ayarlarla** bir belge alıyor. Öteki ölü değerler bize boş bir dal
+maliyetindeydi; bu, kullanıcıya verdiğini sandığı bir seçime.
+
+**İstenen:** bilinmeyen ya da başkasına ait bir `customizationId`
+**`404 RESOURCE_NOT_FOUND`** (ya da `400 VALIDATION_FAILED` + `fields:
+["customizationId"]`). Hangisi olursa olsun ekran çizilebilir bir şey alıyor;
+bugün aldığı şey sessizlik.
+
+**Yan not — bir üretim harcandı.** Sondayı yazarken bunu ölçmenin ucuz yolu
+yoktu; `emphasize` ve `note` reddin içinden doğrulanabildi, bu doğrulanamadı.
+
+**Spec:** `08-api.md` § 35.3 · `/customizations` uç açıklaması
 
 ### F-039 · `GenerationResponse` `maxPages` taşımıyor
 

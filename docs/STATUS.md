@@ -40,7 +40,7 @@
 
 **Güvenlik:** `next` 16.3.0 iki **kritik** RCE uyarısının aralığındaydı (Windows sunucu; AVIF/görüntü optimizasyonu). 16.3.5'e çıkıldı, kalan yedisi geliştirme zinciriydi, **sıfır açık**. CI action'ları `@v5` — yalnız push'ta doğrulanabilir.
 
-**Test:** 805 birim · 75 e2e · **bundle** profil 254.7 / ayarlar 241.0 / üretim 223.3 / onboarding 220.8 / başvurular 216.0 / geçmiş 214.8 / landing 168.8 KB.
+**Test:** 965 birim · 77 e2e · **bundle** profil 258.6 / ayarlar 243.8 / üretim 227.4 / onboarding 221.2 / başvurular 216.6 / geçmiş 215.5 / landing ve nasıl-çalışıyor 168.8 KB (tavan: pazarlama 200, uygulama 280) · `npm audit` sıfır açık
 
 ## Açık kararlar
 
@@ -52,4 +52,4 @@ _Daha önce kapandı 09-09: model `openai/gpt-5.6-sol`; `emphasis` kalın, bedel
 
 **Sırada `B-100`…`B-116` var (2026-09-20).** On yedisi de denetimlerden ve hiçbiri ACK'lenmedi, yani `to-frontend.md` sınırı üç kattan fazla geçti — bu bir arşivleme değil koordinasyon meselesi. **Önce `npm run gen:api`**: dört turda şema değişti, sonuncusunda `Resolution.action` iki değer kazandı ve üç enum daraldı. Başlıcaları: `B-100` (CSP — dağıtımda görülmeli), `B-101` (`contract-check`'in URL'i), `B-103` (etiketler), `B-108` (`heldBackReason` dört ayrı cümle istiyor), **`B-111`** (çeviri dosyalarınız yanlış tablodan yazılmış olabilir), **`B-114`** (dört çıkarım reddi artık çözüm taşıyor — iki yeni ICU anahtarı), **`B-115`** (§ 37.6'nın iki düğmesi çalışıyor, spec "çizmeyin" diyordu), **`B-116`** (`failed`, `cancelled`, `two_column` telden kalktı).
 
-**Frontend'den üç madde açık: `F-037` (`choose_language`'ın dolduracağı alan yok), `F-038` (şemada olup hiçbir maddede adlandırılmayan dört şey) ve `F-039` (`maxPages` üretimde yayımlanmıyor).** Frontend bir kapanış sırasına bağlandı (2026-09-20): D1…D14, `notes/current.md` § *Kapanış sırası*. Kapsam § 55'in `[F]` kalemlerinin tamamı; VPS bu turda alınmıyor, yani analitik ve `deploy.yml` dağıtım listesine geçti, blog yerine tek statik sayfa, üçüncü arayüz dili yok.
+**Frontend'den dört madde açık: `F-037` (`choose_language`'ın dolduracağı alan yok), `F-038` (şemada olup hiçbir maddede adlandırılmayan dört şey), `F-039` (`maxPages` üretimde yayımlanmıyor) ve `F-040` (bilinmeyen bir `customizationId` 202 alıyor — gerçek uca karşı ölçüldü).** Kapanış sırası D1…D14 bitti ve **`B-100`…`B-116` ACK'lendi**: `to-frontend.md` 347 → 43 satır, satır satır `resolved/to-frontend-2026-09.md`'de. `B-101`'in `contract-check`'i CI'da ve `main/openapi.json`'ı çekiyor — yerelde koşuldu, backend'in commit'li şeması bizim tiplerimizle birebir. Yeni yüzeyin hepsi **gerçek uca karşı** doğrulandı (MSW kapalı, 2026-09-20); üç fark çıktı ve üçü de mock'a ya da `F-040`'a yazıldı.

@@ -121,41 +121,64 @@ frontend'in kendi kararı:
 
 ### Kapanan dilimlerin kaydı → `archive/stage-4.md`
 
-D1…D13 oraya indi (2026-09-20), 400 satır sınırı yüzünden. Burada
+D1…D14 oraya indi (2026-09-20), 400 satır sınırı yüzünden. Burada
 yalnız **hâlâ geçerli olan** kalıyor; bir dilimde neyin neden öyle yapıldığını
 arıyorsan `rg -n "D1 kapandı" docs/notes/archive/`.
 
-### D14 kapandı — açık kaynak yüzeyi, ve dağıtımın bekleyenleri (2026-09-20)
+### Gerçek uca karşı ölçüm, ve atlanmış bir madde (2026-09-20)
 
-**`README` "Stage 0 — skeleton" diyordu.** Üç aşama geride kalmıştı, ve bu
-açık kaynak bir repoda **ilk okunan** dosya: durum satırı yanlışsa geri kalan
-her şey de şüpheli okunur. Bugünkü hâli yazıldı — spec'in tarif ettiği her
-ekran var ve gerçek uca bağlı — **ve dağıtılmadığı da yazıldı**, beş ölçümsüz
-şeyi adıyla sayarak.
+**`B-101` sıraya hiç girmemişti.** Analizde "küçük iş" diye durdu ve
+D1…D14'ün hiçbirine yazılmadı; kapanış "on yedisi de kapandı" diye bildirildi
+ve yanlıştı. Üstelik atlanan şey, `F-038`'de tekrar tekrar işaret edilen
+muhafızın ta kendisi — **şemanın dokümanı geçmesine izin veren şeyin
+yokluğu**. Bir kapanış listesinin kendi kalemini düşürmesi, listenin ölçülmesi
+gereken şey olduğunu söylüyor.
 
-**`CONTRIBUTING` ve `SECURITY` indi.** İkincisi bir şeyi açıkça söylüyor:
-**dağıtım yok**, yani bugün işe yarayan rapor vahşi doğada gözlenmiş bir şey
-değil, koştuğunda önemli *olacak* bir kusur. İkisi de kapsam dışını sayıyor,
-çünkü bir katkıcının en pahalı öğrenme şekli yazdıktan sonra öğrenmek.
+Şimdi CI'da: `contract-check` backend'in `main/openapi.json`'ını çekiyor,
+tipleri yeniden üretiyor ve commit'liyle farkta düşüyor. **`main`, `build`
+değil** — maddenin asıl bulgusu buydu: eski URL üretilen ve gitignore'lu bir
+yolu gösteriyordu, yani hep 404 veriyor ve iş hep "skipping" dalına gidiyordu.
+**Atlayan bir muhafız, hiç olmayandan kötüdür: başarı bildirir.** `curl`
+`--fail-with-body` ile, çünkü sessizlik bu işin ortadan kaldırmak için var
+olduğu arıza biçimi. Yerelde koşuldu: backend'in commit'li şeması bizim
+`api.d.ts`'imizle **birebir**.
 
-**`.env.example` denetlendi ve iki değişken silindi.** `NEXT_PUBLIC_APP_NAME`
-hiçbir yerde okunmuyordu; `NEXT_PUBLIC_SENTRY_DSN` "Aşama 3'te doldurulacak"
-diye yazılmış ve hiç bağlanmamıştı. **Kodun yok saydığı bir değişkeni listeleyen
-bir örnek dosya, onu atlayandan kötüdür**: biri ayarlar, hiçbir şey olmaz, ve
-özelliğin kapalı mı bozuk mu olduğunu ayırt edemez.
+**Yeni yüzeyin hepsi yalnız MSW'ye karşı doğrulanmıştı**, ve mock kendisiyle
+çelişemez. `:8080`'e karşı bir sonda koşuldu (§ Test ve ölçüm'ün kuralı) —
+etiketler, şablon registry'si, özelleştirmeler, GitHub önerileri, bölüm düzeni,
+`emphasize`/`note` sınırları. 18 kontrolün 17'si geçti; "düşen" biri sondanın
+kendi hatasıydı (`POST /auth/session` diye bir uç yok). **Üç fark çıktı.**
 
-**Blog yerine tek sayfa, ve bu bir kısayol değil karar.** Blog bir hattır;
-yazılacak içeriği olmayan bir hat hiçbir şey indeksletmez ve bakım maliyeti
-getirir. Arama motorunun kullanabileceği şey, insanın geldiği soruyu cevaplayan
-bir sayfa — sayfa sınırı nasıl **garanti** ediliyor, bir dil modelinin iş
-uydurmasını ne engelliyor — ve yazılacak tam olarak bir tane var.
-`/how-it-works` `(app)` dışında: sağlayıcı yok, kendi JS'i yok, ve
-`PUBLIC_PATHS`'e girdiği için sitemap ile hreflang haritasına da girdi.
+**1. Registry'nin sayıları § 33.5'in tablosundan farklı.** Klasik 53 (tablo
+~54), modern 52 (tablo ~50). Bölüm kendi sayılarını "katalog için, yaklaşık"
+diye yazıyor ve uç zaten **ölçülmüş** cevabı vermek için var — yani çelişki
+değil, ama mock tabloyu kopyalamıştı. Kopyalanmış bir tablo *doğru görünür*:
+fark, ekranın sunucunun hiç göndermediği bir rakamı basması için yeterli.
+Mock artık ölçülen değerleri taşıyor, ve **sürümler de aynı değil** (klasik 6,
+modern 3, kompakt 2 — ilk taslak üçüne de 6 vermişti).
 
-**Yazılmayan iki şey ve sebebi.** Analitik ve `deploy.yml`. Ölçümü alacak bir
-yer yokken huni ölçen kod yazmak, çalıştığını hiç görmeyeceğimiz bir şeyi
-bakım yüküne çevirmek olurdu — ve `SECURITY.md` bunu bir güvenlik olgusu
-olarak da söylüyor: üçüncü taraf script yok, Turnstile dışında.
+**2. `POST /customizations` yankılamıyor, çözüyor.** Yalnız `fontSizePt`
+gönderilen bir istek, kenar boşluğu, satır aralığı, aile ve vurgu rengi
+şablonun kendisinden doldurulmuş olarak geri geliyor. Yankılayan bir mock,
+ekranın **boşluklara** karşı yazılıp üretimde gerçek sayılarla karşılaşmasına
+izin verirdi — sürprizin yanlış yönü: geliştirmede "—", dağıtımda "0.55in"
+gösteren bir liste, canlıya çıkana kadar kimsenin bulmadığı bir kusurdur.
+
+**3. Bilinmeyen bir `customizationId` reddedilmiyor** — `202`, iş kuyruğa
+giriyor. Uç açıklaması "başkasına ait bir set bulunamaz" diyor. Bu
+`B-116`'nın `two_column`'uyla **aynı şekil**: kişi bir şey seçiyor, hiçbir şey
+söylenmiyor, belgesi başkasını basıyor. `F-040`.
+
+**Bir de küçük bir alan adı farkı:** çok uzun bir terim `emphasize[0]` diye
+geri geliyor, `emphasize` diye değil — listeyi adlandıran bir cümleyle
+içindeki girdiyi adlandıran cümle arasındaki fark.
+
+**Kapasite testi sayıya değil iddiaya bağlandı.** Ölçülen değerleri teste
+yazmak, bir rakamı sabitlemek olurdu; test artık ucu okuyup ekranın **onu**
+bastığını doğruluyor — birisi makul görünen bir sayıyı koda gömdüğü gün düşer.
+
+**`B-100`…`B-116` ACK'lendi ve indi.** `to-frontend.md` 347 → **43 satır**;
+satır satır kayıt `resolved/to-frontend-2026-09.md`'de.
 
 ### Dağıtım günü — sırayla denenecekler
 

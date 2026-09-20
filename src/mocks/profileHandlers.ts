@@ -147,37 +147,85 @@ function findAtom(id: string): MockAtom | undefined {
 }
 
 /**
- * § 33.5's catalogue, as the registry publishes it (`F-038`).
+ * What `GET /templates` publishes, **read off the running backend**
+ * (2026-09-20) rather than copied from § 33.5's table.
  *
- * The capacities are the section's own numbers rather than invented ones, and
- * they are the answer to the question a chooser has to ask on somebody's
- * behalf: what does this template hold. The two point measurements are what
- * that line count is derived from; they travel because the schema declares
- * them, not because a screen should print them.
+ * Those two disagree, and the section says they may: its numbers are written
+ * as approximations "for the catalogue", and the endpoint exists because a
+ * chooser needs the measured answer. Classic is 53 rather than ~54 and modern
+ * 52 rather than ~50 — close enough that a copied table looks right and far
+ * enough that a screen built on it would print a figure the server never sent.
+ *
+ * **The versions are not all the same**, which the first draft of this
+ * assumed: classic is on 6, modern on 3 and compact on 2. They move when a
+ * template's geometry does, so they move independently.
  */
 const TEMPLATE_REGISTRY: Schemas['TemplateSummary'][] = [
   {
     id: 'classic',
     version: 6,
-    pageTextHeightPt: 648,
+    pageTextHeightPt: 722.7,
     baselineSkipPt: 13.6,
-    approximateLinesPerPage: 54,
+    approximateLinesPerPage: 53,
   },
   {
     id: 'compact',
-    version: 6,
-    pageTextHeightPt: 648,
-    baselineSkipPt: 11.4,
+    version: 2,
+    pageTextHeightPt: 737.15489,
+    baselineSkipPt: 11.39996,
     approximateLinesPerPage: 64,
   },
   {
     id: 'modern',
-    version: 6,
-    pageTextHeightPt: 648,
-    baselineSkipPt: 14.6,
-    approximateLinesPerPage: 50,
+    version: 3,
+    pageTextHeightPt: 715.47255,
+    baselineSkipPt: 13.6,
+    approximateLinesPerPage: 52,
   },
 ];
+
+/**
+ * What a template's own settings are, when a saved set names none of them.
+ *
+ * **Measured against the running backend, and it is a behaviour rather than a
+ * payload:** `POST /customizations` does not echo what it was sent — it
+ * resolves every omitted field to the template's own and returns the whole
+ * set. A mock that echoed would let a screen be written against blanks and
+ * then show real numbers in production, which is the wrong way round for a
+ * surprise.
+ *
+ * `modern`'s blue accent is `B-092`'s, and the other two are black — the one
+ * difference the section calls out by name.
+ */
+const TEMPLATE_DEFAULTS: Record<
+  string,
+  Pick<
+    Schemas['CustomizationResponse'],
+    'fontSizePt' | 'marginInches' | 'lineSpacing' | 'fontFamily' | 'accentColor'
+  >
+> = {
+  classic: {
+    fontSizePt: 11,
+    marginInches: 0.5,
+    lineSpacing: 1,
+    fontFamily: 'modern',
+    accentColor: '000000',
+  },
+  compact: {
+    fontSizePt: 10,
+    marginInches: 0.4,
+    lineSpacing: 0.95,
+    fontFamily: 'modern',
+    accentColor: '000000',
+  },
+  modern: {
+    fontSizePt: 11,
+    marginInches: 0.55,
+    lineSpacing: 1,
+    fontFamily: 'modern',
+    accentColor: '1D4ED8',
+  },
+};
 
 /** Twenty per profile, which the endpoint states and this enforces. */
 const CUSTOMIZATION_LIMIT = 20;
@@ -1440,11 +1488,24 @@ export const profileHandlers = [
       );
     }
 
+    /*
+      **Resolved, not echoed** — measured against the running backend on
+      2026-09-20. Sending only `fontSizePt` comes back with the margin, the
+      line spacing, the family and the accent filled in from the template's
+      own settings, and with *that* template's version rather than a constant.
+
+      Echoing instead would let a screen be written against blanks and then
+      meet real numbers in production, which is the wrong direction for a
+      surprise: a list of saved sets showing "—" in development and "0.55in"
+      once deployed is a bug nobody finds until it is live.
+    */
     const saved: Schemas['CustomizationResponse'] = {
       id: crypto.randomUUID(),
       name,
       baseTemplateId,
-      templateVersion: 6,
+      templateVersion:
+        TEMPLATE_REGISTRY.find((template) => template.id === baseTemplateId)?.version ?? 1,
+      ...TEMPLATE_DEFAULTS[baseTemplateId],
       ...(body.fontSizePt === undefined ? {} : { fontSizePt: body.fontSizePt }),
       ...(body.marginInches === undefined ? {} : { marginInches: body.marginInches }),
       ...(body.lineSpacing === undefined ? {} : { lineSpacing: body.lineSpacing }),
