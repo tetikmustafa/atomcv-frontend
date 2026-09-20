@@ -15,6 +15,7 @@
 
 import { useLocale, useTranslations } from 'next-intl';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
+import { ArchiveToggle } from '@/components/generation/ArchiveToggle';
 import { CoverLetter } from '@/components/generation/CoverLetter';
 import { EditRequest } from '@/components/generation/EditRequest';
 import { Feedback } from '@/components/generation/Feedback';
@@ -179,6 +180,19 @@ export function GenerationResult({ generationId }: { generationId: string }) {
         so this sentence is the only place the difference is stated.
       */}
       <p className="text-muted-foreground text-sm">{t('formatNote')}</p>
+
+      {/*
+        `B-102`. Beside the downloads because that is where somebody decides
+        this is the resume that mattered, and read back on the history screen
+        — a mark set in one place and read in another is a feature with one
+        end; the item says the history is where it is read.
+
+        `archived` is optional on the wire and absent means not archived: a
+        generation is not made archived. `=== true` rather than truthiness so
+        the switch is off while the field is missing rather than undefined,
+        which React would treat as uncontrolled.
+      */}
+      <ArchiveToggle generationId={generationId} archived={data.archived === true} />
 
       {data.fitReport ? (
         <FitReport report={data.fitReport} />

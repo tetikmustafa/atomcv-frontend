@@ -296,6 +296,33 @@ export function submitFeedback(generationId: string, body: FeedbackRequest) {
   return api.post<Feedback>(`/generations/${generationId}/feedback`, body);
 }
 
+/* ------------------------------- archiving ------------------------------ */
+
+/**
+ * Marking a generation to keep, or taking the mark off (`B-102`, § 13).
+ *
+ * The endpoint had been in the resource map from the beginning and the
+ * `generations.archived` column since V1; they had simply never met.
+ *
+ * **An omitted body archives.** That is the server's default and this sends
+ * it as one — `{ archived: true }` rather than nothing — for the reason every
+ * other body on this client states what it asked for: a request that names
+ * its intent cannot drift when a default moves. Clearing the mark has to be
+ * explicit either way.
+ *
+ * **It is idempotent**, so a second press on an archived generation is not an
+ * error, and the screen has nothing to guard against.
+ *
+ * **What the mark buys is a retention rule, and there is nothing to retain
+ * yet.** An archived generation's artifact never expires; until object
+ * storage lands nothing expires either way (§ 57.4). So the honest thing for
+ * the screen to promise today is that the mark is **kept and read**, not that
+ * it is protecting a file from deletion — and the copy says the first.
+ */
+export function archiveGeneration(generationId: string, archived: boolean) {
+  return api.post<Generation>(`/generations/${generationId}/archive`, { archived });
+}
+
 /* -------------------------------- history ------------------------------ */
 
 export type GenerationPage = Returns<'listGenerations'>;

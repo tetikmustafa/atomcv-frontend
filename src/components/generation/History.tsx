@@ -116,6 +116,7 @@ function Row({ row }: { row: GenerationSummary }) {
     row.matchLevel ? fit('level', { level: row.matchLevel }) : null,
     languageName(row.contentLanguage, locale),
     row.hasCoverLetter ? t('withLetter') : null,
+    row.archived === true ? t('kept') : null,
   ].filter(Boolean);
 
   /*
@@ -129,6 +130,16 @@ function Row({ row }: { row: GenerationSummary }) {
     screen reader wants anyway.
   */
   const label = [row.roleTitle, row.companyName].filter(Boolean);
+
+  /*
+    `B-102`: this is the screen the mark is read on, and it is in the facts
+    above rather than in a badge of its own. Said in words rather than drawn
+    as an icon or a colour (rule 6), because it is one more thing that is true
+    about the row — like its language or its page count — and it reaches the
+    accessible name for free that way.
+
+    Absent means not archived; a generation is not made archived.
+  */
 
   const body = (
     <>

@@ -159,6 +159,14 @@ export type MockGenerationJob = MockJobCommon & {
    * fixture has; on the server it belongs to the generation.
    */
   selection: MockSelectionLine[];
+  /**
+   * Whether this one is marked to keep (`B-102`, § 13).
+   *
+   * Optional and absent by default, because a generation is **not** made
+   * archived — the endpoint and the `generations.archived` column both
+   * existed from the start and had simply never met.
+   */
+  archived?: boolean;
 };
 
 /**

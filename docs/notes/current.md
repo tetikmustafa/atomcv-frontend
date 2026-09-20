@@ -121,124 +121,51 @@ frontend'in kendi kararı:
 
 ### Kapanan dilimlerin kaydı → `archive/stage-4.md`
 
-D1, D2, D3 oraya indi (2026-09-20), 400 satır sınırı yüzünden. Burada
+D1…D6 oraya indi (2026-09-20), 400 satır sınırı yüzünden. Burada
 yalnız **hâlâ geçerli olan** kalıyor; bir dilimde neyin neden öyle yapıldığını
 arıyorsan `rg -n "D1 kapandı" docs/notes/archive/`.
 
-### D4 kapandı — bayat varyant kontrolü ve iki bayat test (2026-09-20)
+### D7 kapandı — arşivleme, ve vaadin bugünkü büyüklüğü (2026-09-20)
 
-`B-115`'in dört maddesinden üçü zaten yazılıydı; eksik olan dördüncüsüydü.
-**Anonim oturumda çeviri kuyruğa girmiyor** — o oturumun ne işi sahiplenecek
-bir id'si var ne ikinci bir dili — yani iki satır da kendince yalan olurdu:
-"yenileniyor" olmayacak bir işi adlandırır, "yeniden üret" sunucunun kabul
-edip hiçbir şey kuyruğa koymadığı bir yamayı gönderir. Doğru şekli sessizlik.
+`B-102`: uç kaynak haritasında ilk taslaktan beri, `generations.archived`
+kolonu V1'den beri vardı ve ikisi hiç buluşmamıştı.
 
-**Koşul `!== false`**, `=== true` değil: oturum uçuşurken de çizilmiyor.
-`useCanWriteCoverLetter`'ın gerekçesi — görünüp kaybolan bir kontrol arada
-basılabilir — burada bir kat daha ağır basıyor, çünkü basılacak ekran kişiye
-**kendi cümlesinin** değiştirileceğini söyleyen ekran.
+**Kopya bugün doğru olanı vaat ediyor, yarın doğru olacağı değil.** İşaretin
+satın aldığı şey bir saklama kuralı — arşivlenmiş bir üretimin çıktısı hiç
+sonlanmıyor — ama nesne deposu inene kadar zaten hiçbir şey sonlanmıyor
+(§ 57.4). O yüzden cümle "işaret tutuluyor ve okunuyor" diyor, "dosyanı
+silinmekten koruyor" demiyor. Kural ısırmaya başladığında cümle **güçlenir**;
+önce fazla vaat eden bir cümle **zayıflamak** zorunda kalırdı, ve kimse
+düzeltme okumaz.
 
-**Bugün başka yoldan da erişilemez** ve bu yüzden dal değil muhafız: anonim
-profil tek dilli, yani hiçbir sözcükleme başkasından türemiyor ve `stale`'in
-doğru olacağı bir şey yok. § 9'un dar ürünü dilleri eksilterek daralıyor,
-doğruluğu değil.
+**İşaret bir yerde konuyor, başka yerde okunuyor** ve maddenin kendisi böyle
+diyor: sonuç ekranı kişinin "bu CV önemliydi" dediği yer, geçmiş ise
+okunduğu. Geçmişte **kendi rozeti yok** — satır hakkında doğru olan bir şey
+daha, dili ya da sayfa sayısı gibi; olgulara katılınca erişilebilir ada da
+bedavaya giriyor, ve renk ya da ikon değil söz (kural 6).
 
-**İki test bayattı ve ikisi de aynı sebepten.** `VariantTabs.test` ile
-`StaleWording.test` oturumu hiç okumuyordu — mock'un varsayılanı anonim, yani
-iki sözcüklemeli bir atomu anonim bir oturumda çiziyorlardı; anonim profilin
-üretemeyeceği bir şekil. Şimdi ikisi de `signIn()` okuyor.
+**Anonimde çizilmiyor, ve bu esirgeme değil anlamsızlık.** Anonim oturumun
+üretimleri profiliyle gidiyor, yani işaretin saklayacağı bir şey yok. Diğer
+iki eksik kontrolden (ön yazı, geri bildirim) farkı bu, ve test bunu ayrı
+cümleyle yazıyor.
 
-**Biri ise bir şey kanıtlamadan geçiyordu.** *"offers no regenerate button,
-because nothing could answer it"* — Aşama 1'de doğruydu, Aşama 3'te ikisi de
-değişti, satır kaldı. Üstelik eşleştirmesi `/regenerate/i` ve düğmenin adı
-"Write it again from the new source": düğme indiği günden beri **hiç
-bulunamayacak** bir adın yokluğunu iddia ediyordu. Bir test hem bayat bir
-kararı sabitleyip hem hiçbir şey ölçmeyebiliyor. Tersine çevrildi.
+**Mock'ta iki gövde bire indi.** Arşivleme ucu "üretimin şu anki hâlini"
+döndürüyor, yani okumayla aynı gövde — iki literal, bir yazma ile bir okumanın
+ayrışmaya başlama şeklidir, ve ayrışma ekranda "cache'e yazdım, yenileyince
+başka şey gördüm" diye çıkar. `generationBody` çıkarıldı.
 
-**Negatif kontrol yapıldı:** muhafız kaldırıldı, anonim testi düştü.
+**Boş gövde "değişiklik yok" değil, `true`.** Bir istemcinin en kolay ters
+anlayacağı şey bu; mock alanı zorunlu tutsaydı, hiçbir şey göndermeyen bir
+çağıran doğru görünürdü.
 
-**Ölçüm:** 892 birim testi yeşil, typecheck ve lint temiz.
+**`count` bilerek invalidate edilmiyor.** Arşivleme bir üretim eklemiyor ya da
+silmiyor — işaret bir saklama kuralı, silme değil — yani silme ekranının sesli
+söylediği sayı değişmedi; invalidate etmek, zaten doğru olan bir şeyi öğrenmek
+için istek atmak olurdu.
 
-### D5 kapandı — dört biçim, üç farklı sayfa iddiası (2026-09-20)
+**Negatif kontrol yapıldı:** anonim kapısı kaldırıldı, anonim testi düştü.
 
-`B-105` iki şeyi birden indirdi: `format=source` ilk taslaktan beri § 35.3'ün
-haritasındaydı ve `400` dönüyordu, HTML renderer'ın paketi de boştu. İkisi de
-serviste, yani iki yeni düğme.
-
-**Sayfa sınırı artık üç şey söylüyor ve üçü ayrı cümle.** PDF'te **kesin**,
-Word'de **yaklaşık** (atomlar dizilmiş bir sayfaya sığanlar, Word onları kendi
-fontlarının aldığı yerde diziyor), HTML'de **hiç geçerli değil** — Word'ün
-zayıf hâli değil: aşılacak bir sayfa yok. "Aşağı yukarı bir sayfa" ile "burada
-sayfa diye bir şey yok" farklı vaatler, ve HTML'i bir forma yapıştıran kişiye
-lazım olan ikincisi. Ekran iki satır yukarıda bir sayfa sayısı söylüyor, yani
-bu cümle o sayının neyi kapsamadığını söyleyen tek yer.
-
-**`DOWNLOAD_EXTENSION` bir kolaylık değil.** Query değeri bir **biçim** adı,
-dosya ise `.tex`: `format` interpolate edilseydi tarayıcı
-`atomcv-<id>.source` diye kaydederdi ve kişinin makinesinde onu açan hiçbir
-şey olmazdı. Aynı harita mock'un `Content-Disposition`'ında da var, ve testin
-asıl iddiası o.
-
-**`source` `text/plain` olarak servis ediliyor**, `application/x-tex`'in
-yazımlarından biri olarak değil: bu **bakılacak** LaTeX, ve tarayıcının
-bilinmeyen tür sayıp indirdiği bir medya tipi, açacağı bir tipten kötü. Ters
-yöne LaTeX göndermek zaten yasak — okumayı zararsız kılan da bu.
-
-**Bilinmeyen biçimin reddi duruyor** ve gerekçesi ilk yazıldığı günkü: sessiz
-bir PDF'e düşüş, hiç servis edilmeyen bir biçimin düğmesine PDF döndürürdü ve
-kimse dosyayı açana kadar fark etmezdi. Test `rtf` ile soruyor.
-
-**Ölçüm:** 897 birim testi yeşil, typecheck ve lint temiz.
-
-### D6 kapandı — iki yönlendirme alanı, varsayılan kapalı (2026-09-20)
-
-**Kapsam bir alan daraldı ve gerekçesi kayda değer.** Plan D6'ya üç alan
-yazıyordu; `customizationId` **D12'ye taşındı**, çünkü kaydedilmiş bir görünüm
-seti yokken bir seçici çizmek, kişiye özelliğin bozuk olduğunu öğreten bir
-kontroldür. Alan telde duruyor, isteği kuran yer aynı — eksik olan tek şey
-kaydı üreten ekran.
-
-**Kapalı olması bir yerleşim tercihi değil, ürün kuralı.** "Elle kontrol
-isteğe bağlı", varsayılan çıktının kimse hiçbir şeye dokunmadan kullanılabilir
-olması demek; üç girdiyle açılan bir ekran, boş iki tanesinin önemli olduğunu
-**zaten söylemiş** olur. Panel kapalıyken **mount edilmiyor**, yani "varsayılan
-senden bir şey istemiyor" iddiası sekme sırası için de doğru.
-
-**İkisi de ne profile ne ilana ait, istek alanı olmalarının sebebi bu.**
-`emphasize` ilanın kendi keyword'lerine tek koşu için katılıyor ve **pasted
-metne katlanamaz**: bir ilanın analizi hash'iyle cache'leniyor ve onu
-yapıştıran herkes arasında paylaşılıyor, yönlendirme ise bir kişiye ve bir
-koşuya ait. `note` yalnız Faz D'ye gidiyor — Faz B ilana karşı sıralıyor ve bir
-cümle terim değil.
-
-**İkisi de boşken gönderilmiyor.** Boş bir `emphasize` hiçbir terim adlandıran
-bir yönlendirme, boş bir `note` prompt'a verilip yok sayılması gereken bir
-cümle. Şemanın kendi açıklaması `customizationId` için aynı okumayı yapıyor:
-"yokluğu neredeyse her isteğin kastettiği şey".
-
-**Reddedilmeden yeniden gönderilenler korunuyor.** Bu ekrandaki her çıkış yolu
-isteği tekrar gönderiyor (`continue_anyway`, `continue_as_general_cv`,
-`increase_page_limit`) ve gönderdiği şey kişinin kastettiği istek. Yönlendirmeyi
-orada düşürmek, tek işi aynı isteği tekrar göndermek olan bir düğmenin
-arkasında isteği sessizce değiştirmek olurdu.
-
-**`TagInput` bir `maxCount` kazandı** ve sınırda **devre dışı kalıp sebebini
-söylüyor**. On birinci girdiyi yutmak, kişiye listesinin yanlış olduğunu birer
-birer öğretirdi (P8) — üstelik burada liste, sıralamanın okuduğu şey. `onBlur`
-sınıra giderken de tetiklendiği için taslak ayrıca düşürülüyor.
-
-**Sınır mock'ta da var, ekranda olmasına rağmen.** Ekran ikisini de kapıyor,
-yani gönderdiği hiçbir şey oraya varamaz — reddin kodlanma sebebi tam olarak
-bu: yalnız istemcinin tuttuğu bir sınır, ikinci bir çağıran yazılana kadar
-tutan bir sınırdır.
-
-**Bir test kapsamsız sorguyla kırıldı ve düzeltilmesi doğruydu.** "Üç çıkış
-yolu, gönderildiği sırada" ekrandaki **bütün** düğmeleri okuyordu ve formun
-kendi submit'ini de listeye sayıyordu; iddia sunucunun sıralaması hakkında,
-ekranın kaç kontrolü olduğu hakkında değil. Panele kapsandı, ve "submit satırın
-dışında" ayrı bir iddia olarak yazıldı.
-
-**Ölçüm:** 902 birim testi yeşil, typecheck ve lint temiz.
+**Ölçüm:** 909 birim testi yeşil, typecheck ve lint temiz.
 
 ### Aşama 3'ten devrolan açıklar
 

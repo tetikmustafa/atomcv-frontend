@@ -89,6 +89,7 @@
     "shown": "{total, plural, =1 {Tek CV} other {# CV}} içinden {shown, number} tanesi gösteriliyor.",
     "pages": "{count, plural, =1 {bir sayfa} other {# sayfa}}",
     "withLetter": "ön yazısıyla",
+    "kept": "saklanıyor",
     "status": "{status, select, superseded {Daha yeni bir sürümle değiştirildi.} other {}}",
     "open": "CV'yi aç: {facts}",
     "more": "Daha eskilerini göster",
@@ -462,6 +463,12 @@
     "downloading": "Dosya hazırlanıyor…",
     "again": "Bir tane daha oluştur",
     "announceDownloaded": "İndirme başladı",
+    "archive": {
+      "label": "Bunu sakla",
+      "hint": "Sakladığın CV'ler geçmişinde işaretli kalıyor; önemli olanı sonra kolayca bulursun.",
+      "announceKept": "Saklanıyor olarak işaretlendi",
+      "announceUnkept": "Saklama işareti kaldırıldı"
+    },
     "loading": "CV’n getiriliyor…",
     "generalNote": "İlan verilmedi, yani karşılaştırılacak bir şey yok.",
     "languageNote": "{content} yazıldı, {posting} değil. Bir CV tek dilde yazılır ve profilinde bu sayfaya girecek her şeyin {posting} sözcüklemesi henüz yok.",

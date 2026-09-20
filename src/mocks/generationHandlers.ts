@@ -359,6 +359,47 @@ function downloadBody(format: DownloadFormat): Uint8Array | string {
   }
 }
 
+/**
+ * One generation's read body, and the **only** place it is built (`B-102`).
+ *
+ * Extracted when the archive endpoint landed, because that endpoint answers
+ * with the generation as it now stands: two literals for one resource is how
+ * a write and a read start disagreeing, and the disagreement shows up as a
+ * screen that writes through the cache and then sees something else on
+ * reload.
+ */
+function generationBody(job: MockGenerationJob): Schemas['GenerationResponse'] {
+  const id = job.generationId;
+
+  return {
+    generationId: job.generationId,
+    // Still readable and still downloadable once it has been edited, and
+    // that is the point of keeping it (`B-088`) — what changes is that it
+    // is no longer the one to edit.
+    status: job.supersededBy ? 'superseded' : 'completed',
+    // Only on a retired row, which is the only place it means anything
+    // (`B-097`). The edge runs the other way in the database — the edit
+    // writes the new row naming the old — and this is the direction a
+    // screen needs: the reader is looking at the one that was replaced.
+    ...(job.supersededBy ? { supersededByGenerationId: job.supersededBy } : {}),
+    // Same reading as in the summary above (`B-102`).
+    ...(job.archived ? { archived: true } : {}),
+    pageCount: 1,
+    createdAt: new Date(job.startedAt).toISOString(),
+    ...(job.fitReport ? { fitReport: job.fitReport } : {}),
+    // `B-042`. Omitted rather than blank, the way `F-010` settled it.
+    ...(job.contentLanguage ? { contentLanguage: job.contentLanguage } : {}),
+    ...(job.postingLanguage ? { postingLanguage: job.postingLanguage } : {}),
+    // Absent when none was written, which is a state the reader can act on
+    // rather than an error: a letter that could not be written does not
+    // fail the generation (`B-056`).
+    ...(generations.coverLetters[id] ? { coverLetter: generations.coverLetters[id].text } : {}),
+    // Absent until somebody judges it (`B-065`). This is the half that
+    // makes `accessedAt` readable the day after the permission was given.
+    ...(feedbackBody(id) ? { feedback: feedbackBody(id) } : {}),
+  };
+}
+
 /** The one zip field a reader actually verifies. */
 function crc32(bytes: Uint8Array): number {
   let crc = 0xffffffff;
@@ -856,6 +897,10 @@ export const generationHandlers = [
         ...(job.fitReport?.level ? { matchLevel: job.fitReport.level } : {}),
         ...(job.contentLanguage ? { contentLanguage: job.contentLanguage } : {}),
         hasCoverLetter: Boolean(generations.coverLetters[job.generationId]),
+        // `B-102`. Absent rather than `false` when unmarked: the field is
+        // optional on the wire and a generation is not made archived, so the
+        // history screen reads an absence the same way the server means it.
+        ...(job.archived ? { archived: true } : {}),
       })),
       // Absent at the end of the history. An empty `items` on the next call
       // would be one page too late to say so.
@@ -877,31 +922,7 @@ export const generationHandlers = [
     */
     if (!job || job.outcome !== 'completed') return notFound(`/api/v1/generations/${id}`);
 
-    return HttpResponse.json<Schemas['GenerationResponse']>({
-      generationId: job.generationId,
-      // Still readable and still downloadable once it has been edited, and
-      // that is the point of keeping it (`B-088`) — what changes is that it
-      // is no longer the one to edit.
-      status: job.supersededBy ? 'superseded' : 'completed',
-      // Only on a retired row, which is the only place it means anything
-      // (`B-097`). The edge runs the other way in the database — the edit
-      // writes the new row naming the old — and this is the direction a
-      // screen needs: the reader is looking at the one that was replaced.
-      ...(job.supersededBy ? { supersededByGenerationId: job.supersededBy } : {}),
-      pageCount: 1,
-      createdAt: new Date(job.startedAt).toISOString(),
-      ...(job.fitReport ? { fitReport: job.fitReport } : {}),
-      // `B-042`. Omitted rather than blank, the way `F-010` settled it.
-      ...(job.contentLanguage ? { contentLanguage: job.contentLanguage } : {}),
-      ...(job.postingLanguage ? { postingLanguage: job.postingLanguage } : {}),
-      // Absent when none was written, which is a state the reader can act on
-      // rather than an error: a letter that could not be written does not
-      // fail the generation (`B-056`).
-      ...(generations.coverLetters[id] ? { coverLetter: generations.coverLetters[id].text } : {}),
-      // Absent until somebody judges it (`B-065`). This is the half that
-      // makes `accessedAt` readable the day after the permission was given.
-      ...(feedbackBody(id) ? { feedback: feedbackBody(id) } : {}),
-    });
+    return HttpResponse.json<Schemas['GenerationResponse']>(generationBody(job));
   }),
 
   /**
@@ -1076,6 +1097,53 @@ export const generationHandlers = [
    * the screen's sentence is built from, and a mock that filled it in would
    * hide the only state it usually has.
    */
+  /**
+   * Marking a generation to keep, or clearing the mark (`B-102`, § 13).
+   *
+   * **The body is optional and its absence means archive**, which is the one
+   * thing a client is most likely to get backwards: an omitted body is not
+   * "no change", it is `true`. Encoded here because a mock that required the
+   * field would let a caller sending nothing look correct.
+   *
+   * **Idempotent**, so archiving something already archived is a `200` rather
+   * than a conflict, and the body that comes back is the generation as it now
+   * stands — which is what lets the hook write it through instead of asking
+   * again.
+   *
+   * The `403` is the fifth `AccountFeature` value. An anonymous session's
+   * generations go with its profile, so there is nothing for a keep-mark to
+   * keep — the control is meaningless there rather than withheld, and the
+   * sentence in the catalogue says so.
+   */
+  http.post('*/api/v1/generations/:generationId/archive', async ({ params, request }) => {
+    const id = String(params.generationId);
+    const instance = `/api/v1/generations/${id}/archive`;
+
+    const job = findGeneration(id);
+    if (!job || job.outcome !== 'completed') return notFound(instance);
+
+    if (!isAccount()) {
+      return HttpResponse.json(
+        problem(403, 'FEATURE_REQUIRES_ACCOUNT', instance, [{ action: 'sign_up' }], {
+          feature: 'archive',
+        }),
+        { status: 403 },
+      );
+    }
+
+    // `.json()` throws on an empty body, and an empty body is legal here.
+    const raw = await request.text();
+    const body = raw === '' ? {} : (JSON.parse(raw) as { archived?: unknown });
+
+    job.archived = body.archived !== false;
+
+    // The generation as it now stands, built by the **same** function the
+    // read uses. Two literals for one resource is how a write and a read
+    // start disagreeing, and the disagreement surfaces as a screen that
+    // writes through its cache and then sees something else on reload.
+    return HttpResponse.json<Schemas['GenerationResponse']>(generationBody(job));
+  }),
+
   http.post('*/api/v1/generations/:generationId/feedback', async ({ params, request }) => {
     const id = String(params.generationId);
     const instance = `/api/v1/generations/${id}/feedback`;

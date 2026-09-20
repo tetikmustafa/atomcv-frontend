@@ -15,6 +15,7 @@ import {
   rejectNextCoverLetter,
 } from '@/mocks/generationFixture';
 import { server } from '@/mocks/node';
+import { useAnnouncerStore } from '@/stores/announcerStore';
 import { signIn } from '@/mocks/sessionFixture';
 import { formats } from '@/lib/i18n/formats';
 import en from '@/messages/en.json';
@@ -740,5 +741,87 @@ describe('the same result without an account', () => {
     render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
 
     expect(await screen.findByRole('button', { name: 'Download PDF' })).toBeEnabled();
+  });
+
+  /**
+   * `B-102`, and the third control missing for the same kind of reason as the
+   * other two — but with a difference worth naming: this one is not withheld,
+   * it is **meaningless**. An anonymous session's generations go with its
+   * profile, so a keep-mark would have nothing to keep.
+   */
+  it('draws no keep switch, because there would be nothing to keep', async () => {
+    const generationId = await generate();
+
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    await screen.findByRole('button', { name: 'Download PDF' });
+    expect(screen.queryByLabelText(en.Result.archive.label)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * `B-102`. The endpoint was in the resource map from the first draft and the
+ * `generations.archived` column has been there since V1; the two had never
+ * met.
+ */
+describe('marking a resume to keep', () => {
+  beforeEach(signIn);
+
+  it('starts off, because a generation is not made archived', async () => {
+    const generationId = await generate();
+
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    expect(await screen.findByLabelText(en.Result.archive.label)).not.toBeChecked();
+  });
+
+  it('marks it, and says so out loud rather than only moving a switch', async () => {
+    const generationId = await generate();
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    await userEvent.click(await screen.findByLabelText(en.Result.archive.label));
+
+    await waitFor(() => expect(screen.getByLabelText(en.Result.archive.label)).toBeChecked());
+    // Rule 6: the switch moving is a colour, and a colour is not the whole of
+    // what a change of state is owed.
+    expect(useAnnouncerStore.getState().announcement?.message).toBe(en.Result.archive.announceKept);
+  });
+
+  /**
+   * The mark survives a reload, which is the only thing it is for today: the
+   * retention rule it buys has nothing to bite on until object storage lands
+   * (§ 57.4), so "kept and read" is the whole of the promise — and this is
+   * the half that would silently not be true if the write went nowhere.
+   */
+  it('is still there on a fresh render', async () => {
+    const generationId = await generate();
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    await userEvent.click(await screen.findByLabelText(en.Result.archive.label));
+    await waitFor(() => expect(screen.getByLabelText(en.Result.archive.label)).toBeChecked());
+
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    await waitFor(() =>
+      expect(screen.getAllByLabelText(en.Result.archive.label).at(-1)).toBeChecked(),
+    );
+  });
+
+  /** The same endpoint clears it, which is the half `B-102` spells out. */
+  it('takes the mark off again', async () => {
+    const generationId = await generate();
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    const toggle = await screen.findByLabelText(en.Result.archive.label);
+
+    await userEvent.click(toggle);
+    await waitFor(() => expect(toggle).toBeChecked());
+
+    await userEvent.click(toggle);
+    await waitFor(() => expect(toggle).not.toBeChecked());
+    expect(useAnnouncerStore.getState().announcement?.message).toBe(
+      en.Result.archive.announceUnkept,
+    );
   });
 });

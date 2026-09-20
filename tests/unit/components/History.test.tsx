@@ -207,6 +207,35 @@ describe('the history', () => {
   });
 
   /**
+   * `B-102` says the history is where the mark is read, and this is that.
+   *
+   * In the facts rather than in a badge of its own: it is one more thing that
+   * is true about the row, like its language or its page count — which is
+   * also what puts it in the accessible name without a second element to
+   * label. Said in words, never as a colour or an icon (rule 6).
+   */
+  it('says which resumes are kept, in the row’s own facts', async () => {
+    signIn();
+    seedGenerations(1, { archived: true });
+    renderHistory();
+
+    const link = await screen.findByRole('link');
+
+    expect(link).toHaveTextContent(en.History.kept);
+    expect(link).toHaveAccessibleName(new RegExp(en.History.kept));
+  });
+
+  it('says nothing about a resume nobody marked', async () => {
+    signIn();
+    seedGenerations(1);
+    renderHistory();
+
+    // Absent means not archived; a generation is not made archived, and a row
+    // that announced "not kept" would make a decision out of a default.
+    expect(await screen.findByRole('link')).not.toHaveTextContent(en.History.kept);
+  });
+
+  /**
    * This asserted that a failed run was listed **and** not linked, which was
    * the right shape for a row that existed. `B-116` says it never did:
    * `selection_state` is `NOT NULL`, so a run that falls over before the

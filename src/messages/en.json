@@ -89,6 +89,7 @@
     "shown": "Showing {shown, number} of {total, plural, =1 {one resume} other {# resumes}}.",
     "pages": "{count, plural, =1 {one page} other {# pages}}",
     "withLetter": "with a covering letter",
+    "kept": "kept",
     "status": "{status, select, superseded {Replaced by a later version.} other {}}",
     "open": "Open the resume: {facts}",
     "more": "Show older",
@@ -462,6 +463,12 @@
     "downloading": "Preparing the file…",
     "again": "Generate another",
     "announceDownloaded": "Download started",
+    "archive": {
+      "label": "Keep this one",
+      "hint": "Kept resumes stay marked in your history, so the one that mattered is easy to find again.",
+      "announceKept": "Marked as kept",
+      "announceUnkept": "No longer marked as kept"
+    },
     "loading": "Fetching your resume…",
     "generalNote": "No posting was given, so there is nothing to measure this against.",
     "languageNote": "Written in {content}, not {posting}. A resume is written in one language, and your profile does not yet have {posting} wording for everything on this page.",
