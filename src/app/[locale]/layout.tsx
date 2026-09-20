@@ -7,7 +7,7 @@ import { SiteFooter } from '@/components/layout/SiteFooter';
 import { SkipLink } from '@/components/layout/SkipLink';
 import { locales } from '@/lib/i18n/locales';
 import { routing } from '@/lib/i18n/routing';
-import { SITE_URL } from '@/lib/seo';
+import { APP_NAME, SITE_URL } from '@/lib/seo';
 import { THEME_SCRIPT } from '@/lib/theme';
 import '@/styles/globals.css';
 
@@ -40,11 +40,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'AtomCV',
-    template: '%s — AtomCV',
+    default: APP_NAME,
+    template: `%s — ${APP_NAME}`,
   },
   openGraph: {
-    siteName: 'AtomCV',
+    siteName: APP_NAME,
     type: 'website',
   },
 };

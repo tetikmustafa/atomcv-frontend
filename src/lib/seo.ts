@@ -9,6 +9,23 @@
 import { defaultLocale, locales } from '@/lib/i18n/locales';
 
 /**
+ * What the product is called, in one place.
+ *
+ * **The name is temporary and says so** (EK C.5), so the thing that matters
+ * is that changing it is one edit rather than a search. It was five literals
+ * across two files and six sentences in the message catalogues, which is the
+ * state a rename checklist cannot be run against.
+ *
+ * **A constant rather than a message key**, though the checklist names one:
+ * the name is not translated — it reads the same in both catalogues — and the
+ * root layout's `metadata` is a static export that cannot call a translator.
+ * A key would have meant either translating something that has no translation
+ * or keeping a second copy for the metadata. The sentences that mention the
+ * product take it as an ICU argument instead, so there is still one source.
+ */
+export const APP_NAME = 'AtomCV';
+
+/**
  * The origin, from the deployment rather than from the code.
  *
  * **It has no honest default**, which is why the fallback is localhost rather

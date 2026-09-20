@@ -186,7 +186,7 @@
   },
   "Landing": {
     "tagline": "Profilini bir kez oluştur, her iş ilanına özel CV üret.",
-    "intro": "Profesyonel geçmişin bir doküman değil, yapılandırılmış bir veri kümesi. AtomCV onu öyle tutar ve her ilan için o veriden bir CV üretir — umut edilen değil, hesaplanan bir sayfa sınırı içinde.",
+    "intro": "Profesyonel geçmişin bir doküman değil, yapılandırılmış bir veri kümesi. {appName} onu öyle tutar ve her ilan için o veriden bir CV üretir — umut edilen değil, hesaplanan bir sayfa sınırı içinde.",
     "cta": "Profilini oluşturmaya başla",
     "featuresHeading": "Farkı ne",
     "features": {
@@ -214,7 +214,7 @@
     "openSourceNote": "MIT lisanslı, ücretsiz ve açık kaynak. Tek kişi tarafından yürütülüyor ve hizmet garantisi yok — kapatılması halinde en az 30 gün önceden bildirilir."
   },
   "HowItWorks": {
-    "title": "AtomCV nasıl çalışıyor",
+    "title": "{appName} nasıl çalışıyor",
     "intro": "Mesleki geçmişin bir belge değil, yapılandırılmış bir veri kümesi. CV ise onun kısıtlar altında üretilmiş tek bir görünümü — ikisi ayrıldığında aynı profil, kimse elle dosya düzenlemeden başka bir ilana cevap verebiliyor.",
     "stepsHeading": "Dört adım",
     "steps": {
@@ -673,7 +673,7 @@
     "terms": {
       "title": "Kullanım Şartları",
       "noGuarantee": "İş bulma garantisi yok",
-      "noGuaranteeBody": "AtomCV, halihazırda sahip olduğun deneyimi sunmana yardım eder. Mülakat ya da teklif vaat etmez.",
+      "noGuaranteeBody": "{appName}, halihazırda sahip olduğun deneyimi sunmana yardım eder. Mülakat ya da teklif vaat etmez.",
       "estimate": "Uygunluk raporu bir tahmindir",
       "estimateBody": "CV'nin bir ilandaki terimleri ne kadar yansıttığını gösterir. Herhangi bir başvuru takip sisteminin davranışını birebir yeniden üretmez ve gerçek işe alım kararları anahtar kelime kapsamasından çok daha fazlasına dayanır.",
       "accuracy": "Doğruluktan sen sorumlusun",
@@ -698,15 +698,6 @@
     "deleteConfirmTitle": "Hesabın silinsin mi?",
     "deleteConfirmBody": "Bu, profilini — {sections, plural, =1 {bir bölüm} other {# bölüm}} ve {atoms, plural, =1 {bir madde} other {# madde}} — {generations, plural, =0 {ürettiğin bütün CV'leri} =1 {ürettiğin tek CV'yi} other {ürettiğin # CV'nin hepsini}} ve onlardan çıkan belgeleri, sırada bekleyen işleri, kullanım sayaçlarını ve e-posta tercihlerini siler. Geri alınamaz.\n\nİki şey kalıyor. Üretimlerinin maliyet kaydı, seninle bağı koparılmış olarak duruyor; artık kimseyi göstermiyor. Ve adresin bir kez geri döndüyse ya da bizi şikâyet ettiyse, o kayıt hesaba değil **adrese** ait olduğu için kalıyor — silmek, bize yazma dememiş olan bir adrese yeniden yazmamıza izin verirdi.\n\nYapay zekâ sağlayıcıları kendi taraflarında kısa ömürlü kayıtlar tutabiliyor. Hangileri olduğu gizlilik politikasında.",
     "deleteConfirmAction": "Her şeyi sil",
-    "export": {
-      "title": "Verini yanına al",
-      "intro": "Profilindeki her şey, sende kalacak bir dosya olarak. Bunu yapmak hiçbir şeyi silmez — bu bir kopya.",
-      "json": "JSON'u indir",
-      "markdown": "Markdown'ı indir",
-      "preparing": "Dosya hazırlanıyor…",
-      "formats": "JSON tam kopya, başka bir program okusun diye. Markdown okunabilir olan, başka bir yere yapıştırmak için — yalnız bu uygulamanın kullandığı kısımları dışarıda bırakır.",
-      "announceStarted": "İndirme başladı"
-    },
     "generationDefaults": {
       "title": "CV nasıl yazılsın",
       "intro": "Her üretimin başladığı yer. Hiçbirine dokunmayabilirsin — bunlar varsayılan, atman gereken bir adım değil.",
@@ -732,6 +723,15 @@
       "save": "Kaydet",
       "saving": "Kaydediliyor…",
       "saved": "Kaydedildi."
+    },
+    "export": {
+      "title": "Verini yanına al",
+      "intro": "Profilindeki her şey, sende kalacak bir dosya olarak. Bunu yapmak hiçbir şeyi silmez — bu bir kopya.",
+      "json": "JSON'u indir",
+      "markdown": "Markdown'ı indir",
+      "preparing": "Dosya hazırlanıyor…",
+      "formats": "JSON tam kopya, başka bir program okusun diye. Markdown okunabilir olan, başka bir yere yapıştırmak için — yalnız bu uygulamanın kullandığı kısımları dışarıda bırakır.",
+      "announceStarted": "İndirme başladı"
     }
   },
   "Appearance": {

@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { routing } from '@/lib/i18n/routing';
-import { absoluteUrl, alternatesFor } from '@/lib/seo';
+import { absoluteUrl, alternatesFor, APP_NAME } from '@/lib/seo';
 import { buttonVariants } from '@/components/ui/button';
 
 const FEATURE_KEYS = [
@@ -50,16 +50,16 @@ export async function generateMetadata({ params }: PageProps<'/[locale]'>): Prom
   setRequestLocale(locale);
 
   const t = await getTranslations('Landing');
-  const description = t('intro');
+  const description = t('intro', { appName: APP_NAME });
 
   return {
     // The site name, not "AtomCV — AtomCV": this page *is* the product, so it
     // opts out of the template rather than filling it in.
-    title: { absolute: 'AtomCV' },
+    title: { absolute: APP_NAME },
     description,
     alternates: alternatesFor(locale),
     openGraph: {
-      title: 'AtomCV',
+      title: APP_NAME,
       description,
       url: absoluteUrl(locale),
       locale,
@@ -79,9 +79,9 @@ export default async function LandingPage({ params }: PageProps<'/[locale]'>) {
     <main id="main" tabIndex={-1} className="flex-1 outline-none">
       <div className="mx-auto flex max-w-3xl flex-col gap-12 px-8 py-16">
         <header className="flex flex-col gap-4">
-          <h1 className="text-4xl font-semibold tracking-tight">AtomCV</h1>
+          <h1 className="text-4xl font-semibold tracking-tight">{APP_NAME}</h1>
           <p className="text-xl">{t('tagline')}</p>
-          <p className="text-muted-foreground max-w-prose">{t('intro')}</p>
+          <p className="text-muted-foreground max-w-prose">{t('intro', { appName: APP_NAME })}</p>
 
           <a href={`/${locale}/profile`} className={`${buttonVariants({ size: 'lg' })} self-start`}>
             {t('cta')}
