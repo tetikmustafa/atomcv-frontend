@@ -26,6 +26,7 @@ import {
   deleteAtom,
   deleteEntry,
   deleteSection,
+  deleteVariant,
   getProfile,
   listAtoms,
   listEntries,
@@ -903,6 +904,39 @@ export function useApplyGitHubSuggestions() {
     mutationFn: ({ repositories, username }: { repositories: string[]; username?: string }) =>
       applyGitHubSuggestions(repositories, username),
     onSuccess: () => invalidateWholeProfile(client),
+  });
+}
+
+/**
+ * Deleting one wording (D13).
+ *
+ * **The server refuses two cases and the screen must not pretend otherwise**
+ * (`B-036`): the last wording an atom has, and the one that is primary. Both
+ * are a `400` naming the field, and both are right — an atom with no wording
+ * is an atom with nothing to print, and demoting-by-deleting would leave the
+ * server choosing a new primary on somebody's behalf. So the control is drawn
+ * only where neither holds, and the refusals still render if a second tab got
+ * there first.
+ *
+ * This was a deliberate gap whose stated reason was that "the thing being
+ * deleted is the atom". That is true of the *usual* case and was never true
+ * of an atom with two wordings, where removing the Turkish one is a perfectly
+ * ordinary thing to want — the endpoint and its two refusals were already
+ * written, and only the button was missing.
+ */
+export function useDeleteVariant() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ atomId, variantId }: { atomId: string; variantId: string }) =>
+      deleteVariant(atomId, variantId, variantVersionOf(client, atomId, variantId)),
+
+    onSuccess: (_result, { atomId, variantId }) => {
+      updateAtomThrough(client, atomId, (atom) => ({
+        ...atom,
+        variants: (atom.variants ?? []).filter((variant) => variant.id !== variantId),
+      }));
+    },
   });
 }
 

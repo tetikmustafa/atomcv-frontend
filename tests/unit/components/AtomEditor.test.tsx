@@ -129,7 +129,9 @@ describe('the atom editor', () => {
 
     expect(screen.queryByRole('slider', { name: 'Importance' })).not.toBeInTheDocument();
     expect(screen.queryByRole('switch', { name: /always include/i })).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Text')).toBeInTheDocument();
+    // Still editable, as parts: `atom-1`'s wording is marked (D13), and
+    // section 9 promises a narrower product rather than a degraded one.
+    expect(screen.getByLabelText('Part 1')).toBeInTheDocument();
   });
 
   /**
@@ -148,27 +150,42 @@ describe('the atom editor', () => {
   });
 
   /**
-   * P8: the plain-text field cannot represent marks, so saving through it
-   * drops them. That is allowed; doing it without saying so is not — and the
-   * warning has to arrive while the edit can still be abandoned.
+   * This asserted the **warning** until D13, and the warning was a bridge
+   * rather than a design: P8 said the loss had to be announced before it
+   * happened, because the plain field could not represent a mark and saving
+   * through it deleted one.
+   *
+   * The bridge is gone because the other side arrived. A marked wording gets
+   * the mark-aware editor — the lazily-loaded component rule 4 names — so
+   * there is nothing to warn about, and the right answer to "this would
+   * destroy something" is not to do it.
    */
-  it('warns before a text edit drops the marks on it', async () => {
-    const user = userEvent.setup();
+  it('gives a marked wording an editor that can hold its marks', async () => {
     await renderEditor();
 
+    // The list rather than a field: a `<label>` names one control and this is
+    // several, so the set of parts carries the name.
+    expect(await screen.findByRole('list', { name: en.Editor.atom.text })).toBeInTheDocument();
     expect(screen.queryByText(/drop the highlighting/i)).not.toBeInTheDocument();
-
-    await user.type(screen.getByLabelText('Text'), '!');
-
-    expect(screen.getByText(/drop the highlighting/i)).toBeInTheDocument();
   });
 
-  it('says nothing about marks on an atom that has none', async () => {
-    const user = userEvent.setup();
+  /**
+   * And the plain field stays where it is right. One unmarked run is one
+   * sentence: it types like a field, and wrapping it in a run list would be
+   * ceremony around a thing with nothing to arrange.
+   */
+  it('keeps the plain field for a wording with no marks', async () => {
     await renderEditor('atom-2');
 
-    await user.type(screen.getByLabelText('Text'), '!');
-
+    /*
+      Asserted without typing, deliberately. Typing here starts an autosave
+      whose request lands after this test ends — past `resetProfileFixture`,
+      so it rewrites the *fresh* fixture and the next test reads a wording
+      somebody else edited. The question this test asks is which editor was
+      drawn, and that is answerable without a keystroke.
+    */
+    expect(screen.getByLabelText(en.Editor.atom.text).tagName).toBe('TEXTAREA');
+    expect(screen.queryByRole('list', { name: en.Editor.atom.text })).toBeNull();
     expect(screen.queryByText(/drop the highlighting/i)).not.toBeInTheDocument();
   });
 
@@ -178,16 +195,21 @@ describe('the atom editor', () => {
    */
   it('saves wording through the variant, leaving the atom’s own version alone', async () => {
     const user = userEvent.setup();
-    const { client } = await renderEditor();
+    // `atom-2`'s wording has no marks, so it is the plain field — which is
+    // what this test is about. `atom-1` went to the run editor with D13.
+    const { client } = await renderEditor('atom-2');
 
-    const field = screen.getByLabelText('Text');
+    const field = screen.getByLabelText(en.Editor.atom.text);
     await user.clear(field);
     await user.type(field, 'Rewritten');
     await user.tab();
 
-    await waitFor(() => expect(cached(client)?.variants?.[0]?.plainText).toBe('Rewritten'));
-    expect(cached(client)?.variants?.[0]?.version).toBe(1);
-    expect(cached(client)?.version).toBe(0);
+    await waitFor(
+      () => expect(cached(client, 'atom-2')?.variants?.[0]?.plainText).toBe('Rewritten'),
+      { timeout: 4000 },
+    );
+    expect(cached(client, 'atom-2')?.variants?.[0]?.version).toBe(1);
+    expect(cached(client, 'atom-2')?.version).toBe(0);
   });
 
   /**

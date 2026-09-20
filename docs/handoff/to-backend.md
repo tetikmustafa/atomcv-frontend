@@ -11,6 +11,42 @@
 
 ## OPEN
 
+> **Dosya 100 satırı geçti ve bu bir arşivleme değil koordinasyon meselesi**
+> — `to-frontend.md`'nin aynı durumu. `F-037`, `F-038` ve `F-039`'un hiçbiri
+> `ACK` almadı, yani taşınabilecek madde yok. Üçü de kapanış sırasından
+> (D1…D14) çıktı ve üçü de bir **soru** taşıyor: ikisi telin bir alanı,
+> biri iki dokümanın çeliştiği bir nokta.
+
+### F-039 · `GenerationResponse` `maxPages` taşımıyor
+
+**Since:** frontend `feat/stage-4-closing` · D13
+
+**Neden:** ürün dokümanı **"bir sayfadan kısa CV doğrudur, pad edilmez, bir
+bilgi notu gösterilir"** diyor ve not bugüne kadar yazılmadı; kaydımızdaki
+gerekçe "sunucu *sayfa dolmadı* diye bir sinyal göndermiyor, sinyalsiz
+yazılırsa her CV'de çıkar" idi.
+
+D13'te şu ölçüldü: sinyal **doluluk** olmak zorunda değil. `pageCount` istenen
+sınırdan küçükse belge *istenenden* kısa demektir, ve bu sayılabilir bir
+olgu — § 23.3'ün yasakladığı türden bir yüzde değil. Ama `GenerationResponse`
+`pageCount` yayımlıyor, **`maxPages` yayımlamıyor**.
+
+Profilin bugünkü `preferences.defaults.maxPages`'iyle karşılaştıramayız:
+`POST /generations` `maxPages` alıyor ve `increase_page_limit` tam olarak onu
+değiştiriyor, yani profil tercihi o üretimin neyle yapıldığını değil **bugün
+neyin ayarlı olduğunu** söyler. İki yıl önceki bir CV'yi bugünkü tercihe göre
+"kısa" ilan etmek, olmayan bir olguyu bildirmek olurdu.
+
+**İstenen:** `GenerationResponse`'a (ve mümkünse `GenerationSummary`'ye) o
+üretimin **kullandığı** `maxPages`. Parametresiz bir olgu, kullanıcı içeriği
+taşımıyor (mutlak kural 4).
+
+**Alternatif kabul edilir:** bir `pageCount` / `maxPages` karşılaştırması
+yerine doğrudan bir bayrak — ama tercihimiz sayı, çünkü ekran zaten
+`pageCount`'u basıyor ve iki sayı bir bayraktan daha az yorum gerektiriyor.
+
+**Spec:** `06-pipeline-d-g.md` § 22 · ürün konsept § 11.2
+
 ### F-037 · `choose_language`'ın dolduracağı alan yok
 
 **Since:** frontend `feat/stage-4-closing` · D3 · `B-114`

@@ -30,7 +30,7 @@
 | Aşama 3 — **bütün dilimler** | ✅ |
 | Aşama 4 — `B-071`-`B-074`, `B-085`-`B-087`, `B-088`-`B-094`, `B-096` | ✅ |
 | Aşama 4 — SEO, a11y denetimi, tema, `canAddAlternatives`, bağımlılıklar | ✅ |
-| Aşama 4 — kapanış sırası D1…D14, `B-100`…`B-116` dahil | D1-D12 ✅ |
+| Aşama 4 — kapanış sırası D1…D14, `B-100`…`B-116` dahil | D1-D13 ✅ |
 
 **Aşama 4'ün sekizi karşılandı (2026-09-11).** Faz G'nin cümle kutusu, üç şablon + Katman B, `/applications`, DOCX, `/unsubscribe` — satır satır `handoff/resolved/to-frontend-2026-09.md`'de. **Tek eksik bilerek:** `B-088`'in elle aç/kapa arayüzü çizilmedi, çünkü hangi atomların tartıldığını söyleyen uç yok (`F-031`); istemci fonksiyonu ve `GENERATION_SUPERSEDED` indi. **`gen:api` bir sessiz kusur açığa çıkardı:** springdoc `DELETE /account`'u `delete_2`'ye kaydırdı ve `delete_1` başvuru silmeye geçti; ikisi de 204 döndüğü için typecheck sustu — numaralı id'li her uç artık **yoluyla** bağlanıyor (`F-033`).
 
@@ -52,4 +52,4 @@ _Daha önce kapandı 09-09: model `openai/gpt-5.6-sol`; `emphasis` kalın, bedel
 
 **Sırada `B-100`…`B-116` var (2026-09-20).** On yedisi de denetimlerden ve hiçbiri ACK'lenmedi, yani `to-frontend.md` sınırı üç kattan fazla geçti — bu bir arşivleme değil koordinasyon meselesi. **Önce `npm run gen:api`**: dört turda şema değişti, sonuncusunda `Resolution.action` iki değer kazandı ve üç enum daraldı. Başlıcaları: `B-100` (CSP — dağıtımda görülmeli), `B-101` (`contract-check`'in URL'i), `B-103` (etiketler), `B-108` (`heldBackReason` dört ayrı cümle istiyor), **`B-111`** (çeviri dosyalarınız yanlış tablodan yazılmış olabilir), **`B-114`** (dört çıkarım reddi artık çözüm taşıyor — iki yeni ICU anahtarı), **`B-115`** (§ 37.6'nın iki düğmesi çalışıyor, spec "çizmeyin" diyordu), **`B-116`** (`failed`, `cancelled`, `two_column` telden kalktı).
 
-**Frontend'den iki madde açık: `F-037` (`choose_language`'ın dolduracağı alan yok) ve `F-038` (şemada olup hiçbir maddede adlandırılmayan dört şey).** Frontend bir kapanış sırasına bağlandı (2026-09-20): D1…D14**, `notes/current.md` § *Kapanış sırası*. Kapsam § 55'in `[F]` kalemlerinin tamamı; VPS bu turda alınmıyor, yani analitik ve `deploy.yml` dağıtım listesine geçti, blog yerine tek statik sayfa, üçüncü arayüz dili yok. **`gen:api` koşuldu ve şema dokümanı geçti:** `POST /generations` `note` **taşıyor** (`B-104` "gelmedi" diyor), `customizationId` de; `GET /templates` ve `/customizations` hiçbir maddede adlandırılmadı — dördü D6'dan önce `F-034`…`F-036` olarak açılıyor.
+**Frontend'den üç madde açık: `F-037` (`choose_language`'ın dolduracağı alan yok), `F-038` (şemada olup hiçbir maddede adlandırılmayan dört şey) ve `F-039` (`maxPages` üretimde yayımlanmıyor).** Frontend bir kapanış sırasına bağlandı (2026-09-20): D1…D14, `notes/current.md` § *Kapanış sırası*. Kapsam § 55'in `[F]` kalemlerinin tamamı; VPS bu turda alınmıyor, yani analitik ve `deploy.yml` dağıtım listesine geçti, blog yerine tek statik sayfa, üçüncü arayüz dili yok.

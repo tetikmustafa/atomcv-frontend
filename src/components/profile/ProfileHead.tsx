@@ -42,6 +42,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { SaveStatus } from '@/components/editor/SaveStatus';
+import { ContentLanguages } from '@/components/profile/ContentLanguages';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -180,6 +181,24 @@ export function ProfileHead({ profile }: { profile: Profile }) {
               onBlur={autosave.flush}
             />
           </div>
+
+          {/*
+            The content-language axis (D13, § 38.1). It was a deliberate gap
+            whose reason changed under it: the note said
+            `capabilities.allowedLanguages` was not published, and it has been
+            since `B-081`. What was left was an unbuilt control rather than a
+            missing answer — which is how a deliberate gap becomes an
+            unnoticed one.
+
+            Inside the same autosave as everything else here, because it is
+            the same `PUT`: the head is replaced whole, so a language change
+            and a headline change are one write and must not race.
+          */}
+          <ContentLanguages
+            sourceLanguage={value.sourceLanguage}
+            enabledLanguages={value.enabledLanguages ?? []}
+            onChange={edit}
+          />
 
           <SaveStatus
             status={autosave.status}

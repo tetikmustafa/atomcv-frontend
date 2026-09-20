@@ -317,6 +317,10 @@
       "added": "{language} dilinde bir ifade eklendi.",
       "unknownLanguage": "Bilinmeyen dil",
       "translated": "Bu sözcükleme senin için çevrildi, sen yazmadın. Bir göz atmaya değer — düzenlediğin anda senin olur.",
+      "deleteTrigger": "{language} sözcüklemesini sil",
+      "deleteTitle": "Bu sözcükleme silinsin mi?",
+      "deleteBody": "Madde ve öteki sözcüklemeleri kalıyor. Yalnız bu gidiyor.",
+      "deleteConfirm": "Sözcüklemeyi sil",
       "staleRefreshing": "Bunun dayandığı ifade değişti. Yenisi yazılıyor.",
       "staleYours": "Bunun dayandığı ifade değişti, ve bu hali sen yazdın. Sen istemedikçe hiçbir şey onu değiştirmeyecek.",
       "staleRegenerate": "Yeni kaynaktan yeniden yaz",
@@ -336,12 +340,44 @@
     "addSection": {
       "open": "Bölüm ekle",
       "kind": "Türü",
+      "layout": "Nasıl dizilsin",
+      "layoutHint": "Bu bölümün nasıl basılacağı. Öneri seçtiğin türü izliyor; başka bir şey istiyorsan değiştir.",
       "title": "Adı",
       "submit": "Bölümü ekle",
       "adding": "Ekleniyor…",
       "cancel": "Vazgeç",
       "added": "{title} bölümü eklendi.",
       "loadingForm": "Form açılıyor…"
+    },
+    "runs": {
+      "intro": "Bu cümle parçalardan oluşuyor ve her parça etiketlenebilir. Etiketleri şablon okuyor — bir teknolojinin ya da bir sayının sayfada nasıl görüneceğine o karar veriyor.",
+      "partLabel": "{number, number}. parça",
+      "removePart": "{number, number}. parçayı kaldır",
+      "marksLabel": "{number, number}. parçanın etiketleri",
+      "marks": {
+        "technology": "Teknoloji",
+        "metric": "Sayı",
+        "emphasis": "Vurgu",
+        "link": "Bağlantı",
+        "organization": "İşveren ya da okul"
+      },
+      "unknownMarks": "Ayrıca {marks} etiketli — bu sürümün bilmediği yeni bir etiket. Olduğu gibi korunuyor.",
+      "hrefLabel": "Bağlantı adresi",
+      "hrefMissing": "Bağlantının bir adresi olmalı, yoksa kaydedilemez.",
+      "addPart": "Parça ekle"
+    },
+    "languages": {
+      "sourceLabel": "Yazdığın dil",
+      "sourceHint": "Maddelerinin yazıldığı dil. Bu CV ile ilgili, bu düğmelerin diliyle değil.",
+      "enabledLabel": "CV'nin çıkabileceği diller",
+      "enabledHint": "Bir CV tek dilde yazılır. Başka bir dili açmak onu isteyebilmeni sağlar — eksik sözcüklemeler ilk seferinde çevrilip saklanıyor.",
+      "sourceAlwaysOn": "Hep açık: yazdığın dil bu"
+    },
+    "sectionLayout": {
+      "bullet_list": "Madde listesi",
+      "entry_list": "Tarihli kayıtlar",
+      "inline_list": "Etiketli satırlar",
+      "paragraph": "Tek paragraf"
     },
     "sectionKind": {
       "about": "Hakkımda",

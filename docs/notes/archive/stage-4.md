@@ -10,6 +10,49 @@
 
 ---
 
+### D12 kapandı — şablon kapasitesi ve adlandırılmış görünüm setleri (2026-09-20)
+
+`F-038`'in iki ucu telde duruyordu ve hiçbir şey okumuyordu.
+
+**`GET /templates` bu ekran için var ve öyle diyor:** *"üç isim ve hiç yoğunluk
+göstermeyen bir seçici, birinden kör seçim yapmasını istiyor."* Seçicide duran
+tam olarak üç isimdi. **İki liste, iki soru:** `allowedTemplates` bu çağıranın
+hangilerini seçebileceğini, registry ise onların ne olduğunu söylüyor. Ayrı
+tutuluyorlar çünkü ömürleri farklı — registry herkes için aynı ve bayatlamıyor
+(`staleTime: Infinity`), yetenekler oturumla kayıyor.
+
+**Yoğunluk `aria-describedby`, `label` değil.** Etikete katlandığında radyonun
+erişilebilir adı *"ClassicAbout 54 lines a page"* oldu: şablon kendi adıyla
+bulunamaz hâle geldi ve ekran okuyucu iki olguyu tek cümle gibi okudu. Ad
+"bu nedir", yoğunluk "bunun hakkında doğru olan" — ikincisi açıklamadır, ve
+okuyucu onu ikinci sırada duyar. Testi iki ucundan sabitliyor.
+
+**Çakışan bir ICU ad alanı, uzaktan patlayan bir hata.** Yeni bölüm önce
+`Appearance.saved` diye eklendi; `Appearance` zaten `"saved": "Saved."` diye
+bir **string** taşıyordu, JSON son tanımı kazandı ve namespace sessizce bir
+string oldu. Hata `useTranslations('Appearance.saved')` satırında "geçerli bir
+namespace değil" diye çıktı — sebebi başka bir dosyadaki bir ad çakışması.
+Bölüm `Appearance.presets` oldu. **Ders:** yeni bir ICU nesnesi eklerken
+kardeş anahtarlara bak; çakışma tip hatasını gerçek sebebinden uzağa taşıyor.
+
+**Kaydetmek yukarıdaki çalışma setini kopyalıyor**, ikinci bir slider takımı
+açmıyor. Aynı beş değeri kuracak iki yer, onları yanlış kuracak iki yer olurdu;
+ekranın sorduğu soru bunların ne olması gerektiği değil, ne adlandırılacağı.
+
+**Silme hiçbir şey hakkında uyarmıyor ve bu dikkatsizlik değil.** Bir setle
+üretilmiş CV, enstantanesinde id değil **ayarların kendisini** taşıyor, yani
+gönderilmiş her belge hâlâ birebir yeniden basılıyor. Anlatılacak bir cascade
+ve riskteki bir belge yok.
+
+**`customizationId` ancak seçilecek bir şey varken çiziliyor.** Kaydedilmiş
+seti olmayan profil olağan hâl; tek seçeneği "her zamanki ayarların" olan bir
+seçici, kimsenin vermek zorunda olmadığı bir karar için kontrol olurdu — ve
+okuyucuya özelliğin yok olduğunu değil **bozuk** olduğunu öğretirdi. Liste
+yalnız panel açıldığında isteniyor.
+
+**Ölçüm:** 948 birim testi yeşil; `/settings` **241.3 → 243.8 KB**,
+`/generate` **225.4 → 227.4**, `/profile` **257.4** (tavan 280).
+
 ### D10 kapandı — `auto`'nun üç sonucu (2026-09-20)
 
 `B-107` `F-013`'ü kapattı: Türkçe bir profil İngilizce bir ilana Türkçe CV

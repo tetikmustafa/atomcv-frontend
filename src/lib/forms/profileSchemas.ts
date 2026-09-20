@@ -97,15 +97,67 @@ export const sectionForm = z.object({
     'custom',
   ]),
   title: z.string().trim().min(1, 'titleRequired').max(120, 'titleTooLong'),
+  /**
+   * How the section is set (§ 33.4).
+   *
+   * **Four values, not five.** `two_column` left the vocabulary with `V17`
+   * (`B-116`) and it is the one worth remembering why: the endpoint accepted
+   * it, the CHECK allowed it, the schema published it, and the renderer
+   * printed an entry list anyway — all three templates are single-column for
+   * an ATS-extraction reason. So a person chose a layout, nothing said
+   * otherwise, and their document printed a different one. The other dead
+   * values cost a branch; that one cost somebody a choice they thought they
+   * had made.
+   *
+   * **Offering it at all is D13's decision**, and the gap it closes was
+   * explicit about its own condition: drawing the picker needs an ICU name
+   * for every value *and* a sensible default for About, because half of it
+   * would hand somebody a choice whose meaning they cannot read.
+   */
+  layout: z.enum(['bullet_list', 'entry_list', 'inline_list', 'paragraph']),
 });
 
 export type SectionFormValues = z.infer<typeof sectionForm>;
 
-/** Fails to compile if the wire renames or re-types either field. */
+/** Fails to compile if the wire renames or re-types any of the three. */
 export type _SectionFormFitsWire = Extends<
   SectionFormValues,
-  Pick<SectionCreate, 'kind' | 'title'>
+  Pick<SectionCreate, 'kind' | 'title' | 'layout'>
 >;
+
+/**
+ * The same reverse check `kind` gets, and for the same reason: a layout added
+ * server-side would otherwise be missing from the dropdown in silence.
+ *
+ * It has already been the other way round once. `paragraph` arrived with
+ * `B-073` and nothing here noticed, because nothing here offered layouts at
+ * all — which is what made "five values, no screen shows them" a state that
+ * lasted a stage.
+ */
+export type _WireLayoutsAllOffered = Extends<
+  NonNullable<SectionCreate['layout']>,
+  SectionFormValues['layout']
+>;
+
+/**
+ * What a section of this kind is usually set as (§ 33.4.1).
+ *
+ * The form opens on it rather than on a fixed `bullet_list`, because the
+ * server already writes the right one per kind and a form that always
+ * suggested bullets would be arguing with it. About is the case the section
+ * names: a summary is one flowing paragraph, and printed as a list it reads
+ * as the first item of a list that never comes.
+ */
+export const DEFAULT_LAYOUT: Record<SectionFormValues['kind'], SectionFormValues['layout']> = {
+  about: 'paragraph',
+  education: 'entry_list',
+  experience: 'entry_list',
+  projects: 'entry_list',
+  skills: 'inline_list',
+  soft_skills: 'inline_list',
+  languages: 'inline_list',
+  custom: 'bullet_list',
+};
 
 /**
  * And the reverse, for `kind` alone: a kind the server has added since the

@@ -88,7 +88,7 @@ dendiği için değil.
 | Sözcükleme tek başına silinemiyor | **Kapanıyor.** `deleteVariant` uçta ve `endpoints/profile.ts`'te var, iki reddi de mock üretiyor, yalnız düğme yok |
 | Profil başında dil eksenleri | **Kapanıyor.** Gerekçesi 2026-09-08'de bayatladı; `allowedLanguages` yayımlanıyor ve okunuyor |
 | Bölüm düzeni seçici | **Kapanıyor**, ve `two_column` kalktığı için artık dört değer. Dördünün ICU adı ve About için `paragraph` varsayılanı ile — yarısı bu boşluğun kendisiydi |
-| "Bir sayfadan kısa CV" notu | **Kapanıyor, ama sinyal değişti.** Sunucu hâlâ "sayfa dolmadı" demiyor; `pageCount < maxPages` ise belge *istenenden* kısa demektir, ve o sayılabilir bir olgu. Not bunu söyler, doluluğu değil |
+| "Bir sayfadan kısa CV" notu | **Kalıyor — verdikt ölçümle düzeltildi (D13).** "`pageCount < maxPages` sayılabilir bir olgu" doğru ama `GenerationResponse` **`maxPages` yayımlamıyor**; profilin bugünkü tercihiyle karşılaştırmak o üretimin neyle yapıldığını değil bugün neyin ayarlı olduğunu söylerdi. `F-039` alanı istiyor |
 | `format=source` düğmesi | D5'te kapanıyor — uç artık `400` dönmüyor |
 | PDF önizlemesi | **Kalıyor.** Ölçülmüş karar ve ölçümü değiştiren bir şey olmadı |
 | Başvurularda duruma göre süzme | **Kalıyor.** `B-093`'ün gerekçesi aynen geçerli; tek sayfanın üstünde istemci süzgeci, süzdüğünü sandığı şeyi süzmez |
@@ -121,52 +121,72 @@ frontend'in kendi kararı:
 
 ### Kapanan dilimlerin kaydı → `archive/stage-4.md`
 
-D1…D11 oraya indi (2026-09-20), 400 satır sınırı yüzünden. Burada
+D1…D12 oraya indi (2026-09-20), 400 satır sınırı yüzünden. Burada
 yalnız **hâlâ geçerli olan** kalıyor; bir dilimde neyin neden öyle yapıldığını
 arıyorsan `rg -n "D1 kapandı" docs/notes/archive/`.
 
-### D12 kapandı — şablon kapasitesi ve adlandırılmış görünüm setleri (2026-09-20)
+### D13 kapandı — kasıtlı boşlukların dördü, biri gerekçesiyle kalıyor (2026-09-20)
 
-`F-038`'in iki ucu telde duruyordu ve hiçbir şey okumuyordu.
+**Bir boşluk "artık yapabiliriz" diye değil, "gerekçesi bayatladı" diye
+kapanıyor.** Dördünde de bayatlayan şey bir cümleydi.
 
-**`GET /templates` bu ekran için var ve öyle diyor:** *"üç isim ve hiç yoğunluk
-göstermeyen bir seçici, birinden kör seçim yapmasını istiyor."* Seçicide duran
-tam olarak üç isimdi. **İki liste, iki soru:** `allowedTemplates` bu çağıranın
-hangilerini seçebileceğini, registry ise onların ne olduğunu söylüyor. Ayrı
-tutuluyorlar çünkü ömürleri farklı — registry herkes için aynı ve bayatlamıyor
-(`staleTime: Infinity`), yetenekler oturumla kayıyor.
+**Bölüm düzeni seçici.** Gerekçe "beşinin de ICU adı ve About için
+`paragraph` varsayılanı gerekir" idi ve hâlâ doğru — ama `two_column`
+telden kalktığı için artık **dört**, ve dördünün de adı yazıldı. Öneri türü
+izliyor (§ 33.4.1), **kişi bir seçim yapana kadar**: `paragraph` seçip sonra
+türü düzelten biri karar vermiştir, üstüne yazmak formun kendini daha iyi
+bilir sanması olurdu. Öneri bir **olay** anında kuruluyor, `kind`'ı izleyen
+bir effect'te değil — effect state'e tepki veren state olurdu ve lint de öyle
+diyor.
 
-**Yoğunluk `aria-describedby`, `label` değil.** Etikete katlandığında radyonun
-erişilebilir adı *"ClassicAbout 54 lines a page"* oldu: şablon kendi adıyla
-bulunamaz hâle geldi ve ekran okuyucu iki olguyu tek cümle gibi okudu. Ad
-"bu nedir", yoğunluk "bunun hakkında doğru olan" — ikincisi açıklamadır, ve
-okuyucu onu ikinci sırada duyar. Testi iki ucundan sabitliyor.
+**Profil başındaki dil eksenleri.** Gerekçe "`allowedLanguages` yayımlanmıyor"
+idi; `B-081`'den beri yayımlanıyor. Geriye kalan çizilmemiş bir kontroldü —
+kasıtlı boşluğun fark edilmemiş boşluğa dönüşme şekli tam olarak bu.
+**Kaynak dil kapatılamıyor**: `enabledLanguages` onu içermek zorunda, yoksa
+sunucu gövdeyi reddediyor. Kutu **yok edilmiyor, devre dışı bırakılıp sebebi
+söyleniyor** — yük taşımaya başlayınca kaybolan bir kontrol hiçbir şey
+öğretmez.
 
-**Çakışan bir ICU ad alanı, uzaktan patlayan bir hata.** Yeni bölüm önce
-`Appearance.saved` diye eklendi; `Appearance` zaten `"saved": "Saved."` diye
-bir **string** taşıyordu, JSON son tanımı kazandı ve namespace sessizce bir
-string oldu. Hata `useTranslations('Appearance.saved')` satırında "geçerli bir
-namespace değil" diye çıktı — sebebi başka bir dosyadaki bir ad çakışması.
-Bölüm `Appearance.presets` oldu. **Ders:** yeni bir ICU nesnesi eklerken
-kardeş anahtarlara bak; çakışma tip hatasını gerçek sebebinden uzağa taşıyor.
+**Tek sözcüklemenin silinmesi.** Gerekçe "silinmek istenen şey madde" idi:
+olağan durumda doğru, iki sözcüklemeli bir atomda hiç doğru değil. Uç ve iki
+reddi zaten yazılıydı, eksik olan düğmeydi. Sunucunun iki reddi ekranda **tek
+koşula** indi — `primary` değilse başka biri vardır — yani birincil olan da,
+tek olan da kontrolü hiç göstermiyor.
 
-**Kaydetmek yukarıdaki çalışma setini kopyalıyor**, ikinci bir slider takımı
-açmıyor. Aynı beş değeri kuracak iki yer, onları yanlış kuracak iki yer olurdu;
-ekranın sorduğu soru bunların ne olması gerektiği değil, ne adlandırılacağı.
+**Mark-farkında editör, ve bu dördünün en büyüğü.** Mutlak kural 4 bileşeni
+adıyla sayıyordu; uyarı bir köprüydü. **Hangi editörün çizileceğine içerik
+karar veriyor**: marksız bir cümle tek alan, marklı bir cümle parça listesi.
+İşaretsiz içeriği parça listesine sarmak tören olurdu; marklı içeriği düz
+alanda düzenlemek ise markı silmek — uyarının var olma sebebi.
 
-**Silme hiçbir şey hakkında uyarmıyor ve bu dikkatsizlik değil.** Bir setle
-üretilmiş CV, enstantanesinde id değil **ayarların kendisini** taşıyor, yani
-gönderilmiş her belge hâlâ birebir yeniden basılıyor. Anlatılacak bir cascade
-ve riskteki bir belge yok.
+**Dönüşüm kaydetme yolundan editöre taşındı.** `useAutosave` bir string
+taşıyordu ve "tek marksız run"a çevirme **save**'de oluyordu: yani her yazma
+markları siliyordu, hangi editör üretmiş olursa olsun. Dönüşüm, markları
+temsil **edemeyen** editöre ait.
 
-**`customizationId` ancak seçilecek bir şey varken çiziliyor.** Kaydedilmiş
-seti olmayan profil olağan hâl; tek seçeneği "her zamanki ayarların" olan bir
-seçici, kimsenin vermek zorunda olmadığı bir karar için kontrol olurdu — ve
-okuyucuya özelliğin yok olduğunu değil **bozuk** olduğunu öğretirdi. Liste
-yalnız panel açıldığında isteniyor.
+**Taslak geçersiz olabilir, run olamaz.** `link` bir `href` ister ve
+`createRun` ikisinde de fırlatıyor — içerik için doğru, kutunun
+işaretlendiği an için yanlış. Yarım hâl taslakta duruyor, satırda söyleniyor,
+ve `onChange` yalnız bütün içerikle çağrılıyor. Alternatif, saniyeler sonra
+sunucunun reddetmesi: P8'in önlemek için var olduğu şekil.
 
-**Ölçüm:** 948 birim testi yeşil; `/settings` **241.3 → 243.8 KB**,
-`/generate` **225.4 → 227.4**, `/profile` **257.4** (tavan 280).
+**Üç gerçek kusur yazarken çıktı.** (1) Seed **kimlikle** karşılaştırılıyordu;
+`runs` her render'da yeniden ayrıştırıldığı için alan bir karakter alıp
+kaydedilmiş cümleye geri dönüyordu — değere göre karşılaştırıldı, negatif
+kontrolü var. (2) Grup adı `<h3>` ile veriliyordu: marklı atom başına bir
+başlık, iki yüz tanesi bölümünkinin altında. Başlık değil `<span>`, çünkü
+`aria-labelledby` her elemanla çalışıyor. (3) `role="group"` sarmalayıcısı
+kayıt gruplarıyla çakışıyordu; ad **listeye** taşındı.
+
+**Bir ICU etiketi de çakıştı:** `marks.organization` "Organisation" idi ve
+kayıt formunun kendi alanıyla aynı; "Employer or school" oldu.
+
+**`pageCount < maxPages` notu kapanmadı ve sebebi ölçüldü.** Verdikt
+"kapanıyor" diyordu; `GenerationResponse` `maxPages` **yayımlamıyor**, ve
+profilin bugünkü tercihiyle karşılaştırmak o üretimin neyle yapıldığını değil
+bugün neyin ayarlı olduğunu söylerdi. `F-039` bunu istiyor.
+
+**Ölçüm:** 965 birim testi yeşil; `/profile` **257.2 → 258.6 KB** (tavan 280).
 
 ### Aşama 3'ten devrolan açıklar
 

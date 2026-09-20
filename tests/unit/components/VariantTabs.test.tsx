@@ -65,7 +65,9 @@ describe('an atom with one wording', () => {
     await renderEditor('atom-1');
 
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Text')).toBeInTheDocument();
+    // As parts, because this wording is marked (D13). What matters here is
+    // that the wording is editable at all without a strip around it.
+    expect(screen.getByLabelText('Part 1')).toBeInTheDocument();
   });
 });
 
