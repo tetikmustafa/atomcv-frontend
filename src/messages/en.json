@@ -703,6 +703,32 @@
       "preparing": "Preparing the file…",
       "formats": "JSON is the complete copy, meant to be read by another program. Markdown is the readable one, for pasting somewhere else — it leaves out the parts only this app uses.",
       "announceStarted": "Download started"
+    },
+    "generationDefaults": {
+      "title": "How your CV is written",
+      "intro": "What every generation starts from. You can leave all of it alone — these are defaults, not a step you have to take.",
+      "maxPagesLabel": "Page limit",
+      "maxPagesHint": "How many pages a CV may take. The limit is calculated, not hoped for: content is selected to fit it. Leave it empty to use ours.",
+      "maxPagesRange": "Pick a whole number between {min} and {max}.",
+      "cvLanguageLabel": "CV language",
+      "cvLanguageHint": "Which language a CV is written in. This is not the language of these buttons, and not the language your profile is written in — it is the one the document comes out in.",
+      "coverLetterLanguageLabel": "Cover letter language",
+      "followPosting": "Follow the posting",
+      "toneLabel": "Register",
+      "toneUnset": "No preference",
+      "tones": {
+        "formal": "Formal",
+        "casual": "Conversational",
+        "technical": "Technical"
+      },
+      "emphasizeMetrics": "Put numbers and results first where there are any",
+      "conciseSentences": "Keep sentences short",
+      "customInstructionsLabel": "Anything else",
+      "customInstructionsHint": "One or two sentences about how you want to come across — \"lead with my leadership experience\", say. It reaches the rewriting step and nothing else.",
+      "customInstructionsLeft": "{remaining, plural, =0 {No characters left} =1 {One character left} other {# characters left}}",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved."
     }
   },
   "Appearance": {

@@ -20,7 +20,13 @@ import {
   type MockSection,
 } from './profileFixture';
 import { currentMaxAtoms, isAccount, TEMPLATES } from './sessionFixture';
-import { ACCENT_COLOR_PATTERN, APPEARANCE_RANGES } from '@/lib/api/endpoints/profile';
+import {
+  ACCENT_COLOR_PATTERN,
+  APPEARANCE_RANGES,
+  CUSTOM_INSTRUCTIONS_MAX,
+  MAX_PAGES_RANGE,
+  WRITING_TONES,
+} from '@/lib/api/endpoints/profile';
 import type { components } from '@/types/api';
 
 type Schemas = components['schemas'];
@@ -526,6 +532,25 @@ export const profileHandlers = [
         : []),
       ...(appearance.accentColor && !/^[0-9A-Fa-f]{6}$/.test(appearance.accentColor)
         ? ['accentColor']
+        : []),
+      /*
+        The writing style's two bounds (§ 35's validation limits). Stored
+        without a word until now, which let a screen send a sentence longer
+        than the server takes and look correct doing it — the refusal is the
+        half worth mocking.
+      */
+      ...((body.writingStyle?.customInstructions ?? '').length > CUSTOM_INSTRUCTIONS_MAX
+        ? ['customInstructions']
+        : []),
+      ...(body.writingStyle?.tone &&
+      !WRITING_TONES.includes(body.writingStyle.tone as (typeof WRITING_TONES)[number])
+        ? ['tone']
+        : []),
+      ...(body.defaults?.maxPages !== undefined &&
+      (!Number.isInteger(body.defaults.maxPages) ||
+        body.defaults.maxPages < MAX_PAGES_RANGE.min ||
+        body.defaults.maxPages > MAX_PAGES_RANGE.max)
+        ? ['maxPages']
         : []),
     ];
 
