@@ -1,6 +1,6 @@
 # AtomCV — Spec Index
 
-**Ürün:** AtomCV · **Domain:** `atomcv.mustafatetik.com` *(ikisi de geçici)*
+**Ürün:** AtomCV *(ad hâlâ geçici)* · **Domain:** `atomcv.mustafatetik.com` — **ilk yayın bu alt alan adında** (karar: 2026-09-16, `vps-dagitim-plani.md` § 0)
 **Repolar:** `atomcv-backend` (Java/Spring) · `atomcv-frontend` (Next.js)
 
 ---
@@ -14,7 +14,9 @@ rg -n "ETag|If-Match" docs/spec/08-api.md      # önce ara
 # sonra: sadece bulunan aralığı oku
 ```
 
-Tüm spec ~8.500 satır. Doğru dosyayı okumak 200-600 satır. **Fark 15-40 kat.**
+Tüm spec **19 dosya, ~13.100 satır**. Doğru dosyayı okumak 170-1.900 satır, çoğu 200-800. **Fark 15-40 kat.**
+
+> Bu sayı üç dosyada üç türlü yazılıydı ve üçü de eskiydi — burada ve `CLAUDE.md`'de ~9.400, `README.md`'de "eighteen files, ~8,500" (denetim, 2026-09-20). Okuma kuralının kendisi bu orana dayandığı için ölçüldü.
 
 ---
 
@@ -22,13 +24,17 @@ Tüm spec ~8.500 satır. Doğru dosyayı okumak 200-600 satır. **Fark 15-40 kat
 
 | Dosya | Ne | Boyut |
 |---|---|---|
-| `CLAUDE.md` | Kalıcı bağlam, mutlak kurallar | ~150 satır |
-| `docs/INDEX.md` | Bu dosya | ~120 satır |
-| `docs/STATUS.md` | İki repo nerede | ~40 satır |
+| `CLAUDE.md` | Kalıcı bağlam, mutlak kurallar | ~280 satır |
+| `docs/INDEX.md` | Bu dosya | ~160 satır |
+| `docs/STATUS.md` | İki repo nerede | ≤60 satır |
 | `docs/handoff/to-<bu-repo>.md` | Karşı repodan gelen açık maddeler | <100 satır |
 | `docs/notes/current.md` | Bu repodaki aktif aşama notları | <200 satır |
 
-Toplam ~600 satır sabit maliyet. Gerisi göreve göre.
+Toplam ~740 satır sabit maliyet. Gerisi göreve göre.
+
+> Bu sayılar da ölçüldü (denetim, 2026-09-20): ilk üçü sırasıyla ~150/~120/~40
+> yazıyordu. İkisinin bir sınırı var ve yazılı (`STATUS.md` 60, `current.md`
+> 200, handoff 100); ötekilerin yok, o yüzden ölçülüp yazılıyorlar.
 
 ---
 
@@ -127,7 +133,8 @@ Toplam ~600 satır sabit maliyet. Gerisi göreve göre.
 | Aşama 3 — Hesap ve MVP (adımlar) | `spec/14-build-guide.md` § XI-A.6 |
 | Aşama içerikleri, süre tahmini, gerekçe | `spec/13-development.md` § 55 |
 | Günlük geliştirme akışı | `spec/14-build-guide.md` § XI-A.8 |
-| VPS kurulumu | `spec/14-build-guide.md` § XI-A.4 |
+| **VPS: kararlar, adım adım kurulum, sunucu bekleyen işler** | **`docs/vps-dagitim-plani.md`** |
+| VPS adımlarının ilk taslağı (gerekçe) | `spec/14-build-guide.md` § XI-A.4 |
 | Sık karşılaşılan sorunlar | `spec/14-build-guide.md` § XI-A.9 |
 | Repo yapısı, klasör ağacı | `spec/15-repos-and-claude.md` § XI-B.2, XI-B.3 |
 | Prompt şablonları | `spec/15-repos-and-claude.md` § XI-B.8 |
@@ -136,6 +143,8 @@ Toplam ~600 satır sabit maliyet. Gerisi göreve göre.
 | **Telde ilandan ne dönebilir — mutlak kural 4'ün sınırı** | `spec/16-cost-legal.md` § 57.6 |
 | Terimler sözlüğü | `spec/17-appendix-abc.md` § EK A |
 | Yayın kontrol listeleri | `spec/17-appendix-abc.md` § EK C |
+| **Sapma / Ekleme / Düzeltme kayıtları — spec'in gövdesi buraya 75 kez atıf yapıyor** | `spec/18-appendix-d.md` |
+| Frontend'i ilgilendiren inşa kararları | `spec/18-appendix-d.md` § D.9, § D.10 |
 
 ---
 
@@ -148,6 +157,7 @@ Toplam ~600 satır sabit maliyet. Gerisi göreve göre.
 | `docs/STATUS.md` | ortak | ✅ iki yönlü |
 | `docs/handoff/**` | ortak | ✅ **gerçek iletişim kanalı** |
 | `docs/notes/**` | her repo kendi | ❌ repo-yerel |
+| `docs/vps-dagitim-plani.md` | backend repo | ❌ **senkronize değil** — sunucu bu repoya ait |
 
 **Spec'i yalnız backend reposunda düzenle.** Frontend'deki kopya `scripts/sync-spec.sh` ile güncellenir; orada yapılan düzenleme bir sonraki senkronda kaybolur.
 

@@ -83,6 +83,27 @@ void locksAndStructuralConstraintsRespected() {
 
 ### 51.3 Golden test set
 
+> **Güncel (denetim, 2026-09-15).** `jobs/` dokuzu da taşıyor ve
+> `content-formats/` var. Eksik olan dosya sayısı değildi: § 18.1'in ön
+> kontrolü yalnız eşiklerini denemek için yazılmış dizelere karşı test
+> ediliyordu, ki o kodun yazarının kastettiğini yaptığını gösterir ve gerçek
+> bir ilanı geçirip geçirmediği hakkında hiçbir şey söylemez.
+>
+> **Dokuzun yedisi kabul ediliyor, ve bulgu o.** Kapı neredeyse her zaman açık
+> olmak üzere tasarlandı: Türkçe bir ilan, iki dilli bir ilan, gereksinim
+> listesi olmayan bir ilan, şirket adı geçmeyen bir ilan, on iki bin karakterlik
+> kurumsal düzyazı ve **enjeksiyon denemesi taşıyan bir ilan** — hepsi geçiyor.
+> Enjeksiyonu yakalayan şey § 43'ün modelin *cevabını* okuyan katmanları; metni
+> kapıda reddetmek, bir sistem mesajından alıntı yapan gerçek bir ilanı
+> reddedip başka türlü yazılmış bir denemeyi yine durduramamak olurdu.
+>
+> **`content-formats/v1.json` şimdi yazıldı, v1 hâlâ güncelken.** § 16.2'nin
+> tembel yükseltme yolunun ancak yürünecek gerçek bir belge varsa testi olur —
+> ve bir v2 geldiği gün, o göçü yazanın kendi yazdığı bir v1 belgesi yalnız
+> göçün yazarının beklediğini okuduğunu kanıtlar. Belge § 14.1'in her işaretini
+> **ve bu sürümün hiç duymadığı bir tanesini** taşıyor, ki § 16.2'nin
+> "bilinmeyen işaret korunur" sözünün tutulmasının tek yolu odur.
+>
 > **Not (Adım 1.9).** Profiller yazıldı; `jobs/`, `analyses/` ve
 > `content-formats/` Faz A ile birlikte Aşama 2'de gelecek. Dosyalar
 > `src/test/resources` değil **`src/main/resources/golden/profiles`** altında
@@ -91,13 +112,15 @@ void locksAndStructuralConstraintsRespected() {
 > derleyiciye karşı doğrulanıyor: **EK D.8.9**.
 
 ```
-src/test/resources/golden/
-├── profiles/
+src/main/resources/golden/           # test değil main: seeder üretim kodu
+├── profiles/                        # yedi profil
 │   ├── senior_backend_tr.json       # TR, 3 deneyim, 8 proje
 │   ├── junior_frontend_en.json      # zayıf, 2 okul projesi
 │   ├── career_changer.json          # alakasız geçmiş
 │   ├── academic_long.json           # 15 yıl, 20+ yayın
 │   ├── minimal_edge.json            # sınırda: 1 deneyim, 3 beceri
+│   ├── master_cv_en.json            # referans belgenin kendisi
+│   ├── stress_long_career.json      # sayfa garantisini zorlayan
 │   └── *.costs.json                 # önceden ölçülmüş render_costs
 ├── jobs/
 │   ├── backend_go_k8s_en.txt
@@ -122,12 +145,14 @@ src/test/resources/golden/
 > söylüyor) ve `..profile..` için repository paketinin dışına çıkma yasağı
 > eklenmiştir.
 
-> **Boş kural sessizce geçer.** `src/test/resources/archunit.properties`
-> `archRule.failOnEmptyShould=false` taşıyordu, çünkü modül paketlerinde yalnız
-> `package-info.java` varken kurallar "failed to check any classes" ile
-> düşüyordu. Ayar açıkken bir paketi yeniden adlandırmak, o kuralın hiçbir şeyle
-> eşleşmeyip **geçmesine** yol açar. Modüller gerçek sınıf taşımaya başladığında
-> kaldırılır.
+> **Boş kural sessizce geçer, ve o kapı kapandı.**
+> `src/test/resources/archunit.properties` `archRule.failOnEmptyShould=false`
+> taşıyordu, çünkü modül paketlerinde yalnız `package-info.java` varken
+> kurallar "failed to check any classes" ile düşüyordu. Ayar açıkken bir
+> paketi yeniden adlandırmak, o kuralın hiçbir şeyle eşleşmeyip **geçmesine**
+> yol açar — yani muhafız susarak başarı raporlar. Modüller gerçek sınıf
+> taşıdığı için **dosya tamamen kaldırıldı** (doğrulandı: denetim,
+> 2026-09-16).
 
 ```java
 @ArchTest static final ArchRule noCycles = slices()
@@ -148,9 +173,18 @@ src/test/resources/golden/
 @ArchTest static final ArchRule renderersAreDeterministic = noClasses()
     .that().resideInAPackage("..rendering..")
     .should().dependOnClassesThat().resideInAPackage("..llm..");
+
+// Bölüm 10.2, kural 3 — generation hangi formatların olduğunu bilmez.
+@ArchTest static final ArchRule generationDoesNotKnowTheFormats = noClasses()
+    .that().resideInAPackage("..generation..")
+    .and().haveSimpleNameNotEndingWith("ReplayRun")
+    .should().dependOnClassesThat().resideInAnyPackage(
+        "..rendering.latex..", "..rendering.html..", "..rendering.docx..");
 ```
 
-Son kural önemli: **renderer'ın LLM'e bağımlı olması derleme zamanında engelleniyor.**
+Sondan ikinci kural önemli: **renderer'ın LLM'e bağımlı olması derleme
+zamanında engelleniyor.** Sonuncusu 2026-09-16'da eklendi — § 10.2'nin 3.
+kuralı bir aşama boyunca çiğnenmişti ve onu kontrol eden hiçbir şey yoktu.
 
 ### 51.5 Dev endpoint güvenliği
 
@@ -328,6 +362,18 @@ inanmaz.
 Zorlayan kopya frontend reposundaki `bundle-budget.json`; buradaki sayılar
 tavandır ve **karar olmadan yükseltilmez** (EK D.10 · 13, 14).
 
+> **Backend tarafında bu tablonun sekiz satırından ikisi zorlanıyor**
+> (denetim, beşinci tur). `performance-budgets.yaml` bilerek bir alt küme
+> taşıyor — dosyanın kendi gerekçesi: bir CI makinesinin hızı bu farklardan
+> çok oynuyor, o yüzden zamanlama gevşek bir muhafız, ve keskin olanlar sayı
+> değil — profil okumada **sorgu sayısı**, saf fazlarda **ölçek oranı**.
+> Alt kümenin kendisi de üç sayı boyunca tutulmuyordu: `phase_scoring`'in
+> testi hiç yazılmamıştı, `profile_load`'ın milisaniyeleri de öyle, ve her
+> birinin `p50`'sini hiçbir şey okumuyordu. Şimdi dosyadaki her sayının bir
+> okuyucusu var ve `BudgetsAreHeldTest` bunu her koşuda kontrol ediyor.
+> `p50` kalmadı: ölçüm on beş örneğin **en hızlısını** alıyor, medyan o
+> yöntemin altında anlamsız.
+
 ### 52.4 LaTeX optimizasyonu
 
 ```dockerfile
@@ -336,6 +382,18 @@ RUN xelatex -ini -jobname="cvfmt" "&xelatex preamble.tex\dump"   # 1-2sn kazanç
 ```
 
 + Container warm-up (Bölüm 29.6)
+
+> **Düzeltme (ölçüldü, 2026-09-15) — ikinci satır XeTeX'te çalışmıyor.**
+> Motor yerel font yüklenmiş bir oturumdan format döküm etmeyi reddediyor
+> (`Can't \dump a format with native fonts or font-mappings.`) ve yazdığı
+> `.fmt` geri okunamıyor. Tam gerekçe ve ölçüm § 29.2'de; oradaki Dockerfile
+> parçacığında da aynı satır duruyor.
+>
+> **"1-2sn kazanç" rakamı da tutmuyor:** asgari bir belgenin *tamamı* bu
+> imajda 620-925 ms sürüyor. Fontconfig cache'i (ilk satır) yerinde ve
+> gerçek; kazanç oradan geliyor.
+>
+> Kalan soğuk başlangıç maliyeti § 29.6'nın ısıtmasıyla ödeniyor.
 
 ### 52.5 Soğuk başlangıç
 
@@ -347,20 +405,57 @@ curl -sf localhost:8080/api/v1/warmup      # tipik sorguları çalıştırır
 
 JVM CDS (`-XX:ArchiveClassesAtExit`) ile başlangıç ~%30 düşer.
 
+> **İkisi de indi (denetim, 2026-09-15).** `scripts/deploy.sh` sağlıktan sonra
+> ve trafikten önce ısıtmayı çağırıyor, `|| true` ile: soğuk bir havuz
+> yavaştır, bozuk değil, ve sağlık kontrolü sürümün iyi olduğunu zaten
+> söylemiştir — burada düşmek çalışan bir sürümü yavaş olduğu için geri alırdı.
+>
+> **Uç neyi ısıtıyor:** bir JDBC gidiş dönüşü ve bir Redis gidiş dönüşü, yani
+> ilk isteğin ödediği iki I/O yolu. XeLaTeX kendi container'ında ısınıyor
+> (§ 29.6) ve embedding sunucusu ağırlıklarını `/health`'ten önce yüklüyor
+> (§ 28.4); ikisini de kapsadığını iddia eden bir ısıtma, yapmadığı işi başarı
+> diye raporlardı. **Uç public API değil** (EK D.6.7): şemada yok, nginx onu
+> tam eşleşmeyle reddediyor, ve ikisinin de testi var.
+>
+> **CDS eğitim koşusuyla değil `-XX:+AutoCreateSharedArchive` ile.** Spring'in
+> belgelediği tarif uygulamayı başlatıp ne yüklediğini kaydediyor, yani build
+> container'ının sahip olmadığı bir veritabanı istiyor — ve o adımı sessizce
+> atlayan bir build, arşivi boş bir imaj gönderirdi. Arşiv ilk açılışta
+> yazılıyor, sonraki her açılışta map'leniyor, jar değişince kendiliğinden
+> yenileniyor.
+>
+> **Ve arşiv bir volume'de.** Bir deploy container'ı yeniden yaratıyor, yani
+> container'ın kendi katmanına yazılan bir arşiv **her açılışta yazılır ve
+> hiçbirinde okunmaz** — yalnız maliyet olan bir önbellek. İmaj derlenip iki
+> kez koşularak doğrulandı: ilk koşu 47 MB'lık arşivi yazdı, ikincisi
+> `Mapped static region` bastı.
+
 ### 52.6 Bütçe dosyası
 
 ```yaml
-# performance-budgets.yaml
-backend:
-  profile_load:     { p50: 80ms,  p95: 200ms }
-  phase_scoring:    { p50: 30ms,  p95: 60ms }
-  phase_selection:  { p50: 15ms,  p95: 40ms }
-  pipeline_total:   { p50: 8s,    p95: 14s }
-frontend:
-  lcp_editor: 2500ms
-  inp: 200ms
-  bundle_initial_kb: 200
+# performance-budgets.yaml  (inen hali)
+backend:                       # degerler 52.1'in 2-3 kati, bilerek
+  phase_scoring:   { p50_ms: 90,  p95_ms: 180 }
+  phase_selection: { p50_ms: 45,  p95_ms: 120 }
+  profile_load:    { p50_ms: 240, p95_ms: 600 }
+queries:
+  profile_load_max: 6          # 52.2'nin N+1 muhafizi
+scaling:
+  max_growth_when_input_doubles: 3.0
 ```
+
+> **İnen dosya yukarıdakinden iki yerde ayrılıyor** (denetim, 2026-09-16).
+> **`pipeline_total` yok:** içinde bir LLM çağrısı ve gerçek bir derleyici
+> olan bir süreyi CI makinesinde ölçmek, havayı ölçmek olurdu — o sayı
+> § 52.1'de bir hedef olarak duruyor, bir kapı olarak değil. **`frontend:`
+> bloğu da yok** ve olmamalı: zorlayan kopya frontend reposundaki
+> `bundle-budget.json` (§ 52.3), ve bütçeyi iki repoda tutmak ikisinin
+> ayrışmasını beklemektir.
+>
+> Karşılığında iki gerçek muhafız var ve ikisi de **süre değil**:
+> `queries.profile_load_max` (§ 52.2'nin N+1'i — makineden bağımsız bir
+> sayı) ve `scaling` (girdi iki katına çıkınca işin kaç katına çıkabileceği;
+> doğrusal iki, kuadratik dört, tavan üç).
 
 Testler bu dosyayı okur. Bütçe değiştirmek bilinçli bir karar olur (PR'da görünür).
 
@@ -376,12 +471,28 @@ CI makineleri değişken hızda olduğu için eşiği **2-3 kat cömert** tut �
 src/main/resources/prompts/
 ├── job_analysis/       { v1.md, v2.md, schema.json }
 ├── profile_extraction/ { v1.md, schema.json }
-├── atom_rewrite/       { v1.md }
-├── about_synthesis/    { v1.md }
-├── cover_letter/       { v1.md }
-├── edit_intent/        { v1.md }
-└── translation/        { v1.md }
+├── bullet_rewrite/     { v1.md, v2.md, schema.json }
+├── about_synthesis/    { v1.md, schema.json }
+├── cover_letter/       { v1.md, v2.md, schema.json }
+├── selection_edit/     { v1.md, schema.json }
+└── translation/        { v1.md, schema.json }
 ```
+
+> **İki prompt farklı adla indi ve spec eski adları taşımaya devam etti**
+> (denetim, 2026-09-16): `atom_rewrite` → **`bullet_rewrite`**, `edit_intent`
+> → **`selection_edit`**. İkisi de § 21.2 ile § 24.2'nin gerçekte yaptığı işin
+> adı — biri *bir maddeyi* yeniden yazıyor (atomun tamamını değil: beceri, dil
+> ve About satırları bu prompt'a hiç gönderilmiyor), öteki *seçimi* düzenliyor
+> (bir niyeti yorumlamıyor, numaralanmış satırlardan numara döndürüyor).
+>
+> Eski adlar altı yerde duruyordu ve ikisi zararsız değildi: § 53.2'nin
+> `prompts.active` bloğu **kopyalanabilir bir yapılandırma**, ve
+> `atom_rewrite` diye bir anahtar hiçbir şeyi yapılandırmıyor;
+> § 14.7'nin `engine_version.promptVersions` örneği ise **kalıcı bir JSONB
+> kolonunun şekli**, yani hiçbir zaman yazılmamış bir anahtarı belgeliyordu —
+> § 48.5'in replay'i ve "hangi prompt koştu" sorusu tam olarak o kolonu
+> okuyor. Her şema dosyasının da yanında `schema.json` var; ağaç onu da
+> yalnız ikisinde gösteriyordu.
 
 **Neden DB değil:** Prompt ile onu tüketen kod (şema, parse mantığı, doğrulayıcı) birlikte değişir. DB'de tutarsan ayrışırlar.
 
@@ -400,12 +511,28 @@ src/main/resources/prompts/
 prompts:
   active:
     job_analysis: v2
-    atom_rewrite: v1
+    bullet_rewrite: v2
   experiments:
-    atom_rewrite: { enabled: true, variant: v2, trafficPct: 10 }
+    bullet_rewrite: { enabled: true, variant: v2, trafficPct: 10 }
 ```
 
 Deploy etmeden geri alma imkânı verir.
+
+> **Bir sürümü yükseltmek `latexTest`'i düşürür, ve düzeltmesi bir kayıt
+> koşusudur** (denetim, 2026-09-20 — CI'da öğrenildi). Fixture anahtarı
+> `{promptId}/{version}-{sha256[0:12]}` (§ 54.2), yani `active`'i değiştirmek o
+> prompt'un **bütün** kayıtlarını yetim bırakıyor. `job_analysis` için bedeli
+> ağır, çünkü `.gitignore` yalnız onun cevaplarını commit'liyor — ötekiler
+> kişinin CV'si — ve o dosyalar "latexTest'in sentetik analize düşmesini
+> engelleyen şey". Kayıt yokken Faz A sentetik cevap veriyor, sentetik analiz
+> sentetik beceriler taşıyor, Faz D'nin sentetik yeniden yazımı **aynı
+> saçmalıktan kurulmuş** bir doğrulayıcıyı geçiyor, ve DOCX'te maddenin yerinde
+> `synthetic-517` çıkıyor. Dört IT birden düşüyor.
+>
+> **Sırası:** yeni sürümü yaz → `make test-llm` (EK C.3) → `active`'i çevir →
+> **`./scripts/dev-record.sh <cv> src/integrationTest/resources/postings/senior-backend-go.txt`**
+> → `gradlew latexTest`. Son iki adım atlanırsa hat merge kapısında düşer;
+> `JobSpecificCvIT`'in javadoc'u komutu zaten taşıyor.
 
 ### 53.3 A/B testi
 
@@ -443,6 +570,22 @@ void rewritePreservesFactualContent() {
 }
 ```
 
+> **Faz A'nın süiti yoktu ve tablo varmış gibi okunuyordu** (denetim, beşinci
+> tur). Yukarıdaki örnek Faz D'nindir ve **telde yalnız o vardı**;
+> `SCHEMA_CONFORMS` ile `REQUIRED_SKILLS_FOUND` § 53.5'te satır, `EvalThresholds`'ta
+> taban değeri taşıyordu ve hiçbir yerde bir gözlem kaydedilmiyordu. Dahası CI
+> hattı `prompts/` altında **herhangi bir** dosya değişince ateşleniyor ve var
+> olan bütün süitleri koşturuyordu: `job_analysis/v2.md`'yi düzenlemek Faz D'yi
+> ölçüp yeşil dönüyordu. Şimdi `JobAnalysisEvalIT` üç metriği de kaydediyor
+> (üçüncüsü aşağıdaki "anlamsız ilan tespiti"), hat **hangi** prompt'un
+> değiştiğini söylüyor ve süiti olmayanı adıyla uyarıyor.
+>
+> **Süiti olmayan beş prompt bilerek öyle**, ve gerekçeleri
+> `PromptEvalCoverageTest`'te yazılı — o test üçüncü durumu, yani hakkında
+> karar verilmemiş bir prompt'u reddediyor. § 53.5 yalnız Faz A, D ve F için
+> taban koyuyor; ötekilere eşik uydurmak bir ürün kararını bir test dosyasında
+> vermek olurdu.
+
 ### 53.5 Eşikler
 
 | Metrik | Faz | Eşik |
@@ -457,10 +600,21 @@ void rewritePreservesFactualContent() {
 | Doğrulama red oranı | D | <%5 |
 | Sayfa sapma oranı | F | <%2 |
 
+> **Dokuz satırın kaçı gerçekten ölçülüyor** (denetim, beşinci tur): Faz A'nın
+> üçü `JobAnalysisEvalIT`'te, Faz D'nin beşi `BulletRewriteEvalIT`'te —
+> ikisi de `gradlew llmEval`, yani **para harcayan ve elle koşulan** hat.
+> **Faz F'nin sayfa sapması burada değil**, ve olmamalı: model içermiyor,
+> `MeasurementDriftIT` ile golden setin ölçümleri onu gerçek derleyiciye karşı
+> tutuyor ve o hat bedava.
+>
+> **Performans bütçeleri de aynı soruyu sordurdu** ve orada üç sayı gerçekten
+> tutulmuyordu; `performance-budgets.yaml` artık yalnız bir testin okuduğu
+> sayıları taşıyor ve `BudgetsAreHeldTest` bunu kontrol ediyor (§ 52).
+
 ### 53.6 Karşılaştırma raporu
 
 ```
-PROMPT EVAL — atom_rewrite: v1 → v2
+PROMPT EVAL — bullet_rewrite: v1 → v2
 ════════════════════════════════════════════
 Örneklem: 40 atom × 5 ilan = 200 çağrı
 

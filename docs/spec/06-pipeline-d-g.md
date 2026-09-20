@@ -28,11 +28,72 @@ okuyor.
 
 ### 21.2 Adım 2 — Üç kademeli müdahale eşiği
 
-| Skor | Müdahale | Gerekçe |
+**Kademeyi belirleyen şey skor değil, maddenin ilandan adlandırdığı terim
+sayısı** — skor yalnız bir alt sınır. `matchedTerms` — ilanın aradığı ve
+tercih ettiği becerilerden bu atomun taşıdıkları, artı ilanın bu atomda geçen
+kelimeleri. Etiketler sayılmaz: etiket profilin kendi söz dağarcığı, ilanın
+talebi değil.
+
+| Kanıt (adlandırılan terim) | Müdahale | Gerekçe |
 |---|---|---|
-| **≥ 0.65** | Tam uyarlama: keyword entegrasyonu + terminoloji hizalama | Gerçek bağlantı var, vurgulamak dürüst |
-| **0.40 – 0.65** | Sadece sıkıştırma (uzunsa) | Alakalı ama zorlamaya değmez |
-| **< 0.40** | **Hiç dokunma** | Bağlantı yok; uyarlama = uydurma |
+| **≥ 4**, ve skor ≥ 0.35 | Tam uyarlama: keyword entegrasyonu + terminoloji hizalama | Bağ gösterilmiş, vurgulamak dürüst |
+| **1-3**, skor ≥ 0.35, **ve metin uzunsa** | Sadece sıkıştırma | Alakalı ama zorlamaya değmez |
+| **0** — ya da skor < 0.35 | **Hiç dokunma** | Gösterilmiş bağ yok; uyarlama = uydurma |
+
+> **Kademeler skordan kanıta taşındı** (düzeltme, ölçüm 2026-09-16,
+> `ScoreReachIT`). Eskisi `≥ 0.65 / 0.40-0.65 / < 0.40` idi ve **iki ayrı
+> şekilde yanlıştı.**
+>
+> **Üst kademe ulaşılamazdı.** Gerçek BGE-M3 vektörleriyle, golden setin en iyi
+> eşleşen çiftinde — tam o ilana göre yazılmış CV — en yüksek ham skor
+> **0.4133**; importance çarpanının tavanı 1.5, yani ölçeğin tavanı ~0.62.
+> 0.65 hiçbir zaman geçilemezdi, her yeniden yazım sonsuza kadar `COMPRESS`
+> olurdu.
+>
+> **Ve taban, kendisine verilen işi yapamıyordu.** Aynı ilana karşı bir
+> **akademik CV**'nin en iyi maddesi **0.3870** aldı — hiçbir terim
+> adlandırmadan. Eşleşen CV'nin en iyisi 0.4133. Arada 0.026 var, yani hangi
+> mutlak değer seçilirse seçilsin "alakalı" ile "alakasız" ayrılmıyordu.
+> Sebebi skorun iki farklı şeyi toplaması: **benzerlik** (kosinüs, her fixture'da
+> 0.63-0.84 arası dar ve yüksek bir bant — yani neredeyse sabit) ve **kanıt**
+> (beceri/keyword, yalnız gerçek eşleşmede sıfırdan farklı), sonra sonucun
+> **importance** ile çarpılması — ki o kişinin kendi CV'si hakkındaki yargısı,
+> bu ilan hakkında hiçbir şey söylemiyor. Bir cümle, önemli işaretlenmiş ve
+> belirsizce teknik olduğu için iyi skor alabiliyordu.
+>
+> **Kanıt kapısı ayrımı yapıyor, skor yapmıyor:** aynı ölçümde eşleşen profil
+> dört aday veriyor, ona göre yazılmamış **altı profilin hepsi sıfır**.
+> Riskli olan kademenin daha çok **kanıt** istemesi de aynı sebeple: `ADAPT`
+> ilanın terminolojisini kişinin cümlesine işliyor, yani bu ürünün önlemek için
+> var olduğu şeye en yakın işlem.
+>
+> **Sayılar ve sınırları.** Taban 0.35: kapıyla birlikte 0.40 en iyi çiftte tek
+> aday bırakıyordu (bir kez ateşlenen özellik hâlâ kapalıdır), 0.35 dört veriyor
+> — ve **0.30 da aynı dördü veriyor**, yani sayı bir veri noktasının üstünde
+> değil boşlukta duruyor. Dört terim: seçilmiş on dokuz atomun kanıt dağılımı
+> `{0→11, 1→2, 2→1, 3→4, 5→1}`, yani kümenin üstündeki ilk değer.
+> **Ve o fixture'da `ADAPT` yine hiç ateşlenmiyor**, ama artık başka bir
+> sebeple: barajı geçen tek atom **About paragrafı**, ve o § 21.7'nin kendi
+> prompt'una ait olduğu için buraya hiç gelmiyor. Yani kademe *ilkesel olarak*
+> ulaşılabilir hâle geldi — 0.65 hiç değildi — ve golden setin hiçbir
+> **maddesi** bu ilanın dört talebini birden adlandırmıyor.
+>
+> **Tek bir fixture tek bir fixture:** gerçek üretimler biriktiğinde ilk
+> gözden geçirilecek sayı budur.
+>
+> **Bütün korpusa karşı ölçüldü ve baraj korundu** (denetim, beşinci tur;
+> 2026-09-16). Yukarıdaki dağılım tek profilin *seçilmiş* on dokuz atomunun;
+> yedi golden profilin **218 atomunun tamamında** dağılım
+> `{0→206, 1→4, 2→2, 3→5, 5→1}`. Üç şey söylüyor: **(1)** baraj gerçekten
+> ulaşılabilir — bir atom beş terimle geçiyor, yani 0.65'in aritmetik kapalılığı
+> burada yok; **(2)** **tam 4'te hiçbir şey yok**, yani 3'e indirmek uygun kümeyi
+> birden altıya çıkarır ve 5'e çıkarmak hiçbir şeyi değiştirmez — ayar yapacak
+> kişi bu uçurumu bilsin; **(3)** yedi profilin yalnız ikisi bu ilanla herhangi
+> bir örtüşme taşıyor, ki bir Java ilanına karşı akademik bir CV için doğru olan
+> da bu. **Sayı değişmedi**, çünkü tek analiz edilmiş ilan bir ürün eşiğini
+> yeniden ayarlamak için yeterli değil — ama artık kör nokta değil:
+> `AdaptBarReachTest` barajı ulaşılamaz hale getiren her değişiklikte düşüyor,
+> ve gömme servisi istemediği için sıradan suite'te koşuyor.
 
 **Ek bütçe kısıtı:** en yüksek skorlu ilk **6-8 atom** uyarlanır. Bu hem maliyeti sınırlar hem "her cümlesi keyword dolu" yapay CV'yi önler.
 
@@ -348,13 +409,43 @@ DocumentRenderer    → preamble + bloklar + customization
 
 ### 22.2 Arayüzler
 
+> **Düzeltme (2026-09-16) — burada iki arayüz var, ve biri uzun süre
+> ötekinin işini yaptığını iddia etti.** Yukarıdaki `formatId()` ve
+> `supportedTemplates()` **kaldırıldı**: javadoc'ları `latex`, `html`, `docx`
+> diyordu, üç format ilan eden tek bir implementasyon vardı, ve **repoda
+> ikisinin de tek bir çağıranı yoktu.** İlan edilen soyutlama hiçbir yerde
+> yaşamıyordu — `generation` öteki iki formata somut sınıflarıyla uzanıyordu,
+> ki § 10.2'nin 3. kuralının ve § 1.2'nin dördüncü iddiasının yasakladığı şey
+> tam olarak o.
+>
+> **Format soyutlaması `DocumentWriter`'a taşındı** (`OutputFormat format()`,
+> `Result<byte[]> bytesFor(RenderRequest)`) ve dördü de — PDF, DOCX, HTML,
+> kaynak — onu gerçekten karşılıyor. `DocumentWriters` § 6'nın adını verip
+> yazılmamış olan Factory'si; açılışta her formatın bir yazıcısı olduğunu
+> doğruluyor. İndirme yolu artık bir ad çözüp bayt alıyor.
+>
+> **`DocumentRenderer` genişletilmedi, daraltıldı.** Bir derleyiciye kaynak
+> veriyor ve **ölçülmüş** bir kapasite taşıyor, çünkü bir LaTeX sayfası seçim
+> ona söz vermeden önce ölçülmek zorunda. HTML'in sayfası yok, DOCX'i POI'nin
+> kendisi yazıyor ve kimse ölçmüyor — üçünü bu sözleşmenin arkasına almak, iki
+> implementasyona cevaplayamayacakları soruları sordurmak olurdu.
+> `DocxDocumentWriter`'ın javadoc'u bunu zaten yazmıştı ve haklıydı.
+>
+> `capacity` ayrıca **`Optional<CapacityModel>`** döndürüyor: kimsenin
+> kalibre etmediği bir özelleştirme için tahmin edilmiş bir kapasite, sayfa
+> garantisini sessizce bozar.
+
 ```java
 public interface DocumentRenderer {
-    String formatId();
-    Set<String> supportedTemplates();
     RenderedSource renderFinal(RenderRequest req);
     RenderedSource renderMeasurement(MeasurementRequest req);
-    CapacityModel capacity(TemplateCustomization c);
+    Optional<CapacityModel> capacity(TemplateCustomization c);
+}
+
+// Indirilebilir her format, ve yalnizca bir indirmenin sordugu iki soru.
+public interface DocumentWriter {
+    OutputFormat format();                          // PDF | DOCX | HTML | SOURCE
+    Result<byte[]> bytesFor(RenderRequest req);     // yalniz PDF hata dondurebilir
 }
 
 public record RenderRequest(
@@ -480,7 +571,7 @@ private String preamble(TemplateCustomization c) {
         %s
         """.formatted(
             c.fontSizePt(),
-            FontRegistry.resolve(c.fontFamily()),   // enum → whitelist
+            c.fontFamily().latexName(),   // enum'un kendisi whitelist (EK D.6)
             c.marginInches(),
             c.lineSpacing(),
             c.accentColor().hex(),                  // regex doğrulanmış
@@ -510,6 +601,33 @@ run.setBold(true); run.setText(text);
 | DOCX | tahmini satır | font metriği (Word ölçümü alınamaz) | %12 |
 
 DOCX'te sayfa garantisi **yaklaşıktır** — kullanıcıya belirtilir.
+
+#### 22.6.1 Üçüncü renderer indi (denetim, 2026-09-15)
+
+`rendering/html/` modül haritasından beri boştu ve § 1.2'nin dördüncü iddiası
+onun üstünde duruyordu. `GET /generations/{id}/download?format=html` artık
+**tek dosyalık** bir belge veriyor: stylesheet yok, font yok, script yok,
+hiçbir şey çekilmiyor — dosya indirilenler klasöründen açılıyor, bir forma
+yapıştırılıyor ya da bir ayrıştırıcıya veriliyor, ve üçü de olmayan bir
+referansta kırılır.
+
+**Sayfa garantisi HTML'de yaklaşık değil, hiç geçerli değil.** DOCX'inki
+yaklaşıktır çünkü Word bir sayfa dizer; HTML'in sayfası yoktur. Bir genişlik
+verip ona sayfa demek, ölçmediğimiz bir şeyi iddia etmek olurdu.
+
+Yukarıdaki tablonun HTML satırındaki "headless tarayıcı ile ölçüm" bu yüzden
+**karşılıksız**: HTML→PDF diye bir çıktı yok ve olsa bile ölçümü ikinci bir
+bileşen (tarayıcı) ister. Satır bir gelecek tarifi olarak duruyor.
+
+**Kaçış merkezde ve bütün savunma o.** § 42.3'ün cümlesi burada birebir
+geçerli: LaTeX'te güvenli olan taşınmaz. CV kullanıcı içeriği, çıktı HTML, ve
+`href` bir öznitelik içinde duruyor — tırnak da kaçırılıyor, çünkü bir
+kaçırıcıyla bir enjeksiyon arasındaki mesafe tam olarak o.
+
+**`format=source` de indi** (§ 35.2, § 55'in "ham kaynak indirme"si). Ham
+LaTeX'i **okumak** § 33.1'in C katmanı değil: o kural kimsenin LaTeX
+*yazmasına* izin vermiyor, çünkü kullanıcı işaretlemesinin derleyiciye
+ulaşması bir çalıştırma yüzeyi. Buradan geri okunan hiçbir şey yok.
 
 ---
 
@@ -547,16 +665,39 @@ Sapma oranı metrik olarak izlenir (`selection.budget.overshoot.rate`). Yükseli
 ### 23.2 ATS uyumluluk kontrolü
 
 ```java
-public AtsReport checkAts(byte[] pdf) {
-    String extracted = pdfTextStripper.extract(pdf);
+public static AtsReport of(byte[] pdf, RenderRequest printed) {
+    String extracted = new PDFTextStripper().getText(load(pdf));
     return new AtsReport(
-        containsAllSectionHeaders(extracted),
-        contactInfoParseable(extracted),
-        textOrderCorrect(extracted),        // beklenen sırayla mı çıkıyor
-        noTableArtifacts(extracted)
+        headingsFound, headingsMissing,      // bölüm başlıkları geri çıktı mı
+        bulletsFound, bulletsExpected,       // basılan maddelerin kaçı okunabildi
+        contactReadable(printed, extracted),
+        orderPreserved(printed, extracted)   // beklenen sırayla mı çıkıyor
     );
 }
 ```
+
+> **Dört kontrol sayılıyordu, inen üç tanesi ve bir dördüncüsü başka**
+> (düzeltme, denetim 2026-09-20).
+>
+> **`noTableArtifacts` yazılmadı, ve yazılmayacak.** Üç şablon da bilerek tek
+> kolon (§ 33.5'in ATS gerekçesi) ve `two_column` V17'de sözlükten kalktı —
+> yani renderer'ın üretemediği bir kusuru arayan bir kontrol, **hiç
+> düşemeyecek bir test** olurdu (§ 51.7'nin birinci kuralı). Aradığı gerçek
+> risk sıranın bozulması ve onu `orderPreserved` ölçüyor; `AtsReport`'un
+> javadoc'u iki kolonlu bir şablonun öteki her kontrolü geçip ikisini birbirine
+> karıştırabileceğini zaten yazıyor. İki kolonlu bir şablon inerse bu satır
+> yeniden açılır.
+>
+> **Madde kapsaması burada yazılı değildi ve inen en değerli yarısı o.** Başlık
+> geri okunuyor ama maddeler okunmuyorsa metin katmanı bozuk demektir; sayım
+> `bulletsFound / bulletsExpected`, eşleşme ilk 80 karakter üzerinden
+> (kırpılma ve tireleme bir karakter düşürebiliyor, tamamını isteyen bir
+> kontrol mükemmel basılmış bir sayfayı kusurlu raporlardı).
+>
+> **Raporluyor, hiç reddetmiyor.** Sayfa sınırına uyan ve parası ödenmiş bir
+> belge kişinindir; buradaki her bulgu **bizim** şablonumuzun ya da
+> fontumuzun kusuru, ve belgeyi elinden almak kendi hatamızı ona ödetmek
+> olurdu. Sayaçlar `generation.ats.clean` / `.defect`.
 
 ### 23.3 Uygunluk raporu
 
@@ -760,11 +901,22 @@ Kütüphaneye (Vavr) gerek yok — dilin kendisi yeterli.
 
 ### 25.2 Hata hiyerarşisi
 
-> **Not (Aşama 1).** `PipelineError` yalnız hattın bugün üretebildiği dört
-> durumu taşıyor: `InsufficientProfile`, `ConflictingPreferences`,
-> `PageLimitExceeded`, `CompilationFailed`. Gerisi kendi fazlarıyla gelecek —
+> **Not (Aşama 1).** `PipelineError` o gün yalnız hattın üretebildiği dört
+> durumu taşıyordu: `InsufficientProfile`, `ConflictingPreferences`,
+> `PageLimitExceeded`, `CompilationFailed`. Gerisi kendi fazlarıyla gelecekti —
 > erken eklemek `params` alanlarını tahmin etmek olurdu, ve frontend'in
 > mesajlarının ihtiyacı tam olarak o alanlar (EK D.8.6, D.8.8).
+>
+> **Bugün on beş durum var, ve aşağıdaki listenin ikisi hiç gelmedi**
+> (denetim, 2026-09-16). `RewriteValidationFailed` ile `EmbeddingUnavailable`
+> **bilerek yok**: § 21.6.1 yeniden yazım katmanının çağırana
+> bildirebileceği bir başarısızlık olmadığını kaydediyor (reddedilen bir
+> yeniden yazım kişinin kendi cümlesini bastırıyor), ve ölçülemeyen benzerlik
+> kontrolü atlanıyor — yani ikisi de bir hata değil, bir geri çekilme. Kalan
+> on üçünün tamamı `JobRetryPolicy`'nin exhaustive switch'inde.
+>
+> **Kanonik liste artık burası değil**, `ErrorCode` enum'undan üretilen
+> `error-catalogue.md`.
 
 ```java
 public sealed interface PipelineError {

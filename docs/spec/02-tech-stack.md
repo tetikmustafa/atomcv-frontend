@@ -18,12 +18,12 @@
 | **Spring Data JPA + Hibernate** | ORM | İlişkisel model ağırlıklı; `@Version` ile optimistic locking bedava |
 | **Flyway** | Veritabanı migration | Versiyonlu, sıralı, checksum korumalı şema evrimi. Elle DDL asla. |
 | **Jakarta Bean Validation** | Girdi doğrulama | Deklaratif, standart |
-| **Resilience4j** | Retry, circuit breaker, timeout | LLM ve derleme servisleri için dayanıklılık |
+| **Resilience4j** — yalnız circuit breaker | Sağlayıcı devre kesici | **Üçünden biri alındı (denetim, 2026-09-16).** Retry ve timeout bu tablo yazıldıktan sonra başka türlü cevaplandı: Bölüm 27.3'ün retry'si *hangi tür* arızanın sonraki sağlayıcıyı hak ettiğini soran bir zincir yürüyüşü, bir retry politikası değil; timeout soketin durduğu yerde, `RestClient`'ta. Eksik olan kesiciydi ve yokluğu bir kesinti değil bir vergiydi — zincirin başındaki karanlık bir sağlayıcıya her üretim soruyor ve yürüyüş ilerlemeden önce 30 saniyenin tamamını ödüyordu. Çekirdek kütüphane, Spring starter değil: tek çağrı yeri için AOP getirirdi ve § 27.3'ün yürüyüşünün kesiciyi *sarmalanmak* yerine *sorması* gerekiyor. `resilience4j-micrometer` alınmadı — hiçbir kaynak dosyada geçmeyen adlarla ölçer bağlıyor, `MetricCatalogueTest` ise kaynağı tarıyor: bütün bir seri ailesi kayıtsız gelip aynı şekilde giderdi. İzlenmeye değer tek sayı elle yayımlanıyor (`llm.provider.breaker.open`) |
 | ~~Bucket4j~~ → Redis'te kayan pencere | Rate limiting | **Alınmadı (Adım 3.3, dilim 4).** Bölüm 40.5 sınırlarını "3 istek / 15 dakika" diye yazıyor, ki bu pencere; token kovası ortalaması aynı çıkan başka bir kuraldır. Kararı `Retry-After` verdi — bir sonraki slotun ne zaman boşaldığını yalnız pencere söyleyebilir. Sıralı küme + tek Lua script; yeni bağımlılık yok, oturum ve OAuth state'in zaten kullandığı kalıp. § 40.5.1 |
 | **Spring RestClient** | HTTP istemcisi | LLM API'lerine raw REST çağrıları için; SDK bağımlılığı yok |
 | **Apache PDFBox** | PDF metin çıkarımı | En olgun Java PDF kütüphanesi; **FontBox** ile TTF/OTF metrik okuma da bedava geliyor |
 | **Apache POI** | DOCX okuma/yazma | Java'da standart |
-| **Thymeleaf** | E-posta şablonları | Sunucu tarafında render; ayrı JS ekosistemi gerektirmiyor |
+| ~~Thymeleaf~~ → düz Java | E-posta şablonları | **Alınmadı (denetim, 2026-09-15).** § 57.7 listeyi kapalı tuttu: üç e-posta var (sihirli bağlantı, hoş geldin, silme onayı), her biri bir konu ve iki gövde. Bir şablon motoru, üç sınıfın döndürdüğü dizeler için ikinci bir dil, ikinci bir dosya düzeni ve çözülecek ikinci bir yerelleştirme yolu olurdu. `EmailMessage` metni ve HTML'i birlikte zorunlu tutuyor (§ 57.7), ki motorun sağlayacağı garanti oydu |
 | **springdoc-openapi** | API şeması üretimi | Frontend tip üretiminin kaynağı |
 
 **Neden .NET değil:** .NET 9 teknik olarak rekabetçi (daha düşük bellek, daha modern dil ergonomisi). Ancak: (a) Apache PDFBox/POI'nin doküman işleme olgunluğu .NET karşılıklarından belirgin üstün ve bu projenin çekirdek ihtiyacı, (b) virtual threads bu I/O-bound iş yükü için async/await'ten daha az bulaşıcı, (c) geliştiricinin mevcut yetkinliği — karmaşık bir sistemi öğrenirken inşa etmenin bilişsel maliyeti asıl problemlerden çalar.
@@ -89,7 +89,7 @@ Model adları **env değişkeni**dir, koda gömülmez — model isimlendirmeleri
 | **XeLaTeX** | PDF derleme | Unicode'u doğrudan işler. pdflatex'te Türkçe İ/ı karakterleri `inputenc`/`fontenc` ile sorunlu. Bedeli 2-3× yavaşlık, çok dilli üründe ödemeye değer. |
 | **Tectonic** (alternatif) | PDF derleme | Daha küçük saldırı yüzeyi, daha küçük imaj. İkincil seçenek. |
 | `\savebox` + `\typeout` | Render maliyeti ölçümü | TeX'in kendisine ölçtürüyoruz — hata payı sıfır |
-| **Font whitelist** | Güvenlik + tutarlılık | Latin Modern, TeX Gyre Pagella/Termes/Heros, Fira Sans, Source Sans 3. Hepsi Latin Extended (Türkçe) kapsıyor. |
+| **Font whitelist** | Güvenlik + tutarlılık | **Dördü inen:** Latin Modern (`modern`), TeX Gyre Termes (`serif`), Heros (`sans`), Pagella (`book`). Hepsi Latin Extended (Türkçe) kapsıyor ve hepsi Debian'ın `texlive-fonts-recommended` + `fonts-texgyre` paketlerinde. **Fira Sans ve Source Sans 3 inmedi** (denetim, 2026-09-15): ikisi de Debian'da ayrı bir font paketi olarak yok, ve TeX tarafı `texlive-fonts-extra` — ölçüldü, **kurulu boyutu 1.38 GB**. § 46.3 LaTeX imajına 2.0 GB ayırıyor ve imaj bugün onun altında; iki yazı tipi için onu üçe katlamak, § 29.2'nin "texlive-full yok, her paket saldırı yüzeyi" gerekçesini de çiğner. Yol açık: `docker/latex/fonts/` vendor'lanmış bir TTF'i zaten alıyor (ikisi de SIL OFL) — bir şablon gerçekten isterse öyle iner, ve `scripts/measure-template.sh` yeni geometriyi ölçer |
 
 **Neden self-host, dış API değil:** Önceki nesilde dış derleme API'si (latexonline.cc, ytotech) sürekli sorun çıkardı — timeout, format uyumsuzluğu, tek hata noktası. Self-host tam kontrol veriyor.
 
@@ -157,8 +157,8 @@ Model adları **env değişkeni**dir, koda gömülmez — model isimlendirmeleri
 | **Strategy** | LLM sağlayıcıları, Renderer'lar, Seçim algoritması | Yeni sağlayıcı/şablon = yeni sınıf; mevcut kod değişmez |
 | **Ports & Adapters (Hexagonal)** | Tüm dış servisler, anonim/kalıcı store | Dış servisler arayüz arkasında; testte mock'lanabilir; anonim mod pipeline'a dokunmadan çalışır |
 | **Repository (user-scoped)** | Tüm veri erişimi | IDOR'u **yapısal olarak** engeller — kritik güvenlik kararı |
-| **Pipeline / Chain of Responsibility** | Faz A→G | Her faz bağımsız, test edilebilir, sıra konfigüre edilebilir |
-| **Factory** | Renderer seçimi | Şablon adı → renderer örneği |
+| **Pipeline** | Faz A→G | Her faz bağımsız ve tek başına test edilebilir. **"Sıra konfigüre edilebilir" iddiası kaldırıldı** (denetim, 2026-09-16): sıra bir konfigürasyon değil bir veri bağımlılığı — Faz C'nin bütçesi Faz B'nin skorlarını, Faz F'nin sayfa sayısı Faz E'nin kaynağını istiyor. Chain of Responsibility de değil: halkalar isteği birbirine devretmiyor, `GenerationPipeline` onları adıyla çağırıyor (§ 17.1) |
+| **Factory** | Yazıcı seçimi (`DocumentWriters`) | Format adı → `DocumentWriter`. **Satır "şablon adı → renderer örneği" diyordu ve öyle bir şey hiç yazılmadı** (denetim, 2026-09-16): şablonu `TemplateRegistry` çözüyor, seçilecek renderer ise tekti. Gerçekten eksik olan fabrika formatınkiydi, ve yokluğunda listeyi `generation` tutuyordu (§ 10.2, kural 3) |
 | **Result / Either** | Pipeline hata yönetimi | Exception yerine tipli hata; "kullanıcıya ne söyleyeceğiz" kararı akışta kalır |
 | **Value Object** | Atom, Score, RenderCost, ProfileRef | Primitive obsession'dan kaçınma; `ProfileRef` tipi yanlış store'a gitmeyi derleme zamanında yakalar |
 | **Specification** | Skorlama kriterleri | Kriterler kompozit olarak birleştirilebilir |
@@ -190,7 +190,7 @@ userScopedAtomRepository.findById(currentUser, atomId);
 | **Jaro-Winkler + embedding** | Ingestion — kaynak birleştirme/deduplication | O(n·m) |
 | **Exponential backoff + jitter** | Kuyruk retry | O(1) |
 | **Sliding window** | Rate limiting | O(1) |
-| **Murmur3 hash bucketing** | Prompt A/B testi | O(1) |
+| **CRC32 hash bucketing** | Prompt A/B testi | O(1). **Satır Murmur3 diyordu**; karar ve gerekçesi § 53.2'de (tek bir hash için Guava bağımlılığı alınmadı, CRC32 JDK'da ve `Math.abs(Integer.MIN_VALUE)` tuzağından da kaçınıyor). Tablo satırı güncellenmemişti — denetim, 2026-09-16 |
 | **HNSW** | pgvector indeksi (10k+ satırda) | O(log n) |
 
 ### 7.1 Neden greedy, DP değil
