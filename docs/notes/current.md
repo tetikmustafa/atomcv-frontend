@@ -155,6 +155,42 @@ birebir senkrondu; gerçek bulgu fazlalıktı. `B-114`'ün iki yeni eylemi
 
 **Ölçüm:** 821 birim testi yeşil, typecheck temiz, lint temiz.
 
+### D2 kapandı — katalog testi üretilen tabloya bağlandı (2026-09-20)
+
+`B-110`'un teklifi alındı. `errorCatalogue.test.ts` artık
+`docs/error-catalogue.md`'yi **veri olarak** okuyor ve kendi `PARAMS`'ıyla üç
+şeyi karşılaştırıyor: kod kümesi, kod başına parametre **adları**, ve her
+adın **tipi**. Zincirin ikinci halkası bağlandı — backend bir kod eklediğinde
+`ErrorCatalogueDocumentTest` orada, bu test burada düşüyor.
+
+**Sayılar da denetlendi ve `B-111`'in ikisi de yanlıştı.** Madde "27'ye karşı
+enum'da 41" diyordu; ölçüldü: **enum 40, katalog 40, ve ikisi birebir aynı.**
+Bizim tarafta bir eylem gerektirmiyor, ama bir sayıyı doğru sanmakla ölçmek
+arasındaki farkın kaydı olsun.
+
+**Tip karşılaştırması tek yönlü.** Soru "`PARAMS` yalan mı söylüyor" — "tek
+doğru bu mu" değil. `integer` 2.3'ü reddediyor, `number` 1'i kabul ediyor:
+daraltan taraf katalog. `timestamp` telde bir metin, çünkü `Date` teli
+geçemez — `formatErrorParams` onu çeviren tek yer.
+
+**`Vite`'ın bir kuralına çarpıldı ve kayda değer.** `new URL(yol,
+import.meta.url)` Vite'ta bir **varlık referansıdır**; kalıp derleme anında
+yeniden yazılıyor ve `fileURLToPath` elinde çıplak bir `/docs/…` buluyor,
+sonra fırlatıyor. Dizin önce alınırsa kuralın eşleşeceği bir şey kalmıyor.
+
+**Boş yere geçmenin yolu kapatıldı.** Her kontrol ayrıştırılmış satırlar
+üzerinde dönüyor, yani hiçbir şey eşleştirmeyen bir ayrıştırıcı hepsini tek
+satır okumadan geçerdi — biçim değişikliğinin yaratacağı hatanın ta kendisi,
+ve başarıya benzeyen tek hata. `read the file` bunun için var, ve okunamayan
+bir satır artık atlanmıyor, **fırlatıyor**: kırkta otuz dokuzu ayrıştıran bir
+biçim değişikliği eşiği geçerdi.
+
+**Negatif kontrol yapıldı, üç yönde** (Aşama 2'nin dersi): yanlış tip →
+tip kontrolü düştü; katalogda ad değişikliği → ad kontrolü düştü; tablo
+biçimi bozuldu → `read the file` düştü.
+
+**Ölçüm:** 880 birim testi yeşil (D1'de 821'di), typecheck ve lint temiz.
+
 ### Aşama 3'ten devrolan açıklar
 
 - ~~**Gizlilik politikasının sağlayıcı listesi eksik.**~~ **Bayat çıktı

@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createTranslator } from 'next-intl';
 import { describe, expect, it } from 'vitest';
 import en from '@/messages/en.json';
@@ -6,7 +9,7 @@ import { formatErrorParams, MESSAGE_DEFAULTS, type IcuValue } from '@/lib/errors
 import type { ErrorCode, KnownResolutionAction } from '@/types/domain';
 
 /**
- * The `params` each code carries, with the types `spec/08b-api-contract.md` declares.
+ * The `params` each code carries, with the types the catalogue declares.
  *
  * This is test data, not a mirror of a backend type: it is the input every
  * message has to survive. The server refuses to publish an undeclared key
@@ -14,6 +17,15 @@ import type { ErrorCode, KnownResolutionAction } from '@/types/domain';
  * information the message will ever get — and formatting throws when a
  * message reaches for anything else, which is the typo this file exists to
  * catch.
+ *
+ * **It is no longer written from a table somebody read** (`B-110`, D2). The
+ * names and types below are checked against `docs/error-catalogue.md`, which
+ * is generated from `ErrorCode` and fails the backend's own build the moment
+ * the two diverge. Until that check existed, every code's parameter names
+ * lived in two hand-written places and nothing compared them — the
+ * exhaustiveness
+ * assertion further down covers the *set* of codes, which is what `gen:api`
+ * publishes, and said nothing about what each one carries.
  */
 const PARAMS = {
   INSUFFICIENT_PROFILE: { completeness: 28, missing: ['atoms', 'sections'] },
@@ -105,6 +117,149 @@ const PARAMS = {
 type Uncovered = Exclude<ErrorCode, keyof typeof PARAMS>;
 const _everyCodeIsCovered: Uncovered extends never ? true : Uncovered = true;
 void _everyCodeIsCovered;
+
+/**
+ * The generated catalogue, read as data (`B-110`).
+ *
+ * `docs/error-catalogue.md` arrives through the spec sync and is produced
+ * from the `ErrorCode` enum; `ErrorCatalogueDocumentTest` fails the backend's
+ * build when the committed file and the enum diverge. Reading it here closes
+ * the second link: a code whose params change fails **this** build too,
+ * before anybody writes a sentence against the old shape.
+ *
+ * Read from disk rather than imported, because it is a document rather than a
+ * module — and it is the same copy `INDEX.md` routes a person to.
+ *
+ * **Resolved in two steps, and the one-liner is wrong here.** Vite gives
+ * `new URL(path, import.meta.url)` a meaning of its own — it is how an asset
+ * is referenced — so the literal form is rewritten at transform time and
+ * `fileURLToPath` is then handed a bare `/docs/…`, which throws. Taking the
+ * directory first leaves nothing for that rule to match.
+ */
+const HERE = dirname(fileURLToPath(import.meta.url));
+const CATALOGUE_PATH = resolve(HERE, '../../../docs/error-catalogue.md');
+
+type DeclaredParam = { name: string; type: string };
+
+/**
+ * Throws rather than skips, everywhere a row does not parse.
+ *
+ * `noUncheckedIndexedAccess` makes the three possible holes visible, and the
+ * answer to each is the same: a row this cannot read is a **format change**,
+ * which is the one event this whole block exists to notice. Returning a
+ * partial map would leave the mismatch to be discovered as an absence, and an
+ * absence is what the `read the file` guard below already covers — badly, if
+ * thirty-nine of forty rows still parse.
+ */
+function parseCatalogue(markdown: string): Map<string, DeclaredParam[]> {
+  const rows = markdown.matchAll(/^\|\s*`([A-Z_]+)`\s*\|\s*(\d{3})\s*\|\s*(.*?)\s*\|\s*$/gm);
+  const declared = new Map<string, DeclaredParam[]>();
+
+  for (const row of rows) {
+    const [line, code, , cell] = row;
+
+    if (code === undefined || cell === undefined) {
+      throw new Error(`error-catalogue.md: could not read a row: ${line}`);
+    }
+
+    // An em dash is the file's way of writing "no params", and it is not the
+    // same as an empty cell: one is a statement, the other would be a row
+    // that lost its third column.
+    if (cell === '—') {
+      declared.set(code, []);
+      continue;
+    }
+
+    declared.set(
+      code,
+      cell.split(',').map((entry) => {
+        const [name, type] = entry.trim().replace(/`/g, '').split(':');
+
+        if (name === undefined || type === undefined) {
+          throw new Error(`error-catalogue.md: ${code} declares an unreadable param: ${entry}`);
+        }
+
+        return { name: name.trim(), type: type.trim() };
+      }),
+    );
+  }
+
+  return declared;
+}
+
+const DECLARED = parseCatalogue(readFileSync(CATALOGUE_PATH, 'utf8'));
+
+/**
+ * Whether a sample value could have been sent for a declared type.
+ *
+ * One-directional on purpose: this asks whether `PARAMS` is a **lie**, not
+ * whether it is the only possible truth. `integer` refuses 2.3 and `number`
+ * accepts 1, because a whole number is a number and the catalogue is the side
+ * that narrows.
+ */
+function couldBe(value: unknown, type: string): boolean {
+  switch (type) {
+    case 'integer':
+      return typeof value === 'number' && Number.isInteger(value);
+    case 'number':
+      return typeof value === 'number';
+    case 'boolean':
+      return typeof value === 'boolean';
+    case 'string':
+      return typeof value === 'string';
+    case 'string[]':
+      return Array.isArray(value) && value.every((item) => typeof item === 'string');
+    // A `Date` would not survive the wire; what arrives is the instant as a
+    // string, which `formatErrorParams` is the one thing that converts.
+    case 'timestamp':
+      return typeof value === 'string' && !Number.isNaN(Date.parse(value));
+    default:
+      return false;
+  }
+}
+
+describe('the generated catalogue and the params written here', () => {
+  /**
+   * The assertion that keeps the rest of this block honest.
+   *
+   * Every check below iterates the parsed rows, so a parser that matched
+   * nothing would pass all of them without reading a single line — the exact
+   * failure a format change would cause, and the exact failure that looks
+   * like success. The backend undertakes to keep the format stable and to
+   * announce a change as a `B-nnn`; this is what notices if it does not.
+   */
+  it('read the file', () => {
+    expect(DECLARED.size).toBeGreaterThan(30);
+  });
+
+  it('describes exactly the codes this file writes messages for', () => {
+    expect([...DECLARED.keys()].sort()).toEqual(Object.keys(PARAMS).sort());
+  });
+
+  it.each([...DECLARED.entries()])('declares the same params as %s carries', (code, params) => {
+    const written = PARAMS[code as keyof typeof PARAMS] as Record<string, unknown>;
+
+    expect(Object.keys(written).sort()).toEqual(params.map(({ name }) => name).sort());
+  });
+
+  it.each([...DECLARED.entries()].filter(([, params]) => params.length > 0))(
+    'gives %s params of the types written here',
+    (code, params) => {
+      const written = PARAMS[code as keyof typeof PARAMS] as Record<string, unknown>;
+
+      for (const { name, type } of params) {
+        // Named in the message so a failure says which param and which type,
+        // rather than "expected true to be false".
+        expect({ name, type, value: written[name], fits: couldBe(written[name], type) }).toEqual({
+          name,
+          type,
+          value: written[name],
+          fits: true,
+        });
+      }
+    },
+  );
+});
 
 const RESOLUTION_PARAMS = {
   increase_page_limit: { maxPages: 3 },
