@@ -45,13 +45,13 @@ başka hiçbir yerde kırık yok.
 | D3 | `EXTRACTION_TIMEOUT` metni 503'ten ayrılır; `archive` dalı; iki yeni çözüm anahtarı ve davranışı | `B-113`, `B-114` |
 | D4 | `StaleWording` anonimde çizilmez | `B-115`'in tek eksiği |
 | D5 | İndirme: `html` + `source` | `B-105` |
-| D6 | Üretim isteği: `emphasize`, `note`, `customizationId` | `B-104` + F-034 |
+| D6 | Üretim isteği: `emphasize`, `note` | `B-104` + `F-038` |
 | D7 | Arşivleme | `B-102` |
 | D8 | Seçim gerekçeleri: `matchedKeywords`, `heldBackReason` ×4 | `B-108` |
 | D9 | Atom etiketleri | `B-103` |
 | D10 | `auto` çevirinin üç sonucu | `B-107` |
 | D11 | GitHub içe aktarımı | `B-106` |
-| D12 | Şablon kapasitesi + adlandırılmış özelleştirmeler | F-035, F-036 |
+| D12 | Şablon kapasitesi + adlandırılmış özelleştirmeler + `customizationId` | `F-038` |
 | D13 | Kasıtlı boşlukların kapananları | aşağıdaki tablo |
 | D14 | Açık kaynak ve büyüme | § 55 `[F]` |
 
@@ -61,12 +61,13 @@ D5-D8 telde **zaten var olan** alanları okur, yani en ucuz getiri. D9-D12
 yeni ekran ister. D13-D14 karar ve metin ağırlıklı, ve ikisi de kodun geri
 kalanı otururken yazılmalı.
 
-**Dört `F-nnn` D6'dan önce açılır** — üçü doküman düzeltmesi, biri soru:
-`POST /generations` **`note` alanı geldi** ve `B-104` "gelmedi ve bilerek"
-diyor (F-034); **`GET /templates`** ve **`/customizations`** hiçbir maddede
-adlandırılmadı (F-035, F-036); `customizationId` de öyle. Dördü de
-`gen:api`'nin bulduğu şeyler, bir maddenin değil — **şema dokümanı geçti**,
-ve bu, `B-101`'in bağlamak istediği muhafızın yokluğunun ta kendisi.
+**İki `F-nnn` açıldı (D3'te).** `F-038` şemada olup hiçbir maddede
+adlandırılmayan **dördünü** tek maddede soruyor: `POST /generations`'ın
+**`note`** alanı geldi ve `B-104` "gelmedi ve bilerek" diyor, `customizationId`
+de öyle, ve `GET /templates` ile `/customizations` hiç anılmadı. Dördü de
+`gen:api`'nin bulduğu şeyler, bir maddenin değil — **şema dokümanı geçti**, ve
+bu, `B-101`'in bağlamak istediği muhafızın yokluğunun ta kendisi. `F-037` ise
+`choose_language`'ın dolduracağı alanı istiyor.
 
 **Ucu olmayan üç iş `F-nnn` olarak kalır, D13'e girmez:** § 37.5'in arka plan
 iş göstergesi, § 33.3'ün "yeniden hesaplanıyor"u, ve ürün dokümanının saydığı
@@ -188,6 +189,56 @@ bir PDF'e düşüş, hiç servis edilmeyen bir biçimin düğmesine PDF döndür
 kimse dosyayı açana kadar fark etmezdi. Test `rtf` ile soruyor.
 
 **Ölçüm:** 897 birim testi yeşil, typecheck ve lint temiz.
+
+### D6 kapandı — iki yönlendirme alanı, varsayılan kapalı (2026-09-20)
+
+**Kapsam bir alan daraldı ve gerekçesi kayda değer.** Plan D6'ya üç alan
+yazıyordu; `customizationId` **D12'ye taşındı**, çünkü kaydedilmiş bir görünüm
+seti yokken bir seçici çizmek, kişiye özelliğin bozuk olduğunu öğreten bir
+kontroldür. Alan telde duruyor, isteği kuran yer aynı — eksik olan tek şey
+kaydı üreten ekran.
+
+**Kapalı olması bir yerleşim tercihi değil, ürün kuralı.** "Elle kontrol
+isteğe bağlı", varsayılan çıktının kimse hiçbir şeye dokunmadan kullanılabilir
+olması demek; üç girdiyle açılan bir ekran, boş iki tanesinin önemli olduğunu
+**zaten söylemiş** olur. Panel kapalıyken **mount edilmiyor**, yani "varsayılan
+senden bir şey istemiyor" iddiası sekme sırası için de doğru.
+
+**İkisi de ne profile ne ilana ait, istek alanı olmalarının sebebi bu.**
+`emphasize` ilanın kendi keyword'lerine tek koşu için katılıyor ve **pasted
+metne katlanamaz**: bir ilanın analizi hash'iyle cache'leniyor ve onu
+yapıştıran herkes arasında paylaşılıyor, yönlendirme ise bir kişiye ve bir
+koşuya ait. `note` yalnız Faz D'ye gidiyor — Faz B ilana karşı sıralıyor ve bir
+cümle terim değil.
+
+**İkisi de boşken gönderilmiyor.** Boş bir `emphasize` hiçbir terim adlandıran
+bir yönlendirme, boş bir `note` prompt'a verilip yok sayılması gereken bir
+cümle. Şemanın kendi açıklaması `customizationId` için aynı okumayı yapıyor:
+"yokluğu neredeyse her isteğin kastettiği şey".
+
+**Reddedilmeden yeniden gönderilenler korunuyor.** Bu ekrandaki her çıkış yolu
+isteği tekrar gönderiyor (`continue_anyway`, `continue_as_general_cv`,
+`increase_page_limit`) ve gönderdiği şey kişinin kastettiği istek. Yönlendirmeyi
+orada düşürmek, tek işi aynı isteği tekrar göndermek olan bir düğmenin
+arkasında isteği sessizce değiştirmek olurdu.
+
+**`TagInput` bir `maxCount` kazandı** ve sınırda **devre dışı kalıp sebebini
+söylüyor**. On birinci girdiyi yutmak, kişiye listesinin yanlış olduğunu birer
+birer öğretirdi (P8) — üstelik burada liste, sıralamanın okuduğu şey. `onBlur`
+sınıra giderken de tetiklendiği için taslak ayrıca düşürülüyor.
+
+**Sınır mock'ta da var, ekranda olmasına rağmen.** Ekran ikisini de kapıyor,
+yani gönderdiği hiçbir şey oraya varamaz — reddin kodlanma sebebi tam olarak
+bu: yalnız istemcinin tuttuğu bir sınır, ikinci bir çağıran yazılana kadar
+tutan bir sınırdır.
+
+**Bir test kapsamsız sorguyla kırıldı ve düzeltilmesi doğruydu.** "Üç çıkış
+yolu, gönderildiği sırada" ekrandaki **bütün** düğmeleri okuyordu ve formun
+kendi submit'ini de listeye sayıyordu; iddia sunucunun sıralaması hakkında,
+ekranın kaç kontrolü olduğu hakkında değil. Panele kapsandı, ve "submit satırın
+dışında" ayrı bir iddia olarak yazıldı.
+
+**Ölçüm:** 902 birim testi yeşil, typecheck ve lint temiz.
 
 ### Aşama 3'ten devrolan açıklar
 

@@ -273,7 +273,8 @@
     },
     "tags": {
       "placeholder": "Type and press Enter",
-      "remove": "Remove {value}"
+      "remove": "Remove {value}",
+      "full": "That's the limit of {max, plural, =1 {one} other {#}}. Remove one to add another."
     },
     "variants": {
       "listLabel": "Wordings",
@@ -414,7 +415,16 @@
     "startOver": "Start again",
     "coverLetter": "Write a covering letter too",
     "coverLetterAccount": "Covering letters need an account. The resume itself is the same either way.",
-    "coverLetterSignIn": "Create an account"
+    "coverLetterSignIn": "Create an account",
+    "directives": {
+      "show": "Steer this one",
+      "hide": "Hide these",
+      "emphasizeLabel": "Terms to bring forward",
+      "emphasizeHint": "Words you know the work is about that the posting does not say. They join the posting's own terms for this resume only — nothing about your profile changes.",
+      "noteLabel": "How this one should read",
+      "noteHint": "A sentence or two, in your own words. It can steer wording and emphasis; it cannot add anything you have not written, or change what a line says happened.",
+      "notePlaceholder": "Lead with the platform work rather than the ML."
+    }
   },
   "Result": {
     "title": "Your resume",

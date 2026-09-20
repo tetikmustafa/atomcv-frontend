@@ -9,6 +9,11 @@
  * where the profile already decided them. `maxPages` reaches the request only
  * when the *server* offers `increase_page_limit` as a way out of an error.
  *
+ * `B-104` added two fields the reader may set, and the rule above is what
+ * decides where they go: behind a control that is **closed by default**
+ * (`Directives`). A screen opening with three inputs has already told
+ * somebody the empty two matter.
+ *
  * The posting itself is optional too. Its absence is general mode (§ 35.3) —
  * narrower in aim, never lower in quality — so the button is never disabled
  * for an empty field.
@@ -18,6 +23,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
+import { Directives } from '@/components/generation/Directives';
 import { JobProgress } from '@/components/generation/JobProgress';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -73,6 +79,17 @@ export function GenerateScreen() {
    * this screen that adds to it.
    */
   const [coverLetter, setCoverLetter] = useState(false);
+  /**
+   * `B-104`'s two, and they are **not** cleared on a refusal.
+   *
+   * Every way out of an error on this screen resubmits — `continue_anyway`,
+   * `continue_as_general_cv`, `increase_page_limit` — and they resubmit what
+   * the reader meant. Dropping the directives there would silently change the
+   * request behind a button whose whole purpose is to send the same one
+   * again.
+   */
+  const [emphasize, setEmphasize] = useState<string[]>([]);
+  const [note, setNote] = useState('');
   const [job, setJob] = useState<{ jobId: string; streamUrl?: string } | null>(null);
 
   /**
@@ -110,6 +127,19 @@ export function GenerateScreen() {
       // see (`B-082`).
       coverLetter: coverLetter && canWriteCoverLetter,
       ...(trimmed === '' ? {} : { jobDescription: trimmed }),
+      /*
+        Both omitted when empty rather than sent blank, and not for tidiness.
+        An empty `emphasize` array is a directive that names no terms, and an
+        empty `note` is a sentence the prompt would be handed and have to
+        ignore — the server's own description says an absent `customizationId`
+        is what nearly every request means, and the same reading applies here.
+
+        Trimmed because the server stores them trimmed; sending the untrimmed
+        form would make two requests that mean the same thing look different
+        to anything comparing them.
+      */
+      ...(emphasize.length === 0 ? {} : { emphasize }),
+      ...(note.trim() === '' ? {} : { note: note.trim() }),
       // Omitted rather than sent empty where there is none: an empty value is
       // a **failure** to the challenge, while an absence is what a deployment
       // without a Turnstile secret expects (`B-083`).
@@ -246,6 +276,14 @@ export function GenerateScreen() {
           onChange={(event) => setPosting(event.target.value)}
         />
       </div>
+
+      <Directives
+        emphasize={emphasize}
+        onEmphasizeChange={setEmphasize}
+        note={note}
+        onNoteChange={setNote}
+        disabled={start.isPending}
+      />
 
       {/*
         The box, or the sentence that stands in for it (§ 35.7.3, `B-082`).

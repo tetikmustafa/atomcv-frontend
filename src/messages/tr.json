@@ -273,7 +273,8 @@
     },
     "tags": {
       "placeholder": "Yaz ve Enter’a bas",
-      "remove": "{value} sil"
+      "remove": "{value} sil",
+      "full": "Sınır {max, plural, =1 {bir} other {#}}. Yenisini eklemek için birini kaldır."
     },
     "variants": {
       "listLabel": "İfadeler",
@@ -414,7 +415,16 @@
     "startOver": "Yeniden başla",
     "coverLetter": "Ön yazı da yaz",
     "coverLetterAccount": "Ön yazı için hesap gerekiyor. CV'nin kendisi iki durumda da aynı.",
-    "coverLetterSignIn": "Hesap aç"
+    "coverLetterSignIn": "Hesap aç",
+    "directives": {
+      "show": "Bunu yönlendir",
+      "hide": "Gizle",
+      "emphasizeLabel": "Öne çıkarılacak terimler",
+      "emphasizeHint": "İlanın söylemediği ama işin bununla ilgili olduğunu bildiğin sözcükler. Yalnız bu CV için ilanın kendi terimlerine katılıyorlar — profilinde hiçbir şey değişmiyor.",
+      "noteLabel": "Bu CV nasıl okunsun",
+      "noteHint": "Kendi cümlelerinle bir iki satır. Sözcük seçimini ve vurguyu yönlendirebilir; yazmadığın bir şeyi ekleyemez, bir satırın ne olduğunu anlattığını değiştiremez.",
+      "notePlaceholder": "Makine öğrenmesi yerine platform işlerini öne al."
+    }
   },
   "Result": {
     "title": "CV’n",

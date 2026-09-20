@@ -492,6 +492,37 @@ export const generationHandlers = [
       );
     }
 
+    /*
+      § 18.7's bounds, enforced rather than described (`B-104`).
+
+      The screen caps both fields, so nothing it sends can land here — which
+      is exactly why the refusal is encoded. A bound the client alone keeps is
+      a bound that holds until somebody writes a second caller, and this is
+      the handler that tells them, in the shape the server would.
+
+      Ahead of the quota gate, with the challenge and the letter: a malformed
+      request should not spend one of five generations.
+    */
+    const emphasize = body.emphasize ?? [];
+
+    if (
+      emphasize.length > 10 ||
+      emphasize.some((term) => term.length > 60) ||
+      (body.note ?? '').length > 500
+    ) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', GENERATIONS, [], {
+          fields: [
+            ...(emphasize.length > 10 || emphasize.some((term) => term.length > 60)
+              ? ['emphasize']
+              : []),
+            ...((body.note ?? '').length > 500 ? ['note'] : []),
+          ],
+        }),
+        { status: 400 },
+      );
+    }
+
     // § 44.3: the brake runs ahead of the quota, so a paused deployment does
     // not spend anyone's allowance on a request it is going to refuse.
     if (generations.paused) {
