@@ -43,8 +43,23 @@ const HANDLED = [
   'keep_existing_profile',
   'retry',
   'switch_to_manual_form',
+  'upload_another_file',
 ] as const;
 
+/**
+ * **`choose_language` is deliberately not in that list** (`B-114`, `F-037`).
+ *
+ * The server offers it beside `LANGUAGE_UNDETECTED`, and the screen would be
+ * right to ask the question — one candidate comes back, so it is "this one,
+ * or another?" rather than a menu. What is missing is somewhere to put the
+ * answer: `POST /profile/import` publishes `mode` and nothing else, and the
+ * multipart body carries the file and the challenge token. An answer with no
+ * field to travel in is a button that reopens the same refusal.
+ *
+ * Dropping it is the policy `ErrorPanel` already documents and the same call
+ * made for `keep_top_pinned`. The label stays in the catalogue, because the
+ * vocabulary is the server's; what waits on `F-037` is the field.
+ */
 function canResolve(action: Resolution['action']) {
   return (HANDLED as readonly string[]).includes(action);
 }
@@ -123,6 +138,33 @@ export function ImportScreen() {
       case 'switch_to_manual_form':
         // Nothing came out of the file, so the way forward is to write it.
         return router.push('/profile');
+
+      case 'upload_another_file':
+        /*
+          **Not `retry`, and the difference is the whole of `B-114`.** This
+          arrives with `PDF_ENCRYPTED`, and an encrypted file fails in the
+          same place every single time — a retry button would offer a door
+          that is known to be locked. What the reader needs is the picker,
+          because the copy they can open may already be on their machine.
+
+          The current file is cleared first. Leaving it selected would let
+          somebody close the picker and press Upload on the very file that was
+          just refused, which is the retry this is written to avoid.
+
+          `setJob(null)` covers the view this cannot arrive on today —
+          `PDF_ENCRYPTED` is refused synchronously, so the panel is on the
+          form. If it ever came from a job, the progress view has no `<input>`
+          mounted and the click would land on nothing; going back to the form
+          leaves an empty picker to press instead of a dead button.
+        */
+        setFile(null);
+        setJob(null);
+        start.reset();
+        if (input.current) {
+          input.current.value = '';
+          input.current.click();
+        }
+        return;
 
       default:
         // Unreachable: `canResolve` decides what is drawn.

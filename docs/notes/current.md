@@ -191,6 +191,40 @@ biçimi bozuldu → `read the file` düştü.
 
 **Ölçüm:** 880 birim testi yeşil (D1'de 821'di), typecheck ve lint temiz.
 
+### D3 kapandı — dört reddin çıkış yolu, iki metnin ayrılması (2026-09-20)
+
+**`B-114`'ün asıl bulgusu mock'un sadakatiydi.** Dört çıkarım reddi boş bir
+`resolutions` dizisiyle geliyordu ve mock bunu **sadakatle** üretiyordu — yani
+"cümle var, düğme yok" hâli defalarca bakıldı ve hiç görülmedi. Üçü artık
+çözüm taşıyor; `switch_to_manual_form` sözlükte üretensiz duruyordu.
+
+**`upload_another_file` bir `retry` değil ve fark maddenin tamamı.** Şifreli
+dosya her seferinde aynı yerde düşüyor, yani tekrar düğmesi kilitli olduğu
+bilinen bir kapı açıyor. Seçilen dosya **önce temizleniyor**: seçici kapatılıp
+Yükle'ye basılabilseydi, kaçınmak için yazılan tekrar geri gelirdi.
+
+**`choose_language` çizilmiyor ve bu `F-037`.** Sunucu onu gönderiyor, ekranın
+soruyu sorması doğru, ama cevabın gideceği alan yok: `POST /profile/import`
+yalnız `mode` yayımlıyor, gövde `file` ve `challengeToken` taşıyor. Üstelik kod
+**işten** geliyor (§ 08b, Adım 3.4), yani red anında yazılmış bir profil de
+yok. `ErrorPanel`'in politikası — taşıyamadığını düşür — `keep_top_pinned`'de
+verilen kararın aynısı, ve mutlak kural 7 ile sürtündüğü için madde açıldı.
+**Düğmenin çizilmediği bir testle sabitlendi**: alan indiği gün o test
+düğmenin artık borç olduğunu söyleyecek.
+
+**İki metin ayrıldı, çünkü `B-113` sunucuda ayırmıştı.** 504 aynı dosyayla
+tekrar denemeye davet ediyor, 503 denemenin yardımcı olmayacağını söylüyor —
+ikisi kullanıcıdan **zıt** şeyler istiyor ve ikisi de "bir şeyler ters gitti"
+deseydi ayrım ekrana giderken kaybolurdu. Üç kontrol: 504 tekrar diyor mu,
+503 yardımcı olmaz diyor mu, ikisi aynı cümle değil mi.
+
+**`FEATURE_REQUIRES_ACCOUNT` beşinci dalını aldı** (`archive`) ve cümlesi
+"hesap gerekiyor"dan fazlasını söylüyor: anonim oturumun üretimleri profiliyle
+gidiyor, yani işaretin saklayacağı bir şey **yok** — kontrol esirgenmiş değil,
+anlamsız.
+
+**Ölçüm:** 891 birim testi yeşil, typecheck ve lint temiz.
+
 ### Aşama 3'ten devrolan açıklar
 
 - ~~**Gizlilik politikasının sağlayıcı listesi eksik.**~~ **Bayat çıktı

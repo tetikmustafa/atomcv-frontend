@@ -22,10 +22,9 @@ import type { ErrorCode, KnownResolutionAction } from '@/types/domain';
  * names and types below are checked against `docs/error-catalogue.md`, which
  * is generated from `ErrorCode` and fails the backend's own build the moment
  * the two diverge. Until that check existed, every code's parameter names
- * lived in two hand-written places and nothing compared them — the
- * exhaustiveness
- * assertion further down covers the *set* of codes, which is what `gen:api`
- * publishes, and said nothing about what each one carries.
+ * lived in two hand-written places and nothing compared them: the
+ * exhaustiveness assertion further down covers the *set* of codes, which is
+ * what `gen:api` publishes, and said nothing about what each one carries.
  */
 const PARAMS = {
   INSUFFICIENT_PROFILE: { completeness: 28, missing: ['atoms', 'sections'] },
@@ -385,8 +384,19 @@ describe.each(CATALOGUES)('the %s error catalogue', (locale, messages) => {
    * server's, and a value it may send has to render whether or not today's UI
    * can produce it.
    */
-  describe('the four features behind FEATURE_REQUIRES_ACCOUNT', () => {
-    const FEATURES = ['atom_controls', 'alternatives', 'cover_letter', 'feedback'] as const;
+  describe('the five features behind FEATURE_REQUIRES_ACCOUNT', () => {
+    // `archive` is the fifth (`B-102`), and it maps to `canSaveHistory` the
+    // way `feedback` does. Its sentence has to say more than "that needs an
+    // account", because the reason is specific and reassuring: an anonymous
+    // session's generations go with its profile, so a keep-mark would have
+    // nothing to keep — the control is missing rather than withheld.
+    const FEATURES = [
+      'atom_controls',
+      'alternatives',
+      'cover_letter',
+      'feedback',
+      'archive',
+    ] as const;
 
     const render = (feature: string) => renderCode('FEATURE_REQUIRES_ACCOUNT', { feature });
 
@@ -719,6 +729,49 @@ describe('when a quota renews', () => {
  * are the server's to send, but the *message* is ours, and it should not
  * suggest the one thing that cannot work.
  */
+/**
+ * `B-113` split these two apart on the server, and the split is only worth
+ * anything if the sentences differ.
+ *
+ * Until then a provider chain that ran out said `ALL_PROVIDERS_UNAVAILABLE`
+ * whether the vendors were down or a long CV had simply run out of time. The
+ * chain now distinguishes them — every failure a timeout means 504 — and the
+ * two ask the reader for **opposite** things: 504 says try the same file
+ * again, 503 says trying again now will not help. Two messages that both said
+ * "something went wrong" would have thrown the distinction away on the way to
+ * the screen.
+ */
+describe('the two ways extraction runs out', () => {
+  it.each(CATALOGUES)(
+    'tells the reader to try again after a timeout, in %s',
+    (locale, messages) => {
+      const t = createTranslator({ locale, messages, namespace: 'errors' });
+
+      expect(t('EXTRACTION_TIMEOUT').toLowerCase()).toMatch(/again|tekrar/);
+    },
+  );
+
+  it.each(CATALOGUES)(
+    'says a retry will not help when nothing answered, in %s',
+    (locale, messages) => {
+      const t = createTranslator({ locale, messages, namespace: 'errors' });
+      const rendered = t('ALL_PROVIDERS_UNAVAILABLE').toLowerCase();
+
+      // The word is allowed; what is not allowed is inviting one. Both
+      // catalogues phrase the refusal with the verb in it, so a message that
+      // merely dropped the clause would pass a "does not contain again" check
+      // and say nothing about retrying at all.
+      expect(rendered).toMatch(/won't help|will not help|yardımcı olmaz/);
+    },
+  );
+
+  it.each(CATALOGUES)('does not say the same thing twice in %s', (locale, messages) => {
+    const t = createTranslator({ locale, messages, namespace: 'errors' });
+
+    expect(t('EXTRACTION_TIMEOUT')).not.toBe(t('ALL_PROVIDERS_UNAVAILABLE'));
+  });
+});
+
 describe('PAGE_LIMIT_EXCEEDED', () => {
   it.each(CATALOGUES)('does not invite a retry in %s', (locale, messages) => {
     const t = createTranslator({ locale, messages, namespace: 'errors' });

@@ -133,6 +133,75 @@ describe('uploading a CV', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('a scan rather than text');
   });
+
+  /**
+   * `B-114`. All four extraction refusals arrived with an empty `resolutions`
+   * before it — a sentence and no button, on the screen where the reader is
+   * already stuck, which is the shape P4 forbids.
+   *
+   * `switch_to_manual_form` is the striking one: it had been in the published
+   * vocabulary the whole time with nothing producing it.
+   */
+  it('offers the manual form when nothing came out of the file', async () => {
+    await renderImport();
+    await upload(cv('scanned-cv.pdf'));
+
+    const panel = await screen.findByRole('alert');
+    await userEvent.click(
+      within(panel).getByRole('button', { name: en.resolutions.switch_to_manual_form }),
+    );
+
+    expect(push).toHaveBeenCalledWith('/profile');
+  });
+
+  /**
+   * And this one is **not** a retry, which is the distinction the item turns
+   * on: an encrypted file fails in the same place every time, so a retry
+   * button offers a door known to be locked. The reader may already have an
+   * unprotected copy.
+   */
+  it('reopens the picker for an encrypted file rather than offering a retry', async () => {
+    await renderImport();
+    await upload(cv('encrypted-cv.pdf'));
+
+    const panel = await screen.findByRole('alert');
+    expect(within(panel).queryByRole('button', { name: en.resolutions.retry })).toBeNull();
+
+    // jsdom has no picker, so the click is what is observable — and it is
+    // also the thing that would silently do nothing if the ref were lost.
+    const picker = screen.getByLabelText(en.Onboarding.fileLabel) as HTMLInputElement;
+    const opened = vi.spyOn(picker, 'click');
+
+    await userEvent.click(
+      within(panel).getByRole('button', { name: en.resolutions.upload_another_file }),
+    );
+
+    expect(opened).toHaveBeenCalled();
+    // The refused file is gone, so Upload cannot be pressed on it again —
+    // which would be the retry this button exists to avoid.
+    expect(picker.value).toBe('');
+    expect(screen.getByRole('button', { name: en.Onboarding.upload })).toBeDisabled();
+  });
+
+  /**
+   * `F-037`. The server offers `choose_language` beside
+   * `LANGUAGE_UNDETECTED` and the screen would be right to ask — but
+   * `POST /profile/import` publishes `mode` and nothing else, so the answer
+   * has nowhere to travel. Drawing it would reopen the same refusal.
+   *
+   * Asserted rather than left to a comment: the day the field lands, this
+   * test is what says the button is now owed.
+   */
+  it('does not draw a language choice it has nowhere to send', async () => {
+    await renderImport();
+    await upload(cv('encrypted-cv.pdf'));
+
+    const panel = await screen.findByRole('alert');
+
+    expect(
+      within(panel).queryByRole('button', { name: en.resolutions.choose_language }),
+    ).toBeNull();
+  });
 });
 
 describe('when the account already has a profile', () => {

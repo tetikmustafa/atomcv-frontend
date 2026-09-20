@@ -207,19 +207,38 @@ export const importHandlers = [
 
     const name = file.name.toLowerCase();
 
+    /*
+      All three carry a way out since `B-114`, and they did not before: a
+      sentence and no button, on the screen where somebody is already stuck.
+      The mock produced the empty arrays faithfully, which is how a refusal
+      with nowhere to go survived being looked at.
+
+      `PDF_ENCRYPTED` gets `upload_another_file` rather than `retry` because
+      the same locked file fails in the same place every time; the other two
+      get `switch_to_manual_form`, which was in the vocabulary unused.
+    */
     if (name.includes('encrypted')) {
-      return HttpResponse.json(problem(422, 'PDF_ENCRYPTED', IMPORT), { status: 422 });
+      return HttpResponse.json(
+        problem(422, 'PDF_ENCRYPTED', IMPORT, [{ action: 'upload_another_file' }]),
+        { status: 422 },
+      );
     }
 
     // § 31.10 separates these two here and only here, and the difference is
     // the sentence the reader gets: "this may be a scan" is what stops them
     // uploading the same file again.
     if (name.includes('scanned')) {
-      return HttpResponse.json(problem(422, 'PDF_NOT_TEXT_BASED', IMPORT), { status: 422 });
+      return HttpResponse.json(
+        problem(422, 'PDF_NOT_TEXT_BASED', IMPORT, [{ action: 'switch_to_manual_form' }]),
+        { status: 422 },
+      );
     }
 
     if (file.size === 0) {
-      return HttpResponse.json(problem(422, 'EXTRACTION_EMPTY', IMPORT), { status: 422 });
+      return HttpResponse.json(
+        problem(422, 'EXTRACTION_EMPTY', IMPORT, [{ action: 'switch_to_manual_form' }]),
+        { status: 422 },
+      );
     }
 
     const job: MockImportJob = {
