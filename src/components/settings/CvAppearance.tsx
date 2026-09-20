@@ -34,6 +34,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { SavedAppearances } from '@/components/settings/SavedAppearances';
+import { useTemplates } from '@/hooks/useAppearance';
 import { useProfile, useReplacePreferences } from '@/hooks/useProfile';
 import { useCapabilities } from '@/hooks/useSession';
 import {
@@ -94,7 +96,22 @@ export function CvAppearance() {
   const { data: profile } = useProfile();
   const save = useReplacePreferences();
 
+  const fieldId = useId();
   const templates = capabilities?.allowedTemplates ?? [];
+
+  /*
+    Two lists, two questions (`F-038`). `allowedTemplates` says which of them
+    this caller may pick; the registry says what they are. Joined by id here
+    rather than merged into one read, because they have different lifetimes:
+    the registry is the same for everybody and never goes stale, and the
+    capabilities move with the session.
+  */
+  const registry = useTemplates();
+  const capacity = new Map(
+    (registry.data ?? [])
+      .filter((summary) => summary.id && summary.approximateLinesPerPage)
+      .map((summary) => [summary.id!, summary.approximateLinesPerPage!]),
+  );
   const canCustomize = capabilities?.canCustomizeTemplate ?? false;
 
   const preferences = profile?.data.preferences;
@@ -209,21 +226,66 @@ export function CvAppearance() {
           <legend className="mb-2 text-sm font-medium">{t('template')}</legend>
 
           <div className="flex flex-wrap gap-4">
-            {templates.map((id) => (
-              <label key={id} className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="templateId"
-                  value={id}
-                  checked={templateId === id}
-                  onChange={() => setTemplateId(id)}
-                />
-                {/* A name the server has never sent us: the list is ids, and
-                    an id this build has no word for still has to be pickable
-                    rather than hidden. */}
-                {loose.has(`templates.${id}`) ? loose(`templates.${id}`) : id}
-              </label>
-            ))}
+            {templates.map((id) => {
+              /*
+                § 33.5's capacity, from `GET /templates` (`F-038`).
+
+                The endpoint exists for this screen and says so: "a chooser
+                showing three names and no density asks somebody to pick
+                blind". Three names is exactly what stood here, and the
+                difference between the templates — how much each holds — was
+                the one fact a person picking between them needs.
+
+                **Absent rather than guessed.** The registry is its own
+                request and may not have answered yet, or may name a template
+                this list does not; a chooser that printed a number it did not
+                have would be inventing the very thing it is here to publish.
+              */
+              const lines = capacity.get(id);
+              const capacityId = `${fieldId}-${id}-capacity`;
+
+              return (
+                <div key={id} className="flex items-start gap-2 text-sm">
+                  <input
+                    type="radio"
+                    id={`${fieldId}-${id}`}
+                    name="templateId"
+                    value={id}
+                    checked={templateId === id}
+                    className="mt-1"
+                    /*
+                      **Described by, not named by.** Folding the density into
+                      the label made the radio's accessible name
+                      "ClassicAbout 54 lines a page" — the template stopped
+                      being findable by its own name, and a screen reader read
+                      two facts as one. The name is what this is; the density
+                      is what is true about it, which is what a description is
+                      for and where a reader hears it second.
+                    */
+                    {...(lines === undefined ? {} : { 'aria-describedby': capacityId })}
+                    onChange={() => setTemplateId(id)}
+                  />
+                  <span className="flex flex-col">
+                    {/* A name the server has never sent us: the list is ids,
+                        and an id this build has no word for still has to be
+                        pickable rather than hidden. */}
+                    <label htmlFor={`${fieldId}-${id}`}>
+                      {loose.has(`templates.${id}`) ? loose(`templates.${id}`) : id}
+                    </label>
+
+                    {lines !== undefined && (
+                      <span
+                        id={capacityId}
+                        data-testid={`template-capacity-${id}`}
+                        className="text-muted-foreground text-xs"
+                      >
+                        {t('templateCapacity', { lines })}
+                      </span>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </fieldset>
       )}
@@ -330,6 +392,20 @@ export function CvAppearance() {
           {save.isSuccess ? t('saved') : save.isError ? t('saveFailed') : ''}
         </p>
       </div>
+
+      {/*
+        Below the save button on purpose (`F-038`).
+
+        What it keeps is the working set above, so it has to come after the
+        controls that make one — and after the button that commits them, so
+        the name is given to something the reader has finished arranging
+        rather than to a half-moved slider.
+
+        It draws nothing without `canCustomizeTemplate`, which is its own
+        check rather than this component's: the gate belongs with the thing
+        gated, and putting it here would leave a second place to forget.
+      */}
+      <SavedAppearances defaults={defaults} />
     </section>
   );
 }

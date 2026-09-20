@@ -316,6 +316,80 @@ export function deleteVariant(atomId: string, variantId: string, version: Versio
   });
 }
 
+/* ------------------------------- templates ------------------------------ */
+
+/**
+ * The templates a CV can be rendered with, and what each one holds (§ 33.5).
+ *
+ * **Not the same question as `capabilities.allowedTemplates`**, and both are
+ * needed: that list says which ones this caller may pick, and this one says
+ * what they are. The endpoint's own description is blunt about why it exists
+ * — "a chooser showing three names and no density asks somebody to pick
+ * blind" — and § 33.5's capacity numbers are there for exactly that screen.
+ *
+ * **No display name and no description travel**, deliberately: those are
+ * sentences, and the server sends keys rather than prose. The id is the key,
+ * and a template this build has no word for still has to be pickable.
+ *
+ * `approximateLinesPerPage` is the one a chooser can use. The two point
+ * measurements beside it are what that number is derived from, and printing
+ * them would be answering a question nobody asked.
+ */
+export type TemplateSummary = NonNullable<Returns<'listTemplates'>[number]>;
+
+export function listTemplates() {
+  return api.get<Returns<'listTemplates'>>('/templates');
+}
+
+/* ----------------------------- customizations --------------------------- */
+
+/**
+ * Appearance settings kept under a name (`F-038`, § 13.2).
+ *
+ * **The profile's own `preferences.appearance` is still the working set**,
+ * and it is what a generation uses when it names nothing. This is the second
+ * thing: somebody who keeps a dense set for a long CV and a roomier one for a
+ * short one, and picks between them per generation with `customizationId`.
+ *
+ * **Every value is bounded by the published ranges**, which is why a bad page
+ * is not reachable from here — the same bounds `APPEARANCE_RANGES` already
+ * enforces on the working set, so the controls are the same controls.
+ *
+ * At most twenty per profile, and names are unique within one.
+ *
+ * **A generation already made with one is unaffected by editing or deleting
+ * it**: the selection snapshot holds the settings themselves rather than an
+ * id, so a document can always be re-rendered exactly as it was sent. That is
+ * what makes deleting safe to offer without a warning about old resumes.
+ */
+export type Customization = NonNullable<Returns<'listCustomizations'>[number]>;
+
+export type CustomizationCreate = Accepts<'createCustomization'>;
+
+export type CustomizationPatch = Accepts<'patchCustomization'>;
+
+export function listCustomizations() {
+  return api.get<Returns<'listCustomizations'>>('/customizations');
+}
+
+export function createCustomization(body: CustomizationCreate) {
+  return api.post<Returns<'createCustomization'>>('/customizations', body);
+}
+
+/**
+ * **The settings are replaced whole.** Every parameter is read together by
+ * the renderer, and a half-applied geometry is a page nobody asked for — so
+ * `baseTemplateId` present means "replace the settings", and a body carrying
+ * only a name is a rename that leaves them alone.
+ */
+export function patchCustomization(id: string, body: CustomizationPatch) {
+  return api.patch<Returns<'patchCustomization'>>(`/customizations/${id}`, body);
+}
+
+export function deleteCustomization(id: string) {
+  return api.delete<Returns<'deleteCustomization'>>(`/customizations/${id}`);
+}
+
 /* -------------------------------- github ------------------------------- */
 
 /**

@@ -451,6 +451,9 @@
       "emphasizeHint": "İlanın söylemediği ama işin bununla ilgili olduğunu bildiğin sözcükler. Yalnız bu CV için ilanın kendi terimlerine katılıyorlar — profilinde hiçbir şey değişmiyor.",
       "noteLabel": "Bu CV nasıl okunsun",
       "noteHint": "Kendi cümlelerinle bir iki satır. Sözcük seçimini ve vurguyu yönlendirebilir; yazmadığın bir şeyi ekleyemez, bir satırın ne olduğunu anlattığını değiştiremez.",
+      "appearanceLabel": "Bu CV'nin görünümü",
+      "appearanceHint": "Sakladığın setlerden biri. Olduğu gibi bırakırsan her zamanki ayarların kullanılır.",
+      "appearanceDefault": "Her zamanki ayarların",
       "notePlaceholder": "Makine öğrenmesi yerine platform işlerini öne al."
     }
   },
@@ -617,6 +620,22 @@
     "title": "CV’nin görünüşü",
     "intro": "Bundan sonra ürettiğin her CV böyle çıkar. Her CV için ayrıca sorulmaz.",
     "template": "Şablon",
+    "presets": {
+      "title": "Bu ayarları sakla",
+      "intro": "Yukarıdaki ayarlar her CV'nin kullandığı ayarlar. Bir seti adıyla saklarsan tek bir üretim için onu seçebilirsin — uzun bir CV için sıkı bir set, kısası için ferah bir set.",
+      "nameLabel": "Ad",
+      "namePlaceholder": "Sıkı, tek sayfa",
+      "keep": "Yukarıdaki ayarları sakla",
+      "keeping": "Saklanıyor…",
+      "builtOn": "{template} üzerine kurulu",
+      "remove": "{name} setini sil",
+      "removeTitle": "Bu ayarlar silinsin mi?",
+      "removeBody": "Bunlarla ürettiğin CV'ler etkilenmiyor — her biri kendi kurulduğu ayarları taşıyor.",
+      "removeConfirm": "Sil",
+      "full": "{max, number} setin hepsi dolu. Yenisini saklamak için birini sil.",
+      "announceKept": "{name} adıyla saklandı"
+    },
+    "templateCapacity": "Sayfada yaklaşık {lines, number} satır",
     "templates": {
       "classic": "Klasik",
       "compact": "Kompakt",

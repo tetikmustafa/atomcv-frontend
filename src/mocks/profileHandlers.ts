@@ -20,6 +20,7 @@ import {
   type MockSection,
 } from './profileFixture';
 import { currentMaxAtoms, isAccount, TEMPLATES } from './sessionFixture';
+import { ACCENT_COLOR_PATTERN, APPEARANCE_RANGES } from '@/lib/api/endpoints/profile';
 import type { components } from '@/types/api';
 
 type Schemas = components['schemas'];
@@ -143,6 +144,70 @@ function completenessOf(selfDescription: string | undefined): number {
 
 function findAtom(id: string): MockAtom | undefined {
   return fixture.atoms.find((atom) => atom.id === id);
+}
+
+/**
+ * § 33.5's catalogue, as the registry publishes it (`F-038`).
+ *
+ * The capacities are the section's own numbers rather than invented ones, and
+ * they are the answer to the question a chooser has to ask on somebody's
+ * behalf: what does this template hold. The two point measurements are what
+ * that line count is derived from; they travel because the schema declares
+ * them, not because a screen should print them.
+ */
+const TEMPLATE_REGISTRY: Schemas['TemplateSummary'][] = [
+  {
+    id: 'classic',
+    version: 6,
+    pageTextHeightPt: 648,
+    baselineSkipPt: 13.6,
+    approximateLinesPerPage: 54,
+  },
+  {
+    id: 'compact',
+    version: 6,
+    pageTextHeightPt: 648,
+    baselineSkipPt: 11.4,
+    approximateLinesPerPage: 64,
+  },
+  {
+    id: 'modern',
+    version: 6,
+    pageTextHeightPt: 648,
+    baselineSkipPt: 14.6,
+    approximateLinesPerPage: 50,
+  },
+];
+
+/** Twenty per profile, which the endpoint states and this enforces. */
+const CUSTOMIZATION_LIMIT = 20;
+
+/**
+ * Which published ranges a body falls outside of, if any.
+ *
+ * Encoded rather than trusted to the sliders: the controls cannot produce an
+ * out-of-range value, which is exactly why the refusal has to live here — a
+ * bound only the client keeps holds until somebody writes a second caller,
+ * and "a bad page is not reachable from here" is the promise the ranges make.
+ */
+function boundsRefusal(body: {
+  fontSizePt?: number;
+  marginInches?: number;
+  lineSpacing?: number;
+  accentColor?: string;
+}): string[] | undefined {
+  const fields: string[] = [];
+
+  for (const [field, range] of Object.entries(APPEARANCE_RANGES)) {
+    const value = body[field as keyof typeof APPEARANCE_RANGES];
+    if (value !== undefined && (value < range.min || value > range.max)) fields.push(field);
+  }
+
+  if (body.accentColor !== undefined && !ACCENT_COLOR_PATTERN.test(body.accentColor)) {
+    fields.push('accentColor');
+  }
+
+  return fields.length > 0 ? fields : undefined;
 }
 
 /**
@@ -1301,5 +1366,185 @@ export const profileHandlers = [
     const applied = asked.filter((name) => known.includes(name)).length;
 
     return HttpResponse.json({ applied });
+  }),
+
+  /**
+   * The registry's own list, with the measured capacity of each (§ 33.5).
+   *
+   * **Not the same question as `capabilities.allowedTemplates`**: that says
+   * which of these a caller may pick, this says what they are. The numbers
+   * are § 33.5's — classic ~54 lines a page, modern ~50, compact ~64 — and
+   * they are the whole reason the endpoint exists, because a chooser showing
+   * three names and no density asks somebody to pick blind.
+   *
+   * **No display name and no description**, deliberately: those are
+   * sentences, and the server sends keys. The id is the key.
+   */
+  http.get('*/api/v1/templates', () => HttpResponse.json(TEMPLATE_REGISTRY)),
+
+  /** The sets this profile has kept, oldest first — the order they were made. */
+  http.get('*/api/v1/customizations', () => HttpResponse.json(fixture.customizations)),
+
+  /**
+   * Keeping a set under a name (`F-038`, § 13.2).
+   *
+   * Three refusals are encoded, because each is a state the screen has to be
+   * able to reach:
+   *
+   * - **names are unique within a profile**, so a second set called the same
+   *   thing is a `409` rather than a silent second row;
+   * - **twenty per profile**, which is a `422` naming the limit;
+   * - **every value is bounded by the published ranges**, and that is what
+   *   makes a bad page unreachable from here.
+   */
+  http.post('*/api/v1/customizations', async ({ request }) => {
+    const instance = '/api/v1/customizations';
+    const body = (await request.json()) as Partial<Schemas['CustomizationRequest']>;
+
+    const name = (body.name ?? '').trim();
+    const baseTemplateId = body.baseTemplateId ?? '';
+
+    if (name === '' || !TEMPLATES.includes(baseTemplateId)) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], {
+          fields: [
+            ...(name === '' ? ['name'] : []),
+            ...(TEMPLATES.includes(baseTemplateId) ? [] : ['baseTemplateId']),
+          ],
+        }),
+        { status: 400 },
+      );
+    }
+
+    if (fixture.customizations.some((saved) => saved.name === name)) {
+      return HttpResponse.json(
+        problem(409, 'VALIDATION_FAILED', instance, [], { fields: ['name'] }),
+        {
+          status: 409,
+        },
+      );
+    }
+
+    if (fixture.customizations.length >= CUSTOMIZATION_LIMIT) {
+      return HttpResponse.json(
+        problem(422, 'VALIDATION_FAILED', instance, [], { fields: ['name'] }),
+        { status: 422 },
+      );
+    }
+
+    const outOfRange = boundsRefusal(body);
+    if (outOfRange) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: outOfRange }),
+        { status: 400 },
+      );
+    }
+
+    const saved: Schemas['CustomizationResponse'] = {
+      id: crypto.randomUUID(),
+      name,
+      baseTemplateId,
+      templateVersion: 6,
+      ...(body.fontSizePt === undefined ? {} : { fontSizePt: body.fontSizePt }),
+      ...(body.marginInches === undefined ? {} : { marginInches: body.marginInches }),
+      ...(body.lineSpacing === undefined ? {} : { lineSpacing: body.lineSpacing }),
+      ...(body.fontFamily ? { fontFamily: body.fontFamily } : {}),
+      ...(body.accentColor ? { accentColor: body.accentColor } : {}),
+      createdAt: new Date().toISOString(),
+    };
+
+    fixture.customizations.push(saved);
+
+    return HttpResponse.json(saved, { status: 201 });
+  }),
+
+  /**
+   * Rename, or re-set.
+   *
+   * **The settings are replaced whole when `baseTemplateId` is present.**
+   * Every parameter is read together by the renderer and a half-applied
+   * geometry is a page nobody asked for — so a body carrying only a name is a
+   * rename that leaves the settings alone, and that difference is encoded
+   * rather than described.
+   */
+  http.patch('*/api/v1/customizations/:id', async ({ params, request }) => {
+    const id = String(params.id);
+    const instance = `/api/v1/customizations/${id}`;
+    const saved = fixture.customizations.find((candidate) => candidate.id === id);
+
+    if (!saved) {
+      return HttpResponse.json(problem(404, 'RESOURCE_NOT_FOUND', instance), { status: 404 });
+    }
+
+    const body = (await request.json()) as Partial<Schemas['CustomizationPatch']>;
+
+    if (body.name !== undefined) {
+      const name = body.name.trim();
+
+      if (name === '') {
+        return HttpResponse.json(
+          problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['name'] }),
+          { status: 400 },
+        );
+      }
+
+      if (fixture.customizations.some((other) => other.id !== id && other.name === name)) {
+        return HttpResponse.json(
+          problem(409, 'VALIDATION_FAILED', instance, [], { fields: ['name'] }),
+          { status: 409 },
+        );
+      }
+
+      saved.name = name;
+    }
+
+    if (body.baseTemplateId !== undefined) {
+      const outOfRange = boundsRefusal(body);
+      if (outOfRange) {
+        return HttpResponse.json(
+          problem(400, 'VALIDATION_FAILED', instance, [], { fields: outOfRange }),
+          { status: 400 },
+        );
+      }
+
+      saved.baseTemplateId = body.baseTemplateId;
+
+      // Replaced whole: a field left out of a settings write is cleared, not
+      // kept, because the renderer reads them together.
+      for (const field of [
+        'fontSizePt',
+        'marginInches',
+        'lineSpacing',
+        'fontFamily',
+        'accentColor',
+      ] as const) {
+        if (body[field] === undefined) delete saved[field];
+        else Object.assign(saved, { [field]: body[field] });
+      }
+    }
+
+    return HttpResponse.json(saved);
+  }),
+
+  /**
+   * Deleting one.
+   *
+   * **A generation already made with it is unaffected**: the snapshot holds
+   * the settings themselves rather than an id, so the document still
+   * re-renders exactly as it was sent. Nothing cascades, and the screen owes
+   * no warning about old resumes.
+   */
+  http.delete('*/api/v1/customizations/:id', ({ params }) => {
+    const id = String(params.id);
+    const instance = `/api/v1/customizations/${id}`;
+    const known = fixture.customizations.some((candidate) => candidate.id === id);
+
+    if (!known) {
+      return HttpResponse.json(problem(404, 'RESOURCE_NOT_FOUND', instance), { status: 404 });
+    }
+
+    fixture.customizations = fixture.customizations.filter((saved) => saved.id !== id);
+
+    return new HttpResponse(null, { status: 204 });
   }),
 ];

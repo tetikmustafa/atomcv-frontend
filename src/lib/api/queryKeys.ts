@@ -35,6 +35,25 @@ export const profileKeys = {
 };
 
 /**
+ * The template registry, and the appearance sets a profile has saved.
+ *
+ * **Not under `profileKeys`**, and the two halves are outside it for
+ * different reasons. `GET /templates` is the registry's own list — the same
+ * for everybody, nothing to do with whose profile is open — and putting it
+ * under the profile's prefix would have `invalidateWholeProfile` refetch a
+ * list that cannot have changed.
+ *
+ * `/customizations` does belong to a profile, but it is its own resource with
+ * its own endpoints, and the profile's cascade does not touch it: deleting a
+ * section does not delete an appearance set.
+ */
+export const appearanceKeys = {
+  all: ['appearance'] as const,
+  templates: () => [...appearanceKeys.all, 'templates'] as const,
+  customizations: () => [...appearanceKeys.all, 'customizations'] as const,
+};
+
+/**
  * A running job, and the only server-state key the SSE stream writes into.
  *
  * The stream and `GET /jobs/{id}` describe the same thing, so they share a

@@ -451,6 +451,9 @@
       "emphasizeHint": "Words you know the work is about that the posting does not say. They join the posting's own terms for this resume only — nothing about your profile changes.",
       "noteLabel": "How this one should read",
       "noteHint": "A sentence or two, in your own words. It can steer wording and emphasis; it cannot add anything you have not written, or change what a line says happened.",
+      "appearanceLabel": "Appearance for this one",
+      "appearanceHint": "One of the settings you kept. Leave it as it is to use your usual ones.",
+      "appearanceDefault": "Your usual settings",
       "notePlaceholder": "Lead with the platform work rather than the ML."
     }
   },
@@ -617,6 +620,22 @@
     "title": "How your resume looks",
     "intro": "This applies to every resume you generate from now on. It is not asked again per resume.",
     "template": "Template",
+    "presets": {
+      "title": "Keep these settings",
+      "intro": "The settings above are the ones every resume uses. Keeping a set under a name lets you pick it for one generation instead — a dense set for a long CV, a roomier one for a short one.",
+      "nameLabel": "Name",
+      "namePlaceholder": "Compact, one page",
+      "keep": "Keep the settings above",
+      "keeping": "Keeping…",
+      "builtOn": "Built on {template}",
+      "remove": "Delete {name}",
+      "removeTitle": "Delete these settings?",
+      "removeBody": "Resumes you already made with them are unaffected — each one keeps the settings it was built with.",
+      "removeConfirm": "Delete",
+      "full": "That is all {max, number} of them. Delete one to keep another.",
+      "announceKept": "Kept as {name}"
+    },
+    "templateCapacity": "About {lines, number} lines a page",
     "templates": {
       "classic": "Classic",
       "compact": "Compact",

@@ -10,6 +10,85 @@
 
 ---
 
+### D10 kapandı — `auto`'nun üç sonucu (2026-09-20)
+
+`B-107` `F-013`'ü kapattı: Türkçe bir profil İngilizce bir ilana Türkçe CV
+üretiyordu, çünkü belgeyi tek dilde tutmanın tek yolu ilanı takip etmeyi
+reddetmekti. § 21.8'in ikinci adımı indi — eksik sözcüklemeler Faz B ile Faz C
+**arasında** çevriliyor ve profile yazılıyor. Ekranda üç sonucu var.
+
+**Bekleme `SCORING`'in içinde ve orada açıklanıyor.** En çok altmış çağrı,
+hepsi tek fazın içinde; yani çubuk, skorlamayla hiç ilgisi olmayan bir sebeple
+durabiliyor ve durduğunu gören biri yavaş adımı takılmış adımdan ayıramıyor.
+Not **yalnız bu fazda**: her beklemeyi açıklayan bir altyazı hiçbir şey
+açıklamaz, ve sebebi üstündeki etiketten görünmeyen tek faz bu. Cümle "ikinci
+sefer hızlı" diyor, çünkü beklemeye değdiren olgu o.
+
+**Karşılaştırma tam anahtara karşı** (`generation.phase.SCORING`), faz adına
+karşı değil: `phaseKey` sunucunun gönderdiği şey ve sunucu bir çeviri anahtarı
+gönderiyor. `'SCORING'` ile karşılaştırmak her karede yanlış olurdu — **ve
+sessizce**: hiç çıkmayan bir not, çevrilecek bir şeyi olmayan bir üretimden
+ayırt edilemez. Bunun kendi testi var.
+
+**Dil notunun gerekçesi değişti.** Eski cümle "profilinde ilanın dilinde
+sözcükleme yok" diyordu — `auto` çeviremezken hikâyenin tamamı buydu.
+Artık çevirebiliyor, yani belgenin profilin dilinde çıkması **çevirinin
+tamamlanamadığı** anlamına geliyor: hep ya hiç, asla yarısı bir dilde.
+
+**Çevrilmiş sözcükleme kendi notunu taşıyor**, ve bayatlıktan **ayrı bir
+olgu**: bir satır gayet güncel olup yine de makine çevirisi olabilir
+(`stale: false`, `userEdited: false`). İkisi ayrı bileşen, çünkü bir atom
+ikisini de, birini ya da hiçbirini taşıyabilir. Not **kapatılamıyor**: bir
+kapatma, olguyu bitirmeden notu bitirirdi.
+
+**Not kişi metne dokununca bitiyor, ve bitiren sunucu.** `userEdited`'i
+yazmak sunucunun işi; ekran bir bayrak tutmuyor. Bunu yazarken mock'ta **bir
+eksik bulundu**: içerik yaması `userEdited`'i hiç işaretlemiyordu, yani mock
+istemcinin az önce baştan yazdığı bir satırı "kimsenin yazmadığı" olarak
+tutmaya devam ediyordu. Bayrağı hiçbir şey çizmediği sürece görünmezdi.
+
+**Ölçüm:** 931 birim testi yeşil, typecheck ve lint temiz.
+
+### D11 kapandı — GitHub içe aktarımı (2026-09-20)
+
+`B-106`: iki uç, ve **birincisi hiçbir şey yazmıyor**. Kural "sunulur, asla
+otomatik eklenmez" ve ayrım tam olarak bunu koruyor — profile hiçbir şey
+ulaşmıyor, ta ki ikinci istek depoları adıyla sayana kadar.
+
+**Hiçbir şey bağlanmıyor, hiçbir izin istenmiyor.** Yalnız herkese açık veri
+okunuyor, o yüzden ne token isteniyor ne saklanıyor — ve ekran aksini ima
+etmemeli. "GitHub'ı bağla" yazan bir düğme, ürünün istemediği ve
+kullanmadığı bir şeyi istemek olurdu.
+
+**Birleştirme ile yeni proje ayrı çiziliyor**, çünkü kişinin kendi yazdığına
+farklı şeyler yapıyorlar: `matchedEntryId` taşıyan bir öneri dilleri ve
+bağlantıyı ekliyor, **cümlelere dokunmuyor** — kişi onları işin ne için
+olduğunu anlatmak için yazdı, GitHub ise neyle yazıldığını biliyor. Taşımayan
+bir öneri ise **yeni bir proje**, ilk satırı GitHub'ın kendi açıklaması: yani
+kişinin yazmadığı sözcüklerin geldiği durum, ve bunu kutuyu işaretledikten
+**sonra** değil önce bilmeli.
+
+**Hiçbiri işaretli gelmiyor.** Önceden seçili bir liste "sunuldu"yu bir
+formaliteye çevirirdi: ekrandan en hızlı çıkış yolu hepsini kabul etmek olur,
+ki kuralın yasakladığı otomatik ekleme tam olarak budur.
+
+**Boş cevap tek bir durum, dört değil.** Olmayan bir hesap, cevap vermeyen bir
+GitHub ve kayda değer bir şeyi olmayan bir hesap aynı boş listeyle geliyor —
+hiçbiri kişinin yapabileceği bir şey değil, o yüzden ekran hangisi olduğunu
+tahmin etmek yerine doğru olan tek şeyi söylüyor. **Hata paneli değil**:
+bir şey ters gitmedi.
+
+**Öneri sorgusu `useQuery` değil `useMutation`**, okumasına rağmen: saatte
+beşten birini harcayan bir `POST`, yani bir düğmeye basıldığında olmalı, bir
+bileşen mount olduğunda değil. `useQuery` odak değişiminde refetch edip hakkı
+bir sekme geçişinde yakardı.
+
+**Uygulama profilin tamamını düşürüyor**: tek transaction'da hem yeni proje
+ekleyip hem mevcut kayda birleşebiliyor, yani bölümler, kayıtlar ve atomlar
+birden kaymış olabilir.
+
+**Ölçüm:** 940 birim testi yeşil; `/profile` **256.5 → 257.2 KB** (tavan 280).
+
 ### D7 kapandı — arşivleme, ve vaadin bugünkü büyüklüğü (2026-09-20)
 
 `B-102`: uç kaynak haritasında ilk taslaktan beri, `generations.archived`

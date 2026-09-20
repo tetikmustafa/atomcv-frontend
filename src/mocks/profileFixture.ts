@@ -37,11 +37,22 @@ export type ProfileFixture = {
   sections: MockSection[];
   entries: MockEntry[];
   atoms: MockAtom[];
+  /**
+   * Appearance sets kept under a name (`F-038`, § 13.2).
+   *
+   * **Starts empty, and that is the state most screens are written
+   * against**: the profile's own `preferences.appearance` is the working set
+   * and is what a generation uses when it names nothing, so having none of
+   * these is not a gap to be filled in — it is what nearly every profile
+   * looks like.
+   */
+  customizations: Schemas['CustomizationResponse'][];
 };
 
 function initial(): ProfileFixture {
   return {
     profileVersion: 1,
+    customizations: [],
     profile: {
       headline: 'Senior Backend Engineer',
       /*

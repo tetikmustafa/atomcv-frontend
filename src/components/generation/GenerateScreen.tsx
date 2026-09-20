@@ -90,6 +90,7 @@ export function GenerateScreen() {
    */
   const [emphasize, setEmphasize] = useState<string[]>([]);
   const [note, setNote] = useState('');
+  const [customizationId, setCustomizationId] = useState('');
   const [job, setJob] = useState<{ jobId: string; streamUrl?: string } | null>(null);
 
   /**
@@ -140,6 +141,9 @@ export function GenerateScreen() {
       */
       ...(emphasize.length === 0 ? {} : { emphasize }),
       ...(note.trim() === '' ? {} : { note: note.trim() }),
+      // Absent means the profile's own working settings, which the schema
+      // calls what nearly every request means.
+      ...(customizationId === '' ? {} : { customizationId }),
       // Omitted rather than sent empty where there is none: an empty value is
       // a **failure** to the challenge, while an absence is what a deployment
       // without a Turnstile secret expects (`B-083`).
@@ -282,6 +286,8 @@ export function GenerateScreen() {
         onEmphasizeChange={setEmphasize}
         note={note}
         onNoteChange={setNote}
+        customizationId={customizationId}
+        onCustomizationChange={setCustomizationId}
         disabled={start.isPending}
       />
 

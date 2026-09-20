@@ -121,88 +121,52 @@ frontend'in kendi kararı:
 
 ### Kapanan dilimlerin kaydı → `archive/stage-4.md`
 
-D1…D9 oraya indi (2026-09-20), 400 satır sınırı yüzünden. Burada
+D1…D11 oraya indi (2026-09-20), 400 satır sınırı yüzünden. Burada
 yalnız **hâlâ geçerli olan** kalıyor; bir dilimde neyin neden öyle yapıldığını
 arıyorsan `rg -n "D1 kapandı" docs/notes/archive/`.
 
-### D10 kapandı — `auto`'nun üç sonucu (2026-09-20)
+### D12 kapandı — şablon kapasitesi ve adlandırılmış görünüm setleri (2026-09-20)
 
-`B-107` `F-013`'ü kapattı: Türkçe bir profil İngilizce bir ilana Türkçe CV
-üretiyordu, çünkü belgeyi tek dilde tutmanın tek yolu ilanı takip etmeyi
-reddetmekti. § 21.8'in ikinci adımı indi — eksik sözcüklemeler Faz B ile Faz C
-**arasında** çevriliyor ve profile yazılıyor. Ekranda üç sonucu var.
+`F-038`'in iki ucu telde duruyordu ve hiçbir şey okumuyordu.
 
-**Bekleme `SCORING`'in içinde ve orada açıklanıyor.** En çok altmış çağrı,
-hepsi tek fazın içinde; yani çubuk, skorlamayla hiç ilgisi olmayan bir sebeple
-durabiliyor ve durduğunu gören biri yavaş adımı takılmış adımdan ayıramıyor.
-Not **yalnız bu fazda**: her beklemeyi açıklayan bir altyazı hiçbir şey
-açıklamaz, ve sebebi üstündeki etiketten görünmeyen tek faz bu. Cümle "ikinci
-sefer hızlı" diyor, çünkü beklemeye değdiren olgu o.
+**`GET /templates` bu ekran için var ve öyle diyor:** *"üç isim ve hiç yoğunluk
+göstermeyen bir seçici, birinden kör seçim yapmasını istiyor."* Seçicide duran
+tam olarak üç isimdi. **İki liste, iki soru:** `allowedTemplates` bu çağıranın
+hangilerini seçebileceğini, registry ise onların ne olduğunu söylüyor. Ayrı
+tutuluyorlar çünkü ömürleri farklı — registry herkes için aynı ve bayatlamıyor
+(`staleTime: Infinity`), yetenekler oturumla kayıyor.
 
-**Karşılaştırma tam anahtara karşı** (`generation.phase.SCORING`), faz adına
-karşı değil: `phaseKey` sunucunun gönderdiği şey ve sunucu bir çeviri anahtarı
-gönderiyor. `'SCORING'` ile karşılaştırmak her karede yanlış olurdu — **ve
-sessizce**: hiç çıkmayan bir not, çevrilecek bir şeyi olmayan bir üretimden
-ayırt edilemez. Bunun kendi testi var.
+**Yoğunluk `aria-describedby`, `label` değil.** Etikete katlandığında radyonun
+erişilebilir adı *"ClassicAbout 54 lines a page"* oldu: şablon kendi adıyla
+bulunamaz hâle geldi ve ekran okuyucu iki olguyu tek cümle gibi okudu. Ad
+"bu nedir", yoğunluk "bunun hakkında doğru olan" — ikincisi açıklamadır, ve
+okuyucu onu ikinci sırada duyar. Testi iki ucundan sabitliyor.
 
-**Dil notunun gerekçesi değişti.** Eski cümle "profilinde ilanın dilinde
-sözcükleme yok" diyordu — `auto` çeviremezken hikâyenin tamamı buydu.
-Artık çevirebiliyor, yani belgenin profilin dilinde çıkması **çevirinin
-tamamlanamadığı** anlamına geliyor: hep ya hiç, asla yarısı bir dilde.
+**Çakışan bir ICU ad alanı, uzaktan patlayan bir hata.** Yeni bölüm önce
+`Appearance.saved` diye eklendi; `Appearance` zaten `"saved": "Saved."` diye
+bir **string** taşıyordu, JSON son tanımı kazandı ve namespace sessizce bir
+string oldu. Hata `useTranslations('Appearance.saved')` satırında "geçerli bir
+namespace değil" diye çıktı — sebebi başka bir dosyadaki bir ad çakışması.
+Bölüm `Appearance.presets` oldu. **Ders:** yeni bir ICU nesnesi eklerken
+kardeş anahtarlara bak; çakışma tip hatasını gerçek sebebinden uzağa taşıyor.
 
-**Çevrilmiş sözcükleme kendi notunu taşıyor**, ve bayatlıktan **ayrı bir
-olgu**: bir satır gayet güncel olup yine de makine çevirisi olabilir
-(`stale: false`, `userEdited: false`). İkisi ayrı bileşen, çünkü bir atom
-ikisini de, birini ya da hiçbirini taşıyabilir. Not **kapatılamıyor**: bir
-kapatma, olguyu bitirmeden notu bitirirdi.
+**Kaydetmek yukarıdaki çalışma setini kopyalıyor**, ikinci bir slider takımı
+açmıyor. Aynı beş değeri kuracak iki yer, onları yanlış kuracak iki yer olurdu;
+ekranın sorduğu soru bunların ne olması gerektiği değil, ne adlandırılacağı.
 
-**Not kişi metne dokununca bitiyor, ve bitiren sunucu.** `userEdited`'i
-yazmak sunucunun işi; ekran bir bayrak tutmuyor. Bunu yazarken mock'ta **bir
-eksik bulundu**: içerik yaması `userEdited`'i hiç işaretlemiyordu, yani mock
-istemcinin az önce baştan yazdığı bir satırı "kimsenin yazmadığı" olarak
-tutmaya devam ediyordu. Bayrağı hiçbir şey çizmediği sürece görünmezdi.
+**Silme hiçbir şey hakkında uyarmıyor ve bu dikkatsizlik değil.** Bir setle
+üretilmiş CV, enstantanesinde id değil **ayarların kendisini** taşıyor, yani
+gönderilmiş her belge hâlâ birebir yeniden basılıyor. Anlatılacak bir cascade
+ve riskteki bir belge yok.
 
-**Ölçüm:** 931 birim testi yeşil, typecheck ve lint temiz.
+**`customizationId` ancak seçilecek bir şey varken çiziliyor.** Kaydedilmiş
+seti olmayan profil olağan hâl; tek seçeneği "her zamanki ayarların" olan bir
+seçici, kimsenin vermek zorunda olmadığı bir karar için kontrol olurdu — ve
+okuyucuya özelliğin yok olduğunu değil **bozuk** olduğunu öğretirdi. Liste
+yalnız panel açıldığında isteniyor.
 
-### D11 kapandı — GitHub içe aktarımı (2026-09-20)
-
-`B-106`: iki uç, ve **birincisi hiçbir şey yazmıyor**. Kural "sunulur, asla
-otomatik eklenmez" ve ayrım tam olarak bunu koruyor — profile hiçbir şey
-ulaşmıyor, ta ki ikinci istek depoları adıyla sayana kadar.
-
-**Hiçbir şey bağlanmıyor, hiçbir izin istenmiyor.** Yalnız herkese açık veri
-okunuyor, o yüzden ne token isteniyor ne saklanıyor — ve ekran aksini ima
-etmemeli. "GitHub'ı bağla" yazan bir düğme, ürünün istemediği ve
-kullanmadığı bir şeyi istemek olurdu.
-
-**Birleştirme ile yeni proje ayrı çiziliyor**, çünkü kişinin kendi yazdığına
-farklı şeyler yapıyorlar: `matchedEntryId` taşıyan bir öneri dilleri ve
-bağlantıyı ekliyor, **cümlelere dokunmuyor** — kişi onları işin ne için
-olduğunu anlatmak için yazdı, GitHub ise neyle yazıldığını biliyor. Taşımayan
-bir öneri ise **yeni bir proje**, ilk satırı GitHub'ın kendi açıklaması: yani
-kişinin yazmadığı sözcüklerin geldiği durum, ve bunu kutuyu işaretledikten
-**sonra** değil önce bilmeli.
-
-**Hiçbiri işaretli gelmiyor.** Önceden seçili bir liste "sunuldu"yu bir
-formaliteye çevirirdi: ekrandan en hızlı çıkış yolu hepsini kabul etmek olur,
-ki kuralın yasakladığı otomatik ekleme tam olarak budur.
-
-**Boş cevap tek bir durum, dört değil.** Olmayan bir hesap, cevap vermeyen bir
-GitHub ve kayda değer bir şeyi olmayan bir hesap aynı boş listeyle geliyor —
-hiçbiri kişinin yapabileceği bir şey değil, o yüzden ekran hangisi olduğunu
-tahmin etmek yerine doğru olan tek şeyi söylüyor. **Hata paneli değil**:
-bir şey ters gitmedi.
-
-**Öneri sorgusu `useQuery` değil `useMutation`**, okumasına rağmen: saatte
-beşten birini harcayan bir `POST`, yani bir düğmeye basıldığında olmalı, bir
-bileşen mount olduğunda değil. `useQuery` odak değişiminde refetch edip hakkı
-bir sekme geçişinde yakardı.
-
-**Uygulama profilin tamamını düşürüyor**: tek transaction'da hem yeni proje
-ekleyip hem mevcut kayda birleşebiliyor, yani bölümler, kayıtlar ve atomlar
-birden kaymış olabilir.
-
-**Ölçüm:** 940 birim testi yeşil; `/profile` **256.5 → 257.2 KB** (tavan 280).
+**Ölçüm:** 948 birim testi yeşil; `/settings` **241.3 → 243.8 KB**,
+`/generate` **225.4 → 227.4**, `/profile` **257.4** (tavan 280).
 
 ### Aşama 3'ten devrolan açıklar
 

@@ -8,6 +8,7 @@ import { GenerateScreen } from '@/components/generation/GenerateScreen';
 import { failNextJob, gateRefusal } from '@/mocks/generationFixture';
 import { server } from '@/mocks/node';
 import { signIn } from '@/mocks/sessionFixture';
+import { createCustomization } from '@/lib/api/endpoints/profile';
 import en from '@/messages/en.json';
 
 const push = vi.fn();
@@ -184,6 +185,42 @@ describe('starting a generation', () => {
       await waitFor(() => expect(bodies).toHaveLength(1));
 
       expect((await sent(0)).emphasize).toHaveLength(10);
+    });
+
+    /**
+     * `F-038`'s third field. A profile with no saved appearance sets is the
+     * ordinary case, and a chooser whose only option is "your usual settings"
+     * would be a control for a decision nobody has to make — it teaches the
+     * reader a feature is broken rather than absent.
+     */
+    it('draws no appearance chooser while there is nothing to choose', async () => {
+      const user = userEvent.setup();
+      render(<GenerateScreen />, { wrapper });
+
+      await user.click(screen.getByRole('button', { name: en.Generation.directives.show }));
+      await screen.findByLabelText(en.Generation.directives.noteLabel);
+
+      expect(screen.queryByLabelText(en.Generation.directives.appearanceLabel)).toBeNull();
+    });
+
+    it('offers the saved sets once there are any, and sends the one picked', async () => {
+      const user = userEvent.setup();
+      signIn();
+      await createCustomization({ name: 'Compact, one page', baseTemplateId: 'classic' });
+
+      render(<GenerateScreen />, { wrapper });
+      await user.click(screen.getByRole('button', { name: en.Generation.directives.show }));
+
+      const chooser = await screen.findByLabelText(en.Generation.directives.appearanceLabel);
+      // The empty value is first and selected: an omitted `customizationId` is
+      // what nearly every request means.
+      expect(chooser).toHaveValue('');
+
+      await user.selectOptions(chooser, 'Compact, one page');
+      await user.click(screen.getByRole('button', { name: 'Generate' }));
+
+      await waitFor(() => expect(bodies).toHaveLength(1));
+      expect(await sent(0)).toHaveProperty('customizationId');
     });
 
     /**

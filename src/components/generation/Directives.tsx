@@ -27,15 +27,21 @@
  * **The note is the person's own content**, so it travels inside the fence
  * and nothing about it reaches a log line (absolute rule 4).
  *
- * `customizationId` is the third field on that request and is **not** here:
- * it names a saved appearance set, and there is nowhere to save one yet. It
- * arrives with the screen that makes them (D12), because a picker with no
- * items is a control that teaches the reader the feature is broken.
+ * **`customizationId` is the third field, and it is drawn only when there is
+ * something to pick.** It names an appearance set saved in the settings, and
+ * a profile with none is what nearly every profile looks like — a picker with
+ * one option reading "the usual" teaches the reader a feature is broken
+ * rather than absent. So the control appears the moment a set exists and not
+ * before.
+ *
+ * Absent means the profile's own working settings, which the server's own
+ * description calls what nearly every request means.
  */
 
 import { useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { TagInput } from '@/components/profile/TagInput';
+import { useCustomizations } from '@/hooks/useAppearance';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -50,6 +56,9 @@ export type DirectivesProps = {
   onEmphasizeChange: (terms: string[]) => void;
   note: string;
   onNoteChange: (note: string) => void;
+  /** Empty means the profile's own working settings. */
+  customizationId: string;
+  onCustomizationChange: (id: string) => void;
   disabled?: boolean;
 };
 
@@ -58,6 +67,8 @@ export function Directives({
   onEmphasizeChange,
   note,
   onNoteChange,
+  customizationId,
+  onCustomizationChange,
   disabled = false,
 }: DirectivesProps) {
   const t = useTranslations('Generation.directives');
@@ -65,6 +76,15 @@ export function Directives({
   const panelId = useId();
   const noteId = useId();
   const noteHintId = `${noteId}-hint`;
+  const appearanceId = useId();
+
+  /*
+    Asked for only once the panel is open, which is what keeps this off the
+    path of a reader who never steers anything: the list is a second request,
+    and "manual control is optional" means the default has to cost nothing.
+  */
+  const saved = useCustomizations(open);
+  const sets = saved.data ?? [];
 
   /*
     A button and a panel rather than `<details>`, for one reason that matters
@@ -120,6 +140,37 @@ export function Directives({
               onChange={(event) => onNoteChange(event.target.value)}
             />
           </div>
+
+          {/*
+            Only when there is something to pick (`F-038`). A profile with no
+            saved sets is the ordinary case, and a chooser whose only option
+            is "the usual" would be a control for a decision nobody has to
+            make — it teaches a reader the feature is broken rather than
+            absent.
+
+            The empty value is the **first** option and the default, because
+            an omitted `customizationId` is what nearly every request means.
+          */}
+          {sets.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor={appearanceId}>{t('appearanceLabel')}</Label>
+              <p className="text-muted-foreground text-xs">{t('appearanceHint')}</p>
+              <select
+                id={appearanceId}
+                value={customizationId}
+                disabled={disabled}
+                className="border-border bg-background h-9 w-fit rounded-lg border px-3 text-sm"
+                onChange={(event) => onCustomizationChange(event.target.value)}
+              >
+                <option value="">{t('appearanceDefault')}</option>
+                {sets.map((set) => (
+                  <option key={set.id} value={set.id}>
+                    {set.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       )}
     </div>
