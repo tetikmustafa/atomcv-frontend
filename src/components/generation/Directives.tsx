@@ -36,15 +36,24 @@
  *
  * Absent means the profile's own working settings, which the server's own
  * description calls what nearly every request means.
+ *
+ * **`language` is the fourth, and § 38.1 puts it here rather than only in the
+ * settings**: the output language is decided per generation, because the
+ * posting you are answering today may not be in the language you usually
+ * write in. Drawn on the same terms as the set picker — only when the profile
+ * may be rendered in more than one language — and empty means the profile's
+ * own default, which is itself allowed to say "follow the posting".
  */
 
 import { useId, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { TagInput } from '@/components/profile/TagInput';
 import { useCustomizations } from '@/hooks/useAppearance';
+import { useProfile } from '@/hooks/useProfile';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { languageName } from '@/lib/i18n/languageNames';
 
 /** The server's own bounds, so a refused request is never sent (§ 18.7). */
 export const EMPHASIZE_MAX_TERMS = 10;
@@ -59,6 +68,9 @@ export type DirectivesProps = {
   /** Empty means the profile's own working settings. */
   customizationId: string;
   onCustomizationChange: (id: string) => void;
+  /** Empty means the profile's own default, which may itself be `auto`. */
+  language: string;
+  onLanguageChange: (language: string) => void;
   disabled?: boolean;
 };
 
@@ -69,14 +81,27 @@ export function Directives({
   onNoteChange,
   customizationId,
   onCustomizationChange,
+  language,
+  onLanguageChange,
   disabled = false,
 }: DirectivesProps) {
   const t = useTranslations('Generation.directives');
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const noteId = useId();
   const noteHintId = `${noteId}-hint`;
   const appearanceId = useId();
+  const languageId = useId();
+
+  /*
+    The languages this profile may be *rendered* in, which is not the same
+    question as `capabilities.allowedLanguages` — that one says what a profile
+    may hold. Offering a language with no wordings behind it would be asking
+    for a document the server cannot produce.
+  */
+  const { data: profile } = useProfile();
+  const languages = profile?.data.enabledLanguages ?? [];
 
   /*
     Asked for only once the panel is open, which is what keeps this off the
@@ -166,6 +191,36 @@ export function Directives({
                 {sets.map((set) => (
                   <option key={set.id} value={set.id}>
                     {set.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/*
+            § 38.1's third axis, asked per generation. Same rule as the set
+            picker above: one language is not a choice, and an anonymous
+            session has exactly one.
+
+            The empty option is first and is the default — it means "whatever
+            the profile says", which is a different answer from every named
+            language and from "follow the posting" alike.
+          */}
+          {languages.length > 1 && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor={languageId}>{t('languageLabel')}</Label>
+              <p className="text-muted-foreground text-xs">{t('languageHint')}</p>
+              <select
+                id={languageId}
+                value={language}
+                disabled={disabled}
+                className="border-border bg-background h-9 w-fit rounded-lg border px-3 text-sm"
+                onChange={(event) => onLanguageChange(event.target.value)}
+              >
+                <option value="">{t('languageDefault')}</option>
+                {languages.map((code) => (
+                  <option key={code} value={code}>
+                    {languageName(code, locale) ?? code}
                   </option>
                 ))}
               </select>

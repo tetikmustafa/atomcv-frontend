@@ -94,6 +94,14 @@ export function GenerateScreen() {
   const [emphasize, setEmphasize] = useState<string[]>([]);
   const [note, setNote] = useState('');
   const [customizationId, setCustomizationId] = useState('');
+  /**
+   * The output language for this one generation (§ 38.1).
+   *
+   * Empty means the profile's default, which is what nearly every request
+   * means — and is itself allowed to be `auto`, "follow the posting". Three
+   * states, so an empty string cannot be collapsed into either of the others.
+   */
+  const [language, setLanguage] = useState('');
   const [job, setJob] = useState<{ jobId: string; streamUrl?: string } | null>(null);
 
   /**
@@ -148,6 +156,10 @@ export function GenerateScreen() {
       // Absent means the profile's own working settings, which the schema
       // calls what nearly every request means.
       ...(customizationId === '' ? {} : { customizationId }),
+      // Same reading for the language, and it has to be an omission rather
+      // than a value: the profile's default may itself be `auto`, so sending
+      // one of ours would overrule a preference the reader did set.
+      ...(language === '' ? {} : { language }),
       // Omitted rather than sent empty where there is none: an empty value is
       // a **failure** to the challenge, while an absence is what a deployment
       // without a Turnstile secret expects (`B-083`).
@@ -322,6 +334,8 @@ export function GenerateScreen() {
         onNoteChange={setNote}
         customizationId={customizationId}
         onCustomizationChange={setCustomizationId}
+        language={language}
+        onLanguageChange={setLanguage}
         disabled={start.isPending}
       />
 

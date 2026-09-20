@@ -532,7 +532,10 @@
       "appearanceLabel": "Bu CV'nin görünümü",
       "appearanceHint": "Sakladığın setlerden biri. Olduğu gibi bırakırsan her zamanki ayarların kullanılır.",
       "appearanceDefault": "Her zamanki ayarların",
-      "notePlaceholder": "Makine öğrenmesi yerine platform işlerini öne al."
+      "notePlaceholder": "Makine öğrenmesi yerine platform işlerini öne al.",
+      "languageLabel": "Bunun dili",
+      "languageHint": "Bu CV hangi dilde çıksın. Her zamanki tercihini kullanmak için dokunma — bugün cevapladığın ilan, genelde yazdığın dilde olmak zorunda değil.",
+      "languageDefault": "Her zamanki tercihin"
     }
   },
   "Result": {

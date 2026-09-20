@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GenerateScreen } from '@/components/generation/GenerateScreen';
 import { failNextJob, gateRefusal } from '@/mocks/generationFixture';
 import { server } from '@/mocks/node';
+import { fixture } from '@/mocks/profileFixture';
 import { signIn } from '@/mocks/sessionFixture';
 import { createCustomization, deleteCustomization } from '@/lib/api/endpoints/profile';
 import en from '@/messages/en.json';
@@ -185,6 +186,59 @@ describe('starting a generation', () => {
       await waitFor(() => expect(bodies).toHaveLength(1));
 
       expect((await sent(0)).emphasize).toHaveLength(10);
+    });
+
+    /**
+     * § 38.1's third axis, and the reason it is asked here as well as in the
+     * settings: the posting you are answering today need not be in the
+     * language you usually write in.
+     *
+     * Drawn on the same terms as the appearance chooser — one language is not
+     * a choice, and an anonymous session has exactly one.
+     */
+    it('draws no language chooser while the profile has one language', async () => {
+      const user = userEvent.setup();
+      render(<GenerateScreen />, { wrapper });
+
+      await user.click(screen.getByRole('button', { name: en.Generation.directives.show }));
+      await screen.findByLabelText(en.Generation.directives.noteLabel);
+
+      expect(screen.queryByLabelText(en.Generation.directives.languageLabel)).toBeNull();
+    });
+
+    it('offers the profile’s languages and sends the one picked', async () => {
+      const user = userEvent.setup();
+      signIn();
+      fixture.profile.enabledLanguages = ['en', 'tr'];
+
+      render(<GenerateScreen />, { wrapper });
+      await user.click(screen.getByRole('button', { name: en.Generation.directives.show }));
+
+      const chooser = await screen.findByLabelText(en.Generation.directives.languageLabel);
+      // Empty and first: the profile's own default is what nearly every
+      // request means, and that default may itself be "follow the posting".
+      expect(chooser).toHaveValue('');
+
+      await user.selectOptions(chooser, 'tr');
+      await user.click(screen.getByRole('button', { name: 'Generate' }));
+
+      await waitFor(() => expect(bodies).toHaveLength(1));
+      expect(await sent(0)).toHaveProperty('language', 'tr');
+    });
+
+    it('sends no language when the chooser was left alone', async () => {
+      const user = userEvent.setup();
+      signIn();
+      fixture.profile.enabledLanguages = ['en', 'tr'];
+
+      render(<GenerateScreen />, { wrapper });
+      await user.click(screen.getByRole('button', { name: en.Generation.directives.show }));
+      await screen.findByLabelText(en.Generation.directives.languageLabel);
+
+      await user.click(screen.getByRole('button', { name: 'Generate' }));
+
+      await waitFor(() => expect(bodies).toHaveLength(1));
+      expect(await sent(0)).not.toHaveProperty('language');
     });
 
     /**
