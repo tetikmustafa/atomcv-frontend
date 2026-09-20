@@ -20,6 +20,7 @@ import { useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
+import { UsageNote } from '@/components/generation/UsageNote';
 import { ProgressBar } from '@/components/feedback/ProgressBar';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -304,6 +305,14 @@ export function ImportScreen() {
         submit();
       }}
     >
+      {/*
+        The import allowance, before the file is chosen rather than after it
+        is refused. § 44 makes the quota a product boundary, not an incident —
+        and `PROFILE_QUOTA_EXCEEDED` is otherwise the first time anybody hears
+        this limit exists.
+      */}
+      <UsageNote metric="profile_extract" />
+
       <div className="flex flex-col gap-2">
         <Label htmlFor="cv-file">{t('fileLabel')}</Label>
         <input

@@ -7,11 +7,16 @@
  * meets by hitting it is a limit they experience as a failure. § 44 makes the
  * quota a product boundary, not an incident.
  *
- * Only the `generation` metric is drawn. `/account/usage` always reports both
- * — a missing entry would mean the metric does not exist, never that nothing
- * has been used (`B-039`) — but profile import is Stage 3, and a counter for
- * something the product cannot yet do is noise on the screen where the user
- * is about to do the other thing.
+ * **Which metric is a prop, and it used to be a constant.** `/account/usage`
+ * always reports both — a missing entry would mean the metric does not exist,
+ * never that nothing has been used (`B-039`) — and only `generation` was ever
+ * drawn, because "profile import is Stage 3" and a counter for something the
+ * product could not yet do would have been noise.
+ *
+ * Stage 3 closed. Import shipped, `PROFILE_QUOTA_EXCEEDED` has a sentence
+ * written for it, and the counter stayed behind — so the only way to learn
+ * that limit was to be refused by it, which is the failure this component
+ * exists to prevent.
  *
  * It stays quiet while it loads and when it fails: this is context, and a
  * screen that leads with an error about a side note has buried what the user
@@ -21,11 +26,14 @@
 import { useTranslations } from 'next-intl';
 import { useUsage } from '@/hooks/useGeneration';
 
-export function UsageNote() {
+/** The two the server counts (§ 44.2). */
+export type UsageMetric = 'generation' | 'profile_extract';
+
+export function UsageNote({ metric = 'generation' }: { metric?: UsageMetric } = {}) {
   const t = useTranslations('Usage');
   const { data } = useUsage();
 
-  const generation = data?.find((entry) => entry.metric === 'generation');
+  const generation = data?.find((entry) => entry.metric === metric);
 
   if (
     !generation ||
@@ -37,8 +45,8 @@ export function UsageNote() {
   }
 
   return (
-    <p data-testid="usage-note" className="text-muted-foreground text-sm">
-      <span>{t('metric', { metric: generation.metric ?? 'generation' })}</span>
+    <p data-testid={`usage-note-${metric}`} className="text-muted-foreground text-sm">
+      <span>{t('metric', { metric: generation.metric ?? metric })}</span>
       {' · '}
       <span data-testid="usage-count">
         {/*
