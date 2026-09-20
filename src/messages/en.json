@@ -532,7 +532,10 @@
       "appearanceLabel": "Appearance for this one",
       "appearanceHint": "One of the settings you kept. Leave it as it is to use your usual ones.",
       "appearanceDefault": "Your usual settings",
-      "notePlaceholder": "Lead with the platform work rather than the ML."
+      "notePlaceholder": "Lead with the platform work rather than the ML.",
+      "languageLabel": "Language for this one",
+      "languageHint": "Which language this resume comes out in. Leave it alone to use your usual choice — the posting you are answering today need not be in the language you usually write in.",
+      "languageDefault": "Your usual choice"
     }
   },
   "Result": {

@@ -691,8 +691,14 @@ export const generationHandlers = [
 
         The language is guessed from the posting the way a mock may: this
         stands in for Faz A, which is the only thing that really knows.
+
+        **A language named in the request beats all of it** (§ 14.3): the
+        request's own field beats the preference, and the preference beats the
+        posting. Without that order here, a screen could send `language` and
+        never see it take effect — which is the one thing a mock owes a
+        control that has just been drawn.
       */
-      contentLanguage: 'tr',
+      contentLanguage: body.language ?? 'tr',
       ...(jobDescription === ''
         ? {}
         : { postingLanguage: looksEnglish(jobDescription) ? 'en' : 'tr' }),
