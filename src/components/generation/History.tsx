@@ -110,12 +110,33 @@ function Row({ row }: { row: GenerationSummary }) {
   const locale = useLocale();
 
   const when = row.createdAt ? format.dateTime(new Date(row.createdAt), 'short') : '';
+
+  /*
+    `B-118`, `F-039`: the summary carries `maxPages` so a row reads the way the
+    result screen reads, and this is the row's version of it — one fact, not a
+    second one. A badge saying "short" beside the page count would be the same
+    thing said twice, and louder than a document that came out correct
+    deserves.
+
+    The limit is **this generation's**, which is the whole reason the field was
+    asked for: a CV made under a one-page limit must not be relabelled the day
+    the preference is raised to two. Absent on a row written before the limit
+    was recorded, and then the count stands alone rather than against a guess.
+  */
+  const pages =
+    row.pageCount === undefined
+      ? null
+      : row.maxPages !== undefined && row.pageCount < row.maxPages
+        ? t('pagesUnderLimit', { count: row.pageCount, limit: row.maxPages })
+        : t('pages', { count: row.pageCount });
+
   const facts = [
     when,
-    row.pageCount === undefined ? null : t('pages', { count: row.pageCount }),
+    pages,
     row.matchLevel ? fit('level', { level: row.matchLevel }) : null,
     languageName(row.contentLanguage, locale),
     row.hasCoverLetter ? t('withLetter') : null,
+    row.archived === true ? t('kept') : null,
   ].filter(Boolean);
 
   /*
@@ -129,6 +150,16 @@ function Row({ row }: { row: GenerationSummary }) {
     screen reader wants anyway.
   */
   const label = [row.roleTitle, row.companyName].filter(Boolean);
+
+  /*
+    `B-102`: this is the screen the mark is read on, and it is in the facts
+    above rather than in a badge of its own. Said in words rather than drawn
+    as an icon or a colour (rule 6), because it is one more thing that is true
+    about the row — like its language or its page count — and it reaches the
+    accessible name for free that way.
+
+    Absent means not archived; a generation is not made archived.
+  */
 
   const body = (
     <>
@@ -150,12 +181,18 @@ function Row({ row }: { row: GenerationSummary }) {
   const className = 'border-border flex flex-col gap-1 rounded-md border px-3 py-2';
 
   /*
-    A generation that did not finish has no document to open, so its row is
-    not a link. Linking it would offer a screen whose only possible content is
-    an error — the reader learns the same thing from the label, without the
-    journey.
+    This tested `status === 'failed'` as well until `B-116`, and the branch
+    was unreachable for a structural reason rather than an accidental one:
+    `selection_state` is `NOT NULL`, so a run that falls over before the
+    selection has no row to be listed as, and the failure lives on the **job**
+    instead. The value left the wire with V17.
+
+    What is left is the row without an id, which stays as it was: there is
+    nothing to link to. `superseded` is deliberately **not** in here — a
+    replaced generation is a finished one with a document, and refusing to
+    open it would hide the very thing the reader came back for.
   */
-  if (row.status === 'failed' || !row.generationId) {
+  if (!row.generationId) {
     return <div className={className}>{body}</div>;
   }
 

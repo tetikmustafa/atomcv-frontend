@@ -109,6 +109,18 @@ export type MockGenerationJob = MockJobCommon & {
   contentLanguage?: string;
   postingLanguage?: string;
   /**
+   * The page limit **this** generation was made under (`B-118`, `F-039`) —
+   * what the request asked for, or the profile's default when it asked for
+   * nothing.
+   *
+   * Frozen onto the job for the same reason the selection above is: the
+   * preference can be raised a minute later, and a document must not be
+   * called short against a limit it was never built to. Optional here too,
+   * because the server sends nothing for a row written before the limit was
+   * recorded, and a screen that reads an absence has to be able to meet one.
+   */
+  maxPages?: number;
+  /**
    * What the history row is labelled with (`B-070`) — the two names Faz A
    * reads off the posting, and the whole of § 57.6's exception to absolute
    * rule 4.
@@ -159,6 +171,14 @@ export type MockGenerationJob = MockJobCommon & {
    * fixture has; on the server it belongs to the generation.
    */
   selection: MockSelectionLine[];
+  /**
+   * Whether this one is marked to keep (`B-102`, § 13).
+   *
+   * Optional and absent by default, because a generation is **not** made
+   * archived — the endpoint and the `generations.archived` column both
+   * existed from the start and had simply never met.
+   */
+  archived?: boolean;
 };
 
 /**
@@ -168,8 +188,19 @@ export type MockGenerationJob = MockJobCommon & {
  * schema's and only the order is ours. `onPage` false is an atom the page
  * budget held back — it competed and lost, which is exactly what makes it
  * offerable as a toggle.
+ *
+ * **`Required<>` over the whole schema was wrong from the moment `B-108`
+ * landed**, and wrong in a way a mock is uniquely placed to hide: the two
+ * fields it added are absent rather than empty, and their absence *means*
+ * something. `matchedKeywords: []` beside a chosen line reads as "nothing
+ * matched", and `heldBackReason` on a line that is on the page names a
+ * reason for something that did not happen. A fixture that cannot express
+ * absence cannot produce the state the screen has to handle.
  */
-export type MockSelectionLine = Required<Schemas['SelectionLine']>;
+export type MockSelectionLine = Required<
+  Pick<Schemas['SelectionLine'], 'atomId' | 'text' | 'onPage'>
+> &
+  Pick<Schemas['SelectionLine'], 'matchedKeywords' | 'heldBackReason'>;
 
 /**
  * A job of either kind.

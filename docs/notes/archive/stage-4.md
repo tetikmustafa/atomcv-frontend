@@ -10,6 +10,575 @@
 
 ---
 
+### D14 kapandı — açık kaynak yüzeyi, ve dağıtımın bekleyenleri (2026-09-20)
+
+**`README` "Stage 0 — skeleton" diyordu.** Üç aşama geride kalmıştı, ve bu
+açık kaynak bir repoda **ilk okunan** dosya: durum satırı yanlışsa geri kalan
+her şey de şüpheli okunur. Bugünkü hâli yazıldı — spec'in tarif ettiği her
+ekran var ve gerçek uca bağlı — **ve dağıtılmadığı da yazıldı**, beş ölçümsüz
+şeyi adıyla sayarak.
+
+**`CONTRIBUTING` ve `SECURITY` indi.** İkincisi bir şeyi açıkça söylüyor:
+**dağıtım yok**, yani bugün işe yarayan rapor vahşi doğada gözlenmiş bir şey
+değil, koştuğunda önemli *olacak* bir kusur. İkisi de kapsam dışını sayıyor,
+çünkü bir katkıcının en pahalı öğrenme şekli yazdıktan sonra öğrenmek.
+
+**`.env.example` denetlendi ve iki değişken silindi.** `NEXT_PUBLIC_APP_NAME`
+hiçbir yerde okunmuyordu; `NEXT_PUBLIC_SENTRY_DSN` "Aşama 3'te doldurulacak"
+diye yazılmış ve hiç bağlanmamıştı. **Kodun yok saydığı bir değişkeni listeleyen
+bir örnek dosya, onu atlayandan kötüdür**: biri ayarlar, hiçbir şey olmaz, ve
+özelliğin kapalı mı bozuk mu olduğunu ayırt edemez.
+
+**Blog yerine tek sayfa, ve bu bir kısayol değil karar.** Blog bir hattır;
+yazılacak içeriği olmayan bir hat hiçbir şey indeksletmez ve bakım maliyeti
+getirir. Arama motorunun kullanabileceği şey, insanın geldiği soruyu cevaplayan
+bir sayfa — sayfa sınırı nasıl **garanti** ediliyor, bir dil modelinin iş
+uydurmasını ne engelliyor — ve yazılacak tam olarak bir tane var.
+`/how-it-works` `(app)` dışında: sağlayıcı yok, kendi JS'i yok, ve
+`PUBLIC_PATHS`'e girdiği için sitemap ile hreflang haritasına da girdi.
+
+**Yazılmayan iki şey ve sebebi.** Analitik ve `deploy.yml`. Ölçümü alacak bir
+yer yokken huni ölçen kod yazmak, çalıştığını hiç görmeyeceğimiz bir şeyi
+bakım yüküne çevirmek olurdu — ve `SECURITY.md` bunu bir güvenlik olgusu
+olarak da söylüyor: üçüncü taraf script yok, Turnstile dışında.
+
+### D13 kapandı — kasıtlı boşlukların dördü, biri gerekçesiyle kalıyor (2026-09-20)
+
+**Bir boşluk "artık yapabiliriz" diye değil, "gerekçesi bayatladı" diye
+kapanıyor.** Dördünde de bayatlayan şey bir cümleydi.
+
+**Bölüm düzeni seçici.** Gerekçe "beşinin de ICU adı ve About için
+`paragraph` varsayılanı gerekir" idi ve hâlâ doğru — ama `two_column`
+telden kalktığı için artık **dört**, ve dördünün de adı yazıldı. Öneri türü
+izliyor (§ 33.4.1), **kişi bir seçim yapana kadar**: `paragraph` seçip sonra
+türü düzelten biri karar vermiştir, üstüne yazmak formun kendini daha iyi
+bilir sanması olurdu. Öneri bir **olay** anında kuruluyor, `kind`'ı izleyen
+bir effect'te değil — effect state'e tepki veren state olurdu ve lint de öyle
+diyor.
+
+**Profil başındaki dil eksenleri.** Gerekçe "`allowedLanguages` yayımlanmıyor"
+idi; `B-081`'den beri yayımlanıyor. Geriye kalan çizilmemiş bir kontroldü —
+kasıtlı boşluğun fark edilmemiş boşluğa dönüşme şekli tam olarak bu.
+**Kaynak dil kapatılamıyor**: `enabledLanguages` onu içermek zorunda, yoksa
+sunucu gövdeyi reddediyor. Kutu **yok edilmiyor, devre dışı bırakılıp sebebi
+söyleniyor** — yük taşımaya başlayınca kaybolan bir kontrol hiçbir şey
+öğretmez.
+
+**Tek sözcüklemenin silinmesi.** Gerekçe "silinmek istenen şey madde" idi:
+olağan durumda doğru, iki sözcüklemeli bir atomda hiç doğru değil. Uç ve iki
+reddi zaten yazılıydı, eksik olan düğmeydi. Sunucunun iki reddi ekranda **tek
+koşula** indi — `primary` değilse başka biri vardır — yani birincil olan da,
+tek olan da kontrolü hiç göstermiyor.
+
+**Mark-farkında editör, ve bu dördünün en büyüğü.** Mutlak kural 4 bileşeni
+adıyla sayıyordu; uyarı bir köprüydü. **Hangi editörün çizileceğine içerik
+karar veriyor**: marksız bir cümle tek alan, marklı bir cümle parça listesi.
+İşaretsiz içeriği parça listesine sarmak tören olurdu; marklı içeriği düz
+alanda düzenlemek ise markı silmek — uyarının var olma sebebi.
+
+**Dönüşüm kaydetme yolundan editöre taşındı.** `useAutosave` bir string
+taşıyordu ve "tek marksız run"a çevirme **save**'de oluyordu: yani her yazma
+markları siliyordu, hangi editör üretmiş olursa olsun. Dönüşüm, markları
+temsil **edemeyen** editöre ait.
+
+**Taslak geçersiz olabilir, run olamaz.** `link` bir `href` ister ve
+`createRun` ikisinde de fırlatıyor — içerik için doğru, kutunun
+işaretlendiği an için yanlış. Yarım hâl taslakta duruyor, satırda söyleniyor,
+ve `onChange` yalnız bütün içerikle çağrılıyor. Alternatif, saniyeler sonra
+sunucunun reddetmesi: P8'in önlemek için var olduğu şekil.
+
+**Üç gerçek kusur yazarken çıktı.** (1) Seed **kimlikle** karşılaştırılıyordu;
+`runs` her render'da yeniden ayrıştırıldığı için alan bir karakter alıp
+kaydedilmiş cümleye geri dönüyordu — değere göre karşılaştırıldı, negatif
+kontrolü var. (2) Grup adı `<h3>` ile veriliyordu: marklı atom başına bir
+başlık, iki yüz tanesi bölümünkinin altında. Başlık değil `<span>`, çünkü
+`aria-labelledby` her elemanla çalışıyor. (3) `role="group"` sarmalayıcısı
+kayıt gruplarıyla çakışıyordu; ad **listeye** taşındı.
+
+**Bir ICU etiketi de çakıştı:** `marks.organization` "Organisation" idi ve
+kayıt formunun kendi alanıyla aynı; "Employer or school" oldu.
+
+**`pageCount < maxPages` notu kapanmadı ve sebebi ölçüldü.** Verdikt
+"kapanıyor" diyordu; `GenerationResponse` `maxPages` **yayımlamıyor**, ve
+profilin bugünkü tercihiyle karşılaştırmak o üretimin neyle yapıldığını değil
+bugün neyin ayarlı olduğunu söylerdi. `F-039` bunu istiyor.
+
+**Ölçüm:** 965 birim testi yeşil; `/profile` **257.2 → 258.6 KB** (tavan 280).
+
+### D12 kapandı — şablon kapasitesi ve adlandırılmış görünüm setleri (2026-09-20)
+
+`F-038`'in iki ucu telde duruyordu ve hiçbir şey okumuyordu.
+
+**`GET /templates` bu ekran için var ve öyle diyor:** *"üç isim ve hiç yoğunluk
+göstermeyen bir seçici, birinden kör seçim yapmasını istiyor."* Seçicide duran
+tam olarak üç isimdi. **İki liste, iki soru:** `allowedTemplates` bu çağıranın
+hangilerini seçebileceğini, registry ise onların ne olduğunu söylüyor. Ayrı
+tutuluyorlar çünkü ömürleri farklı — registry herkes için aynı ve bayatlamıyor
+(`staleTime: Infinity`), yetenekler oturumla kayıyor.
+
+**Yoğunluk `aria-describedby`, `label` değil.** Etikete katlandığında radyonun
+erişilebilir adı *"ClassicAbout 54 lines a page"* oldu: şablon kendi adıyla
+bulunamaz hâle geldi ve ekran okuyucu iki olguyu tek cümle gibi okudu. Ad
+"bu nedir", yoğunluk "bunun hakkında doğru olan" — ikincisi açıklamadır, ve
+okuyucu onu ikinci sırada duyar. Testi iki ucundan sabitliyor.
+
+**Çakışan bir ICU ad alanı, uzaktan patlayan bir hata.** Yeni bölüm önce
+`Appearance.saved` diye eklendi; `Appearance` zaten `"saved": "Saved."` diye
+bir **string** taşıyordu, JSON son tanımı kazandı ve namespace sessizce bir
+string oldu. Hata `useTranslations('Appearance.saved')` satırında "geçerli bir
+namespace değil" diye çıktı — sebebi başka bir dosyadaki bir ad çakışması.
+Bölüm `Appearance.presets` oldu. **Ders:** yeni bir ICU nesnesi eklerken
+kardeş anahtarlara bak; çakışma tip hatasını gerçek sebebinden uzağa taşıyor.
+
+**Kaydetmek yukarıdaki çalışma setini kopyalıyor**, ikinci bir slider takımı
+açmıyor. Aynı beş değeri kuracak iki yer, onları yanlış kuracak iki yer olurdu;
+ekranın sorduğu soru bunların ne olması gerektiği değil, ne adlandırılacağı.
+
+**Silme hiçbir şey hakkında uyarmıyor ve bu dikkatsizlik değil.** Bir setle
+üretilmiş CV, enstantanesinde id değil **ayarların kendisini** taşıyor, yani
+gönderilmiş her belge hâlâ birebir yeniden basılıyor. Anlatılacak bir cascade
+ve riskteki bir belge yok.
+
+**`customizationId` ancak seçilecek bir şey varken çiziliyor.** Kaydedilmiş
+seti olmayan profil olağan hâl; tek seçeneği "her zamanki ayarların" olan bir
+seçici, kimsenin vermek zorunda olmadığı bir karar için kontrol olurdu — ve
+okuyucuya özelliğin yok olduğunu değil **bozuk** olduğunu öğretirdi. Liste
+yalnız panel açıldığında isteniyor.
+
+**Ölçüm:** 948 birim testi yeşil; `/settings` **241.3 → 243.8 KB**,
+`/generate` **225.4 → 227.4**, `/profile` **257.4** (tavan 280).
+
+### D10 kapandı — `auto`'nun üç sonucu (2026-09-20)
+
+`B-107` `F-013`'ü kapattı: Türkçe bir profil İngilizce bir ilana Türkçe CV
+üretiyordu, çünkü belgeyi tek dilde tutmanın tek yolu ilanı takip etmeyi
+reddetmekti. § 21.8'in ikinci adımı indi — eksik sözcüklemeler Faz B ile Faz C
+**arasında** çevriliyor ve profile yazılıyor. Ekranda üç sonucu var.
+
+**Bekleme `SCORING`'in içinde ve orada açıklanıyor.** En çok altmış çağrı,
+hepsi tek fazın içinde; yani çubuk, skorlamayla hiç ilgisi olmayan bir sebeple
+durabiliyor ve durduğunu gören biri yavaş adımı takılmış adımdan ayıramıyor.
+Not **yalnız bu fazda**: her beklemeyi açıklayan bir altyazı hiçbir şey
+açıklamaz, ve sebebi üstündeki etiketten görünmeyen tek faz bu. Cümle "ikinci
+sefer hızlı" diyor, çünkü beklemeye değdiren olgu o.
+
+**Karşılaştırma tam anahtara karşı** (`generation.phase.SCORING`), faz adına
+karşı değil: `phaseKey` sunucunun gönderdiği şey ve sunucu bir çeviri anahtarı
+gönderiyor. `'SCORING'` ile karşılaştırmak her karede yanlış olurdu — **ve
+sessizce**: hiç çıkmayan bir not, çevrilecek bir şeyi olmayan bir üretimden
+ayırt edilemez. Bunun kendi testi var.
+
+**Dil notunun gerekçesi değişti.** Eski cümle "profilinde ilanın dilinde
+sözcükleme yok" diyordu — `auto` çeviremezken hikâyenin tamamı buydu.
+Artık çevirebiliyor, yani belgenin profilin dilinde çıkması **çevirinin
+tamamlanamadığı** anlamına geliyor: hep ya hiç, asla yarısı bir dilde.
+
+**Çevrilmiş sözcükleme kendi notunu taşıyor**, ve bayatlıktan **ayrı bir
+olgu**: bir satır gayet güncel olup yine de makine çevirisi olabilir
+(`stale: false`, `userEdited: false`). İkisi ayrı bileşen, çünkü bir atom
+ikisini de, birini ya da hiçbirini taşıyabilir. Not **kapatılamıyor**: bir
+kapatma, olguyu bitirmeden notu bitirirdi.
+
+**Not kişi metne dokununca bitiyor, ve bitiren sunucu.** `userEdited`'i
+yazmak sunucunun işi; ekran bir bayrak tutmuyor. Bunu yazarken mock'ta **bir
+eksik bulundu**: içerik yaması `userEdited`'i hiç işaretlemiyordu, yani mock
+istemcinin az önce baştan yazdığı bir satırı "kimsenin yazmadığı" olarak
+tutmaya devam ediyordu. Bayrağı hiçbir şey çizmediği sürece görünmezdi.
+
+**Ölçüm:** 931 birim testi yeşil, typecheck ve lint temiz.
+
+### D11 kapandı — GitHub içe aktarımı (2026-09-20)
+
+`B-106`: iki uç, ve **birincisi hiçbir şey yazmıyor**. Kural "sunulur, asla
+otomatik eklenmez" ve ayrım tam olarak bunu koruyor — profile hiçbir şey
+ulaşmıyor, ta ki ikinci istek depoları adıyla sayana kadar.
+
+**Hiçbir şey bağlanmıyor, hiçbir izin istenmiyor.** Yalnız herkese açık veri
+okunuyor, o yüzden ne token isteniyor ne saklanıyor — ve ekran aksini ima
+etmemeli. "GitHub'ı bağla" yazan bir düğme, ürünün istemediği ve
+kullanmadığı bir şeyi istemek olurdu.
+
+**Birleştirme ile yeni proje ayrı çiziliyor**, çünkü kişinin kendi yazdığına
+farklı şeyler yapıyorlar: `matchedEntryId` taşıyan bir öneri dilleri ve
+bağlantıyı ekliyor, **cümlelere dokunmuyor** — kişi onları işin ne için
+olduğunu anlatmak için yazdı, GitHub ise neyle yazıldığını biliyor. Taşımayan
+bir öneri ise **yeni bir proje**, ilk satırı GitHub'ın kendi açıklaması: yani
+kişinin yazmadığı sözcüklerin geldiği durum, ve bunu kutuyu işaretledikten
+**sonra** değil önce bilmeli.
+
+**Hiçbiri işaretli gelmiyor.** Önceden seçili bir liste "sunuldu"yu bir
+formaliteye çevirirdi: ekrandan en hızlı çıkış yolu hepsini kabul etmek olur,
+ki kuralın yasakladığı otomatik ekleme tam olarak budur.
+
+**Boş cevap tek bir durum, dört değil.** Olmayan bir hesap, cevap vermeyen bir
+GitHub ve kayda değer bir şeyi olmayan bir hesap aynı boş listeyle geliyor —
+hiçbiri kişinin yapabileceği bir şey değil, o yüzden ekran hangisi olduğunu
+tahmin etmek yerine doğru olan tek şeyi söylüyor. **Hata paneli değil**:
+bir şey ters gitmedi.
+
+**Öneri sorgusu `useQuery` değil `useMutation`**, okumasına rağmen: saatte
+beşten birini harcayan bir `POST`, yani bir düğmeye basıldığında olmalı, bir
+bileşen mount olduğunda değil. `useQuery` odak değişiminde refetch edip hakkı
+bir sekme geçişinde yakardı.
+
+**Uygulama profilin tamamını düşürüyor**: tek transaction'da hem yeni proje
+ekleyip hem mevcut kayda birleşebiliyor, yani bölümler, kayıtlar ve atomlar
+birden kaymış olabilir.
+
+**Ölçüm:** 940 birim testi yeşil; `/profile` **256.5 → 257.2 KB** (tavan 280).
+
+### D7 kapandı — arşivleme, ve vaadin bugünkü büyüklüğü (2026-09-20)
+
+`B-102`: uç kaynak haritasında ilk taslaktan beri, `generations.archived`
+kolonu V1'den beri vardı ve ikisi hiç buluşmamıştı.
+
+**Kopya bugün doğru olanı vaat ediyor, yarın doğru olacağı değil.** İşaretin
+satın aldığı şey bir saklama kuralı — arşivlenmiş bir üretimin çıktısı hiç
+sonlanmıyor — ama nesne deposu inene kadar zaten hiçbir şey sonlanmıyor
+(§ 57.4). O yüzden cümle "işaret tutuluyor ve okunuyor" diyor, "dosyanı
+silinmekten koruyor" demiyor. Kural ısırmaya başladığında cümle **güçlenir**;
+önce fazla vaat eden bir cümle **zayıflamak** zorunda kalırdı, ve kimse
+düzeltme okumaz.
+
+**İşaret bir yerde konuyor, başka yerde okunuyor** ve maddenin kendisi böyle
+diyor: sonuç ekranı kişinin "bu CV önemliydi" dediği yer, geçmiş ise
+okunduğu. Geçmişte **kendi rozeti yok** — satır hakkında doğru olan bir şey
+daha, dili ya da sayfa sayısı gibi; olgulara katılınca erişilebilir ada da
+bedavaya giriyor, ve renk ya da ikon değil söz (kural 6).
+
+**Anonimde çizilmiyor, ve bu esirgeme değil anlamsızlık.** Anonim oturumun
+üretimleri profiliyle gidiyor, yani işaretin saklayacağı bir şey yok. Diğer
+iki eksik kontrolden (ön yazı, geri bildirim) farkı bu, ve test bunu ayrı
+cümleyle yazıyor.
+
+**Mock'ta iki gövde bire indi.** Arşivleme ucu "üretimin şu anki hâlini"
+döndürüyor, yani okumayla aynı gövde — iki literal, bir yazma ile bir okumanın
+ayrışmaya başlama şeklidir, ve ayrışma ekranda "cache'e yazdım, yenileyince
+başka şey gördüm" diye çıkar. `generationBody` çıkarıldı.
+
+**Boş gövde "değişiklik yok" değil, `true`.** Bir istemcinin en kolay ters
+anlayacağı şey bu; mock alanı zorunlu tutsaydı, hiçbir şey göndermeyen bir
+çağıran doğru görünürdü.
+
+**`count` bilerek invalidate edilmiyor.** Arşivleme bir üretim eklemiyor ya da
+silmiyor — işaret bir saklama kuralı, silme değil — yani silme ekranının sesli
+söylediği sayı değişmedi; invalidate etmek, zaten doğru olan bir şeyi öğrenmek
+için istek atmak olurdu.
+
+**Negatif kontrol yapıldı:** anonim kapısı kaldırıldı, anonim testi düştü.
+
+**Ölçüm:** 909 birim testi yeşil, typecheck ve lint temiz.
+
+### D8 kapandı — seçimin gerekçeleri (2026-09-20)
+
+`B-108`: İlke 7 her seçimin gerekçesinin gösterilmesini istiyor ve **üç şey**
+adlandırıyor — skor, eşleşen keyword'ler, red nedeni. Üçü de hesaplanıyordu,
+hiçbiri telde değildi; yani bu liste **gerekçesi hiç yayımlanmamış** bir
+sıralamaydı.
+
+**Skor hâlâ yok ve istenmemeli.** § 23.3'ün yüzdeye itirazı bir madde
+yanındaki sayı için de geçerli, ve sıra zaten sıralamayı söylüyor.
+
+**Yokluk sözleşmenin parçası, eksiklik değil.** `matchedKeywords` **hiç
+gelmiyor**, boş dizi olarak değil: seçilmiş bir satırın yanındaki boş dizi
+"hiçbir şey eşleşmedi" diye okunur, ve genel CV modunda — ortada ilan
+yokken — bu içerik hakkında bir iddia olurdu. Mock ikisini de üretiyor: hem
+alanı, hem alanın olmayışını. Hep gönderen bir fixture, ekranın sunucunun hiç
+göndermediği bir şekle karşı yazılmasına izin verirdi.
+
+**Dört neden dört ayrı cümle, ve biri tehlikeli.**
+`EXCLUDED_BY_DIRECTIVE` **bu CV'de** yapılmış bir düzenleme; onu profil ayarı
+gibi geri aldıran bir ekran, kişiye kalıcı bir kararı geri aldırır. Cümle
+"profiline hiç dokunulmadı" diyor. `INACTIVE` tersi — profil hakkında bir
+olgu — ve **tek** profil bağlantısı taşıyan o.
+
+**Cümle taslağa göre çiziliyor, sunucunun cevabına göre değil.** Switch
+açıldığı anda satır sayfaya gidiyor; yokluğu açıklayan bir cümle, kişinin az
+önce terk ettiği bir durumu tarif ederdi. Alan zaten sayfaya giren satırda
+yok, yani kişinin kendi çıkardığı satır da burada bir şey söylemiyor —
+sunucu onu geri tutmadı, kişi tuttu.
+
+**Mock'un `EXCLUDED_BY_DIRECTIVE`'i bir düzenlemeden doğuyor**, `weigh`'den
+değil: tek üreteni bir insan, ve `include` gelen satırda alan **siliniyor** —
+seçilmiş bir satırın yanında bayat bir neden, olmayan bir yokluğu açıklardı.
+
+**Kapalı atom testte kuruluyor, ortak fixture'da değil.** `INACTIVE` profil
+hakkında bir olgu, yani durum kişinin kuracağı gibi kurulmalı; seed profilde
+kapalı atom yok ve olmamalı — editörün kendi testlerindeki her atom sayısı
+onunla kayardı. `resetProfileFixture` geri alıyor.
+
+**Bir sorgu kapsandı ve sebebi kayda değer:** birkaç satır terim taşıyor, yani
+kapsamsız bir `getByRole('list')` ya yanlış satırı bulur ya da **başka bir
+satıra ait** bir çiple geçer.
+
+**Ölçüm:** 914 birim testi yeşil, typecheck ve lint temiz.
+
+### D9 kapandı — atom etiketleri, ve sıfırdan çıkan çeyrek (2026-09-20)
+
+`B-103` sayıyı veriyor: **Faz B'nin ham skorunun dörtte biri** atomun
+etiketleriyle ilanın istedikleri arasındaki örtüşme, ve `tags` ile `atom_tags`
+tablolarına **hiçbir şey** yazılmıyordu — içe aktarım modelin bulduğu
+etiketleri normalize edip düşürüyordu. Yani o çeyrek, her atom için her ilana
+karşı **yapısal olarak sıfırdı**. § 55'in "etiket / önem / kilit" editörünün
+eksik yarısı buydu.
+
+**`TagInput` yeniden kullanılmadı, ve bu bir tekrar değil.** Yanındaki üç
+liste `AtomPatch`'in **alanları** ve bütün olarak değişiyor; etiketler **satır**
+— id'si var, tek tek ekleniyor ve siliniyor, ve kimin koyduğunu taşıyor. Ortak
+kontrol, ya tek etiket alan bir uca bütün liste göndermek ya da satır şeklinde
+bir şeyi alan gibi göstermek olurdu. `TagInput`'a eklenen tek şey D6'nın
+`maxCount`'u.
+
+**`auto` ile `user` farklı çiziliyor, çünkü farklı iddialar.** `auto` çıkarımın
+kişinin işi hakkındaki tahmini, `user` kişinin kendi kararı. Aynı çizilseler
+tahmin bir seçim gibi görünürdü — ve hangisinin hangisi olduğunu ayırt
+edemeyen birinin ikisini de düzeltmek için sebebi olmaz. Ayrım kenarlıkla
+**ve sözle** (kural 6).
+
+**Hiçbir sürüm gitmiyor**, ve bu dosyadaki diğer her yazmadan farkı bu: etiket
+kendi satırı, atoma dokunulmuyor, yani önkoşulun hakkında olacağı bir atom
+sürümü yok. `versionOf`'a uzanmak, uçun istemediği bir `If-Match` göndermek ve
+bir atomu etiketleyen iki kişiyi çakışma saymak olurdu — doğru sonuç iki
+etiket. Test bunu **hem başlığın yokluğuyla hem atom sürümünün kıpırdamamasıyla**
+sabitliyor.
+
+**Ekranda yazılan değil, dönen çiziliyor.** Etiket kırpılmış ve küçük harfe
+çevrilmiş saklanıyor, çünkü skorlayıcının karşılaştırdığı biçim o; girdiyi
+yankılamak, skorlanan sözcük olmayan bir sözcüğü göstermek olurdu.
+
+**Zaten taşınan bir etiket istek üretmiyor.** Uç idempotent, yani zararsız
+olurdu — ama boşa bir gidiş dönüş ve alanın bir şey yapmış gibi göründüğü bir
+an. Karşılaştırma `toLocaleLowerCase('en')` ile: `ETL` okuyucunun Türkçe
+locale'inde `etl`'ye eşleşmezdi (kural 11).
+
+**Mock idempotent çağrıda `source`'u yeniden yazmıyor:** çıkarımın tahmininin
+üstüne aynı etiketi yazan kişi, onu sessizce sahiplenmiyor.
+
+**Ölçüm:** 922 birim testi yeşil; `/profile` **255.8 → 256.5 KB** (tavan 280),
+landing 0.0 KB.
+
+### D4 kapandı — bayat varyant kontrolü ve iki bayat test (2026-09-20)
+
+`B-115`'in dört maddesinden üçü zaten yazılıydı; eksik olan dördüncüsüydü.
+**Anonim oturumda çeviri kuyruğa girmiyor** — o oturumun ne işi sahiplenecek
+bir id'si var ne ikinci bir dili — yani iki satır da kendince yalan olurdu:
+"yenileniyor" olmayacak bir işi adlandırır, "yeniden üret" sunucunun kabul
+edip hiçbir şey kuyruğa koymadığı bir yamayı gönderir. Doğru şekli sessizlik.
+
+**Koşul `!== false`**, `=== true` değil: oturum uçuşurken de çizilmiyor.
+`useCanWriteCoverLetter`'ın gerekçesi — görünüp kaybolan bir kontrol arada
+basılabilir — burada bir kat daha ağır basıyor, çünkü basılacak ekran kişiye
+**kendi cümlesinin** değiştirileceğini söyleyen ekran.
+
+**Bugün başka yoldan da erişilemez** ve bu yüzden dal değil muhafız: anonim
+profil tek dilli, yani hiçbir sözcükleme başkasından türemiyor ve `stale`'in
+doğru olacağı bir şey yok. § 9'un dar ürünü dilleri eksilterek daralıyor,
+doğruluğu değil.
+
+**İki test bayattı ve ikisi de aynı sebepten.** `VariantTabs.test` ile
+`StaleWording.test` oturumu hiç okumuyordu — mock'un varsayılanı anonim, yani
+iki sözcüklemeli bir atomu anonim bir oturumda çiziyorlardı; anonim profilin
+üretemeyeceği bir şekil. Şimdi ikisi de `signIn()` okuyor.
+
+**Biri ise bir şey kanıtlamadan geçiyordu.** *"offers no regenerate button,
+because nothing could answer it"* — Aşama 1'de doğruydu, Aşama 3'te ikisi de
+değişti, satır kaldı. Üstelik eşleştirmesi `/regenerate/i` ve düğmenin adı
+"Write it again from the new source": düğme indiği günden beri **hiç
+bulunamayacak** bir adın yokluğunu iddia ediyordu. Bir test hem bayat bir
+kararı sabitleyip hem hiçbir şey ölçmeyebiliyor. Tersine çevrildi.
+
+**Negatif kontrol yapıldı:** muhafız kaldırıldı, anonim testi düştü.
+
+**Ölçüm:** 892 birim testi yeşil, typecheck ve lint temiz.
+
+### D5 kapandı — dört biçim, üç farklı sayfa iddiası (2026-09-20)
+
+`B-105` iki şeyi birden indirdi: `format=source` ilk taslaktan beri § 35.3'ün
+haritasındaydı ve `400` dönüyordu, HTML renderer'ın paketi de boştu. İkisi de
+serviste, yani iki yeni düğme.
+
+**Sayfa sınırı artık üç şey söylüyor ve üçü ayrı cümle.** PDF'te **kesin**,
+Word'de **yaklaşık** (atomlar dizilmiş bir sayfaya sığanlar, Word onları kendi
+fontlarının aldığı yerde diziyor), HTML'de **hiç geçerli değil** — Word'ün
+zayıf hâli değil: aşılacak bir sayfa yok. "Aşağı yukarı bir sayfa" ile "burada
+sayfa diye bir şey yok" farklı vaatler, ve HTML'i bir forma yapıştıran kişiye
+lazım olan ikincisi. Ekran iki satır yukarıda bir sayfa sayısı söylüyor, yani
+bu cümle o sayının neyi kapsamadığını söyleyen tek yer.
+
+**`DOWNLOAD_EXTENSION` bir kolaylık değil.** Query değeri bir **biçim** adı,
+dosya ise `.tex`: `format` interpolate edilseydi tarayıcı
+`atomcv-<id>.source` diye kaydederdi ve kişinin makinesinde onu açan hiçbir
+şey olmazdı. Aynı harita mock'un `Content-Disposition`'ında da var, ve testin
+asıl iddiası o.
+
+**`source` `text/plain` olarak servis ediliyor**, `application/x-tex`'in
+yazımlarından biri olarak değil: bu **bakılacak** LaTeX, ve tarayıcının
+bilinmeyen tür sayıp indirdiği bir medya tipi, açacağı bir tipten kötü. Ters
+yöne LaTeX göndermek zaten yasak — okumayı zararsız kılan da bu.
+
+**Bilinmeyen biçimin reddi duruyor** ve gerekçesi ilk yazıldığı günkü: sessiz
+bir PDF'e düşüş, hiç servis edilmeyen bir biçimin düğmesine PDF döndürürdü ve
+kimse dosyayı açana kadar fark etmezdi. Test `rtf` ile soruyor.
+
+**Ölçüm:** 897 birim testi yeşil, typecheck ve lint temiz.
+
+### D6 kapandı — iki yönlendirme alanı, varsayılan kapalı (2026-09-20)
+
+**Kapsam bir alan daraldı ve gerekçesi kayda değer.** Plan D6'ya üç alan
+yazıyordu; `customizationId` **D12'ye taşındı**, çünkü kaydedilmiş bir görünüm
+seti yokken bir seçici çizmek, kişiye özelliğin bozuk olduğunu öğreten bir
+kontroldür. Alan telde duruyor, isteği kuran yer aynı — eksik olan tek şey
+kaydı üreten ekran.
+
+**Kapalı olması bir yerleşim tercihi değil, ürün kuralı.** "Elle kontrol
+isteğe bağlı", varsayılan çıktının kimse hiçbir şeye dokunmadan kullanılabilir
+olması demek; üç girdiyle açılan bir ekran, boş iki tanesinin önemli olduğunu
+**zaten söylemiş** olur. Panel kapalıyken **mount edilmiyor**, yani "varsayılan
+senden bir şey istemiyor" iddiası sekme sırası için de doğru.
+
+**İkisi de ne profile ne ilana ait, istek alanı olmalarının sebebi bu.**
+`emphasize` ilanın kendi keyword'lerine tek koşu için katılıyor ve **pasted
+metne katlanamaz**: bir ilanın analizi hash'iyle cache'leniyor ve onu
+yapıştıran herkes arasında paylaşılıyor, yönlendirme ise bir kişiye ve bir
+koşuya ait. `note` yalnız Faz D'ye gidiyor — Faz B ilana karşı sıralıyor ve bir
+cümle terim değil.
+
+**İkisi de boşken gönderilmiyor.** Boş bir `emphasize` hiçbir terim adlandıran
+bir yönlendirme, boş bir `note` prompt'a verilip yok sayılması gereken bir
+cümle. Şemanın kendi açıklaması `customizationId` için aynı okumayı yapıyor:
+"yokluğu neredeyse her isteğin kastettiği şey".
+
+**Reddedilmeden yeniden gönderilenler korunuyor.** Bu ekrandaki her çıkış yolu
+isteği tekrar gönderiyor (`continue_anyway`, `continue_as_general_cv`,
+`increase_page_limit`) ve gönderdiği şey kişinin kastettiği istek. Yönlendirmeyi
+orada düşürmek, tek işi aynı isteği tekrar göndermek olan bir düğmenin
+arkasında isteği sessizce değiştirmek olurdu.
+
+**`TagInput` bir `maxCount` kazandı** ve sınırda **devre dışı kalıp sebebini
+söylüyor**. On birinci girdiyi yutmak, kişiye listesinin yanlış olduğunu birer
+birer öğretirdi (P8) — üstelik burada liste, sıralamanın okuduğu şey. `onBlur`
+sınıra giderken de tetiklendiği için taslak ayrıca düşürülüyor.
+
+**Sınır mock'ta da var, ekranda olmasına rağmen.** Ekran ikisini de kapıyor,
+yani gönderdiği hiçbir şey oraya varamaz — reddin kodlanma sebebi tam olarak
+bu: yalnız istemcinin tuttuğu bir sınır, ikinci bir çağıran yazılana kadar
+tutan bir sınırdır.
+
+**Bir test kapsamsız sorguyla kırıldı ve düzeltilmesi doğruydu.** "Üç çıkış
+yolu, gönderildiği sırada" ekrandaki **bütün** düğmeleri okuyordu ve formun
+kendi submit'ini de listeye sayıyordu; iddia sunucunun sıralaması hakkında,
+ekranın kaç kontrolü olduğu hakkında değil. Panele kapsandı, ve "submit satırın
+dışında" ayrı bir iddia olarak yazıldı.
+
+**Ölçüm:** 902 birim testi yeşil, typecheck ve lint temiz.
+
+### D1 kapandı — şemanın açtığı sekiz kırık (2026-09-20)
+
+**`failed` ve `cancelled` birer dal değil, birer yokluktu.** `B-116`'nın
+gerekçesi yapısal ve ikisi de aynı cümleden çıkıyor: `selection_state`
+`NOT NULL`, yani seçimden önce düşen bir koşunun yazacak **generation satırı
+yok** — arıza **işin** üstünde yaşıyor, ki `JobStatusResponse.status`
+`failed`'i hâlâ taşıyor. `cancelled`'ı ise hiçbir uç üretmiyor.
+
+Bunun mock'a maliyeti göründüğünden büyüktü. Geçmiş listesi başarısız bir işi
+`status: 'failed'` ile **satır olarak** yayımlıyordu ve `GET /generations/{id}`
+onu buluyordu; ikisi de veritabanının tutamayacağı bir şeyi tarif ediyor. Mock
+artık başarısız koşuyu listeden düşürüyor ve tekil okumada **404** veriyor.
+Ekran tarafında `History`'nin "bitmemişse bağlantı değil" dalı silindi —
+kalan tek koşul `generationId` yokluğu, ve `superseded` **bilerek dışarıda**:
+değiştirilmiş bir üretim belgesi olan bitmiş bir üretimdir.
+
+**Testin kendisi tersine çevrildi, silinmedi.** "Başarısız üretime yol
+açmıyor" artık "başarısız koşu geçmişte hiç yok" diyor; eski hâli doğru
+şekilli ama var olmayan bir satır hakkındaydı.
+
+**İki muhafız eklendi.** `endpoints/jobs.ts`'te `TERMINAL` artık yayımlanan
+enum'a karşı **sınıflandırma** kontrolü taşıyor: her durum ya terminal ya
+uçuşta, üçüncüsü derlemeyi düşürüyor. `cancelled` geri geldiği gün — iptal bir
+özellik — bu, sessizce asılı kalan bir akış yerine bir typecheck hatası olur.
+`MockSelectionLine`'ın `Required<>`'ı da daraltıldı: `B-108`'in iki alanı
+**yokluğuyla** anlam taşıyor (`matchedKeywords: []` "hiçbir şey eşleşmedi"
+diye okunur), ve yokluğu ifade edemeyen bir fixture ekranın karşılaşacağı
+durumu üretemez.
+
+**İki bayat çeviri anahtarı silindi** (`REWRITE_VALIDATION_FAILED`,
+`NO_ANONYMOUS_PROFILE`) ve `History.status`'ın `failed` dalı da. `B-111`'in
+korktuğu "on beş eksik mesaj" **çıkmadı** — 41 kodun 41'i yazılıydı, iki dil
+birebir senkrondu; gerçek bulgu fazlalıktı. `B-114`'ün iki yeni eylemi
+**etiket olarak** indi, davranışları D3'te.
+
+**Ölçüm:** 821 birim testi yeşil, typecheck temiz, lint temiz.
+
+### D2 kapandı — katalog testi üretilen tabloya bağlandı (2026-09-20)
+
+`B-110`'un teklifi alındı. `errorCatalogue.test.ts` artık
+`docs/error-catalogue.md`'yi **veri olarak** okuyor ve kendi `PARAMS`'ıyla üç
+şeyi karşılaştırıyor: kod kümesi, kod başına parametre **adları**, ve her
+adın **tipi**. Zincirin ikinci halkası bağlandı — backend bir kod eklediğinde
+`ErrorCatalogueDocumentTest` orada, bu test burada düşüyor.
+
+**Sayılar da denetlendi ve `B-111`'in ikisi de yanlıştı.** Madde "27'ye karşı
+enum'da 41" diyordu; ölçüldü: **enum 40, katalog 40, ve ikisi birebir aynı.**
+Bizim tarafta bir eylem gerektirmiyor, ama bir sayıyı doğru sanmakla ölçmek
+arasındaki farkın kaydı olsun.
+
+**Tip karşılaştırması tek yönlü.** Soru "`PARAMS` yalan mı söylüyor" — "tek
+doğru bu mu" değil. `integer` 2.3'ü reddediyor, `number` 1'i kabul ediyor:
+daraltan taraf katalog. `timestamp` telde bir metin, çünkü `Date` teli
+geçemez — `formatErrorParams` onu çeviren tek yer.
+
+**`Vite`'ın bir kuralına çarpıldı ve kayda değer.** `new URL(yol,
+import.meta.url)` Vite'ta bir **varlık referansıdır**; kalıp derleme anında
+yeniden yazılıyor ve `fileURLToPath` elinde çıplak bir `/docs/…` buluyor,
+sonra fırlatıyor. Dizin önce alınırsa kuralın eşleşeceği bir şey kalmıyor.
+
+**Boş yere geçmenin yolu kapatıldı.** Her kontrol ayrıştırılmış satırlar
+üzerinde dönüyor, yani hiçbir şey eşleştirmeyen bir ayrıştırıcı hepsini tek
+satır okumadan geçerdi — biçim değişikliğinin yaratacağı hatanın ta kendisi,
+ve başarıya benzeyen tek hata. `read the file` bunun için var, ve okunamayan
+bir satır artık atlanmıyor, **fırlatıyor**: kırkta otuz dokuzu ayrıştıran bir
+biçim değişikliği eşiği geçerdi.
+
+**Negatif kontrol yapıldı, üç yönde** (Aşama 2'nin dersi): yanlış tip →
+tip kontrolü düştü; katalogda ad değişikliği → ad kontrolü düştü; tablo
+biçimi bozuldu → `read the file` düştü.
+
+**Ölçüm:** 880 birim testi yeşil (D1'de 821'di), typecheck ve lint temiz.
+
+### D3 kapandı — dört reddin çıkış yolu, iki metnin ayrılması (2026-09-20)
+
+**`B-114`'ün asıl bulgusu mock'un sadakatiydi.** Dört çıkarım reddi boş bir
+`resolutions` dizisiyle geliyordu ve mock bunu **sadakatle** üretiyordu — yani
+"cümle var, düğme yok" hâli defalarca bakıldı ve hiç görülmedi. Üçü artık
+çözüm taşıyor; `switch_to_manual_form` sözlükte üretensiz duruyordu.
+
+**`upload_another_file` bir `retry` değil ve fark maddenin tamamı.** Şifreli
+dosya her seferinde aynı yerde düşüyor, yani tekrar düğmesi kilitli olduğu
+bilinen bir kapı açıyor. Seçilen dosya **önce temizleniyor**: seçici kapatılıp
+Yükle'ye basılabilseydi, kaçınmak için yazılan tekrar geri gelirdi.
+
+**`choose_language` çizilmiyor ve bu `F-037`.** Sunucu onu gönderiyor, ekranın
+soruyu sorması doğru, ama cevabın gideceği alan yok: `POST /profile/import`
+yalnız `mode` yayımlıyor, gövde `file` ve `challengeToken` taşıyor. Üstelik kod
+**işten** geliyor (§ 08b, Adım 3.4), yani red anında yazılmış bir profil de
+yok. `ErrorPanel`'in politikası — taşıyamadığını düşür — `keep_top_pinned`'de
+verilen kararın aynısı, ve mutlak kural 7 ile sürtündüğü için madde açıldı.
+**Düğmenin çizilmediği bir testle sabitlendi**: alan indiği gün o test
+düğmenin artık borç olduğunu söyleyecek.
+
+**İki metin ayrıldı, çünkü `B-113` sunucuda ayırmıştı.** 504 aynı dosyayla
+tekrar denemeye davet ediyor, 503 denemenin yardımcı olmayacağını söylüyor —
+ikisi kullanıcıdan **zıt** şeyler istiyor ve ikisi de "bir şeyler ters gitti"
+deseydi ayrım ekrana giderken kaybolurdu. Üç kontrol: 504 tekrar diyor mu,
+503 yardımcı olmaz diyor mu, ikisi aynı cümle değil mi.
+
+**`FEATURE_REQUIRES_ACCOUNT` beşinci dalını aldı** (`archive`) ve cümlesi
+"hesap gerekiyor"dan fazlasını söylüyor: anonim oturumun üretimleri profiliyle
+gidiyor, yani işaretin saklayacağı bir şey **yok** — kontrol esirgenmiş değil,
+anlamsız.
+
+**Ölçüm:** 891 birim testi yeşil, typecheck ve lint temiz.
+
 ### `B-071`-`B-074` kapandı (2026-09-08)
 
 Backend'in kapanış sonrası dilimlerinden gelen dört madde. İkisi kod işi

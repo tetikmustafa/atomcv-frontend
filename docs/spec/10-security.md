@@ -165,6 +165,13 @@ korunan şey onsuz da sınırlı: IP ve global sayaçlar bu çağrının önünd
 yani bir kesintinin saldırgana aldığı en fazla şey global penceredir. Kesin bir
 `success: false` başka bir şeydir — o, Cloudflare'in cevap vermesidir.
 
+**`POST /auth/verify` uygulama katmanında sınırsız, ve bu bir karar**
+(2026-08-28; kaydı notlarda kalmıştı, kalıcı olduğu için buraya taşındı —
+denetim 2026-09-20). Verifier 32 rastgele bayt, yani tahmin edilemez, ve uç
+Nginx'in `auth` zone'unun (1r/s) arkasında. Bir kova daha eklemek bugün
+koruduğu bir şey olmadan sayılacak bir şey daha eklerdi. Tahmin edilebilir bir
+jeton üretilmeye başlandığı gün yeniden açılır.
+
 **Secret yoksa yerelde uyarı, `prod` profilinde açılışta hata.**
 `EmailSenderConfig`'in ihtiyaç duymadığı bir kapı: göndericisi olmayan bir
 dağıtım, bağlantısını hiç alamayan ilk kişiyle anlaşılır; **challenge'ı olmayan
@@ -421,7 +428,23 @@ göstermediğini kendisi hatırlamak zorunda kalırdı.
 
 Rol yapısı basit: `USER`, `ADMIN`. Asıl mesele rol değil, **kaynak sahipliği** — o da repository katmanında çözülüyor.
 
+> **Sapma (denetim, 2026-09-15) — böyle bir uç yok ve olmamalı.** Aşağıdaki
+> parçacık bir HTTP ucu gösteriyor; § 48.4'ün izni **çevrimdışı** bir okuyucuyla
+> kullanılıyor: `scripts/support-read.sh` ile `application-support.yml`, ve
+> `SupportGrantLookup` ArchUnit kuralıyla `..api..`'den erişilemez tutuluyor.
+>
+> Gerekçe mutlak kural 3'ün kendisi: kapsamsız okuma yapabilen bir uç, o
+> kapsamsızlığı bir path değişkenine bağlar. Bir yönetici ucunun kendi rolü ve
+> kendi grant kontrolü olur — ve ikisi de, IDOR savunmasının yapısal olmaktan
+> çıkıp yeniden hatırlanması gereken bir şeye dönüştüğü yerdir. Çevrimdışı
+> okuyucu aynı izni okuyor, `accessed_at`'i aynı şekilde damgalıyor, ve
+> tarayıcıdan erişilebilen hiçbir yüzeyi yok.
+>
+> `USER`/`ADMIN` rolü oturumda duruyor ve bugün hiçbir uç onu okumuyor. Rolü
+> okuyan ilk uç yazıldığında bu paragraf yeniden açılır.
+
 ```java
+// Uygulanmadı — yukarıdaki sapmaya bakın.
 @AdminOnly
 @RequiresSupportGrant
 @GetMapping("/api/v1/admin/generations/{id}/content")
@@ -527,6 +550,22 @@ boolean hasAbnormalFieldLength(JobAnalysis a) {
 > yazan bir kullanıcıyı reddetmek, güvenlik denetimini yanlış bir şey yapmamış
 > insanlara dayatılan bir yazım kuralına çevirirdi. CV, sistemde bir saldırganın
 > uçtan uca kontrol ettiği **tek** belge, o yüzden üç katman da orada.
+>
+> **Ekleme — dördüncü bir tavan var ve kaydı yalnız javadoc'taydı**
+> (denetim, 2026-09-16): **About paragrafı için 1500 karakter**
+> (`MAX_ABOUT_TEXT`), atom metninin 600'ü yerine.
+>
+> Bedeli ölçülerek öğrenildi ve cümlesi buraya ait: **84 atomu temiz
+> çıkarılmış dört sayfalık bir CV, özeti 607 karakter olduğu için bütünüyle
+> çöpe gitti** — tavanın yedi karakter üstünde. O profilin en uzun dört alanı
+> 607, 541, 519 ve 506'ydı ve **dördü de About**; yani bu bir tuhaflık değil,
+> gerçek yazıya sistematik olarak değen bir sınırdı.
+>
+> **Gerekçe § 21.2'nin gerekçesiyle aynı:** bir paragraf bir madde değil.
+> 600, "bir insanın tek maddede yazdığı" üzerine kurulmuş bir sayı ve bir
+> özete taşınmıyor. 1500 yaklaşık 250 kelime, yani yirmi basılı satır — ve
+> testin aslını koruyor: **bir CV alanı olamayacak** bir değeri hâlâ
+> reddediyor.
 
 ### 43.2 Kullanıcı mesajı
 
@@ -540,6 +579,13 @@ Aynı jenerik mesaj, "anlamsız metin" durumuyla aynı.
 ### 43.3 Anomali izleme
 
 Tekrarlanan geçersiz denemeler → hesap/IP bazlı geçici kota kısıtlaması.
+
+> **Bu cümlenin karşılığı `TightenedSubjects`**, ve § 44.3'ün ağır kullanıcı
+> dalı onu çağırıyor: özne Redis'te altı saatliğine işaretleniyor, `QuotaService`
+> işareti okuyup o özneye saatlik bir tavan uyguluyor. TTL kaydın kendisi —
+> bir kolon olsaydı süpürülmesi gerekirdi ve bayat bir satır sebep geçtikten
+> sonra da birini kısık tutardı. **Redis'e ulaşılamıyorsa kısılmıyor:** bir
+> önbellek kesintisi herkesi ağır kullanıcı ilan etmemeli.
 
 ---
 
@@ -635,10 +681,16 @@ public void detectAnomalies() {
 }
 ```
 
-**Uygulanan hâli (Adım 2.7): iki sinyal var, bütçe freni yok.** Kullanıcı
-baselineʼı ve kayıt patlaması indi; ikisi de **raporluyor, davranmıyor** —
-sıkılaştırılacak bir rate limiter yok ve freni tek yoğun kullanıcı için çekmek
-herkesi durdurur, o karar alarmı okuyana ait. Baseline kullanıcının **kendi**
+**Uygulanan hâli: üç sinyal, ikisi davranıyor.** Bütçe freni bayrağı
+düşürüyor; **ağır kullanıcı dalı o özneyi kısıyor** (`TightenedSubjects`,
+§ 43.3). Kayıt patlaması hâlâ yalnız raporluyor — bir patlamanın ne olduğu
+anlaşılmadan ne yapılacağı da belli değil.
+
+> **Bu paragraf bir aşama boyunca "sıkılaştırılacak bir rate limiter yok"
+> diyordu** (düzeltme, denetim 2026-09-20). Limiter inmişti ve bu bölüm ile
+> `AnomalyDetector`'ın javadoc'u ikisi birden eski hâli anlatmaya devam etti —
+> javadoc'ta üstelik **iki blok** vardı, biri ölü ve öteki ile çelişen. Boşluğu
+> anlatan paragraf boşluktan uzun yaşamıştı. Baseline kullanıcının **kendi**
 son yedi günü: sabit bir sayı ağır kullanıcıda işe yaramaz, hafif kullanıcıda
 her gün alarm çalar. Geçmişi olmayan kullanıcı join'le eleniyor — ilk gün
 anomali değil, onu günlük kota sınırlıyor.

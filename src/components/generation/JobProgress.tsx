@@ -19,6 +19,16 @@ import { useJobStream } from '@/hooks/useJob';
 import { announce } from '@/stores/announcerStore';
 import type { Resolution } from '@/types/domain';
 
+/**
+ * The phase the translation happens inside (`B-107`).
+ *
+ * The **whole key**, not the phase's name: `phaseKey` is what the server sent
+ * and the server sends a translation key. Comparing it to `'SCORING'` would
+ * be false on every frame, and silently — the note would simply never appear,
+ * which is indistinguishable from a generation that had nothing to translate.
+ */
+const SCORING_KEY = 'generation.phase.SCORING';
+
 export type JobProgressProps = {
   jobId: string;
   /** The one the 202 handed back. Reconstructed from `jobId` when absent. */
@@ -108,6 +118,30 @@ export function JobProgress({
         {caption}
         {progress.detail ? ` · ${progress.detail}` : ''}
       </p>
+
+      {/*
+        Why this one may sit still (`B-107`).
+
+        § 21.8's second step landed: when the profile has no wording in the
+        target language, the missing ones are translated **between Faz B and
+        Faz C** — up to sixty calls, all inside `SCORING`. So the bar can wait
+        here for a reason that has nothing to do with scoring, and a reader
+        watching it stop has no way to tell a slow step from a stuck one.
+
+        **Only on this phase**, and only as a note: nothing went wrong and
+        there is nothing to do. It says the second time is free, because that
+        is the fact that makes the wait worth sitting through — the
+        translations are written back to the profile rather than thrown away.
+
+        Not drawn for the other phases even though any of them can be slow.
+        A caption that explained every wait would be explaining nothing; this
+        is the one whose cause is invisible from the label above it.
+      */}
+      {progress.phaseKey === SCORING_KEY && (
+        <p data-testid="translation-note" className="text-muted-foreground text-xs">
+          {t('translationNote')}
+        </p>
+      )}
     </div>
   );
 }

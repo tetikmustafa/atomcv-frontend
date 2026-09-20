@@ -11,6 +11,7 @@
 import { useCallback, useRef } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  archiveGeneration,
   downloadGeneration,
   editByInstruction,
   editSelection,
@@ -152,6 +153,32 @@ export function useFeedback(generationId: string) {
       queryClient.setQueryData<Generation>(generationKeys.detail(generationId), (current) =>
         current ? { ...current, feedback: recorded } : current,
       );
+    },
+  });
+}
+
+/**
+ * Marking a generation to keep, or unmarking it (`B-102`).
+ *
+ * **The detail is written through and the history is invalidated**, which is
+ * two different treatments of one change because the two caches know
+ * different amounts. The response *is* the generation, so the detail has the
+ * newer value in hand; the history is a paged query and the row lives on a
+ * page whose cursor this knows nothing about, so there is nowhere to put it.
+ *
+ * `count` is deliberately left alone. Archiving does not add or remove a
+ * generation — the mark is a retention rule, not a deletion — so the number
+ * the deletion screen states out loud has not changed, and invalidating it
+ * would send a request to learn something already true.
+ */
+export function useArchiveGeneration(generationId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (archived: boolean) => archiveGeneration(generationId, archived),
+    onSuccess: (generation) => {
+      queryClient.setQueryData<Generation>(generationKeys.detail(generationId), generation);
+      void queryClient.invalidateQueries({ queryKey: generationKeys.history() });
     },
   });
 }

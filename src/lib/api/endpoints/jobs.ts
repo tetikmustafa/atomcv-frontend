@@ -25,11 +25,36 @@ export type JobStatus = Omit<Returns<'readJob', '*/*'>, 'warnings'> & {
 };
 
 /**
- * The terminal statuses. `cancelled` is in the schema's enum and nothing
- * produces it yet; it is listed here rather than left out so that a job which
- * starts arriving cancelled stops the stream instead of hanging on it.
+ * The terminal statuses.
+ *
+ * `cancelled` used to be listed here as a third one, defensively: it was in
+ * the schema's enum, nothing produced it, and a job that started arriving
+ * cancelled would otherwise have hung the stream. It left the wire with
+ * `B-116` — the only method that could write it had no caller but its own
+ * test, and no endpoint cancels anything — so the defence now guards a value
+ * the server cannot send, and a branch no request reaches is a branch nothing
+ * measures.
+ *
+ * **Cancelling is a feature rather than an omission**, and the day it lands
+ * the value comes back with it. This list is derived from the published enum
+ * rather than written out, so that day is a typecheck failure here and not a
+ * stream that waits forever.
  */
-const TERMINAL = ['completed', 'failed', 'cancelled'] as const;
+const TERMINAL = ['completed', 'failed'] as const;
+
+/**
+ * Every status is either terminal or in flight. A third kind is a value
+ * nobody has decided about, and the decision it needs is exactly the one
+ * `cancelled` needed: does the stream stop on it?
+ *
+ * A type rather than a second array, because nothing reads the in-flight
+ * names at runtime — the code asks `isTerminal` and takes the other branch.
+ */
+type InFlight = 'queued' | 'running';
+
+type Unclassified = Exclude<NonNullable<JobStatus['status']>, (typeof TERMINAL)[number] | InFlight>;
+const _everyStatusIsClassified: Unclassified extends never ? true : Unclassified = true;
+void _everyStatusIsClassified;
 
 export function isTerminal(status: JobStatus | undefined): boolean {
   return status !== undefined && TERMINAL.includes(status.status as (typeof TERMINAL)[number]);

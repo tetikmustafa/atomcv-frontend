@@ -109,8 +109,64 @@ export interface paths {
          *     Answers 202 with a job to follow. Everything that can be decided about the file itself is decided before that: an unreadable format, an oversized file, an encrypted PDF, a scan with no text in it, and a document that yielded nothing are all refused synchronously, because each of them is something the person acts on at once.
          *
          *     Send `Idempotency-Key`. An upload is the request a flaky connection repeats most easily, and profile extraction has the smallest daily allowance in the product.
+         *
+         *     `language` is where a `choose_language` answer goes (F-037). The refusal that offers that action comes out of the worker, so there is no half-written profile to put the answer on — the next upload carries it instead, and carrying it skips detection, so a second attempt cannot fail the same way.
          */
         post: operations["importCv"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/profile/github/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * What a public GitHub account has that this profile does not
+         * @description Reads the public repositories of one account and offers the                     significant ones. Nothing is written.
+         *
+         *     **No permission is asked for and no token is kept.** Only                     public data is read, which is why this needs neither --                     no provider token is stored anywhere.
+         *
+         *     `username` is optional: without it the account named in the                     profile's own contact block is read, which is the one the                     CV shows an employer.
+         *
+         *     A suggestion carrying `matchedEntryId` is a merge onto a                     project already written about. Applying it adds the                     repository's languages to what those bullets claim and                     puts the link on the entry -- **the sentences are never                     touched**, because the person wrote them about what the                     work was for and GitHub knows what it was written in.
+         *
+         *     One carrying no match would be written as a new project,                     with GitHub's own description as its first line.
+         *
+         *     An account that does not exist, a GitHub that will not                     answer and one with nothing significant in it are the same                     empty list: none of them is something a person can act on.
+         */
+        post: operations["suggestFromGitHub"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/profile/github/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add the repositories a person picked
+         * @description The rule is "offered, never added automatically", and                     this is the second half of that sentence: nothing is                     written until a request names it.
+         *
+         *     A repository this account no longer has is skipped rather                     than refused -- the list is a moment old and a repository                     can be renamed.
+         *
+         *     One transaction. Half an import is not a smaller import, it                     is a profile somebody has to work out the state of.
+         */
+        post: operations["applyGitHubSuggestions"];
         delete?: never;
         options?: never;
         head?: never;
@@ -164,7 +220,7 @@ export interface paths {
         };
         /**
          * List atoms with their wordings
-         * @description Unpaginated: a profile holds tens to a few hundred atoms and the editor loads all of them (EK D.6.2).
+         * @description Unpaginated: a profile holds tens to a few hundred atoms and the editor loads all of them.
          */
         get: operations["listAtoms"];
         put?: never;
@@ -193,6 +249,32 @@ export interface paths {
          * @description One wording per language and tone; a second one for the same pair is refused rather than left to a database constraint.
          */
         post: operations["addVariant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/profile/atoms/{id}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put a label on an atom
+         * @description A quarter of Faz B's raw score is the overlap between an                     atom's tags and what the posting asks for, so                     this is a scoring control rather than a label.
+         *
+         *     The label is stored canonical — trimmed and lowercased —                     because that is the form the scorer compares, and the                     response carries the stored form back. A label the profile                     already knows reuses its row rather than making a second                     one that would never match the first.
+         *
+         *     No `If-Match`. A tag is a row of its own and the atom is                     untouched, so there is no version of the atom for a                     precondition to be about; two people tagging one atom end                     up with both tags, which is what each of them asked for.
+         *
+         *     Idempotent: tagging an atom that already wears the label                     returns the tag it already has, and does not rewrite who                     put it there.
+         */
+        post: operations["tagAtom"];
         delete?: never;
         options?: never;
         head?: never;
@@ -247,6 +329,8 @@ export interface paths {
          *     The preflights are synchronous. A posting that does not                     read as one and a profile with nothing in it are both                     refused here, on the spot, rather than accepted and failed                     thirty seconds later.
          *
          *     `Idempotency-Key` is honoured: the same key from the same                     user answers with the job it already made, so a double                     click produces one CV and not two.
+         *
+         *     A `customizationId` is checked here too, and a stale one                     is a `404` rather than a document rendered with something                     else. A set deleted in another tab is the ordinary way to                     hold one (F-040).
          */
         post: operations["generate"];
         delete?: never;
@@ -264,7 +348,7 @@ export interface paths {
         };
         /**
          * What this generation weighed, and what reached the page
-         * @description Bolum 24.4's toggle, as a list a screen can draw (F-031).
+         * @description The manual toggle, as a list a screen can draw (F-031).
          *
          *     Every atom this generation ranked is here, the ones that
          *     reached the page first and the ones that did not after
@@ -295,7 +379,7 @@ export interface paths {
         put?: never;
         /**
          * Keep or drop atoms by hand, and re-make the CV
-         * @description Bolum 24.4. An edit applies to the **selection state**, never to the rendered document — which is what keeps the page limit true after twenty of them: every edit goes back through the selection that made the promise.
+         * @description An edit applies to the **selection state**, never to the rendered document — which is what keeps the page limit true after twenty of them: every edit goes back through the selection that made the promise.
          *
          *     Answers 202 with a job, like a generation, because it re-runs the renderer and a real compiler. It does not re-run Faz A or Faz B — the posting was read once and the profile ranked against it once, and a toggle changes neither answer — and Faz D carries the wording it already wrote. **No model call, and nothing off the day's allowance.**
          *
@@ -323,7 +407,7 @@ export interface paths {
          * Say what you thought of a generation
          * @description A thumb, and everything after it is optional. One verdict                     per person per generation: pressing the other one changes                     your mind rather than adding a second opinion.
          *
-         *     `contentGranted` is Bolum 48.4's consent. Ticking it lets                     the CV's own content be read for forty-eight hours to work                     out what went wrong — everything else in this product is                     diagnosed from shapes and counts, and this is the one door                     through that. The response echoes the grant back,                     how long it has left, and whether anybody has read it —                     `accessedAt` is null until the offline support reader                     stamps it, which is the only thing that can (B-078).                     Sending `contentGranted: false` later                     withdraws a grant that is still open.
+         *     `contentGranted` is the support consent. Ticking it lets                     the CV's own content be read for forty-eight hours to work                     out what went wrong — everything else in this product is                     diagnosed from shapes and counts, and this is the one door                     through that. The response echoes the grant back,                     how long it has left, and whether anybody has read it —                     `accessedAt` is null until the offline support reader                     stamps it, which is the only thing that can (B-078).                     Sending `contentGranted: false` later                     withdraws a grant that is still open.
          *
          *     The comment is stored and never logged. It is not sent                     back either: you wrote it, you have it.
          */
@@ -345,7 +429,7 @@ export interface paths {
         put?: never;
         /**
          * Say what should change, in your own words
-         * @description Bolum 24.2, and the other half of the toggle next door. One sentence is read into a change of **which atoms are on the page**, and the CV is re-made from its own selection state — so the page limit is re-checked and still holds, however many sentences it takes.
+         * @description The natural-language half, and the other half of the toggle next door. One sentence is read into a change of **which atoms are on the page**, and the CV is re-made from its own selection state — so the page limit is re-checked and still holds, however many sentences it takes.
          *
          *     202 with a job, and the model is asked exactly once: it sees the lines **numbered**, never their ids, and answers with numbers. It cannot name a bullet that does not exist.
          *
@@ -371,7 +455,7 @@ export interface paths {
         put?: never;
         /**
          * Write a covering letter for a generation, or another one
-         * @description Bolum 34. The letter is written from the atoms that                     reached the page, which is what makes it consistent with                     the CV that was sent — not from today's profile, and not                     from anything the model knows about the company.
+         * @description The letter is written from the atoms that                     reached the page, which is what makes it consistent with                     the CV that was sent — not from today's profile, and not                     from anything the model knows about the company.
          *
          *     Off the main generation path on purpose: it is a second                     LLM call and most people want a CV. Ask for it here, or                     set `coverLetter: true` when generating.
          *
@@ -380,6 +464,43 @@ export interface paths {
          *     **It can refuse.** A letter has no original to fall back                     on, so a draft that claims a skill the page does not carry,                     overstates the experience, or greets the wrong company is                     thrown away twice and then reported as                     `COVER_LETTER_REJECTED`. Another press is a different                     draft.
          */
         post: operations["regenerateCoverLetter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/generations/{generationId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark a generation as one to keep
+         * @description The schema pairs this mark with how long a generation's
+         *     artifact is kept: fourteen days ordinarily, for good when
+         *     it is archived. **No artifact is stored yet** — a download
+         *     re-renders from the stored snapshot and nothing
+         *     expires in either direction — so today the mark changes no
+         *     retention and is the owner's own mark on their history. It
+         *     is the row the retention rule reads on the day object
+         *     storage lands.
+         *
+         *     The same endpoint takes it off: send `archived: false`.
+         *     A mark that cannot be removed is a trap, and the support
+         *     support grant answered the same question the same
+         *     way. An omitted body archives, because that is what the
+         *     path says.
+         *
+         *     Idempotent. Archiving something already archived is not a
+         *     conflict: the caller asked for a state and the row is in
+         *     it.
+         */
+        post: operations["archiveGeneration"];
         delete?: never;
         options?: never;
         head?: never;
@@ -397,6 +518,40 @@ export interface paths {
         put?: never;
         /** Stop the optional emails for the account this token belongs to */
         post: operations["unsubscribe"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The settings this profile kept
+         * @description Oldest first, which is the order somebody made them in.
+         */
+        get: operations["listCustomizations"];
+        put?: never;
+        /**
+         * Keep a set of appearance settings under a name
+         * @description Layer B, saved. The profile's own
+         *     `preferences.appearance` is still the working set and is
+         *     what a generation uses when it names nothing; this is for
+         *     the person who keeps a dense set for a long CV and a
+         *     roomier one for a short one.
+         *
+         *     Every value is bounded by the published ranges, and the
+         *     ranges are why a bad page is not reachable from here.
+         *
+         *     At most twenty per profile, and names are unique within
+         *     one.
+         */
+        post: operations["createCustomization"];
         delete?: never;
         options?: never;
         head?: never;
@@ -434,10 +589,10 @@ export interface paths {
         put?: never;
         /**
          * Ask for a sign-in link
-         * @description Always 202, and always with no body. Whether the address has an account is exactly what this must not reveal (Bolum 40.4), so the sentence the person reads is the client's to write and is the same either way.
+         * @description Always 202, and always with no body. Whether the address has an account is exactly what this must not reveal , so the sentence the person reads is the client's to write and is the same either way.
          *
          *     The two other answers it can give reveal nothing either:
-         *     `429 RATE_LIMITED`, where every layer of Bolum 40.5
+         *     `429 RATE_LIMITED`, where every rate-limit layer
          *     counts what this caller has already done, and
          *     `403 CHALLENGE_FAILED`, which is about the token in the
          *     request and not about the address in it.
@@ -593,6 +748,30 @@ export interface paths {
         patch: operations["patchVariant"];
         trace?: never;
     };
+    "/api/v1/customizations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Forget one
+         * @description A generation already made with it is unaffected: the snapshot holds the settings themselves into the selection snapshot rather than an id, so a document can always be re-rendered exactly as it was sent.
+         */
+        delete: operations["deleteCustomization"];
+        options?: never;
+        head?: never;
+        /**
+         * Rename or re-set one
+         * @description The settings are replaced whole. Every parameter is read together by the renderer, and a half-applied geometry is a page nobody asked for. Sending only a name renames it and leaves the settings.
+         */
+        patch: operations["patchCustomization"];
+        trace?: never;
+    };
     "/api/v1/applications/{applicationId}": {
         parameters: {
             query?: never;
@@ -618,7 +797,7 @@ export interface paths {
          *
          *     Emptying the notes needs `clearNotes: true` — null cannot mean both "leave them" and "empty them".
          *
-         *     `If-Match` is required (Bolum 35.6).
+         *     `If-Match` is required.
          */
         patch: operations["updateApplication"];
         trace?: never;
@@ -647,8 +826,32 @@ export interface paths {
         delete: operations["deleteAccount"];
         options?: never;
         head?: never;
-        /** Turn the optional emails on or off (Bolum 57.7) */
+        /** Turn the optional emails on or off */
         patch: operations["updateAccountSettings"];
+        trace?: never;
+    };
+    "/api/v1/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The templates a CV can be rendered with
+         * @description The registry's own list, with the measured capacity of                     each: the three are described by how much they hold,                     and a chooser showing three names and no density asks                     somebody to pick blind.
+         *
+         *     No display name and no description — those are sentences,                     and the rule is that the server sends a key and                     the client writes the sentence. The id is the key.
+         *
+         *     The same list `capabilities.allowedTemplates` publishes,                     which is what a client reads to know which of these it may                     offer. This one says what each of them is.
+         */
+        get: operations["listTemplates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/profile/export": {
@@ -728,11 +931,11 @@ export interface paths {
          * One generation and how well it fits the posting
          * @description Carries Faz F's coverage report: how many of the posting's                     required and preferred skills the finished page actually                     says, which ones are missing, and a level over the counts.
          *
-         *     **Counts, never a percentage.** Bolum 23.3 forbids one by                     name — the measurement compares skill names, and a figure                     to the decimal place invites the reader to treat it as a                     hiring probability.
+         *     **Counts, never a percentage.** One is forbidden by                     name — the measurement compares skill names, and a figure                     to the decimal place invites the reader to treat it as a                     hiring probability.
          *
          *     The report is measured on the atoms that reached the page,                     not on everything that was ranked, so it never credits a                     skill the document does not claim. A general-mode                     generation has no report at all: there was no posting to                     be relevant to.
          *
-         *     Carries `feedback` when this person has judged it, so a                     reload shows the thumb they pressed rather than asking                     again, and so Bolum 48.4's 48-hour grant stays visible                     the day after it was given. Absent when they have not                     judged it; the comment never travels.
+         *     Carries `feedback` when this person has judged it, so a                     reload shows the thumb they pressed rather than asking                     again, and so the 48-hour grant stays visible                     the day after it was given. Absent when they have not                     judged it; the comment never travels.
          */
         get: operations["readGeneration"];
         put?: never;
@@ -751,12 +954,16 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Download a generation, as a PDF or a Word document
+         * Download a generation as a PDF, Word, HTML or LaTeX source
          * @description Re-rendered from the stored content snapshot, never from                     the profile. Editing a bullet afterwards does not change                     a CV that has already been sent — the document that comes                     back is the one that was made.
          *
          *     No LLM and no scoring: one compilation, and the same                     generation produces the same bytes on any day.
          *
-         *     `format=docx` writes the same content as a Word                     document. **The page limit is approximate there** (Bolum                     22.6): the atoms are the ones that fitted a typeset page,                     and Word sets them in whatever room its own fonts take.                     Same CV, not a second promise -- say so next to the                     button.
+         *     `format=docx` writes the same content as a Word                     document. **The page limit is approximate there**: the atoms are the ones that fitted a typeset page,                     and Word sets them in whatever room its own fonts take.                     Same CV, not a second promise -- say so next to the                     button.
+         *
+         *     `format=html` writes one self-contained file: no                     stylesheet, no font, no script, nothing fetched. **The                     page limit does not apply at all there** -- HTML has no                     page. It is for pasting into a form that wants formatted                     text, and for anything that reads structure rather than                     layout.
+         *
+         *     `format=source` is the LaTeX the PDF was compiled from.                     Nobody is allowed to *write* LaTeX, because                     user markup reaching a compiler is an execution surface;                     reading back what this product generated is the opposite                     direction and carries none of it.
          */
         get: operations["downloadGeneration"];
         put?: never;
@@ -856,6 +1063,28 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/profile/atoms/{id}/tags/{tagId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Take a label off an atom
+         * @description The tag row goes with the last atom wearing it: the                     vocabulary belongs to the profile, and a label no atom                     carries is a suggestion nobody made.
+         *
+         *     404 when this atom is not wearing that tag — a removal                     that did not happen is not reported as one.
+         */
+        delete: operations["untagAtom"];
         options?: never;
         head?: never;
         patch?: never;
@@ -979,7 +1208,7 @@ export interface components {
              * @description Translation key: the client resolves errors.{CODE}
              * @enum {string}
              */
-            code: "INSUFFICIENT_PROFILE" | "UNPARSEABLE_JOB_DESCRIPTION" | "CONFLICTING_PREFERENCES" | "FEATURE_REQUIRES_ACCOUNT" | "QUOTA_EXCEEDED" | "ALL_PROVIDERS_UNAVAILABLE" | "COMPILATION_FAILED" | "PAGE_LIMIT_EXCEEDED" | "REWRITE_VALIDATION_FAILED" | "COVER_LETTER_REJECTED" | "EMBEDDING_UNAVAILABLE" | "GENERATION_PAUSED" | "UNSUPPORTED_DOCUMENT" | "DOCUMENT_TOO_LARGE" | "PDF_NOT_TEXT_BASED" | "PDF_ENCRYPTED" | "EXTRACTION_EMPTY" | "EXTRACTION_TIMEOUT" | "LANGUAGE_UNDETECTED" | "TRANSLATION_FAILED" | "PROFILE_QUOTA_EXCEEDED" | "ANONYMOUS_SESSION_EXPIRED" | "ATOM_LIMIT_EXCEEDED" | "NO_ANONYMOUS_PROFILE" | "PROFILE_ALREADY_EXISTS" | "GENERATION_ARTIFACT_EXPIRED" | "GENERATION_SUPERSEDED" | "EDIT_NOT_UNDERSTOOD" | "CSRF_TOKEN_INVALID" | "AUTHENTICATION_REQUIRED" | "OAUTH_FAILED" | "MAGIC_LINK_INVALID" | "RATE_LIMITED" | "CHALLENGE_FAILED" | "RESOURCE_NOT_FOUND" | "VERSION_CONFLICT" | "PRECONDITION_REQUIRED" | "VALIDATION_FAILED" | "INTERNAL_ERROR" | "METHOD_NOT_ALLOWED" | "NOT_ACCEPTABLE" | "UNSUPPORTED_MEDIA_TYPE";
+            code: "INSUFFICIENT_PROFILE" | "UNPARSEABLE_JOB_DESCRIPTION" | "CONFLICTING_PREFERENCES" | "FEATURE_REQUIRES_ACCOUNT" | "QUOTA_EXCEEDED" | "ALL_PROVIDERS_UNAVAILABLE" | "COMPILATION_FAILED" | "PAGE_LIMIT_EXCEEDED" | "COVER_LETTER_REJECTED" | "EMBEDDING_UNAVAILABLE" | "GENERATION_PAUSED" | "UNSUPPORTED_DOCUMENT" | "DOCUMENT_TOO_LARGE" | "PDF_NOT_TEXT_BASED" | "PDF_ENCRYPTED" | "EXTRACTION_EMPTY" | "EXTRACTION_TIMEOUT" | "LANGUAGE_UNDETECTED" | "TRANSLATION_FAILED" | "PROFILE_QUOTA_EXCEEDED" | "ANONYMOUS_SESSION_EXPIRED" | "ATOM_LIMIT_EXCEEDED" | "PROFILE_ALREADY_EXISTS" | "GENERATION_ARTIFACT_EXPIRED" | "GENERATION_SUPERSEDED" | "EDIT_NOT_UNDERSTOOD" | "CSRF_TOKEN_INVALID" | "AUTHENTICATION_REQUIRED" | "OAUTH_FAILED" | "MAGIC_LINK_INVALID" | "RATE_LIMITED" | "CHALLENGE_FAILED" | "RESOURCE_NOT_FOUND" | "VERSION_CONFLICT" | "PRECONDITION_REQUIRED" | "VALIDATION_FAILED" | "INTERNAL_ERROR" | "METHOD_NOT_ALLOWED" | "NOT_ACCEPTABLE" | "UNSUPPORTED_MEDIA_TYPE";
             /**
              * @description Values the translated message interpolates. Keys and types are fixed per code; the server refuses to publish anything undeclared.
              * @example {
@@ -995,7 +1224,7 @@ export interface components {
         };
         Resolution: {
             /** @enum {string} */
-            action?: "increase_page_limit" | "replace_profile" | "keep_existing_profile" | "review_pins" | "keep_top_pinned" | "sign_up" | "paste_full_posting" | "continue_as_general_cv" | "continue_anyway" | "switch_to_manual_form" | "complete_profile" | "retry";
+            action?: "increase_page_limit" | "replace_profile" | "keep_existing_profile" | "review_pins" | "keep_top_pinned" | "sign_up" | "paste_full_posting" | "continue_as_general_cv" | "continue_anyway" | "switch_to_manual_form" | "upload_another_file" | "choose_language" | "complete_profile" | "retry";
             params?: {
                 [key: string]: unknown;
             };
@@ -1042,7 +1271,7 @@ export interface components {
              * @description Defaults to bullet_list
              * @enum {string}
              */
-            layout?: "bullet_list" | "entry_list" | "inline_list" | "two_column" | "paragraph";
+            layout?: "bullet_list" | "entry_list" | "inline_list" | "paragraph";
             alwaysInclude?: boolean;
             verbatim?: boolean;
         };
@@ -1057,7 +1286,7 @@ export interface components {
              */
             title?: string;
             /** @enum {string} */
-            layout?: "bullet_list" | "entry_list" | "inline_list" | "two_column" | "paragraph";
+            layout?: "bullet_list" | "entry_list" | "inline_list" | "paragraph";
             /**
              * Format: int32
              * @description Position among the sections, from 0
@@ -1088,12 +1317,53 @@ export interface components {
              */
             jobId?: string;
             /** @enum {string} */
-            status?: "queued" | "running" | "completed" | "failed" | "cancelled";
+            status?: "queued" | "running" | "completed" | "failed";
             /**
              * @description Server-sent events for this job
              * @example /api/v1/jobs/9b1c4e7a-.../stream
              */
             streamUrl?: string;
+        };
+        /** @description Which public GitHub account to read */
+        GitHubImportRequest: {
+            /**
+             * @description A GitHub login; absent reads the one on the profile
+             * @example torvalds
+             */
+            username?: string;
+        };
+        /** @description A public repository worth putting on a CV */
+        GitHubSuggestion: {
+            name?: string;
+            description?: string;
+            url?: string;
+            /** Format: int32 */
+            stars?: number;
+            skills?: string[];
+            /** Format: uuid */
+            matchedEntryId?: string;
+            /** Format: double */
+            confidence?: number;
+            merge?: boolean;
+        };
+        /** @description Which suggestions to write */
+        GitHubApplyRequest: {
+            /**
+             * @description A GitHub login; absent reads the one on the profile
+             * @example torvalds
+             */
+            username?: string;
+            /** @description Repository names, as the suggestion list gave them */
+            repositories: string[];
+        };
+        /** @description What the import did */
+        GitHubImportResult: {
+            /**
+             * Format: int32
+             * @description Projects written or merged
+             * @example 3
+             */
+            applied?: number;
         };
         EntryCreate: {
             /** Format: uuid */
@@ -1155,7 +1425,7 @@ export interface components {
             verbatim?: boolean;
             /**
              * Format: int32
-             * @description Below this many atoms the entry is dropped whole (Bolum 20)
+             * @description Below this many atoms the entry is dropped whole
              */
             minAtoms?: number;
             /**
@@ -1258,12 +1528,22 @@ export interface components {
             verified?: boolean;
             /** @description Every wording, primary first */
             variants?: components["schemas"]["Variant"][];
+            /** @description The labels this atom wears. A quarter of Faz B's raw score is the overlap between these and the posting, so they are a scoring control rather than decoration. */
+            tags?: components["schemas"]["AtomTagResponse"][];
             /**
              * Format: int64
              * @description Send back as If-Match
              * @example 0
              */
             version?: number;
+        };
+        /** @description A tag on an atom */
+        AtomTagResponse: {
+            /** Format: uuid */
+            id?: string;
+            label?: string;
+            /** @enum {string} */
+            source?: "auto" | "user";
         };
         Variant: {
             /** Format: uuid */
@@ -1286,10 +1566,10 @@ export interface components {
              * @description Who wrote it
              * @enum {string}
              */
-            createdBy?: "user" | "llm_extract" | "llm_translate" | "llm_rewrite";
+            createdBy?: "user" | "llm_translate";
             /** @description The source has moved on; this wording needs regenerating */
             stale?: boolean;
-            /** @description The person wrote this wording themselves. With `stale`, it is the pair Bolum 32.2's warning is built from: the two have diverged and nothing will regenerate this one behind their back. */
+            /** @description The person wrote this wording themselves. With `stale`, it is the pair the staleness warning is built from: the two have diverged and nothing will regenerate this one behind their back. */
             userEdited?: boolean;
             /**
              * Format: int64
@@ -1309,6 +1589,14 @@ export interface components {
             tone?: "formal" | "casual" | "technical";
             /** @description Make this the wording used by default */
             primary?: boolean;
+        };
+        /** @description A label to put on an atom */
+        TagRequest: {
+            /**
+             * @description As typed; stored trimmed and lowercased
+             * @example data-engineering
+             */
+            label: string;
         };
         AtomReorder: {
             /** Format: uuid */
@@ -1330,7 +1618,7 @@ export interface components {
              * @default false
              */
             acknowledgePreflight: boolean;
-            /** @description What the challenge widget produced. Required for a caller with no account and ignored for one with an account (Bolum 44.4): signing in already answered a challenge, and generating spends real money on a model. */
+            /** @description What the challenge widget produced. Required for a caller with no account and ignored for one with an account : signing in already answered a challenge, and generating spends real money on a model. */
             challengeToken?: string;
             /**
              * Format: int32
@@ -1344,10 +1632,58 @@ export interface components {
              */
             language?: string;
             /**
-             * @description Write a covering letter alongside the CV (Bolum 34). Off by default: it is a second LLM call, and most generations do not want one. It can be asked for afterwards instead, at POST /generations/{id}/cover-letter/regenerate.
+             * @description Write a covering letter alongside the CV. Off by default: it is a second LLM call, and most generations do not want one. It can be asked for afterwards instead, at POST /generations/{id}/cover-letter/regenerate.
              * @default false
              */
             coverLetter: boolean;
+            /**
+             * @description Terms to bring forward, as a directive. They join
+             *     the posting's own keywords and tags for this one generation --
+             *     the scoring formula is untouched, it reads one larger
+             *     set. Use it when the posting does not say a word you know the
+             *     work is about.
+             *
+             *     Its own field and not part of the posting, because the
+             *     analysis of a posting is cached by its hash and shared between
+             *     everyone who pastes it; a directive belongs to one person and
+             *     one run.
+             *
+             *     Stored trimmed and lowercased. At most ten, each at most 60
+             *     characters -- past that the ranking would be the reader's list
+             *     rather than the posting's.
+             * @example [
+             *       "microservices",
+             *       "observability"
+             *     ]
+             */
+            emphasize?: string[];
+            /**
+             * Format: uuid
+             * @description A set of appearance settings saved under
+             *     `/api/v1/customizations`, to render this one with
+             *     Absent uses the profile's own working settings,
+             *     which is what nearly every request means.
+             *
+             *     A set belonging to somebody else is not found.
+             */
+            customizationId?: string;
+            /**
+             * @description A sentence or two about how this CV should read, in the
+             *     person's own words.
+             *
+             *     It reaches Faz D and nothing else: Faz B ranks against the
+             *     posting and a sentence is not a term. The prompt tells the
+             *     model the note may steer wording and emphasis and may **not**
+             *     licence a claim, lengthen a line past its maximum, or change
+             *     what a sentence says happened — and the validators do
+             *     not care what the note said either way, which is what makes
+             *     that a promise rather than a hope.
+             *
+             *     It travels inside the fence, because it is the person's own
+             *     content. At most 500 characters.
+             * @example Lead with the platform work rather than the ML.
+             */
+            note?: string;
         };
         /**
          * @description Which atoms this CV should keep and which it should drop, whatever Faz B thought of them. The generation is re-made from its own selection state — the page limit is re-checked and still holds, however many times it is edited — and a new generation replaces the one that was edited.
@@ -1430,9 +1766,157 @@ export interface components {
             /** @enum {string} */
             style?: "default" | "shorter" | "more_formal";
         };
+        /** @description Which way to set the keep-mark */
+        ArchiveRequest: {
+            /**
+             * @description Absent means archive; false takes the mark off
+             * @default true
+             */
+            archived: boolean;
+        };
+        /** @description How much of the posting's vocabulary the CV actually says. Counts, never a percentage. */
+        FitReport: {
+            /** Format: int32 */
+            requiredCovered?: number;
+            /** Format: int32 */
+            requiredTotal?: number;
+            /** Format: int32 */
+            preferredCovered?: number;
+            /** Format: int32 */
+            preferredTotal?: number;
+            /** @description Posting skills the page says, in the posting's own words */
+            coveredSkills?: string[];
+            missingRequired?: string[];
+            missingPreferred?: string[];
+            /** @enum {string} */
+            level?: "WEAK" | "MODERATE" | "GOOD" | "STRONG";
+        };
+        /** @description A generation that was made */
+        GenerationResponse: {
+            /** Format: uuid */
+            generationId?: string;
+            /** @enum {string} */
+            status?: "completed" | "superseded";
+            /**
+             * Format: int32
+             * @description How many pages the compiled document came to
+             */
+            pageCount?: number;
+            /**
+             * Format: int32
+             * @description The page limit this generation was made under -- the number the
+             *     request asked for, or the profile's default when it asked for
+             *     none. Read it against `pageCount`: a document that came out
+             *     under its limit is shorter than it was allowed to be, which is
+             *     a fact worth a note rather than a reason to pad.
+             *
+             *     Not the profile's preference of today. That is what is set now,
+             *     and `increase_page_limit` changes it; this is what *this*
+             *     document was built to. Absent for a generation written before
+             *     the limit was recorded, and absent rather than guessed.
+             */
+            maxPages?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            fitReport?: components["schemas"]["FitReport"];
+            /**
+             * @description The language the document was written in, as a BCP 47 tag
+             * @example tr
+             */
+            contentLanguage?: string;
+            /**
+             * @description The language Faz A read the posting as. When it differs from                 contentLanguage the CV was written in the profile's language                 instead: the profile has no wording for every atom in the                 posting's language, and one document is written in one                 language.
+             * @example en
+             */
+            postingLanguage?: string;
+            /** @description The covering letter, as plain text with blank lines between its parts */
+            coverLetter?: string;
+            /** @description What this person already said about it, and the 48-hour diagnostic permission if they opened one. Absent when they have not judged it. */
+            feedback?: components["schemas"]["FeedbackResponse"];
+            /**
+             * Format: uuid
+             * @description The generation that replaced this one, present only when
+             *     `status` is `SUPERSEDED`. An edit writes a new CV and retires
+             *     the one it edited; the retired one is still
+             *     readable and still downloadable -- the CV that was sent to an
+             *     employer does not stop existing -- and this is where the screen
+             *     showing it finds the newer one to link to.
+             */
+            supersededByGenerationId?: string;
+            /**
+             * @description Whether this one is marked to keep. A generation
+             *     is not archived when it is made; `POST /generations/{id}/archive`
+             *     sets the mark and the same endpoint clears it. What the mark
+             *     buys is the retention rule -- an archived generation's
+             *     artifact never expires -- and until object storage lands there
+             *     is nothing that expires either way, so today it is a mark the
+             *     owner sets and reads.
+             */
+            archived?: boolean;
+        };
         UnsubscribeRequest: {
             /** Format: uuid */
             token: string;
+        };
+        /** @description Appearance settings to keep */
+        CustomizationRequest: {
+            /**
+             * @description What to call it; unique within the profile
+             * @example Compact, one page
+             */
+            name: string;
+            /**
+             * @description Which template it is built on
+             * @example classic
+             */
+            baseTemplateId: string;
+            /**
+             * Format: double
+             * @description 9 to 12
+             * @example 10.5
+             */
+            fontSizePt?: number;
+            /**
+             * Format: double
+             * @description 0.4 to 1.0 inches
+             * @example 0.5
+             */
+            marginInches?: number;
+            /**
+             * Format: double
+             * @description 0.9 to 1.3
+             * @example 1
+             */
+            lineSpacing?: number;
+            /**
+             * @description One of the whitelisted families
+             * @example sans
+             */
+            fontFamily?: string;
+            /**
+             * @description Six hex digits, no hash
+             * @example 1D4ED8
+             */
+            accentColor?: string;
+        };
+        /** @description A saved set of appearance settings */
+        CustomizationResponse: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            baseTemplateId?: string;
+            /** Format: int32 */
+            templateVersion?: number;
+            /** Format: double */
+            fontSizePt?: number;
+            /** Format: double */
+            marginInches?: number;
+            /** Format: double */
+            lineSpacing?: number;
+            fontFamily?: string;
+            accentColor?: string;
+            /** Format: date-time */
+            createdAt?: string;
         };
         /** @description Redeem a sign-in link */
         VerifyRequest: {
@@ -1484,7 +1968,7 @@ export interface components {
             kind?: "about" | "education" | "experience" | "projects" | "skills" | "soft_skills" | "languages" | "custom";
             title?: string;
             /** @enum {string} */
-            layout?: "bullet_list" | "entry_list" | "inline_list" | "two_column" | "paragraph";
+            layout?: "bullet_list" | "entry_list" | "inline_list" | "paragraph";
             alwaysInclude?: boolean;
             verbatim?: boolean;
             active?: boolean;
@@ -1539,8 +2023,23 @@ export interface components {
             tone?: "formal" | "casual" | "technical" | null;
             /** @description Make this the wording used by default */
             primary?: boolean;
-            /** @description Send `false` to hand a wording back: it stops being yours, and a stale one is queued for regeneration (Bolum 32.2's "regenerate" button). `true` is refused — a wording becomes yours by writing words, never by claiming it. */
+            /** @description Send `false` to hand a wording back: it stops being yours, and a stale one is queued for regeneration (the "regenerate" button). `true` is refused — a wording becomes yours by writing words, never by claiming it. */
             userEdited?: boolean;
+        };
+        /** @description What to change about a saved set */
+        CustomizationPatch: {
+            /** @description A new name, or absent to keep the one it has */
+            name?: string;
+            /** @description Present to replace the settings; absent to leave them */
+            baseTemplateId?: string;
+            /** Format: double */
+            fontSizePt?: number;
+            /** Format: double */
+            marginInches?: number;
+            /** Format: double */
+            lineSpacing?: number;
+            fontFamily?: string;
+            accentColor?: string;
         };
         /**
          * @description A partial edit. Omitting a field leaves it as it is — send only what changed.
@@ -1561,6 +2060,38 @@ export interface components {
         };
         AccountSettings: {
             lifecycleEmails?: boolean;
+        };
+        /** @description A template a CV can be rendered with */
+        TemplateSummary: {
+            /**
+             * @description The id used everywhere else
+             * @example classic
+             */
+            id?: string;
+            /**
+             * Format: int32
+             * @description Renderer version; moves when the geometry does
+             * @example 6
+             */
+            version?: number;
+            /**
+             * Format: double
+             * @description The text height of one page, in points
+             * @example 648
+             */
+            pageTextHeightPt?: number;
+            /**
+             * Format: double
+             * @description One line of body text, in points
+             * @example 13.6
+             */
+            baselineSkipPt?: number;
+            /**
+             * Format: int32
+             * @description Roughly how many lines of body text fit a page, which is how the three are described
+             * @example 54
+             */
+            approximateLinesPerPage?: number;
         };
         EntryExport: {
             entry?: components["schemas"]["Entry"];
@@ -1596,7 +2127,7 @@ export interface components {
             /** Format: uuid */
             jobId?: string;
             /** @enum {string} */
-            status?: "queued" | "running" | "completed" | "failed" | "cancelled";
+            status?: "queued" | "running" | "completed" | "failed";
             phase?: string;
             label?: string;
             /** Format: int32 */
@@ -1609,7 +2140,7 @@ export interface components {
             /**
              * Format: uuid
              * @description The generation this one replaced, when the job was a Faz G
-             *     edit (Bolum 24.4). Absent on every other kind of job,
+             *     edit. Absent on every other kind of job,
              *     including an ordinary generation, which replaces nothing.
              */
             supersededGenerationId?: string;
@@ -1662,7 +2193,7 @@ export interface components {
             /** Format: uuid */
             generationId?: string;
             /** @enum {string} */
-            status?: "completed" | "failed" | "superseded";
+            status?: "completed" | "superseded";
             /** Format: date-time */
             createdAt?: string;
             /**
@@ -1670,6 +2201,11 @@ export interface components {
              * @description How many pages the compiled document came to; absent while it is unfinished or failed
              */
             pageCount?: number;
+            /**
+             * Format: int32
+             * @description The page limit this generation was made under, so a row can be read against it the same way the full response is (F-039). Absent for a generation written before the limit was recorded.
+             */
+            maxPages?: number;
             /**
              * @description The role the posting was for, as Faz A read it; absent in general mode and when the posting named none
              * @example Backend Engineer
@@ -1689,62 +2225,8 @@ export interface components {
             contentLanguage?: string;
             /** @description Whether a covering letter was written for it */
             hasCoverLetter?: boolean;
-        };
-        /** @description How much of the posting's vocabulary the CV actually says. Counts, never a percentage — Bolum 23.3. */
-        FitReport: {
-            /** Format: int32 */
-            requiredCovered?: number;
-            /** Format: int32 */
-            requiredTotal?: number;
-            /** Format: int32 */
-            preferredCovered?: number;
-            /** Format: int32 */
-            preferredTotal?: number;
-            /** @description Posting skills the page says, in the posting's own words */
-            coveredSkills?: string[];
-            missingRequired?: string[];
-            missingPreferred?: string[];
-            /** @enum {string} */
-            level?: "WEAK" | "MODERATE" | "GOOD" | "STRONG";
-        };
-        /** @description A generation that was made */
-        GenerationResponse: {
-            /** Format: uuid */
-            generationId?: string;
-            /** @enum {string} */
-            status?: "completed" | "failed" | "superseded";
-            /**
-             * Format: int32
-             * @description How many pages the compiled document came to
-             */
-            pageCount?: number;
-            /** Format: date-time */
-            createdAt?: string;
-            fitReport?: components["schemas"]["FitReport"];
-            /**
-             * @description The language the document was written in, as a BCP 47 tag
-             * @example tr
-             */
-            contentLanguage?: string;
-            /**
-             * @description The language Faz A read the posting as. When it differs from                 contentLanguage the CV was written in the profile's language                 instead: the profile has no wording for every atom in the                 posting's language, and one document is written in one                 language.
-             * @example en
-             */
-            postingLanguage?: string;
-            /** @description The covering letter, as plain text with blank lines between its parts */
-            coverLetter?: string;
-            /** @description What this person already said about it, and the 48-hour diagnostic permission if they opened one. Absent when they have not judged it. */
-            feedback?: components["schemas"]["FeedbackResponse"];
-            /**
-             * Format: uuid
-             * @description The generation that replaced this one, present only when
-             *     `status` is `SUPERSEDED`. An edit writes a new CV and retires
-             *     the one it edited (Bolum 24.4); the retired one is still
-             *     readable and still downloadable -- the CV that was sent to an
-             *     employer does not stop existing -- and this is where the screen
-             *     showing it finds the newer one to link to.
-             */
-            supersededByGenerationId?: string;
+            /** @description Whether this one is marked to keep. The list is where the mark is read: it is the screen a person opens to find the generation they kept. */
+            archived?: boolean;
         };
         /** @description One atom this generation weighed */
         SelectionLine: {
@@ -1752,6 +2234,13 @@ export interface components {
             atomId?: string;
             text?: string;
             onPage?: boolean;
+            /** @description Posting terms this line carries; absent when there are none */
+            matchedKeywords?: string[];
+            /**
+             * @description Why it is not on the page; absent when it is
+             * @enum {string}
+             */
+            heldBackReason?: "BUDGET" | "INACTIVE" | "EXCLUDED_BY_DIRECTIVE" | "ENTRY_BELOW_MINIMUM";
         };
         /** @description The atoms a generation weighed, and which of them reached the page */
         SelectionViewResponse: {
@@ -2141,7 +2630,12 @@ export interface operations {
                      * @description The CV. PDF, DOCX, TEX, TXT or MD, up to ten megabytes.
                      */
                     file?: string;
-                    /** @description What the challenge widget produced. Required for a caller with no account and ignored for one with an account (Bolum 44.4): this is the most expensive single call the product makes. Absent or blank is refused with `403 CHALLENGE_FAILED`. */
+                    /**
+                     * @description What the CV is written in, ISO 639-1. Send it to answer a `choose_language` resolution from a previous upload's `422 LANGUAGE_UNDETECTED`: detection is then skipped and this is the language the profile gets, so the second upload cannot land on the same refusal. Omit it and the language is detected, which is the ordinary case. Not a code we know is `400 VALIDATION_FAILED`.
+                     * @example tr
+                     */
+                    language?: string;
+                    /** @description What the challenge widget produced. Required for a caller with no account and ignored for one with an account: this is the most expensive single call the product makes. Absent or blank is refused with `403 CHALLENGE_FAILED`. */
                     challengeToken?: string;
                 };
             };
@@ -2156,7 +2650,7 @@ export interface operations {
                     "*/*": components["schemas"]["AcceptedJobResponse"];
                 };
             };
-            /** @description VALIDATION_FAILED - the body carried no `file` part */
+            /** @description VALIDATION_FAILED - the body carried no `file` part, or `language` was not an ISO 639-1 code */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2202,6 +2696,90 @@ export interface operations {
                 };
             };
             /** @description The daily allowance is spent */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    suggestFromGitHub: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["GitHubImportRequest"];
+            };
+        };
+        responses: {
+            /** @description What is on offer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitHubSuggestion"][];
+                };
+            };
+            /** @description VALIDATION_FAILED — `params.fields` is `username`: the request named no account and the profile names none either */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description RATE_LIMITED — five an hour, because GitHub's own budget is shared by the whole deployment */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    applyGitHubSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GitHubApplyRequest"];
+            };
+        };
+        responses: {
+            /** @description How many were written or merged */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitHubImportResult"];
+                };
+            };
+            /** @description VALIDATION_FAILED — no account to read */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description RATE_LIMITED */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -2523,6 +3101,68 @@ export interface operations {
             };
         };
     };
+    tagAtom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagRequest"];
+            };
+        };
+        responses: {
+            /** @description The tag on this atom */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AtomTagResponse"];
+                };
+            };
+            /** @description VALIDATION_FAILED — `params.fields` is `label` */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description RESOURCE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description VERSION_CONFLICT */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description PRECONDITION_REQUIRED */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     reorderAtoms: {
         parameters: {
             query?: never;
@@ -2628,6 +3268,15 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AcceptedJobResponse"];
+                };
+            };
+            /** @description RESOURCE_NOT_FOUND - the `customizationId` is not one of this profile's saved sets */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
                 };
             };
             /** @description UNPARSEABLE_JOB_DESCRIPTION or INSUFFICIENT_PROFILE */
@@ -2917,6 +3566,50 @@ export interface operations {
             };
         };
     };
+    archiveGeneration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                generationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ArchiveRequest"];
+            };
+        };
+        responses: {
+            /** @description The generation as it now stands */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenerationResponse"];
+                };
+            };
+            /** @description FEATURE_REQUIRES_ACCOUNT — `params.feature` is `archive`, and the resolution is `sign_up`. An anonymous session's generations go with its profile, so there is nothing for a keep-mark to keep */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description No such generation, or it belongs to someone else */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     unsubscribe: {
         parameters: {
             query?: never;
@@ -2936,6 +3629,77 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    listCustomizations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every saved set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomizationResponse"][];
+                };
+            };
+            /** @description RESOURCE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    createCustomization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomizationRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomizationResponse"];
+                };
+            };
+            /** @description VALIDATION_FAILED — an unknown template, a name already used, or one set too many */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description RESOURCE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
             };
         };
     };
@@ -3484,6 +4248,70 @@ export interface operations {
             };
         };
     };
+    deleteCustomization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description RESOURCE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    patchCustomization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomizationPatch"];
+            };
+        };
+        responses: {
+            /** @description The set as it now stands */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomizationResponse"];
+                };
+            };
+            /** @description RESOURCE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     deleteApplication: {
         parameters: {
             query?: never;
@@ -3652,6 +4480,35 @@ export interface operations {
             };
         };
     };
+    listTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every template in the registry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateSummary"][];
+                };
+            };
+            /** @description RESOURCE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     exportProfile: {
         parameters: {
             query?: {
@@ -3803,7 +4660,7 @@ export interface operations {
                     "application/pdf": unknown;
                 };
             };
-            /** @description VALIDATION_FAILED — a format that is not `pdf` or `docx` */
+            /** @description VALIDATION_FAILED — a format that is not `pdf`, `docx`, `html` or `source` */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3934,6 +4791,54 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Usage"][];
+                };
+            };
+        };
+    };
+    untagAtom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                tagId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description RESOURCE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description VERSION_CONFLICT */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description PRECONDITION_REQUIRED */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
                 };
             };
         };

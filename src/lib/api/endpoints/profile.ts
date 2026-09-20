@@ -316,6 +316,172 @@ export function deleteVariant(atomId: string, variantId: string, version: Versio
   });
 }
 
+/* ------------------------------- templates ------------------------------ */
+
+/**
+ * The templates a CV can be rendered with, and what each one holds (§ 33.5).
+ *
+ * **Not the same question as `capabilities.allowedTemplates`**, and both are
+ * needed: that list says which ones this caller may pick, and this one says
+ * what they are. The endpoint's own description is blunt about why it exists
+ * — "a chooser showing three names and no density asks somebody to pick
+ * blind" — and § 33.5's capacity numbers are there for exactly that screen.
+ *
+ * **No display name and no description travel**, deliberately: those are
+ * sentences, and the server sends keys rather than prose. The id is the key,
+ * and a template this build has no word for still has to be pickable.
+ *
+ * `approximateLinesPerPage` is the one a chooser can use. The two point
+ * measurements beside it are what that number is derived from, and printing
+ * them would be answering a question nobody asked.
+ */
+export type TemplateSummary = NonNullable<Returns<'listTemplates'>[number]>;
+
+export function listTemplates() {
+  return api.get<Returns<'listTemplates'>>('/templates');
+}
+
+/* ----------------------------- customizations --------------------------- */
+
+/**
+ * Appearance settings kept under a name (`F-038`, § 13.2).
+ *
+ * **The profile's own `preferences.appearance` is still the working set**,
+ * and it is what a generation uses when it names nothing. This is the second
+ * thing: somebody who keeps a dense set for a long CV and a roomier one for a
+ * short one, and picks between them per generation with `customizationId`.
+ *
+ * **Every value is bounded by the published ranges**, which is why a bad page
+ * is not reachable from here — the same bounds `APPEARANCE_RANGES` already
+ * enforces on the working set, so the controls are the same controls.
+ *
+ * At most twenty per profile, and names are unique within one.
+ *
+ * **A generation already made with one is unaffected by editing or deleting
+ * it**: the selection snapshot holds the settings themselves rather than an
+ * id, so a document can always be re-rendered exactly as it was sent. That is
+ * what makes deleting safe to offer without a warning about old resumes.
+ */
+export type Customization = NonNullable<Returns<'listCustomizations'>[number]>;
+
+export type CustomizationCreate = Accepts<'createCustomization'>;
+
+export type CustomizationPatch = Accepts<'patchCustomization'>;
+
+export function listCustomizations() {
+  return api.get<Returns<'listCustomizations'>>('/customizations');
+}
+
+export function createCustomization(body: CustomizationCreate) {
+  return api.post<Returns<'createCustomization'>>('/customizations', body);
+}
+
+/**
+ * **The settings are replaced whole.** Every parameter is read together by
+ * the renderer, and a half-applied geometry is a page nobody asked for — so
+ * `baseTemplateId` present means "replace the settings", and a body carrying
+ * only a name is a rename that leaves them alone.
+ */
+export function patchCustomization(id: string, body: CustomizationPatch) {
+  return api.patch<Returns<'patchCustomization'>>(`/customizations/${id}`, body);
+}
+
+export function deleteCustomization(id: string) {
+  return api.delete<Returns<'deleteCustomization'>>(`/customizations/${id}`);
+}
+
+/* -------------------------------- github ------------------------------- */
+
+/**
+ * What a public GitHub account has that this profile does not (`B-106`,
+ * § 31.8).
+ *
+ * **Two calls, and the first one writes nothing.** "Offered, never added
+ * automatically" is the rule, and the split is how it is kept: the
+ * suggestions endpoint reads and returns, and nothing reaches the profile
+ * until a second request names the repositories by hand.
+ *
+ * **The path is `/profile/github`, not `/ingestion/github`** — the same call
+ * `F-029` made for the CV upload: this is something that happens *to a
+ * profile*, and the resource it belongs under is the profile.
+ *
+ * **No permission is asked for and no token is kept.** Only public data is
+ * read, which is why neither is needed — and the screen should not imply
+ * otherwise by asking somebody to connect an account.
+ *
+ * `username` is optional: absent, the account named in the profile's own
+ * contact block is read, which is the one the CV shows an employer anyway.
+ *
+ * **Five an hour** (`429 RATE_LIMITED`), because GitHub's own budget is
+ * shared by the whole deployment rather than by one person.
+ */
+export type GitHubSuggestion = NonNullable<Returns<'suggestFromGitHub'>[number]>;
+
+export function suggestFromGitHub(username?: string) {
+  return api.post<Returns<'suggestFromGitHub'>>(
+    '/profile/github/suggestions',
+    username ? { username } : {},
+  );
+}
+
+/**
+ * Writes the ones that were picked.
+ *
+ * **One transaction**: half an import is not a smaller import, it is a
+ * profile somebody has to work out the state of. A repository the account no
+ * longer has is skipped rather than refused — the list is a moment old, and a
+ * repository can be renamed between reading it and choosing it.
+ *
+ * The username is sent again rather than remembered server-side, so the two
+ * calls stay independent: the second one is not a continuation of a session
+ * the first one opened.
+ */
+export type GitHubApplyResult = Returns<'applyGitHubSuggestions'>;
+
+export function applyGitHubSuggestions(repositories: string[], username?: string) {
+  return api.post<GitHubApplyResult>('/profile/github/apply', {
+    repositories,
+    ...(username ? { username } : {}),
+  });
+}
+
+/* --------------------------------- tags -------------------------------- */
+
+/**
+ * The labels an atom wears (`B-103`, § 19.1).
+ *
+ * **A scoring control, not decoration**, and the item is blunt about what was
+ * wrong before it: nothing was writing to `tags` or `atom_tags` at all — the
+ * import normalised what the model found and dropped it — so Faz B's tag
+ * overlap, **a quarter of the raw score**, was structurally zero for every
+ * atom against every posting.
+ *
+ * **No `If-Match`, and that is not an omission.** A tag is a row of its own
+ * and the atom is untouched, so there is no version of the atom for a
+ * precondition to be about. Two people tagging one atom end up with both
+ * tags, which is what each of them asked for.
+ *
+ * **Stored canonical** — trimmed and lowercased, because that is the form the
+ * scorer compares — and the response carries the stored form back rather than
+ * what was typed. So the screen renders what came back; echoing the input
+ * would show a label that does not match the one being scored.
+ */
+export type AtomTag = NonNullable<Atom['tags']>[number];
+
+export type TagSource = NonNullable<AtomTag['source']>;
+
+export function tagAtom(atomId: string, label: string) {
+  return api.post<Returns<'tagAtom'>>(`/profile/atoms/${atomId}/tags`, { label });
+}
+
+/**
+ * `404` when the atom is not wearing that tag: a removal that did not happen
+ * is not reported as one.
+ */
+export function untagAtom(atomId: string, tagId: string) {
+  return api.delete<Returns<'untagAtom'>>(`/profile/atoms/${atomId}/tags/${tagId}`);
+}
+
 /* -------------------------------- export ------------------------------- */
 
 /**
@@ -365,6 +531,17 @@ export function exportProfileAsMarkdown() {
  * counters of § 44.1 say *how much* rather than *who*. Omitted rather than
  * sent empty where there is none — an empty value is a **failure**, while an
  * absent one is what a deployment with no Turnstile secret expects.
+ *
+ * **`language` is where a `choose_language` answer travels** (`B-119`,
+ * `F-037`). The refusal that offers that action comes out of the worker, so
+ * there is no half-written profile to put the answer on: the next upload
+ * carries it instead, and carrying it **skips detection** rather than tipping
+ * a threshold — a field that only nudged the guess would let the second
+ * attempt land on the same refusal, which is the loop `F-037` was about.
+ *
+ * A code the server does not know is `400 VALIDATION_FAILED` with
+ * `fields: ["language"]`, not a silent fallback, so nothing here filters the
+ * value first: the screen offers codes it got from the server.
  */
 export function importCv(
   file: File,
@@ -372,11 +549,13 @@ export function importCv(
     idempotencyKey,
     replace = false,
     challengeToken,
-  }: { idempotencyKey: string; replace?: boolean; challengeToken?: string },
+    language,
+  }: { idempotencyKey: string; replace?: boolean; challengeToken?: string; language?: string },
 ) {
   const form = new FormData();
   form.append('file', file);
   if (challengeToken) form.append('challengeToken', challengeToken);
+  if (language) form.append('language', language);
 
   return api.post<Returns<'importCv', '*/*'>>(
     `/profile/import${query({ mode: replace ? 'replace' : undefined })}`,

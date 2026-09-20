@@ -57,3 +57,8 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Fetched by the contract-drift job and by `gen:api:ci`, never committed:
+# the backend publishes it, and a second copy here would be the drift the
+# job exists to catch.
+/openapi.json

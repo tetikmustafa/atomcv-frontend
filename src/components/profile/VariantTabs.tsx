@@ -17,6 +17,7 @@
 import { Tabs } from 'radix-ui';
 import { useLocale, useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
+import { DeleteControl } from '@/components/profile/DeleteControl';
 import { languageName } from '@/lib/i18n/languageNames';
 import type { Variant } from '@/lib/api/endpoints/profile';
 
@@ -26,6 +27,16 @@ export type VariantTabsProps = {
   onSelect: (variantId: string) => void;
   /** Sends `{ primary: true }` and nothing else. See the note in the editor. */
   onPromote: (variant: Variant) => void;
+  /**
+   * Removing this wording (D13, `B-036`).
+   *
+   * Optional, and absent draws no control at all: a caller with nowhere to
+   * send it opts out rather than being handed a dead button.
+   */
+  onDelete?: (variant: Variant) => Promise<unknown>;
+  deleting?: boolean;
+  deleteError?: unknown;
+  onDeleteReset?: () => void;
   children: (variant: Variant) => React.ReactNode;
 };
 
@@ -39,6 +50,10 @@ export function VariantTabs({
   selectedId,
   onSelect,
   onPromote,
+  onDelete,
+  deleting,
+  deleteError,
+  onDeleteReset,
   children,
 }: VariantTabsProps) {
   const t = useTranslations('Editor.variants');
@@ -82,16 +97,37 @@ export function VariantTabs({
         </Tabs.Content>
       ))}
 
+      {/*
+        Both controls belong to a wording that is **not** primary, and that is
+        one condition rather than a coincidence (`B-036`, D13).
+
+        The server refuses to delete the primary and refuses to delete the
+        last one, and both refusals are right: an atom with no wording has
+        nothing to print, and demoting-by-deleting would leave the server
+        picking a new primary on somebody's behalf. `primary` false implies
+        there is another, so the one check covers the pair — and a reader who
+        wants this wording gone promotes the other first, which is the same
+        decision said out loud.
+      */}
       {selected && !selected.primary && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="mt-2 self-start"
-          onClick={() => onPromote(selected)}
-        >
-          {t('makePrimary')}
-        </Button>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => onPromote(selected)}>
+            {t('makePrimary')}
+          </Button>
+
+          {onDelete && (
+            <DeleteControl
+              triggerLabel={t('deleteTrigger', { language: labelFor(selected, nameOf) })}
+              title={t('deleteTitle')}
+              description={t('deleteBody')}
+              confirmLabel={t('deleteConfirm')}
+              onConfirm={() => onDelete(selected)}
+              isPending={deleting === true}
+              error={deleteError}
+              onReset={onDeleteReset ?? (() => {})}
+            />
+          )}
+        </div>
       )}
     </Tabs.Root>
   );

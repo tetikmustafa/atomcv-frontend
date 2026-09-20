@@ -6,12 +6,11 @@
     "INSUFFICIENT_PROFILE": "There isn't enough in your profile to build a resume from yet. It's {completeness, number, ::percent scale/0.01} complete, and what's still missing is: {missing}.",
     "UNPARSEABLE_JOB_DESCRIPTION": "{reason, select,\n  too_short {That posting is too short to work from. Paste the whole advert — the requirements are the part that matters most.}\n  too_long {That is longer than any posting we can read. Paste the advert on its own, without the page around it.}\n  low_entropy {That text repeats itself too much to read as a posting. If you pasted a whole page, try just the advert.}\n  not_job_like {That does not read like a job posting to us. If it is one, you can carry on anyway.}\n  low_confidence {We read the posting but were not sure enough of it to tailor anything — we would rather not guess at what the job wants.}\n  too_few_skills {We read the posting, but only {skillsFound, plural, =0 {no skills} =1 {one skill} other {# skills}} came out of it — not enough to tailor anything to.}\n  suspicious_output {Our reading of that posting came back malformed. Nothing is wrong with what you pasted — asking again usually settles it.}\n  other {We couldn't make sense of that job posting.}\n}",
     "CONFLICTING_PREFERENCES": "The content you've pinned needs about {pinnedPages, number} pages, and the limit is set to {maxPages, plural, =1 {one page} other {# pages}}.",
-    "FEATURE_REQUIRES_ACCOUNT": "{feature, select,\n  atom_controls {Importance, availability and the two locks need an account. Everything else about this item stays editable.}\n  alternatives {Adding a second wording needs an account. Editing the one that is here does not.}\n  cover_letter {A covering letter needs an account. Your resume was not affected.}\n  feedback {Saying what you thought of a resume needs an account — we need somewhere to write back to.}\n  other {That needs an account.}\n}",
+    "FEATURE_REQUIRES_ACCOUNT": "{feature, select,\n  atom_controls {Importance, availability and the two locks need an account. Everything else about this item stays editable.}\n  alternatives {Adding a second wording needs an account. Editing the one that is here does not.}\n  cover_letter {A covering letter needs an account. Your resume was not affected.}\n  feedback {Saying what you thought of a resume needs an account — we need somewhere to write back to.}\n  archive {Keeping a resume needs an account. Without one everything here goes when the session does, so there would be nothing for the mark to keep.}\n  other {That needs an account.}\n}",
     "QUOTA_EXCEEDED": "{metric, select, generation {You have used every resume you can generate today.} profile_extract {You have used every profile import you can make today.} other {You have used today's allowance.}} It renews {resetsAt, date, short} at {resetsAt, time, short}.",
-    "ALL_PROVIDERS_UNAVAILABLE": "None of the AI providers answered. Nothing was lost — your profile is untouched.",
+    "ALL_PROVIDERS_UNAVAILABLE": "None of the AI providers answered, so trying again now won't help. Nothing was lost — your profile is untouched.",
     "COMPILATION_FAILED": "The document didn't come out. {detail}",
     "PAGE_LIMIT_EXCEEDED": "Your content came to {actual, plural, =1 {one page} other {# pages}} and the limit is {limit, plural, =1 {one} other {#}}. It was already shortened as far as it goes.",
-    "REWRITE_VALIDATION_FAILED": "A rewrite changed something it shouldn't have, so it was thrown away and your own wording kept.",
     "COVER_LETTER_REJECTED": "That draft didn't pass our own check, so we didn't keep it: {issues}. Asking again usually produces one that does.",
     "EMBEDDING_UNAVAILABLE": "Skill matching is unavailable right now.",
     "GENERATION_PAUSED": "Generation is paused for now. Nothing else is affected — your profile stays open to read, edit and export.",
@@ -22,13 +21,12 @@
     "PDF_NOT_TEXT_BASED": "That PDF is a scan rather than text, so there's nothing to read out of it. A PDF exported from a word processor works.",
     "PDF_ENCRYPTED": "That PDF is password-protected. Save an unprotected copy and upload that.",
     "EXTRACTION_EMPTY": "Nothing readable came out of that file.",
-    "EXTRACTION_TIMEOUT": "Reading that file took too long and was stopped.",
+    "EXTRACTION_TIMEOUT": "Reading that file took too long and was stopped. A long CV can simply run out of time, so trying the same file again is worth it.",
     "LANGUAGE_UNDETECTED": "We couldn't tell what language that's written in. Closest guesses: {detectedCandidates}.",
     "TRANSLATION_FAILED": "That wording couldn't be regenerated, so it stays marked out of date. Nothing else changed.",
     "PROFILE_QUOTA_EXCEEDED": "{caller, select,\n  account {You've reached today's limit of {limit, plural, =1 {one profile} other {# profiles}}.}\n  anonymous {No more CVs can be read from this network right now. Without an account the allowance is counted per network, so it may not have been you who used it.}\n  other {No more CVs can be read right now — today's limit of {limit, plural, =1 {one profile} other {# profiles}} has been reached.}\n} It renews {resetsAt, date, short} at {resetsAt, time, short}.",
     "ANONYMOUS_SESSION_EXPIRED": "This session ended, two hours after your last activity here.",
     "ATOM_LIMIT_EXCEEDED": "You're at {current, number} of {limit, plural, =1 {one item} other {# items}}.",
-    "NO_ANONYMOUS_PROFILE": "There's no unsaved profile to claim.",
     "PROFILE_ALREADY_EXISTS": "This account already has a profile.",
     "GENERATION_ARTIFACT_EXPIRED": "That file is past its 14 days and has been deleted. Everything it was built from is still here, so it can be made again.",
     "CSRF_TOKEN_INVALID": "That request couldn't be verified. Reload the page and try again.",
@@ -59,6 +57,8 @@
     "paste_full_posting": "Paste the full posting",
     "continue_as_general_cv": "Build a general resume instead",
     "switch_to_manual_form": "Enter it by hand",
+    "upload_another_file": "Choose a different file",
+    "choose_language": "Set the language myself",
     "retry": "Try again",
     "complete_profile": "Open the profile editor"
   },
@@ -88,8 +88,10 @@
     "empty": "Nothing here yet. Every resume you build will be listed here.",
     "shown": "Showing {shown, number} of {total, plural, =1 {one resume} other {# resumes}}.",
     "pages": "{count, plural, =1 {one page} other {# pages}}",
+    "pagesUnderLimit": "{count, plural, =1 {one page} other {# pages}} of {limit, number} allowed",
     "withLetter": "with a covering letter",
-    "status": "{status, select, failed {This one did not finish.} superseded {Replaced by a later version.} other {}}",
+    "kept": "kept",
+    "status": "{status, select, superseded {Replaced by a later version.} other {}}",
     "open": "Open the resume: {facts}",
     "more": "Show older",
     "loadingMore": "Fetching…"
@@ -99,6 +101,8 @@
     "intro": "Upload it and we'll pull out your experience, skills and education. You check what came out before anything is built from it.",
     "fileLabel": "Your CV",
     "fileHint": "PDF, Word, LaTeX, Markdown or plain text.",
+    "languageLabel": "What language is this CV written in?",
+    "languageHint": "We could not work it out from the file. Tell us and we will read it as that language instead of guessing again.",
     "upload": "Read my CV",
     "uploading": "Uploading…",
     "reading": "Reading your CV",
@@ -209,6 +213,45 @@
     },
     "openSourceNote": "Free and open source under the MIT licence. Run by one person, with no service guarantee — if it is ever shut down, notice comes at least 30 days in advance."
   },
+  "HowItWorks": {
+    "title": "How AtomCV works",
+    "intro": "Your professional history is a structured dataset, not a document. A resume is one view of it, produced under constraints — and once the two are separated, the same profile can answer a different posting without anyone rewriting a file by hand.",
+    "stepsHeading": "The four steps",
+    "steps": {
+      "profile": {
+        "title": "You build a profile once",
+        "body": "Every line of your history is stored as its own item, with what it is about and how much it matters to you. Upload a CV to start from what you already have, or write it here. Nothing is a document yet."
+      },
+      "posting": {
+        "title": "You paste a posting",
+        "body": "The posting is read for what the work actually asks for — the skills it names, the responsibilities it describes. Nothing about your profile changes, and the reading is about the advert rather than about you."
+      },
+      "selection": {
+        "title": "Your items are ranked, then chosen to fit",
+        "body": "Each item is scored against the posting, and the ones that fit the page are chosen by measurement rather than by guesswork. What did not fit is still there, with the reason it did not — and you can put any of it back by hand."
+      },
+      "document": {
+        "title": "A document is typeset from the result",
+        "body": "The chosen items are set into a template and compiled. You get a PDF, a Word file, an HTML copy or the LaTeX source — and a covering letter if you asked for one."
+      }
+    },
+    "questionsHeading": "The three questions people ask",
+    "questions": {
+      "pageLimit": {
+        "title": "How can a page limit be guaranteed?",
+        "body": "Because it is measured rather than estimated. Every item has been typeset once and its height recorded, so what fits a page is arithmetic before anything is compiled. That is also why a thin profile can produce a resume shorter than a page: padding it would be inventing work you have not done."
+      },
+      "invention": {
+        "title": "Does a language model write my resume?",
+        "body": "No. A model reads the posting and, where you have written more than one version of a line, chooses between the versions you wrote. It never writes a sentence of its own, and the checks that follow refuse anything that added a number or a claim you did not make."
+      },
+      "ats": {
+        "title": "Will an applicant tracking system read it?",
+        "body": "The templates are single-column with real text rather than images, which is what those systems extract cleanly. The skills you label are the ones the matching reads, so what a system finds is what you said was there."
+      }
+    },
+    "cta": "Start building a profile"
+  },
   "Editor": {
     "save": {
       "saving": "Saving…",
@@ -271,9 +314,35 @@
       "completenessLabel": "Profile completeness",
       "completeness": "Profile: {percent} complete"
     },
+    "github": {
+      "title": "Add projects from GitHub",
+      "intro": "We read the public repositories of one account and offer the significant ones. Nothing is connected, nothing is authorised and nothing is written until you pick something.",
+      "usernameLabel": "GitHub username",
+      "usernamePlaceholder": "octocat",
+      "usernameHint": "Leave it empty to use the account already on your profile — the one your CV shows an employer.",
+      "look": "See what is there",
+      "looking": "Looking…",
+      "empty": "Nothing to offer from that account. Either it has no public repositories worth adding, or it could not be read just now.",
+      "willMerge": "Merges into a project you have already written about: adds its languages and the link, and leaves your sentences alone.",
+      "willAdd": "Adds a new project, with GitHub's own description as its first line.",
+      "add": "Add {count, plural, =1 {one project} other {# projects}}",
+      "adding": "Adding…",
+      "announceFound": "{count, plural, =0 {Nothing on offer} =1 {One project on offer} other {# projects on offer}}",
+      "announceApplied": "{count, plural, =0 {Nothing was added} =1 {One project added} other {# projects added}}"
+    },
+    "atomTags": {
+      "label": "Labels",
+      "hint": "What this item is about, in your own words. Matching reads these against the posting, so a label here is a scoring decision rather than a note to yourself.",
+      "placeholder": "Type a label and press Enter",
+      "remove": "Remove the label {label}",
+      "source": "{source, select, auto {Suggested when your CV was read} user {Added by you} other {Label}}",
+      "announceAdded": "Added the label {label}",
+      "announceRemoved": "Removed the label {label}"
+    },
     "tags": {
       "placeholder": "Type and press Enter",
-      "remove": "Remove {value}"
+      "remove": "Remove {value}",
+      "full": "That's the limit of {max, plural, =1 {one} other {#}}. Remove one to add another."
     },
     "variants": {
       "listLabel": "Wordings",
@@ -289,6 +358,11 @@
       "adding": "Adding…",
       "added": "A {language} wording was added.",
       "unknownLanguage": "Unknown language",
+      "translated": "This wording was translated for you, not written by you. Worth a read — editing it makes it yours.",
+      "deleteTrigger": "Delete the {language} wording",
+      "deleteTitle": "Delete this wording?",
+      "deleteBody": "The item and its other wordings stay. Only this one goes.",
+      "deleteConfirm": "Delete the wording",
       "staleRefreshing": "The wording this was based on has changed. A new version is being written.",
       "staleYours": "The wording this was based on has changed, and you wrote this one yourself. Nothing will replace it unless you ask.",
       "staleRegenerate": "Write it again from the new source",
@@ -308,12 +382,44 @@
     "addSection": {
       "open": "Add a section",
       "kind": "What kind",
+      "layout": "How it is set",
+      "layoutHint": "How this section prints. The suggestion follows the kind you picked; change it only if you want something else.",
       "title": "Name",
       "submit": "Add section",
       "adding": "Adding…",
       "cancel": "Cancel",
       "added": "Added the section {title}.",
       "loadingForm": "Opening the form…"
+    },
+    "runs": {
+      "intro": "This sentence is made of parts, and each part can be labelled. The labels are what a template reads — it decides how a technology or a number looks on the page.",
+      "partLabel": "Part {number, number}",
+      "removePart": "Remove part {number, number}",
+      "marksLabel": "Labels on part {number, number}",
+      "marks": {
+        "technology": "Technology",
+        "metric": "Number",
+        "emphasis": "Emphasis",
+        "link": "Link",
+        "organization": "Employer or school"
+      },
+      "unknownMarks": "Also labelled {marks} — a newer label this version does not know. It is kept as it is.",
+      "hrefLabel": "Link address",
+      "hrefMissing": "A link needs an address, or it cannot be saved.",
+      "addPart": "Add a part"
+    },
+    "languages": {
+      "sourceLabel": "Language you write in",
+      "sourceHint": "The language your items are written in. This is about the CV, not about the language of these buttons.",
+      "enabledLabel": "Languages a CV may come out in",
+      "enabledHint": "A resume is written in one language. Turning another one on lets you ask for it — missing wording is translated the first time and kept afterwards.",
+      "sourceAlwaysOn": "Always on: it is the one you write in"
+    },
+    "sectionLayout": {
+      "bullet_list": "Bulleted list",
+      "entry_list": "Entries with dates",
+      "inline_list": "Labelled lines",
+      "paragraph": "One paragraph"
     },
     "sectionKind": {
       "about": "About",
@@ -411,10 +517,23 @@
     "announceProgress": "{phase}, {pct} percent",
     "announceDone": "Your resume is ready",
     "announceFailed": "The generation failed",
+    "translationNote": "This can take a while the first time: your profile has no wording in the posting's language yet, so it is being translated now. The result is saved to your profile, so the next one is quick.",
     "startOver": "Start again",
     "coverLetter": "Write a covering letter too",
     "coverLetterAccount": "Covering letters need an account. The resume itself is the same either way.",
-    "coverLetterSignIn": "Create an account"
+    "coverLetterSignIn": "Create an account",
+    "directives": {
+      "show": "Steer this one",
+      "hide": "Hide these",
+      "emphasizeLabel": "Terms to bring forward",
+      "emphasizeHint": "Words you know the work is about that the posting does not say. They join the posting's own terms for this resume only — nothing about your profile changes.",
+      "noteLabel": "How this one should read",
+      "noteHint": "A sentence or two, in your own words. It can steer wording and emphasis; it cannot add anything you have not written, or change what a line says happened.",
+      "appearanceLabel": "Appearance for this one",
+      "appearanceHint": "One of the settings you kept. Leave it as it is to use your usual ones.",
+      "appearanceDefault": "Your usual settings",
+      "notePlaceholder": "Lead with the platform work rather than the ML."
+    }
   },
   "Result": {
     "title": "Your resume",
@@ -422,7 +541,9 @@
     "pages": "{count, plural, =1 {One page.} other {# pages.}}",
     "download": "Download PDF",
     "downloadDocx": "Download Word",
-    "formatNote": "The PDF is exactly what was measured. Word re-flows the same content with its own fonts, so a one-page resume can run a little over there.",
+    "downloadHtml": "Download HTML",
+    "downloadSource": "Download the LaTeX source",
+    "formatNote": "The PDF is exactly what was measured. Word re-flows the same content with its own fonts, so a one-page resume can run a little over there. HTML has no pages at all, so the limit does not apply to it — it is for pasting into a form that wants formatted text. The source is the LaTeX this PDF was compiled from.",
     "editTitle": "Change something",
     "editIntro": "Say what should come off the page or go back on it, in your own words. Naming the skill or the project it is about helps. Rewording a line, changing the tone and resizing the page are not things this can do.",
     "editLabel": "What should change",
@@ -437,22 +558,32 @@
     "selectionSnapshot": "The wording here is what this resume printed. Editing your profile afterwards does not change what is on a resume already made.",
     "selectionOpen": "Choose the lines by hand",
     "selectionClose": "Leave the lines as they are",
-    "selectionLoading": "Fetching the lines\u2026",
+    "selectionLoading": "Fetching the lines…",
     "selectionEmpty": "There are no lines to choose from on this resume.",
     "selectionOnPage": "On the page",
     "selectionHeldBack": "Held back",
-    "selectionCost": "This costs nothing \u2014 no writing is done, the same lines are set again. The resume you have now is kept and still downloads; the change makes a new one.",
+    "selectionHeldBackReason": "{reason, select,\n  BUDGET {The page ran out of room before this one. Switching it on makes room by dropping something below it — or generate again with a higher page limit.}\n  INACTIVE {This item is switched off in your profile, so nothing was weighing it.}\n  EXCLUDED_BY_DIRECTIVE {You took this out of this resume. Switching it on puts it back — your profile was never changed.}\n  ENTRY_BELOW_MINIMUM {Its entry did not have enough lines left to be worth printing, so the whole entry came out.}\n  other {It did not reach the page.}\n}",
+    "selectionHeldBackProfile": "Open the profile editor",
+    "selectionMatched": "Terms from the posting this line carries",
+    "selectionCost": "This costs nothing — no writing is done, the same lines are set again. The resume you have now is kept and still downloads; the change makes a new one.",
     "selectionChanged": "{count, plural, =0 {Nothing changed yet.} =1 {One line changed.} other {# lines changed.}}",
     "selectionOn": "{line} will be on the page.",
     "selectionOff": "{line} will be left off.",
     "selectionSubmit": "Apply these lines",
-    "selectionSending": "Applying\u2026",
+    "selectionSending": "Applying…",
     "downloading": "Preparing the file…",
     "again": "Generate another",
     "announceDownloaded": "Download started",
+    "archive": {
+      "label": "Keep this one",
+      "hint": "Kept resumes stay marked in your history, so the one that mattered is easy to find again.",
+      "announceKept": "Marked as kept",
+      "announceUnkept": "No longer marked as kept"
+    },
     "loading": "Fetching your resume…",
     "generalNote": "No posting was given, so there is nothing to measure this against.",
-    "languageNote": "Written in {content}, not {posting}. A resume is written in one language, and your profile does not yet have {posting} wording for everything on this page.",
+    "languageNote": "Written in {content}, not {posting}. A resume is written in one language, and the {posting} wording could not be completed for everything on this page — so it was built from what your profile already says rather than half in each.",
+    "lengthNote": "{pages, plural, =1 {It came to one page} other {It came to # pages}} where {limit, plural, =1 {one was} other {# were}} allowed. Nothing was padded to fill the rest — a resume is as long as what your profile says and no longer.",
     "coverLetterTitle": "Covering letter",
     "coverLetterAccount": "Covering letters need an account. This resume was built exactly as it would have been with one, and downloads the same way.",
     "coverLetterAbsent": "No letter has been written for this resume yet.",
@@ -512,6 +643,7 @@
     "none": "None left today"
   },
   "Footer": {
+    "howItWorks": "How it works",
     "privacy": "Privacy",
     "terms": "Terms",
     "sourceCode": "Source code"
@@ -568,6 +700,22 @@
     "title": "How your resume looks",
     "intro": "This applies to every resume you generate from now on. It is not asked again per resume.",
     "template": "Template",
+    "presets": {
+      "title": "Keep these settings",
+      "intro": "The settings above are the ones every resume uses. Keeping a set under a name lets you pick it for one generation instead — a dense set for a long CV, a roomier one for a short one.",
+      "nameLabel": "Name",
+      "namePlaceholder": "Compact, one page",
+      "keep": "Keep the settings above",
+      "keeping": "Keeping…",
+      "builtOn": "Built on {template}",
+      "remove": "Delete {name}",
+      "removeTitle": "Delete these settings?",
+      "removeBody": "Resumes you already made with them are unaffected — each one keeps the settings it was built with.",
+      "removeConfirm": "Delete",
+      "full": "That is all {max, number} of them. Delete one to keep another.",
+      "announceKept": "Kept as {name}"
+    },
+    "templateCapacity": "About {lines, number} lines a page",
     "templates": {
       "classic": "Classic",
       "compact": "Compact",

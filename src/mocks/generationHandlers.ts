@@ -65,6 +65,36 @@ export const DOCX_MEDIA_TYPE =
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 /**
+ * What each format is served as (`B-105`).
+ *
+ * `source` goes out as `text/plain` rather than one of the `application/x-tex`
+ * spellings, and the reason is the reader: this is LaTeX to **look at**, and
+ * a media type a browser treats as a download of an unknown kind is worse
+ * than one it will open. Nobody is allowed to send LaTeX the other way, which
+ * is what makes reading it back harmless.
+ */
+const DOWNLOAD_MEDIA_TYPE = {
+  pdf: 'application/pdf',
+  docx: DOCX_MEDIA_TYPE,
+  html: 'text/html',
+  source: 'text/plain',
+} as const;
+
+type DownloadFormat = keyof typeof DOWNLOAD_MEDIA_TYPE;
+
+/** Kept beside the media types, for the reason `DOWNLOAD_EXTENSION` exists. */
+const DOWNLOAD_EXTENSION: Record<DownloadFormat, string> = {
+  pdf: 'pdf',
+  docx: 'docx',
+  html: 'html',
+  source: 'tex',
+};
+
+function isDownloadFormat(value: string): value is DownloadFormat {
+  return value in DOWNLOAD_MEDIA_TYPE;
+}
+
+/**
  * § 18.1's signal vocabulary, both languages. At least **two distinct**
  * signals are wanted: a posting that writes "experience" nine times has said
  * one thing, not nine.
@@ -281,6 +311,100 @@ function onePageDocx(): Uint8Array {
   return zip;
 }
 
+/**
+ * One self-contained file: no stylesheet, no font, no script, nothing
+ * fetched. That is the endpoint's promise and it is the half worth encoding
+ * here — a fixture that linked a stylesheet would let a screen be written
+ * against a document the server does not produce.
+ */
+function onePageHtml(): string {
+  return [
+    '<!doctype html>',
+    '<html lang="en">',
+    '<head><meta charset="utf-8"><title>AtomCV</title></head>',
+    '<body><h1>Ada Lovelace</h1><p>Engineered ETL pipelines.</p></body>',
+    '</html>',
+  ].join('\n');
+}
+
+/**
+ * The LaTeX the PDF was compiled from, in outline.
+ *
+ * Deliberately not valid enough to compile: nothing in the product compiles
+ * it, and a fixture that looked compilable would invite somebody to try. What
+ * it has to be is recognisably TeX, so the dev harness shows a file a reader
+ * would accept as the source.
+ */
+function onePageSource(): string {
+  return [
+    '\\documentclass[10pt]{article}',
+    '% atomcv: classic, v6',
+    '\\begin{document}',
+    '\\section*{Ada Lovelace}',
+    'Engineered ETL pipelines.',
+    '\\end{document}',
+  ].join('\n');
+}
+
+function downloadBody(format: DownloadFormat): Uint8Array | string {
+  switch (format) {
+    case 'docx':
+      return onePageDocx();
+    case 'html':
+      return onePageHtml();
+    case 'source':
+      return onePageSource();
+    case 'pdf':
+      return onePagePdf();
+  }
+}
+
+/**
+ * One generation's read body, and the **only** place it is built (`B-102`).
+ *
+ * Extracted when the archive endpoint landed, because that endpoint answers
+ * with the generation as it now stands: two literals for one resource is how
+ * a write and a read start disagreeing, and the disagreement shows up as a
+ * screen that writes through the cache and then sees something else on
+ * reload.
+ */
+function generationBody(job: MockGenerationJob): Schemas['GenerationResponse'] {
+  const id = job.generationId;
+
+  return {
+    generationId: job.generationId,
+    // Still readable and still downloadable once it has been edited, and
+    // that is the point of keeping it (`B-088`) — what changes is that it
+    // is no longer the one to edit.
+    status: job.supersededBy ? 'superseded' : 'completed',
+    // Only on a retired row, which is the only place it means anything
+    // (`B-097`). The edge runs the other way in the database — the edit
+    // writes the new row naming the old — and this is the direction a
+    // screen needs: the reader is looking at the one that was replaced.
+    ...(job.supersededBy ? { supersededByGenerationId: job.supersededBy } : {}),
+    // Same reading as in the summary above (`B-102`).
+    ...(job.archived ? { archived: true } : {}),
+    pageCount: 1,
+    // Read against `pageCount` and against nothing else (`B-118`): one page
+    // under a two-page limit is a document shorter than it was allowed to be,
+    // which is a note rather than a fault. Absent on a row written before the
+    // limit was recorded, and absent rather than guessed.
+    ...(job.maxPages === undefined ? {} : { maxPages: job.maxPages }),
+    createdAt: new Date(job.startedAt).toISOString(),
+    ...(job.fitReport ? { fitReport: job.fitReport } : {}),
+    // `B-042`. Omitted rather than blank, the way `F-010` settled it.
+    ...(job.contentLanguage ? { contentLanguage: job.contentLanguage } : {}),
+    ...(job.postingLanguage ? { postingLanguage: job.postingLanguage } : {}),
+    // Absent when none was written, which is a state the reader can act on
+    // rather than an error: a letter that could not be written does not
+    // fail the generation (`B-056`).
+    ...(generations.coverLetters[id] ? { coverLetter: generations.coverLetters[id].text } : {}),
+    // Absent until somebody judges it (`B-065`). This is the half that
+    // makes `accessedAt` readable the day after the permission was given.
+    ...(feedbackBody(id) ? { feedback: feedbackBody(id) } : {}),
+  };
+}
+
 /** The one zip field a reader actually verifies. */
 function crc32(bytes: Uint8Array): number {
   let crc = 0xffffffff;
@@ -414,6 +538,57 @@ export const generationHandlers = [
       );
     }
 
+    /*
+      § 18.7's bounds, enforced rather than described (`B-104`).
+
+      The screen caps both fields, so nothing it sends can land here — which
+      is exactly why the refusal is encoded. A bound the client alone keeps is
+      a bound that holds until somebody writes a second caller, and this is
+      the handler that tells them, in the shape the server would.
+
+      Ahead of the quota gate, with the challenge and the letter: a malformed
+      request should not spend one of five generations.
+    */
+    const emphasize = body.emphasize ?? [];
+
+    /*
+      **The field names are the server's, indexed where the server indexes
+      them** — measured on 2026-09-20: too many terms comes back as
+      `emphasize`, one term that is too long as `emphasize[0]`. The first
+      draft here said `emphasize` for both, which is the difference between a
+      sentence naming the list and one naming the entry in it.
+    */
+    const fields = [
+      ...(emphasize.length > 10 ? ['emphasize'] : []),
+      ...emphasize.flatMap((term, index) => (term.length > 60 ? [`emphasize[${index}]`] : [])),
+      ...((body.note ?? '').length > 500 ? ['note'] : []),
+    ];
+
+    if (fields.length > 0) {
+      return HttpResponse.json(problem(400, 'VALIDATION_FAILED', GENERATIONS, [], { fields }), {
+        status: 400,
+      });
+    }
+
+    /*
+      A named appearance set that is not this profile's (`B-118`, `F-040`).
+
+      **At the gate, not in the worker**, and that is the whole item: the
+      check used to run after the `202`, so a set deleted in another tab cost
+      a generation to find out about — measured here, by spending one. A set
+      belonging to somebody else is not found either, which is the same answer
+      as a set that never existed and deliberately so: a `403` would confirm
+      the id names something.
+
+      Ahead of the quota gate, with the challenge and the bounds above.
+    */
+    if (
+      body.customizationId !== undefined &&
+      !fixture.customizations.some((saved) => saved.id === body.customizationId)
+    ) {
+      return HttpResponse.json(problem(404, 'RESOURCE_NOT_FOUND', GENERATIONS), { status: 404 });
+    }
+
     // § 44.3: the brake runs ahead of the quota, so a paused deployment does
     // not spend anyone's allowance on a request it is going to refuse.
     if (generations.paused) {
@@ -487,6 +662,15 @@ export const generationHandlers = [
       );
     }
 
+    /*
+      `B-118`. The request's limit, or the profile's when it named none —
+      resolved **here**, at the moment the generation is made, and then kept
+      on the job. Reading it back off the preferences at render time is the
+      bug the field exists to prevent: a CV made under a one-page limit would
+      be called short the day somebody raises the setting to two.
+    */
+    const limit = body.maxPages ?? fixture.profile.preferences?.defaults?.maxPages;
+
     const job: MockJob = {
       jobId: `job-${generations.jobs.length + 1}`,
       kind: 'generation',
@@ -527,6 +711,7 @@ export const generationHandlers = [
       */
       ...(jobDescription === '' ? {} : { roleTitle: 'Senior Backend Engineer' }),
       ...(namesTheEmployer(jobDescription) ? { companyName: MOCK_COMPANY } : {}),
+      ...(limit === undefined ? {} : { maxPages: limit }),
       startedAt: Date.now(),
       outcome: generations.nextOutcome,
       ...(generations.nextFailure ? { failure: generations.nextFailure } : {}),
@@ -705,8 +890,17 @@ export const generationHandlers = [
       would read as twenty-one resumes — and `total`, which the deletion
       screen states out loud, would say the same.
     */
+    /*
+      `outcome === 'completed'` is a third filter rather than a status mapped
+      onto the row, and `B-116` is why: `selection_state` is `NOT NULL`, so a
+      run that falls over before the selection never writes a generation at
+      all. The failure lives on the **job**, which still reports `failed`.
+      This listed such runs with `status: 'failed'` until the value left the
+      wire — a row for something the database cannot hold.
+    */
     const rows = generations.jobs
       .filter(isGenerationJob)
+      .filter((job) => job.outcome === 'completed')
       .filter((job) => !job.supersededBy)
       .sort((a, b) => b.startedAt - a.startedAt || b.generationId.localeCompare(a.generationId));
 
@@ -730,14 +924,21 @@ export const generationHandlers = [
     return HttpResponse.json<Schemas['GenerationPage']>({
       items: page.map((job) => ({
         generationId: job.generationId,
-        status: job.outcome === 'completed' ? 'completed' : 'failed',
+        status: 'completed',
         createdAt: new Date(job.startedAt).toISOString(),
-        ...(job.outcome === 'completed' ? { pageCount: 1 } : {}),
+        pageCount: 1,
+        // The same pair as the full response carries, so a row reads the same
+        // way (`B-118`).
+        ...(job.maxPages === undefined ? {} : { maxPages: job.maxPages }),
         ...(job.roleTitle ? { roleTitle: job.roleTitle } : {}),
         ...(job.companyName ? { companyName: job.companyName } : {}),
         ...(job.fitReport?.level ? { matchLevel: job.fitReport.level } : {}),
         ...(job.contentLanguage ? { contentLanguage: job.contentLanguage } : {}),
         hasCoverLetter: Boolean(generations.coverLetters[job.generationId]),
+        // `B-102`. Absent rather than `false` when unmarked: the field is
+        // optional on the wire and a generation is not made archived, so the
+        // history screen reads an absence the same way the server means it.
+        ...(job.archived ? { archived: true } : {}),
       })),
       // Absent at the end of the history. An empty `items` on the next call
       // would be one page too late to say so.
@@ -750,37 +951,16 @@ export const generationHandlers = [
     const id = String(params.generationId);
     const job = findGeneration(id);
 
-    if (!job) return notFound(`/api/v1/generations/${id}`);
+    /*
+      A failed run is **not found** rather than found and failed (`B-116`).
+      Nothing wrote a generation row for it — the selection it would be keyed
+      by never happened — so the id in the URL names something that does not
+      exist, and 404 is the honest answer. The reader who followed a link here
+      from a job that failed is told what the job already told them.
+    */
+    if (!job || job.outcome !== 'completed') return notFound(`/api/v1/generations/${id}`);
 
-    return HttpResponse.json<Schemas['GenerationResponse']>({
-      generationId: job.generationId,
-      // Still readable and still downloadable once it has been edited, and
-      // that is the point of keeping it (`B-088`) — what changes is that it
-      // is no longer the one to edit.
-      status: job.supersededBy
-        ? 'superseded'
-        : job.outcome === 'completed'
-          ? 'completed'
-          : 'failed',
-      // Only on a retired row, which is the only place it means anything
-      // (`B-097`). The edge runs the other way in the database — the edit
-      // writes the new row naming the old — and this is the direction a
-      // screen needs: the reader is looking at the one that was replaced.
-      ...(job.supersededBy ? { supersededByGenerationId: job.supersededBy } : {}),
-      pageCount: 1,
-      createdAt: new Date(job.startedAt).toISOString(),
-      ...(job.fitReport ? { fitReport: job.fitReport } : {}),
-      // `B-042`. Omitted rather than blank, the way `F-010` settled it.
-      ...(job.contentLanguage ? { contentLanguage: job.contentLanguage } : {}),
-      ...(job.postingLanguage ? { postingLanguage: job.postingLanguage } : {}),
-      // Absent when none was written, which is a state the reader can act on
-      // rather than an error: a letter that could not be written does not
-      // fail the generation (`B-056`).
-      ...(generations.coverLetters[id] ? { coverLetter: generations.coverLetters[id].text } : {}),
-      // Absent until somebody judges it (`B-065`). This is the half that
-      // makes `accessedAt` readable the day after the permission was given.
-      ...(feedbackBody(id) ? { feedback: feedbackBody(id) } : {}),
-    });
+    return HttpResponse.json<Schemas['GenerationResponse']>(generationBody(job));
   }),
 
   /**
@@ -955,6 +1135,53 @@ export const generationHandlers = [
    * the screen's sentence is built from, and a mock that filled it in would
    * hide the only state it usually has.
    */
+  /**
+   * Marking a generation to keep, or clearing the mark (`B-102`, § 13).
+   *
+   * **The body is optional and its absence means archive**, which is the one
+   * thing a client is most likely to get backwards: an omitted body is not
+   * "no change", it is `true`. Encoded here because a mock that required the
+   * field would let a caller sending nothing look correct.
+   *
+   * **Idempotent**, so archiving something already archived is a `200` rather
+   * than a conflict, and the body that comes back is the generation as it now
+   * stands — which is what lets the hook write it through instead of asking
+   * again.
+   *
+   * The `403` is the fifth `AccountFeature` value. An anonymous session's
+   * generations go with its profile, so there is nothing for a keep-mark to
+   * keep — the control is meaningless there rather than withheld, and the
+   * sentence in the catalogue says so.
+   */
+  http.post('*/api/v1/generations/:generationId/archive', async ({ params, request }) => {
+    const id = String(params.generationId);
+    const instance = `/api/v1/generations/${id}/archive`;
+
+    const job = findGeneration(id);
+    if (!job || job.outcome !== 'completed') return notFound(instance);
+
+    if (!isAccount()) {
+      return HttpResponse.json(
+        problem(403, 'FEATURE_REQUIRES_ACCOUNT', instance, [{ action: 'sign_up' }], {
+          feature: 'archive',
+        }),
+        { status: 403 },
+      );
+    }
+
+    // `.json()` throws on an empty body, and an empty body is legal here.
+    const raw = await request.text();
+    const body = raw === '' ? {} : (JSON.parse(raw) as { archived?: unknown });
+
+    job.archived = body.archived !== false;
+
+    // The generation as it now stands, built by the **same** function the
+    // read uses. Two literals for one resource is how a write and a read
+    // start disagreeing, and the disagreement surfaces as a screen that
+    // writes through its cache and then sees something else on reload.
+    return HttpResponse.json<Schemas['GenerationResponse']>(generationBody(job));
+  }),
+
   http.post('*/api/v1/generations/:generationId/feedback', async ({ params, request }) => {
     const id = String(params.generationId);
     const instance = `/api/v1/generations/${id}/feedback`;
@@ -1106,24 +1333,32 @@ export const generationHandlers = [
     // for JSON — which the API client did, by default — is a **406**, and it
     // was measured against the running backend rather than guessed at.
     const accept = request.headers.get('Accept') ?? '*/*';
-    const produced = format === 'docx' ? DOCX_MEDIA_TYPE : 'application/pdf';
-
-    if (!accept.includes(produced) && !accept.includes('*/*')) {
-      return HttpResponse.json(problem(406, 'NOT_ACCEPTABLE', instance), { status: 406 });
-    }
 
     /*
-      § 35.3's map has a third value and nothing serves it, so `format=source`
-      is a `400` rather than a quiet PDF (`B-094`). Encoded here because it is
-      the refusal a client is most likely to write against by accident: a
-      silent fallback would make a "download the source" button produce a PDF,
-      and nobody would notice until somebody opened it.
+      `source` was a `400` here until `B-105`, and the refusal was faithful:
+      the value had been in § 35.3's map since the first draft with nothing
+      serving it, and the HTML renderer's package was empty. Both landed.
+
+      The `400` stays for everything else, and for the same reason it was
+      encoded in the first place — a silent fallback to PDF would let a button
+      for a format nobody serves produce a PDF, and nobody would notice until
+      they opened the file.
     */
-    if (format !== 'pdf' && format !== 'docx') {
+    if (!isDownloadFormat(format)) {
       return HttpResponse.json(
         problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['format'] }),
         { status: 400 },
       );
+    }
+
+    const produced = DOWNLOAD_MEDIA_TYPE[format];
+
+    // Content negotiation, because the real server does it and refusing here
+    // is the only way a client learns before production. Asking this endpoint
+    // for JSON — which the API client did, by default — is a **406**, and it
+    // was measured against the running backend rather than guessed at.
+    if (!accept.includes(produced) && !accept.includes('*/*')) {
+      return HttpResponse.json(problem(406, 'NOT_ACCEPTABLE', instance), { status: 406 });
     }
 
     if (generations.expired.includes(id)) {
@@ -1136,10 +1371,13 @@ export const generationHandlers = [
 
     const day = new Date().toISOString().slice(0, 10);
 
-    return new HttpResponse(format === 'docx' ? onePageDocx() : onePagePdf(), {
+    return new HttpResponse(downloadBody(format), {
       headers: {
         'Content-Type': produced,
-        'Content-Disposition': `attachment; filename="atomcv-cv-${day}.${format}"`,
+        // The **extension**, not the format name: `source` is a `.tex`, and a
+        // `Content-Disposition` naming `atomcv-cv-2026-09-20.source` would be
+        // saved under a name nothing opens.
+        'Content-Disposition': `attachment; filename="atomcv-cv-${day}.${DOWNLOAD_EXTENSION[format]}"`,
         'Cache-Control': 'no-store',
       },
     });
@@ -1194,14 +1432,31 @@ function supersede(
     // the new generation is the old selection with the toggles moved
     // (§ 24.4). Re-weighing here would make the page limit a fresh promise
     // instead of the one that was already kept.
-    selection: source.selection.map((line) => ({
-      ...line,
-      onPage: change.include.includes(line.atomId)
-        ? true
-        : change.exclude.includes(line.atomId)
-          ? false
-          : line.onPage,
-    })),
+    selection: source.selection.map((line) => {
+      if (change.include.includes(line.atomId)) {
+        // Back on the page, so whatever kept it off no longer applies. The
+        // field is **removed** rather than set to something: `B-108` says it
+        // is absent on a line that reached the page, and a client reading a
+        // stale reason beside a chosen line would explain an absence that is
+        // not there.
+        return {
+          atomId: line.atomId,
+          text: line.text,
+          onPage: true,
+          ...(line.matchedKeywords ? { matchedKeywords: line.matchedKeywords } : {}),
+        };
+      }
+
+      if (change.exclude.includes(line.atomId)) {
+        // The one reason a **reader** can produce, and the one the screen has
+        // to keep apart from the rest: this is an edit to *this resume*, and
+        // a screen that offered to undo it as though it were a profile
+        // setting would have somebody revoke something permanent.
+        return { ...line, onPage: false, heldBackReason: 'EXCLUDED_BY_DIRECTIVE' as const };
+      }
+
+      return line;
+    }),
     jobId: crypto.randomUUID(),
     generationId: crypto.randomUUID(),
     startedAt: Date.now(),
@@ -1299,17 +1554,52 @@ function frame(step: PhaseEvent): PhaseEvent {
  *
  * The text is the primary wording's, copied now. That is the snapshot the
  * endpoint promises: § 24.2 numbers the lines this CV printed.
+ *
+ * **Both of `B-108`'s fields are produced, and their absence is produced
+ * too** — which is the half a fixture gets wrong most easily. An on-page line
+ * with no skills carries no `matchedKeywords` at all rather than an empty
+ * array, and a line that reached the page carries no `heldBackReason`. A mock
+ * that always sent both would let a screen be written against a shape the
+ * server never sends, and the shape in question is the one that means
+ * "nothing matched" when it is empty.
+ *
+ * The reasons are decided on the profile, like everything else here:
+ * a switched-off atom is `INACTIVE` — which is a real state the fixture has —
+ * and the rest of what the page could not hold is `BUDGET`.
+ * `EXCLUDED_BY_DIRECTIVE` is written by an **edit**, so it appears where an
+ * edit puts it rather than here, and `ENTRY_BELOW_MINIMUM` needs an entry to
+ * fall out whole, which this fixture's `minAtoms` never reaches.
  */
 function weigh(): MockSelectionLine[] {
-  return fixture.atoms
-    .map((atom) => ({
+  const ranked = fixture.atoms
+    .map((atom) => {
+      const active = atom.active !== false;
+
+      return {
+        atom,
+        active,
+        onPage: active && (atom.importance ?? 0) >= 0.5,
+        importance: atom.importance ?? 0,
+      };
+    })
+    .sort((a, b) => Number(b.onPage) - Number(a.onPage) || b.importance - a.importance);
+
+  // Mapped in a second pass rather than destructured with a discard, so the
+  // ranking key never has to appear on the published line.
+  return ranked.map(({ atom, active, onPage }) => {
+    const keywords = [...(atom.skills ?? [])].sort((a, b) => a.localeCompare(b, 'en'));
+
+    return {
       atomId: atom.id ?? '',
       text: (atom.variants ?? []).find((variant) => variant.primary)?.plainText ?? '',
-      onPage: (atom.importance ?? 0) >= 0.5,
-      importance: atom.importance ?? 0,
-    }))
-    .sort((a, b) => Number(b.onPage) - Number(a.onPage) || b.importance - a.importance)
-    .map(({ atomId, text, onPage }) => ({ atomId, text, onPage }));
+      onPage,
+      // Only on the lines that reached the page: the snapshot records the
+      // chosen ones, so a held-back line has none by construction rather
+      // than by omission.
+      ...(onPage && keywords.length > 0 ? { matchedKeywords: keywords } : {}),
+      ...(onPage ? {} : { heldBackReason: active ? ('BUDGET' as const) : ('INACTIVE' as const) }),
+    };
+  });
 }
 
 /**

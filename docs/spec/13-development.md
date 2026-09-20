@@ -65,6 +65,43 @@ Diğer sahte sağlayıcılar:
 Sahte ve gerçek sağlayıcı **profil ile ayrılır** (`local-fake` / `!local-fake`), ve bu testlidir: iki bean olursa context hiçbir profili adlandırmayan bir belirsizlik mesajıyla açılmaz, sıfır olursa eksik sınıf gibi görünür — iki başarısızlık da sessizdir.
 - `FakeLatexCompiler` — sabit PDF döner (`--profile full` gerekmez)
 
+> **Bu satır bir aşama boyunca yalnız burada vardı** (düzeltme, denetim
+> 2026-09-16): `FakeLatexCompiler` diye bir sınıf yoktu, tek yol
+> `LatexCompilerClient`'tı, ve `make dev` LaTeX konteynerini kaldırmıyor —
+> yani sahte LLM'le çalışan bir klon Faz E'de dinleyen kimsenin olmadığı bir
+> adrese gidiyordu. "Bedava ve çevrimdışı çalışır", zincir override'ının bir
+> faz ötesinde kopuyordu. Sınıf yazıldı; ayrım öteki sahtelerle aynı
+> (`LatexCompiler` arayüzü, `local-fake` / `!local-fake`, `LatexCompilerWiringTest`).
+>
+> **Ne döndürdüğü, ve neyi bilerek döndürmediği:**
+>
+> - **Sayfa sayısı her zaman 1.** Hareket eden bir sayı inandırıcı olurdu ve
+>   uydurma olurdu — kimsenin ölçmediği ikinci bir sayfa modeli. Gerçek bir
+>   sayfa sayısı `make dev-full` ya da `latexTest` hattı demek.
+> - **Ölçüm probu başına bir cevap**, kutudaki karakterlerden aritmetikle
+>   (`\textbf{Go}` iki karakter basar, dokuz değil). Bu bir ölçüm değildir; Faz
+>   C'nin harcayacak sayısı olsun diye vardır, yani seçim, bütçe ve sayfa
+>   aritmetiği Docker'sız koşuyor ve hataları orada görülebiliyor.
+> - **Kalibrasyon cevapsız.** `CALIB` satırı üretmiyor, `CalibrationService`
+>   prob bulamayıp kapasite türetmeyi reddediyor — derlenmeyen bir belge için
+>   zaten yaptığı şey. Reddin kendisi amaç: uydurulmuş bir kalibrasyon
+>   `template_capacities`'e yazılır ve onu uyduran oturumdan sonra da yaşardı.
+>
+> Cevapladığı maliyetler yerel veritabanına ötekiler gibi yazılıyor, yani bir
+> geliştirici makinesi sunucunun ölçüm tuttuğu yerde aritmetik biriktiriyor.
+> `make db-reset` bunun içindir; bu profilden gerçek bir veritabanına ulaşan
+> hiçbir şey yok.
+>
+> **Ve ayrımı profil değil bir anahtar yapıyor: `atomcv.latex.fake`.** İlk
+> hâli `@Profile("!local-fake")` idi ve **latex test hattını kırdı** — dört IT
+> `local,local-fake` altında koşuyor, çünkü **sahte modeli** istiyorlar
+> (bedava, fixture'lardan) ve **gerçek derleyiciyi** istiyorlar, ki asıl
+> ölçtükleri o. Profil ikisini ayırt edemez: "gerçek bir tek sayfalık PDF iki
+> bin bayttan büyüktür" diyen beş iddia 669 baytlık yer tutucuyla karşılaştı.
+> Anahtar `application-local-fake.yml`'de açık, `AbstractLatexTest` onu
+> kapatıyor — tek yerde, ki beşinci bir sınıf onsuz yazılamasın. Ders tanıdık:
+> **bir profil bir niyetin adıdır, iki niyetin değil.**
+
 ### 54.3 Seed data
 
 ```java
@@ -92,14 +129,29 @@ public void devLogin(@PathVariable String email) { ... }
 
 ```make
 dev:        docker compose --profile core up -d && ./gradlew bootRun --args='--spring.profiles.active=local,local-fake'
-dev-full:   docker compose --profile core --profile full up -d
+dev-full:   docker compose --profile core --profile full up -d --build
 db-reset:   docker compose --profile core down -v && docker compose --profile core up -d postgres && $(GRADLE) bootRun ...
 record:     ./gradlew bootRun --args='--spring.profiles.active=local,local-record'
 test:       ./gradlew test
 test-int:   ./gradlew integrationTest
-test-llm:   ./gradlew llmEval
-lint:       ./gradlew spotlessApply
+test-llm:   ./gradlew llmEval                     # para harcar
+golden-costs:    ./gradlew latexTest --tests '*GoldenCostsIT' -Dgolden.record=true
+openapi:         ./gradlew integrationTest --tests '*OpenApiDocumentIT' -Dopenapi.record=true
+catalogue:       ./gradlew test --tests '*ErrorCatalogueDocumentTest' -Dcatalogue.record=true
+measure-template: ./gradlew latexTest --tests '*TemplateMeasurementIT' ...
 ```
+
+> **`lint` yok, ve üç kayıt hedefi var** (düzeltme, denetim 2026-09-20).
+> Biçimlendirme ayrı bir hedef değil: `gradlew spotlessApply` doğrudan
+> koşuluyor ve CI'nın ilk adımı `spotlessCheck` (EK D.1). Buna karşılık
+> **yeniden üreten** üç hedef var — ölçülmüş maliyetler, yayımlanan şema, hata
+> kataloğu — ve üçü de commit'li bir dosyayı yeniden yazıyor; ilgili test
+> ayrışmada düşüyor, kayıt modu onu yeniden kaydediyor.
+>
+> **`test-llm`'in hedef olması bir zorunluluk.** Bu Makefile `.env`'i
+> `include` + `export` ediyor; `gradlew llmEval`'i elle koşturan onu almıyor,
+> her sağlayıcı anahtarsız atlanıyor, ve eval bir skor değil bir **kesinti**
+> olarak düşüyor. Hedef bir aşama boyunca yoktu ve bu bölüm onu sayıyordu.
 
 `front`, `e2e` ve `npm` hedefleri frontend reposunun Makefile'ındadır.
 `db-reset` Flyway'i uygulamayı açarak çalıştırır: Flyway Gradle eklentisi
@@ -391,7 +443,7 @@ Yeni makinede kurulum: `make dev`
 └── Diğer diller (pivot)
 
 [B+F] Açık kaynak hazırlığı
-├── Mimari dokümanlarının İngilizceye çevrilmesi
+├── ~~Mimari dokümanlarının İngilizceye çevrilmesi~~  ← YAPILMAYACAK (2026-09-16)
 ├── README (İngilizce, mimari özet + kurulum)
 ├── CONTRIBUTING.md + SECURITY.md
 └── Örnek .env.example doğrulaması
@@ -402,6 +454,13 @@ Gelecek
 ├── Kullanıcı tanımlı şablonlar
 └── LinkedIn About / bio çıktıları
 ```
+
+> **Doküman çevirisi kapsam dışı (karar: 2026-09-16).** `docs/spec/**` Türkçe
+> kalıyor. Kod, yorum, commit mesajı, `README`, `CONTRIBUTING`, `SECURITY` ve
+> `CLAUDE.md` zaten İngilizce ve öyle kalacak — yani açık kaynak bir okuyucunun
+> **kodu okumak** için Türkçeye ihtiyacı yok. Çeviri ~9.400 satırlık bir iş ve
+> iki kopyayı ayrı ayrı güncel tutma yükümlülüğü getiriyordu; getirisi
+> mimariyi okumak isteyen bir yabancıydı, ki henüz yok.
 
 ### 55.1 Zaman tahmini
 

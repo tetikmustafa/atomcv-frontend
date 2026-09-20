@@ -16,17 +16,24 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useState, type ChangeEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCreateSection, usePatchSection } from '@/hooks/useProfile';
-import { sectionForm, validationKey, type SectionFormValues } from '@/lib/forms/profileSchemas';
+import {
+  DEFAULT_LAYOUT,
+  sectionForm,
+  validationKey,
+  type SectionFormValues,
+} from '@/lib/forms/profileSchemas';
 import { announce } from '@/stores/announcerStore';
 import type { Section } from '@/lib/api/endpoints/profile';
 
 const KINDS = sectionForm.shape.kind.options;
+const LAYOUTS = sectionForm.shape.layout.options;
 
 /**
  * `section` present means editing that one; absent means adding.
@@ -41,6 +48,7 @@ export function SectionForm({ section, onDone }: SectionFormProps) {
   const t = useTranslations('Editor.addSection');
   const te = useTranslations('Editor.editSection');
   const tk = useTranslations('Editor.sectionKind');
+  const tl = useTranslations('Editor.sectionLayout');
   const tv = useTranslations('Editor.validation');
   const create = useCreateSection();
   const patch = usePatchSection();
@@ -53,14 +61,32 @@ export function SectionForm({ section, onDone }: SectionFormProps) {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<SectionFormValues>({
     resolver: zodResolver(sectionForm),
     defaultValues: {
       kind: section?.kind ?? 'custom',
       title: section?.title ?? '',
+      /*
+        The section's own layout when editing; when adding, the one this kind
+        is usually set as (§ 33.4.1). Not a fixed `bullet_list`: the server
+        already writes the right one per kind, and a form that always
+        suggested bullets would be arguing with it — About most of all, where
+        a summary printed as a list reads as the first item of a list that
+        never comes.
+      */
+      layout: section?.layout ?? DEFAULT_LAYOUT.custom,
     },
   });
+
+  /*
+    Changing the kind moves the suggestion with it, but **only while the
+    reader has not chosen one**. Somebody who picked `paragraph` and then
+    corrected the kind has made a decision, and overwriting it would be the
+    form deciding it knew better.
+  */
+  const [layoutTouched, setLayoutTouched] = useState(editing);
 
   const submit = handleSubmit((values) => {
     if (pending) return;
@@ -102,12 +128,54 @@ export function SectionForm({ section, onDone }: SectionFormProps) {
         */}
         <select
           id="section-kind"
-          {...register('kind')}
+          {...register('kind', {
+            /*
+              Moved in the handler rather than in an effect watching `kind`.
+              An effect would be state reacting to state — and the rule-of-hooks
+              lint says so — where this is what it actually is: one thing
+              happening because somebody changed a dropdown.
+            */
+            onChange: (event: ChangeEvent<HTMLSelectElement>) => {
+              if (layoutTouched) return;
+              setValue('layout', DEFAULT_LAYOUT[event.target.value as SectionFormValues['kind']]);
+            },
+          })}
           className="border-border bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-lg border px-3 text-sm outline-none focus-visible:ring-3"
         >
           {KINDS.map((kind) => (
             <option key={kind} value={kind}>
               {tk(kind)}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="section-layout">{t('layout')}</Label>
+        <p id="section-layout-hint" className="text-muted-foreground text-xs">
+          {t('layoutHint')}
+        </p>
+
+        {/*
+          Four values, not five (`B-116`). `two_column` was accepted by the
+          endpoint, allowed by the CHECK, published by the schema -- and
+          printed as an entry list anyway, because all three templates are
+          single-column for an ATS-extraction reason. A person chose a layout,
+          nothing said otherwise, and their document printed a different one.
+
+          Drawing this at all was D13's call, and the gap it closes named its
+          own condition: every value needs a word somebody can read, or the
+          control hands out a choice whose meaning is unavailable.
+        */}
+        <select
+          id="section-layout"
+          aria-describedby="section-layout-hint"
+          {...register('layout', { onChange: () => setLayoutTouched(true) })}
+          className="border-border bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-lg border px-3 text-sm outline-none focus-visible:ring-3"
+        >
+          {LAYOUTS.map((layout) => (
+            <option key={layout} value={layout}>
+              {tl(layout)}
             </option>
           ))}
         </select>

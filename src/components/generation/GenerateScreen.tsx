@@ -9,15 +9,22 @@
  * where the profile already decided them. `maxPages` reaches the request only
  * when the *server* offers `increase_page_limit` as a way out of an error.
  *
+ * `B-104` added two fields the reader may set, and the rule above is what
+ * decides where they go: behind a control that is **closed by default**
+ * (`Directives`). A screen opening with three inputs has already told
+ * somebody the empty two matter.
+ *
  * The posting itself is optional too. Its absence is general mode (§ 35.3) —
  * narrower in aim, never lower in quality — so the button is never disabled
  * for an empty field.
  */
 
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
+import { Directives } from '@/components/generation/Directives';
 import { JobProgress } from '@/components/generation/JobProgress';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -25,6 +32,8 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useStartGeneration } from '@/hooks/useGeneration';
 import { useCanWriteCoverLetter, useIsAnonymous } from '@/hooks/useSession';
+import { toErrorLike } from '@/lib/errors/errorLike';
+import { appearanceKeys } from '@/lib/api/queryKeys';
 import { Link, useRouter } from '@/lib/i18n/navigation';
 import type { GenerationRequest } from '@/lib/api/endpoints/generations';
 import type { Resolution } from '@/types/domain';
@@ -73,6 +82,18 @@ export function GenerateScreen() {
    * this screen that adds to it.
    */
   const [coverLetter, setCoverLetter] = useState(false);
+  /**
+   * `B-104`'s two, and they are **not** cleared on a refusal.
+   *
+   * Every way out of an error on this screen resubmits — `continue_anyway`,
+   * `continue_as_general_cv`, `increase_page_limit` — and they resubmit what
+   * the reader meant. Dropping the directives there would silently change the
+   * request behind a button whose whole purpose is to send the same one
+   * again.
+   */
+  const [emphasize, setEmphasize] = useState<string[]>([]);
+  const [note, setNote] = useState('');
+  const [customizationId, setCustomizationId] = useState('');
   const [job, setJob] = useState<{ jobId: string; streamUrl?: string } | null>(null);
 
   /**
@@ -90,6 +111,7 @@ export function GenerateScreen() {
 
   const anonymous = useIsAnonymous();
   const canWriteCoverLetter = useCanWriteCoverLetter();
+  const queryClient = useQueryClient();
 
   const start = useStartGeneration();
 
@@ -110,6 +132,22 @@ export function GenerateScreen() {
       // see (`B-082`).
       coverLetter: coverLetter && canWriteCoverLetter,
       ...(trimmed === '' ? {} : { jobDescription: trimmed }),
+      /*
+        Both omitted when empty rather than sent blank, and not for tidiness.
+        An empty `emphasize` array is a directive that names no terms, and an
+        empty `note` is a sentence the prompt would be handed and have to
+        ignore — the server's own description says an absent `customizationId`
+        is what nearly every request means, and the same reading applies here.
+
+        Trimmed because the server stores them trimmed; sending the untrimmed
+        form would make two requests that mean the same thing look different
+        to anything comparing them.
+      */
+      ...(emphasize.length === 0 ? {} : { emphasize }),
+      ...(note.trim() === '' ? {} : { note: note.trim() }),
+      // Absent means the profile's own working settings, which the schema
+      // calls what nearly every request means.
+      ...(customizationId === '' ? {} : { customizationId }),
       // Omitted rather than sent empty where there is none: an empty value is
       // a **failure** to the challenge, while an absence is what a deployment
       // without a Turnstile secret expects (`B-083`).
@@ -130,13 +168,43 @@ export function GenerateScreen() {
       // publish which layer turned a request away, so there is no telling a
       // refusal that spent the token from one that did not. A fresh token
       // always works; a discarded good one costs a second.
-      onError: spendChallenge,
+      onError: (error) => {
+        spendChallenge();
+        forgetMissingCustomization(error);
+      },
     });
   }
 
   function spendChallenge() {
     setChallengeToken(undefined);
     setAttempt((n) => n + 1);
+  }
+
+  /**
+   * Drops a saved appearance set the server has just said it does not have
+   * (`B-118`, `F-040`).
+   *
+   * **Not error UI, and the difference matters to rule 7.** Nothing here
+   * renders anything or invents a way forward — the panel still draws the
+   * server's own sentence and the server's own resolutions. What this repairs
+   * is the two pieces of state that would otherwise be wrong: a selection
+   * naming a set that is gone, and a cached list still offering it. Left
+   * alone, the next press sends the same dead id and meets the same refusal,
+   * which is the loop rather than the way out.
+   *
+   * The set is only ever missing because it was deleted somewhere else — the
+   * other tab, or the settings screen — so the list is refetched rather than
+   * edited here: the server owns what is in it.
+   *
+   * `RESOURCE_NOT_FOUND` on this request can mean nothing else. It is checked
+   * at the gate now, ahead of the quota, so finding out costs a round trip
+   * rather than one of the day's generations.
+   */
+  function forgetMissingCustomization(error: unknown) {
+    if (toErrorLike(error).code !== 'RESOURCE_NOT_FOUND') return;
+
+    setCustomizationId('');
+    void queryClient.invalidateQueries({ queryKey: appearanceKeys.customizations() });
   }
 
   /**
@@ -246,6 +314,16 @@ export function GenerateScreen() {
           onChange={(event) => setPosting(event.target.value)}
         />
       </div>
+
+      <Directives
+        emphasize={emphasize}
+        onEmphasizeChange={setEmphasize}
+        note={note}
+        onNoteChange={setNote}
+        customizationId={customizationId}
+        onCustomizationChange={setCustomizationId}
+        disabled={start.isPending}
+      />
 
       {/*
         The box, or the sentence that stands in for it (§ 35.7.3, `B-082`).

@@ -6,12 +6,11 @@
     "INSUFFICIENT_PROFILE": "Profilinde bir CV oluşturmaya yetecek kadar içerik yok. Profilin {completeness, number, ::percent scale/0.01} tamamlanmış durumda; eksik olanlar: {missing}.",
     "UNPARSEABLE_JOB_DESCRIPTION": "{reason, select,\n  too_short {Bu ilan üzerinde çalışmak için fazla kısa. İlanın tamamını yapıştır — en çok işe yarayan kısım aranan nitelikler.}\n  too_long {Bu, okuyabileceğimiz her ilandan uzun. İlanı çevresindeki sayfa olmadan, tek başına yapıştır.}\n  low_entropy {Bu metin ilan olarak okunamayacak kadar kendini tekrar ediyor. Bütün bir sayfa yapıştırdıysan yalnız ilanı dene.}\n  not_job_like {Bu bize ilan gibi görünmedi. Öyleyse yine de devam edebilirsin.}\n  low_confidence {İlanı okuduk ama bir uyarlama yapacak kadar emin olamadık — işin ne istediğini tahmin etmemeyi tercih ederiz.}\n  too_few_skills {İlanı okuduk ama içinden {skillsFound, plural, =0 {hiç yetkinlik} =1 {tek bir yetkinlik} other {# yetkinlik}} çıktı; bu da bir uyarlama yapmaya yetmiyor.}\n  suspicious_output {Bu ilanı okuyuşumuz bozuk döndü. Yapıştırdığın metinde bir sorun yok — tekrar sormak genellikle çözüyor.}\n  other {Bu ilanı çözümleyemedik.}\n}",
     "CONFLICTING_PREFERENCES": "Sabitlediğin içerik yaklaşık {pinnedPages, number} sayfa tutuyor, sınır ise {maxPages, plural, =1 {bir sayfa} other {# sayfa}}.",
-    "FEATURE_REQUIRES_ACCOUNT": "{feature, select,\n  atom_controls {Önem, kullanılabilirlik ve iki kilit için hesap gerekiyor. Bu maddenin geri kalanını düzenlemeye devam edebilirsin.}\n  alternatives {İkinci bir yazım eklemek için hesap gerekiyor. Buradaki yazımı düzenlemek için gerekmiyor.}\n  cover_letter {Ön yazı için hesap gerekiyor. CV'ne bir şey olmadı.}\n  feedback {Bir CV hakkında görüş bildirmek için hesap gerekiyor — dönüş yapabileceğimiz bir yer olması lazım.}\n  other {Bunun için hesap gerekiyor.}\n}",
+    "FEATURE_REQUIRES_ACCOUNT": "{feature, select,\n  atom_controls {Önem, kullanılabilirlik ve iki kilit için hesap gerekiyor. Bu maddenin geri kalanını düzenlemeye devam edebilirsin.}\n  alternatives {İkinci bir yazım eklemek için hesap gerekiyor. Buradaki yazımı düzenlemek için gerekmiyor.}\n  cover_letter {Ön yazı için hesap gerekiyor. CV'ne bir şey olmadı.}\n  feedback {Bir CV hakkında görüş bildirmek için hesap gerekiyor — dönüş yapabileceğimiz bir yer olması lazım.}\n  archive {Bir CV'yi saklamak için hesap gerekiyor. Hesapsız, buradaki her şey oturumla birlikte gidiyor; yani işaretin saklayacağı bir şey kalmıyor.}\n  other {Bunun için hesap gerekiyor.}\n}",
     "QUOTA_EXCEEDED": "{metric, select, generation {Bugün üretebileceğin CV hakkını doldurdun.} profile_extract {Bugün yapabileceğin profil içe aktarma hakkını doldurdun.} other {Bugünkü hakkını doldurdun.}} {resetsAt, date, short} {resetsAt, time, short}’te yenilenir.",
-    "ALL_PROVIDERS_UNAVAILABLE": "Yapay zekâ sağlayıcılarının hiçbiri yanıt vermedi. Hiçbir şey kaybolmadı, profiline dokunulmadı.",
+    "ALL_PROVIDERS_UNAVAILABLE": "Yapay zekâ sağlayıcılarının hiçbiri yanıt vermedi; şu an tekrar denemek yardımcı olmaz. Hiçbir şey kaybolmadı, profiline dokunulmadı.",
     "COMPILATION_FAILED": "Belge oluşturulamadı. {detail}",
     "PAGE_LIMIT_EXCEEDED": "İçeriğin {actual, plural, =1 {bir sayfa} other {# sayfa}} tuttu, sınır ise {limit, plural, =1 {bir} other {#}}. İçerik gidebildiği kadar kısaltıldı.",
-    "REWRITE_VALIDATION_FAILED": "Bir yeniden yazım dokunmaması gereken bir şeyi değiştirdi; o yüzden atıldı ve senin ifaden korundu.",
     "COVER_LETTER_REJECTED": "Bu taslak kendi denetimimizden geçmedi, o yüzden saklanmadı: {issues}. Tekrar istemek genellikle geçen bir mektup üretiyor.",
     "EMBEDDING_UNAVAILABLE": "Yetkinlik eşleştirme şu anda kullanılamıyor.",
     "GENERATION_PAUSED": "Üretim şimdilik duraklatıldı. Başka bir şey etkilenmedi — profilini okumaya, düzenlemeye ve dışa aktarmaya devam edebilirsin.",
@@ -22,13 +21,12 @@
     "PDF_NOT_TEXT_BASED": "Bu PDF metin değil, tarama. İçinden okunacak bir şey yok. Bir kelime işlemciden dışa aktarılmış PDF çalışır.",
     "PDF_ENCRYPTED": "Bu PDF parola korumalı. Korumasız bir kopyasını kaydedip onu yükle.",
     "EXTRACTION_EMPTY": "Bu dosyadan okunabilir hiçbir şey çıkmadı.",
-    "EXTRACTION_TIMEOUT": "Bu dosyayı okumak çok uzun sürdü ve durduruldu.",
+    "EXTRACTION_TIMEOUT": "Bu dosyayı okumak çok uzun sürdü ve durduruldu. Uzun bir CV'nin süresi yetmeyebilir; aynı dosyayla tekrar denemeye değer.",
     "LANGUAGE_UNDETECTED": "Bunun hangi dilde yazıldığını anlayamadık. En yakın tahminler: {detectedCandidates}.",
     "TRANSLATION_FAILED": "Bu sözcükleme yeniden üretilemedi, o yüzden bayat işaretli kalıyor. Başka bir şey değişmedi.",
     "PROFILE_QUOTA_EXCEEDED": "{caller, select,\n  account {Bugünkü {limit, plural, =1 {bir profil} other {# profil}} sınırına ulaştın.}\n  anonymous {Şu an bu ağdan daha fazla CV okunamıyor. Hesap olmadan hak ağ başına sayılıyor, yani onu harcayan sen olmayabilirsin.}\n  other {Şu an daha fazla CV okunamıyor — bugünkü {limit, plural, =1 {bir profil} other {# profil}} sınırına ulaşıldı.}\n} {resetsAt, date, short} {resetsAt, time, short}’te yenilenir.",
     "ANONYMOUS_SESSION_EXPIRED": "Bu oturum, buradaki son işleminden iki saat sonra sona erdi.",
     "ATOM_LIMIT_EXCEEDED": "Sınır {limit, plural, =1 {bir madde} other {# madde}}; şu anda {current, number} tane var.",
-    "NO_ANONYMOUS_PROFILE": "Sahiplenilecek kaydedilmemiş bir profil yok.",
     "PROFILE_ALREADY_EXISTS": "Bu hesabın zaten bir profili var.",
     "GENERATION_ARTIFACT_EXPIRED": "Bu dosyanın 14 günü doldu ve silindi. Oluşturulduğu her şey duruyor, yeniden üretilebilir.",
     "CSRF_TOKEN_INVALID": "Bu istek doğrulanamadı. Sayfayı yenileyip tekrar dene.",
@@ -59,6 +57,8 @@
     "paste_full_posting": "İlanın tamamını yapıştır",
     "continue_as_general_cv": "Bunun yerine genel CV oluştur",
     "switch_to_manual_form": "Elle gir",
+    "upload_another_file": "Başka bir dosya seç",
+    "choose_language": "Dili kendim seçeyim",
     "retry": "Tekrar dene",
     "complete_profile": "Profil düzenleyiciyi aç"
   },
@@ -88,8 +88,10 @@
     "empty": "Burada henüz bir şey yok. Oluşturduğun her CV burada listelenecek.",
     "shown": "{total, plural, =1 {Tek CV} other {# CV}} içinden {shown, number} tanesi gösteriliyor.",
     "pages": "{count, plural, =1 {bir sayfa} other {# sayfa}}",
+    "pagesUnderLimit": "{count, plural, =1 {bir sayfa} other {# sayfa}} — izin verilen {limit, number}",
     "withLetter": "ön yazısıyla",
-    "status": "{status, select, failed {Bu üretim tamamlanmadı.} superseded {Daha yeni bir sürümle değiştirildi.} other {}}",
+    "kept": "saklanıyor",
+    "status": "{status, select, superseded {Daha yeni bir sürümle değiştirildi.} other {}}",
     "open": "CV'yi aç: {facts}",
     "more": "Daha eskilerini göster",
     "loadingMore": "Getiriliyor…"
@@ -99,6 +101,8 @@
     "intro": "Yükle, deneyimini, becerilerini ve eğitimini çıkaralım. Çıkanı, üzerine bir şey inşa edilmeden önce sen kontrol ediyorsun.",
     "fileLabel": "CV'n",
     "fileHint": "PDF, Word, LaTeX, Markdown ya da düz metin.",
+    "languageLabel": "Bu CV hangi dilde yazılmış?",
+    "languageHint": "Dosyadan çıkaramadık. Sen söyle, yeniden tahmin etmek yerine o dilde okuyalım.",
     "upload": "CV'mi oku",
     "uploading": "Yükleniyor…",
     "reading": "CV'n okunuyor",
@@ -209,6 +213,45 @@
     },
     "openSourceNote": "MIT lisanslı, ücretsiz ve açık kaynak. Tek kişi tarafından yürütülüyor ve hizmet garantisi yok — kapatılması halinde en az 30 gün önceden bildirilir."
   },
+  "HowItWorks": {
+    "title": "AtomCV nasıl çalışıyor",
+    "intro": "Mesleki geçmişin bir belge değil, yapılandırılmış bir veri kümesi. CV ise onun kısıtlar altında üretilmiş tek bir görünümü — ikisi ayrıldığında aynı profil, kimse elle dosya düzenlemeden başka bir ilana cevap verebiliyor.",
+    "stepsHeading": "Dört adım",
+    "steps": {
+      "profile": {
+        "title": "Profili bir kez kuruyorsun",
+        "body": "Geçmişinin her satırı kendi maddesi olarak saklanıyor: neyle ilgili olduğu ve senin için ne kadar önemli olduğuyla. Elindeki CV’yi yükleyerek başlayabilir ya da buraya yazabilirsin. Henüz ortada bir belge yok."
+      },
+      "posting": {
+        "title": "İlanı yapıştırıyorsun",
+        "body": "İlan, işin gerçekten ne istediği için okunuyor — adlandırdığı yetkinlikler, anlattığı sorumluluklar. Profilinde hiçbir şey değişmiyor ve okuma senin hakkında değil, ilan hakkında."
+      },
+      "selection": {
+        "title": "Maddelerin sıralanıyor, sonra sayfaya sığacak şekilde seçiliyor",
+        "body": "Her madde ilana karşı puanlanıyor ve sayfaya sığanlar tahminle değil ölçümle seçiliyor. Sayfaya giremeyenler yerinde duruyor, hem de giremedikleri sebebiyle birlikte — istediğini elle geri koyabilirsin."
+      },
+      "document": {
+        "title": "Sonuçtan bir belge diziliyor",
+        "body": "Seçilen maddeler bir şablona yerleştirilip derleniyor. PDF, Word dosyası, HTML kopya ya da LaTeX kaynağı alıyorsun — istediysen bir de ön yazı."
+      }
+    },
+    "questionsHeading": "En çok sorulan üç şey",
+    "questions": {
+      "pageLimit": {
+        "title": "Sayfa sınırı nasıl garanti edilebiliyor?",
+        "body": "Çünkü tahmin edilmiyor, ölçülüyor. Her madde bir kez dizilip yüksekliği kaydedildiği için, sayfaya neyin sığdığı hiçbir şey derlenmeden önce aritmetik. Zayıf bir profilin bir sayfadan kısa CV üretebilmesinin sebebi de bu: doldurmak, yapmadığın bir işi uydurmak olurdu."
+      },
+      "invention": {
+        "title": "CV’mi bir dil modeli mi yazıyor?",
+        "body": "Hayır. Model ilanı okuyor ve bir satırın birden fazla sürümünü yazdıysan senin yazdığın sürümler arasından seçiyor. Kendi cümlesini hiç yazmıyor, ve ardından gelen denetimler senin öne sürmediğin bir sayıyı ya da iddiayı ekleyen her şeyi reddediyor."
+      },
+      "ats": {
+        "title": "Başvuru takip sistemleri okuyabilecek mi?",
+        "body": "Şablonlar tek kolon ve görsel değil gerçek metin — o sistemlerin temiz çıkardığı biçim bu. Etiketlediğin yetkinlikler eşleştirmenin okuduğu şey, yani bir sistemin bulduğu şey senin orada olduğunu söylediğin şey oluyor."
+      }
+    },
+    "cta": "Profil kurmaya başla"
+  },
   "Editor": {
     "save": {
       "saving": "Kaydediliyor…",
@@ -271,9 +314,35 @@
       "completenessLabel": "Profil tamamlanma oranı",
       "completeness": "Profil: {percent} tamamlandı"
     },
+    "github": {
+      "title": "GitHub'dan proje ekle",
+      "intro": "Bir hesabın herkese açık depolarını okuyup kayda değer olanları sunuyoruz. Hiçbir şey bağlanmıyor, hiçbir izin istenmiyor ve sen bir şey seçmeden hiçbir şey yazılmıyor.",
+      "usernameLabel": "GitHub kullanıcı adı",
+      "usernamePlaceholder": "octocat",
+      "usernameHint": "Boş bırakırsan profilindeki hesap okunur — CV'nin bir işverene gösterdiği hesap.",
+      "look": "Neler var, bak",
+      "looking": "Bakılıyor…",
+      "empty": "Bu hesaptan sunulacak bir şey yok. Ya eklemeye değer herkese açık deposu yok, ya da şu an okunamadı.",
+      "willMerge": "Zaten yazdığın bir projeyle birleşir: dillerini ve bağlantısını ekler, cümlelerine dokunmaz.",
+      "willAdd": "Yeni bir proje ekler; ilk satırı GitHub'ın kendi açıklaması olur.",
+      "add": "{count, plural, =1 {Bir projeyi} other {# projeyi}} ekle",
+      "adding": "Ekleniyor…",
+      "announceFound": "{count, plural, =0 {Sunulacak bir şey yok} =1 {Bir proje sunuluyor} other {# proje sunuluyor}}",
+      "announceApplied": "{count, plural, =0 {Hiçbir şey eklenmedi} =1 {Bir proje eklendi} other {# proje eklendi}}"
+    },
+    "atomTags": {
+      "label": "Etiketler",
+      "hint": "Bu maddenin neyle ilgili olduğu, kendi sözcüklerinle. Eşleştirme bunları ilana karşı okuyor; yani buradaki bir etiket kendine not değil, bir skorlama kararı.",
+      "placeholder": "Etiket yaz ve Enter'a bas",
+      "remove": "{label} etiketini kaldır",
+      "source": "{source, select, auto {CV'n okunurken önerildi} user {Sen ekledin} other {Etiket}}",
+      "announceAdded": "{label} etiketi eklendi",
+      "announceRemoved": "{label} etiketi kaldırıldı"
+    },
     "tags": {
       "placeholder": "Yaz ve Enter’a bas",
-      "remove": "{value} sil"
+      "remove": "{value} sil",
+      "full": "Sınır {max, plural, =1 {bir} other {#}}. Yenisini eklemek için birini kaldır."
     },
     "variants": {
       "listLabel": "İfadeler",
@@ -289,6 +358,11 @@
       "adding": "Ekleniyor…",
       "added": "{language} dilinde bir ifade eklendi.",
       "unknownLanguage": "Bilinmeyen dil",
+      "translated": "Bu sözcükleme senin için çevrildi, sen yazmadın. Bir göz atmaya değer — düzenlediğin anda senin olur.",
+      "deleteTrigger": "{language} sözcüklemesini sil",
+      "deleteTitle": "Bu sözcükleme silinsin mi?",
+      "deleteBody": "Madde ve öteki sözcüklemeleri kalıyor. Yalnız bu gidiyor.",
+      "deleteConfirm": "Sözcüklemeyi sil",
       "staleRefreshing": "Bunun dayandığı ifade değişti. Yenisi yazılıyor.",
       "staleYours": "Bunun dayandığı ifade değişti, ve bu hali sen yazdın. Sen istemedikçe hiçbir şey onu değiştirmeyecek.",
       "staleRegenerate": "Yeni kaynaktan yeniden yaz",
@@ -308,12 +382,44 @@
     "addSection": {
       "open": "Bölüm ekle",
       "kind": "Türü",
+      "layout": "Nasıl dizilsin",
+      "layoutHint": "Bu bölümün nasıl basılacağı. Öneri seçtiğin türü izliyor; başka bir şey istiyorsan değiştir.",
       "title": "Adı",
       "submit": "Bölümü ekle",
       "adding": "Ekleniyor…",
       "cancel": "Vazgeç",
       "added": "{title} bölümü eklendi.",
       "loadingForm": "Form açılıyor…"
+    },
+    "runs": {
+      "intro": "Bu cümle parçalardan oluşuyor ve her parça etiketlenebilir. Etiketleri şablon okuyor — bir teknolojinin ya da bir sayının sayfada nasıl görüneceğine o karar veriyor.",
+      "partLabel": "{number, number}. parça",
+      "removePart": "{number, number}. parçayı kaldır",
+      "marksLabel": "{number, number}. parçanın etiketleri",
+      "marks": {
+        "technology": "Teknoloji",
+        "metric": "Sayı",
+        "emphasis": "Vurgu",
+        "link": "Bağlantı",
+        "organization": "İşveren ya da okul"
+      },
+      "unknownMarks": "Ayrıca {marks} etiketli — bu sürümün bilmediği yeni bir etiket. Olduğu gibi korunuyor.",
+      "hrefLabel": "Bağlantı adresi",
+      "hrefMissing": "Bağlantının bir adresi olmalı, yoksa kaydedilemez.",
+      "addPart": "Parça ekle"
+    },
+    "languages": {
+      "sourceLabel": "Yazdığın dil",
+      "sourceHint": "Maddelerinin yazıldığı dil. Bu CV ile ilgili, bu düğmelerin diliyle değil.",
+      "enabledLabel": "CV'nin çıkabileceği diller",
+      "enabledHint": "Bir CV tek dilde yazılır. Başka bir dili açmak onu isteyebilmeni sağlar — eksik sözcüklemeler ilk seferinde çevrilip saklanıyor.",
+      "sourceAlwaysOn": "Hep açık: yazdığın dil bu"
+    },
+    "sectionLayout": {
+      "bullet_list": "Madde listesi",
+      "entry_list": "Tarihli kayıtlar",
+      "inline_list": "Etiketli satırlar",
+      "paragraph": "Tek paragraf"
     },
     "sectionKind": {
       "about": "Hakkımda",
@@ -411,10 +517,23 @@
     "announceProgress": "{phase}, yüzde {pct}",
     "announceDone": "CV’n hazır",
     "announceFailed": "Üretim başarısız oldu",
+    "translationNote": "İlk seferinde biraz sürebilir: profilinde ilanın dilinde sözcükleme yok, o yüzden şimdi çevriliyor. Sonuç profiline kaydediliyor, yani bir sonraki hızlı olacak.",
     "startOver": "Yeniden başla",
     "coverLetter": "Ön yazı da yaz",
     "coverLetterAccount": "Ön yazı için hesap gerekiyor. CV'nin kendisi iki durumda da aynı.",
-    "coverLetterSignIn": "Hesap aç"
+    "coverLetterSignIn": "Hesap aç",
+    "directives": {
+      "show": "Bunu yönlendir",
+      "hide": "Gizle",
+      "emphasizeLabel": "Öne çıkarılacak terimler",
+      "emphasizeHint": "İlanın söylemediği ama işin bununla ilgili olduğunu bildiğin sözcükler. Yalnız bu CV için ilanın kendi terimlerine katılıyorlar — profilinde hiçbir şey değişmiyor.",
+      "noteLabel": "Bu CV nasıl okunsun",
+      "noteHint": "Kendi cümlelerinle bir iki satır. Sözcük seçimini ve vurguyu yönlendirebilir; yazmadığın bir şeyi ekleyemez, bir satırın ne olduğunu anlattığını değiştiremez.",
+      "appearanceLabel": "Bu CV'nin görünümü",
+      "appearanceHint": "Sakladığın setlerden biri. Olduğu gibi bırakırsan her zamanki ayarların kullanılır.",
+      "appearanceDefault": "Her zamanki ayarların",
+      "notePlaceholder": "Makine öğrenmesi yerine platform işlerini öne al."
+    }
   },
   "Result": {
     "title": "CV’n",
@@ -422,7 +541,9 @@
     "pages": "{count, plural, =1 {Tek sayfa.} other {# sayfa.}}",
     "download": "PDF'i indir",
     "downloadDocx": "Word indir",
-    "formatNote": "PDF, ölçülen belgenin kendisi. Word aynı içeriği kendi fontlarıyla yeniden diziyor; o yüzden bir sayfalık bir CV orada biraz taşabilir.",
+    "downloadHtml": "HTML indir",
+    "downloadSource": "LaTeX kaynağını indir",
+    "formatNote": "PDF, ölçülen belgenin kendisi. Word aynı içeriği kendi fontlarıyla yeniden diziyor; o yüzden bir sayfalık bir CV orada biraz taşabilir. HTML'de sayfa diye bir şey yok, yani sınır orada hiç geçerli değil — biçimli metin isteyen bir forma yapıştırmak içindir. Kaynak ise bu PDF'in derlendiği LaTeX.",
     "editTitle": "Bir şey değiştir",
     "editIntro": "Sayfadan neyin çıkmasını ya da geri gelmesini istediğini kendi cümlelerinle yaz. Hangi yetenek veya proje olduğunu söylemek yardımcı oluyor. Bir satırı yeniden yazmak, tonu değiştirmek ve sayfayı uzatıp kısaltmak bunun yapabildiği şeyler değil.",
     "editLabel": "Ne değişsin",
@@ -431,28 +552,38 @@
     "editSubmit": "Değişikliği yap",
     "editSending": "Üzerinde çalışılıyor…",
     "supersededNote": "Bu CV’nin daha yeni bir sürümü üretildi, o yüzden değiştirilecek olan artık bu değil. Bu sürüm olduğu gibi duruyor ve indirilebiliyor — bir işverene gönderilmiş bir CV için gereken de bu.",
-    "supersededLink": "Yenisini a\u00e7",
-    "selectionTitle": "Sat\u0131rlar\u0131 elle se\u00e7",
-    "selectionIntro": "Bu \u00f6zge\u00e7mi\u015fin tart\u0131ld\u0131\u011f\u0131 b\u00fct\u00fcn sat\u0131rlar. A\u00e7\u0131k olanlar sayfada; kalanlar\u0131 sayfa uzunlu\u011fu geri tuttu.",
-    "selectionSnapshot": "Buradaki metin bu \u00f6zge\u00e7mi\u015fin bast\u0131\u011f\u0131 metindir. Sonras\u0131nda profilini d\u00fczenlemen, \u00e7oktan \u00fcretilmi\u015f bir \u00f6zge\u00e7mi\u015fte yazan\u0131 de\u011fi\u015ftirmez.",
-    "selectionOpen": "Sat\u0131rlar\u0131 elle se\u00e7",
-    "selectionClose": "Sat\u0131rlar\u0131 oldu\u011fu gibi b\u0131rak",
-    "selectionLoading": "Sat\u0131rlar getiriliyor\u2026",
-    "selectionEmpty": "Bu \u00f6zge\u00e7mi\u015fte se\u00e7ilecek sat\u0131r yok.",
+    "supersededLink": "Yenisini aç",
+    "selectionTitle": "Satırları elle seç",
+    "selectionIntro": "Bu özgeçmişin tartıldığı bütün satırlar. Açık olanlar sayfada; kalanları sayfa uzunluğu geri tuttu.",
+    "selectionSnapshot": "Buradaki metin bu özgeçmişin bastığı metindir. Sonrasında profilini düzenlemen, çoktan üretilmiş bir özgeçmişte yazanı değiştirmez.",
+    "selectionOpen": "Satırları elle seç",
+    "selectionClose": "Satırları olduğu gibi bırak",
+    "selectionLoading": "Satırlar getiriliyor…",
+    "selectionEmpty": "Bu özgeçmişte seçilecek satır yok.",
     "selectionOnPage": "Sayfada",
     "selectionHeldBack": "Geri tutuldu",
-    "selectionCost": "Bunun bir bedeli yok \u2014 yeni bir metin yaz\u0131lm\u0131yor, ayn\u0131 sat\u0131rlar yeniden diziliyor. \u015eu anki \u00f6zge\u00e7mi\u015fin duruyor ve inmeye devam ediyor; de\u011fi\u015fiklik yenisini \u00fcretiyor.",
-    "selectionChanged": "{count, plural, =0 {Hen\u00fcz bir \u015fey de\u011fi\u015fmedi.} =1 {Bir sat\u0131r de\u011fi\u015fti.} other {# sat\u0131r de\u011fi\u015fti.}}",
+    "selectionHeldBackReason": "{reason, select,\n  BUDGET {Sayfada bundan önce yer bitti. Açarsan altındaki bir maddeyi düşürerek yer açılır — ya da daha yüksek bir sayfa sınırıyla yeniden üret.}\n  INACTIVE {Bu madde profilinde kapalı, yani hiç tartılmadı.}\n  EXCLUDED_BY_DIRECTIVE {Bunu bu CV'den sen çıkardın. Açarsan geri gelir — profiline hiç dokunulmadı.}\n  ENTRY_BELOW_MINIMUM {Ait olduğu kaydın basılmaya değecek kadar satırı kalmadı, o yüzden kayıt bütün olarak düştü.}\n  other {Sayfaya giremedi.}\n}",
+    "selectionHeldBackProfile": "Profil düzenleyiciyi aç",
+    "selectionMatched": "Bu satırın taşıdığı ilan terimleri",
+    "selectionCost": "Bunun bir bedeli yok — yeni bir metin yazılmıyor, aynı satırlar yeniden diziliyor. Şu anki özgeçmişin duruyor ve inmeye devam ediyor; değişiklik yenisini üretiyor.",
+    "selectionChanged": "{count, plural, =0 {Henüz bir şey değişmedi.} =1 {Bir satır değişti.} other {# satır değişti.}}",
     "selectionOn": "{line} sayfada olacak.",
-    "selectionOff": "{line} sayfa d\u0131\u015f\u0131nda kalacak.",
-    "selectionSubmit": "Bu sat\u0131rlar\u0131 uygula",
-    "selectionSending": "Uygulan\u0131yor\u2026",
+    "selectionOff": "{line} sayfa dışında kalacak.",
+    "selectionSubmit": "Bu satırları uygula",
+    "selectionSending": "Uygulanıyor…",
     "downloading": "Dosya hazırlanıyor…",
     "again": "Bir tane daha oluştur",
     "announceDownloaded": "İndirme başladı",
+    "archive": {
+      "label": "Bunu sakla",
+      "hint": "Sakladığın CV'ler geçmişinde işaretli kalıyor; önemli olanı sonra kolayca bulursun.",
+      "announceKept": "Saklanıyor olarak işaretlendi",
+      "announceUnkept": "Saklama işareti kaldırıldı"
+    },
     "loading": "CV’n getiriliyor…",
     "generalNote": "İlan verilmedi, yani karşılaştırılacak bir şey yok.",
-    "languageNote": "{content} yazıldı, {posting} değil. Bir CV tek dilde yazılır ve profilinde bu sayfaya girecek her şeyin {posting} sözcüklemesi henüz yok.",
+    "languageNote": "{content} yazıldı, {posting} değil. Bir CV tek dilde yazılır ve bu sayfaya girecek her şeyin {posting} sözcüklemesi tamamlanamadı — o yüzden yarısı bir dilde olmak yerine profilinin kendi dilinden kuruldu.",
+    "lengthNote": "{pages, plural, =1 {Bir sayfa} other {# sayfa}} çıktı, izin verilen {limit, plural, =1 {bir sayfaydı} other {# sayfaydı}}. Kalan yer doldurulmadı — bir CV, profilinde yazan kadar uzundur, daha fazlası değil.",
     "coverLetterTitle": "Ön yazı",
     "coverLetterAccount": "Ön yazı için hesap gerekiyor. Bu CV, hesabın olsaydı nasıl üretilecekse öyle üretildi ve aynı şekilde indiriliyor.",
     "coverLetterAbsent": "Bu CV için henüz bir ön yazı yazılmadı.",
@@ -512,6 +643,7 @@
     "none": "Bugünlük hakkın kalmadı"
   },
   "Footer": {
+    "howItWorks": "Nasıl çalışıyor",
     "privacy": "Gizlilik",
     "terms": "Kullanım Şartları",
     "sourceCode": "Kaynak kodu"
@@ -568,6 +700,22 @@
     "title": "CV’nin görünüşü",
     "intro": "Bundan sonra ürettiğin her CV böyle çıkar. Her CV için ayrıca sorulmaz.",
     "template": "Şablon",
+    "presets": {
+      "title": "Bu ayarları sakla",
+      "intro": "Yukarıdaki ayarlar her CV'nin kullandığı ayarlar. Bir seti adıyla saklarsan tek bir üretim için onu seçebilirsin — uzun bir CV için sıkı bir set, kısası için ferah bir set.",
+      "nameLabel": "Ad",
+      "namePlaceholder": "Sıkı, tek sayfa",
+      "keep": "Yukarıdaki ayarları sakla",
+      "keeping": "Saklanıyor…",
+      "builtOn": "{template} üzerine kurulu",
+      "remove": "{name} setini sil",
+      "removeTitle": "Bu ayarlar silinsin mi?",
+      "removeBody": "Bunlarla ürettiğin CV'ler etkilenmiyor — her biri kendi kurulduğu ayarları taşıyor.",
+      "removeConfirm": "Sil",
+      "full": "{max, number} setin hepsi dolu. Yenisini saklamak için birini sil.",
+      "announceKept": "{name} adıyla saklandı"
+    },
+    "templateCapacity": "Sayfada yaklaşık {lines, number} satır",
     "templates": {
       "classic": "Klasik",
       "compact": "Kompakt",

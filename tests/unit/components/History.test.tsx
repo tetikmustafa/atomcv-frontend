@@ -122,6 +122,36 @@ describe('the history', () => {
     expect(await screen.findByText(/Nothing here yet/)).toBeInTheDocument();
   });
 
+  /**
+   * `B-118`, `F-039`. The summary carries the limit that generation was made
+   * under, so a row reads the way the result screen reads — as one fact
+   * rather than a badge repeating it.
+   *
+   * The count stands alone where the row carries no limit: a generation
+   * written before it was recorded has none, and the server sends nothing
+   * rather than a plausible one.
+   */
+  it('reads the page count against the limit that row was made under', async () => {
+    signIn();
+    seedGenerations(1, { maxPages: 2 });
+    seedGenerations(1, { generationId: 'gen-old' });
+    renderHistory();
+
+    const rows = await screen.findAllByRole('listitem');
+
+    // Found by the generation each row opens rather than by position: both
+    // were seeded at the same instant, so "newest first" does not separate
+    // them and the order between the two is not what is being asserted.
+    const rowFor = (id: string) =>
+      rows.find(
+        (row) => within(row).getByRole('link').getAttribute('href') === `/generations/${id}`,
+      );
+
+    expect(rowFor('gen-00')).toHaveTextContent('one page of 2 allowed');
+    expect(rowFor('gen-old')).toHaveTextContent('one page');
+    expect(rowFor('gen-old')).not.toHaveTextContent('allowed');
+  });
+
   it('lists what the account has made, newest first, each one openable', async () => {
     signIn();
     seedGenerations(3);
@@ -207,16 +237,54 @@ describe('the history', () => {
   });
 
   /**
-   * A generation that did not finish has no document behind it, so its row is
-   * not a link: the only thing that screen could show is an error the label
-   * already gave.
+   * `B-102` says the history is where the mark is read, and this is that.
+   *
+   * In the facts rather than in a badge of its own: it is one more thing that
+   * is true about the row, like its language or its page count — which is
+   * also what puts it in the accessible name without a second element to
+   * label. Said in words, never as a colour or an icon (rule 6).
    */
-  it('does not offer a way into a generation that failed', async () => {
+  it('says which resumes are kept, in the row’s own facts', async () => {
+    signIn();
+    seedGenerations(1, { archived: true });
+    renderHistory();
+
+    const link = await screen.findByRole('link');
+
+    expect(link).toHaveTextContent(en.History.kept);
+    expect(link).toHaveAccessibleName(new RegExp(en.History.kept));
+  });
+
+  it('says nothing about a resume nobody marked', async () => {
+    signIn();
+    seedGenerations(1);
+    renderHistory();
+
+    // Absent means not archived; a generation is not made archived, and a row
+    // that announced "not kept" would make a decision out of a default.
+    expect(await screen.findByRole('link')).not.toHaveTextContent(en.History.kept);
+  });
+
+  /**
+   * This asserted that a failed run was listed **and** not linked, which was
+   * the right shape for a row that existed. `B-116` says it never did:
+   * `selection_state` is `NOT NULL`, so a run that falls over before the
+   * selection writes no generation at all, and `status: 'failed'` left both
+   * read shapes with V17.
+   *
+   * So the assertion inverts rather than disappears. The failure is still
+   * reported — on the **job**, whose status keeps `failed` — and this screen
+   * is not where it is reported. Listing it here would put a row in front of
+   * somebody for a document that cannot be fetched, which is the journey the
+   * old version of this test was written to prevent in the first place.
+   */
+  it('leaves a run that failed out of the history entirely', async () => {
     signIn();
     seedGenerations(1, { outcome: 'failed' });
     renderHistory();
 
-    expect(await screen.findByText(/did not finish/)).toBeInTheDocument();
+    // The empty state, not a row without a link.
+    expect(await screen.findByText(en.History.empty)).toBeInTheDocument();
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 

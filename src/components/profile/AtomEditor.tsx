@@ -29,9 +29,12 @@ import { DeleteControl } from '@/components/profile/DeleteControl';
 import { ImportanceSlider } from '@/components/profile/ImportanceSlider';
 import { LockToggles, type LockToggle } from '@/components/profile/LockToggles';
 import { RichText } from '@/components/profile/RichText';
+import { RunEditor } from '@/components/profile/RunEditor';
 import { TagInput } from '@/components/profile/TagInput';
 import { StaleWording } from '@/components/profile/StaleWording';
+import { TranslatedWording } from '@/components/profile/TranslatedWording';
 import { AddWording } from '@/components/profile/AddWording';
+import { AtomTags } from '@/components/profile/AtomTags';
 import { VariantTabs } from '@/components/profile/VariantTabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -40,13 +43,14 @@ import { useAutosave } from '@/hooks/useAutosave';
 import {
   useAtom,
   useDeleteAtom,
+  useDeleteVariant,
   usePatchAtom,
   usePatchVariant,
   useProfile,
 } from '@/hooks/useProfile';
 import { useCapabilities } from '@/hooks/useSession';
 import { plainText } from '@/lib/content/plainText';
-import { parseRichContent, type Run } from '@/lib/content/richContent';
+import { createRun, parseRichContent, toContentPayload, type Run } from '@/lib/content/richContent';
 import type { AtomPatch } from '@/lib/api/endpoints/profile';
 
 export type AtomEditorProps = { atomId: string };
@@ -103,6 +107,7 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
   // same cached copy of it (Bölüm 38.1).
   const { data: profile } = useProfile();
   const remove = useDeleteAtom();
+  const removeVariant = useDeleteVariant();
 
   const variants = atom?.variants ?? [];
   // Variants come back primary-first, so the first one is the wording used
@@ -134,14 +139,24 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
     save: (patch) => patchAtom.mutateAsync({ id: atomId, patch }),
   });
 
-  const wording = useAutosave<string>({
+  /*
+    Runs rather than a string, since D13.
+
+    It carried a string while the only editor was a textarea, and the
+    conversion to a single unmarked run lived at the save. That put the marks'
+    fate in the save path: every write went out as one bare run, and a marked
+    wording lost its marks whichever editor had produced the text. The
+    conversion belongs to the **editor** that cannot represent them, which is
+    where it is now.
+  */
+  const wording = useAutosave<Run[]>({
     trigger: 'text',
     save: (next) =>
       patchVariant.mutateAsync({
         atomId,
         variantId: selected!.id!,
         // The whole content every time — there is no partial text update.
-        body: { content: { runs: [{ t: next, m: [] }] } },
+        body: { content: toContentPayload(next) },
       }),
   });
 
@@ -150,11 +165,36 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
   if (!atom || !selected) return null;
 
   const failed = wording.error ?? importance.error ?? controls.error;
-  const showMarkWarning = hasMarks(runs) && draft !== null;
+  /*
+    Whether this wording has anything a plain-text field would destroy. It
+    used to gate a warning; it now chooses the editor, which is the same
+    question answered by doing the right thing instead of apologising.
+  */
+  const marked = hasMarks(runs);
 
   const wordingField = (
     <div className="flex flex-col gap-2">
-      <Label htmlFor={`${atomId}-text`}>{t('text')}</Label>
+      {/*
+        A `<label>` names one control, and the run editor is a group of them.
+        So the marked case gets a heading that labels the group instead —
+        pointing `htmlFor` at a field that is not drawn is a label attached to
+        nothing, which a screen reader reports as an orphan and a test finds
+        before a person does.
+      */}
+      {marked ? (
+        /*
+          A `<span>`, not a heading. `aria-labelledby` works with any element,
+          and an `<h3>` here would put one heading per marked atom into the
+          document outline — two hundred of them under the section's own,
+          which is exactly the navigation § 39.2 lists landmarks to fix rather
+          than a use of them.
+        */
+        <span id={`${atomId}-text-label`} className="text-sm font-medium">
+          {t('text')}
+        </span>
+      ) : (
+        <Label htmlFor={`${atomId}-text`}>{t('text')}</Label>
+      )}
 
       {/*
         Here rather than inside `VariantTabs`, because it belongs to the
@@ -162,6 +202,15 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
         has no strip and would otherwise never say it was out of date.
       */}
       <StaleWording atomId={atomId} variant={selected} />
+
+      {/*
+        And the other thing that can be true about a wording nobody typed
+        (`B-107`): it may be perfectly up to date and still be a machine
+        translation. The two notes are separate because they are separate
+        facts — one is about the source having moved, the other about who
+        wrote this line — and an atom can carry either, both or neither.
+      */}
+      <TranslatedWording variant={selected} />
 
       {/*
         The stored content, as it will be read. Kept visible while editing:
@@ -172,21 +221,40 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
         <RichText runs={runs} />
       </p>
 
-      <Textarea
-        id={`${atomId}-text`}
-        value={text}
-        rows={2}
-        onChange={(event) => {
-          setDraft(event.target.value);
-          wording.change(event.target.value);
-        }}
-        onBlur={wording.flush}
-      />
+      {/*
+        Two editors, and which one is drawn is decided by the **content**
+        rather than by a preference (D13, rule 4).
 
-      {showMarkWarning && (
-        <p role="status" className="text-muted-foreground text-xs">
-          {t('marksDropped')}
-        </p>
+        Plain text is right for a sentence with no marks in it: it is one
+        field, it types like a field, and building a run list around a single
+        unmarked run would be ceremony. It is wrong the moment a mark exists,
+        because saving through it deletes the mark -- which is what the
+        warning under it used to be for.
+
+        So a marked wording gets `RunEditor`, which is lazily loaded: most
+        atoms have no marks, and most sessions never open one that does.
+      */}
+      {marked ? (
+        <RunEditor
+          runs={runs}
+          labelledBy={`${atomId}-text-label`}
+          disabled={wording.status === 'saving'}
+          onChange={(next) => {
+            setDraft(null);
+            wording.change(next);
+          }}
+        />
+      ) : (
+        <Textarea
+          id={`${atomId}-text`}
+          value={text}
+          rows={2}
+          onChange={(event) => {
+            setDraft(event.target.value);
+            wording.change([createRun(event.target.value)]);
+          }}
+          onBlur={wording.flush}
+        />
       )}
 
       <SaveStatus
@@ -233,6 +301,29 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
               body: { primary: true },
             })
           }
+          /*
+            D13, and the gap it closes had a stale reason: "the thing being
+            deleted is the item". True of the usual case, and never true of an
+            atom with two wordings — removing the Turkish one is an ordinary
+            thing to want, the endpoint and its two refusals were already
+            written, and only the button was missing.
+
+            `onDelete` selects the wording that was open, so the next render
+            falls back to the primary: `selected` is `find(selectedId) ??
+            variants[0]`, and the id it was holding is gone.
+          */
+          onDelete={(variant) =>
+            removeVariant.mutateAsync({ atomId, variantId: variant.id! }).then(() => {
+              // The draft belonged to the wording that is gone. Left in place
+              // it would be written into whichever one opens next, which is
+              // the same mistake a tab switch avoids.
+              setDraft(null);
+              setSelectedId(null);
+            })
+          }
+          deleting={removeVariant.isPending}
+          deleteError={removeVariant.error}
+          onDeleteReset={removeVariant.reset}
         >
           {() => wordingField}
         </VariantTabs>
@@ -320,6 +411,21 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
       ))}
 
       <SaveStatus status={controls.status} onRetry={controls.retry} onDiscard={controls.discard} />
+
+      {/*
+        The labels, and they are **not** one of the lists above (`B-103`).
+        Those are fields on `AtomPatch` and get replaced whole; a tag is a row
+        with an id, added and removed one call at a time and carrying who put
+        it there. It also has its own error surface, because it has its own
+        request — the save indicator above belongs to the patch.
+
+        Drawn for everybody. The lists next to it are, and `atom_controls` —
+        the one capability that closes controls here — names importance,
+        availability and the two locks. A tag is neither: it is how somebody
+        says what their own work was about, and a quarter of the raw score
+        reads it.
+      */}
+      <AtomTags atomId={atomId} tags={atom.tags ?? []} />
 
       {/*
         A refused save is already reported by the indicator next to the field

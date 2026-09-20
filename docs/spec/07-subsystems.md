@@ -21,9 +21,15 @@
 
 **Katman 1 — Font metrik tahmini (derleme yok):**
 
+> **İnen sınıfın adı `RenderCostEstimator`** (`rendering/measurement/`),
+> `FontMetricEstimator` değil — ve aşağıdaki parçacık gibi de çalışmıyor.
+> § 26.5'in notu katmanın **FontBox'sız** yazıldığını kaydediyor; bu yüzden
+> `loadedFonts` diye bir tablo yok, ve tek sözü gerçek derleyiciden **asla az
+> yazmaması**. Parçacık niyeti anlatıyor, imzayı değil (denetim, 2026-09-16).
+
 ```java
 @Component
-public class FontMetricEstimator {
+public class FontMetricEstimator {   // inen adı: RenderCostEstimator
 
     // FontBox (PDFBox içinde) ile TTF/OTF metrikleri
     private final Map<String, FontMetrics> loadedFonts;
@@ -142,7 +148,12 @@ Metin değişti
 Ölçüm henüz yoksa
   → font-metrik tahmini + %8 güvenlik payı
   → trace.C.estimatedAtoms sayacı artar
+  → generation.selection.costs{source=estimated} artar
 ```
+
+> **Son iki satırın ilki bir aşama boyunca doğru değildi** (düzeltme, denetim
+> 2026-09-20): sayı hesaplanıp loglanıyor, trace'e yazılmıyordu. Gerekçe ve
+> ikinci satırın seçilme sebebi § 20.4'te.
 
 ### 26.6 Kalibrasyon geri bildirimi
 
@@ -162,6 +173,24 @@ if (driftPct > 0.03) {
 ```
 
 Sistem kendi tahmin hatasını zamanla öğrenir.
+
+> **Sapma (denetim, 2026-09-15) — ölçülen yükseklik yok, ve pay kendini
+> genişletmiyor.** Yukarıdaki `pdfAnalyzer.measureContentHeight(pdf)` diye bir
+> şey yok: § 23'ün notu `pdfAnalyzer`'ın hiç olmadığını ve sayfa sayısının
+> derleyicinin `X-Page-Count` başlığından geldiğini kaydediyor. Yükseklik
+> üretmenin tek yolu ikinci bir derleme, ve ölçüm belgesi sayfayla aynı
+> preamble'ı paylaşsa da aynı belge değil (§ 22.4).
+>
+> Üretimin ölçebildiği çözünürlükte kaydedilen şey **sayfa**:
+> `generation.pages.drift`, bütçenin öngördüğü sayfa sayısı ile derleyiciden
+> dönen arasındaki fark, şablon etiketiyle. Sıfır olağan okuma; ortalaması
+> sıfırdan uzaklaşan bir şablonun ölçüm katmanı yanlıştır, ki § 26.6 bu sayıyı
+> zaten bunun için istiyor. Kaba, ve kaba olduğunu söylüyor.
+>
+> **Hiçbir şey ona göre davranmıyor.** Güvenlik payını üç yüzdeyi geçince
+> kendiliğinden genişleten bir kural, tam sayfa cinsinden ölçülen bir sinyalde
+> tek bir kötü belgeyle oynar ve geri dönmenin yolu yoktur. Sayı operatöre
+> gidiyor.
 
 ---
 
@@ -451,6 +480,37 @@ WORKDIR /home/texuser
 COPY --chown=texuser server.jar /opt/server.jar
 ENTRYPOINT ["java", "-jar", "/opt/server.jar"]
 ```
+
+> **Düzeltme (ölçüldü, 2026-09-15) — yukarıdaki `\dump` satırı XeTeX'te
+> çalışmıyor, ve çalıştırılamaz.** Motorun kendi cevabı:
+>
+> ```
+> ! Can't \dump a format with native fonts or font-mappings.
+> ```
+>
+> **Bir seçim değil, motor sınırı.** XeTeX yerel (OpenType/sistem) font
+> yüklenmiş bir oturumdan format döküm edemiyor — ve `xelatex` formatı
+> `TU` kodlamasıyla zaten yüklemiş durumda, yani `fontspec` hiç olmasa bile
+> reddediyor: `\documentclass` ve `\endofdump`'tan ibaret bir dosya bile on üç
+> kez aynı hatayı veriyor. `mylatexformat.ltx` ile de aynı. Döküm yine de bir
+> `.fmt` yazıyor, ama o dosya bozuk:
+>
+> ```
+> xelatex: fatal: Could not undump 512303 8-byte item(s) from cvfmt10.fmt.
+> ```
+>
+> Yani satır sessizce başarısız olan bir build adımı ve hiçbir şey kazandırmayan
+> bir imaj katmanı üretirdi. Bu, pdfLaTeX pratiğinden alınmış bir parçacık;
+> pdfLaTeX'te çalışır, bu projenin motorunda çalışmaz.
+>
+> **Vaat edilen kazanç da ölçüldü.** Asgari bir belgenin tam derlemesi bu
+> imajda 620-925 ms; § 52.4'ün "1-2 saniye" rakamı bu belgenin tamamından
+> uzun. Soğuk başlangıç maliyeti § 29.6'nın container ısıtmasıyla zaten
+> ödeniyor.
+>
+> **Dockerfile'da yok ve olmayacak**; `LatexImageTest` satırı geri eklemeyi
+> düşüren testtir, çünkü şartnamedeki parçacık hâlâ okunabilir durumda ve
+> kopyalanması en kolay şey.
 
 ### 29.3 Çalışma zamanı izolasyonu
 
@@ -1205,11 +1265,13 @@ embedding'siz çalışmaya düşüyor (§ 28.4), seçim ölçülmemiş için tah
 düşüyor ve bunu söylüyor (§ 20.4). İkisi de tekrar edilebilir ve başarana
 kadar görünmez.
 
-**Açık — `local-fake` için kayıtlı fixture hâlâ yok.** `make record` gerçek
-bir anahtar ve gerçek bir CV istiyor; fixture anahtarı istek metninin
-özetinden türediği için elle yazılan bir fixture yalnız tek bir girdide
-ateşlenir, yani uydurulamaz. Yerelde çıkan profil şema şeklinde ve anlamsız —
-**ucun sözleşmesi doğru, içeriği değil.**
+**Kapandı — `local-fake` için fixture kaydedildi** (denetim, 2026-09-16).
+Bu madde bir aşama boyunca "hâlâ yok" dedi; `src/test/resources/fixtures/llm/`
+bugün yedi prompt'un fixture'larını taşıyor ve `profile_extraction` onların
+on ikisine sahip. `make record` hâlâ gerçek bir anahtar ve gerçek bir CV
+istiyor — fixture anahtarı istek metninin özetinden türediği için elle
+yazılan bir fixture yalnız tek bir girdide ateşlenir, yani **uydurulamaz**;
+kaydedilmesi gerekiyordu ve kaydedildi.
 
 #### 31.6.3 Kararlar (Adım 3.6, dilim 5 — anonim yükleme)
 
@@ -1301,6 +1363,44 @@ Birleşim:
 Eşleştirme: Jaro-Winkler (repo adı ↔ proje başlığı) + embedding benzerliği.
 
 **Öneri olarak sunulur, otomatik eklenmez.**
+
+#### 31.8.1 İnen hâli ve üç ayrım (denetim, 2026-09-15)
+
+**Hiçbir token saklanmıyor, ve bu bölümün mümkün olma sebebi o.** § 40.6.1
+`oauth_identities.access_token_enc`'i bilerek boş bırakıyor ve bir token'ın
+anahtar yönetimiyle geleceğini söylüyor — gerekmiyor: burada okunan her şey
+public. `GITHUB_API_TOKEN` isteğe bağlı ve yalnız hız sınırı için
+(kimliksiz saatte 60 / adres, tokenla 5.000); hiçbir kapsam istenmiyor.
+
+**Uçlar `/profile/github/suggestions` ve `/apply`** (§ 35.2.1). `connect` diye
+bir adım yok: bağlanacak bir şey olmadığı için. Hesap adı istekte verilebiliyor,
+verilmezse profilin iletişim bloğundan okunuyor — CV'nin işverene gösterdiği
+hesap odur. **Bir depoya giden bağlantı hesap sayılmıyor**: CV'de linklenen
+depo çoğu zaman başkasınındır.
+
+**Süzgeç listelemenin bedavaya verdiğini okuyor.** Yukarıdaki
+`isSignificant` bir commit sayısı ve README varlığı istiyor; ikisi de depo
+başına birer istek, yani otuz depolu bir hesapta altmış istek — kimliksiz
+bütçenin tamamı. Yerlerine listelemenin zaten taşıdıkları: fork değil, arşivli
+değil, 50 KB üstü, adı bir ders adı değil, ve **üstünde birinin bir şey
+yaptığına dair bir iz** — bir yıldız, bir açıklama ya da bir konu etiketi.
+Sorulan soru aynı soru. Diller yalnız süzgeci geçenler için ve en çok on tanesi
+için çekiliyor, aynı sebeple.
+
+**Eşleştirme yalnız Jaro-Winkler, ve sınırı ölçüldü.** § 7 embedding'i de
+adlandırıyor; depo başına bir gidiş dönüş, hızlı açılması gereken bir ekranda
+ve § 28.4'ün kapalı olabileceğini söylediği bir serviste. Ölçülen: normalize
+edildikten sonra gerçek eşleşmeler 1.0'a çok yakın ("order-management-system"
+↔ "Order Management System" aynı dize), yakın ıskalar 0.87-0.92
+("payments-api" ↔ "Payments API Gateway" — aynı kişinin farklı işi, ve
+Jaro-Winkler ortak öneke ikramiye veriyor). **Eşik 0.95**, yani birleştirme
+ancak neredeyse kesinken öneriliyor.
+
+Bedeli açıkça yazılı: **kısaltma ıskalanıyor.** "order-mgmt-system" gerçek bir
+eşleşme ve 0.90 alıyor, yani yakın ıskanın da altında; hiçbir dize mesafesi
+ikisini ayırmıyor. Yeni proje olarak öneriliyor, kişi reddedebiliyor —
+kaçırılan birleştirme iki satır gösterir ve silinir, yanlış birleştirme
+birinin başka bir işi anlatan paragrafına bağlantı koyar ve bunu söylemez.
 
 ### 31.9 Tamamlanma ölçütü
 
@@ -1519,10 +1619,21 @@ enum SectionLayout {
     BULLET_LIST,    // madde listesi
     ENTRY_LIST,     // başlık + tarih + maddeler
     INLINE_LIST,    // etiketli satırlar: "Kategori: öğe, öğe, öğe"
-    TWO_COLUMN,     // yan yana iki liste
     PARAGRAPH       // başlığın altında düz nesir, madde işareti yok
 }
 ```
+
+> **`TWO_COLUMN` kalktı** (V17, denetim 2026-09-20). Beşinci bir değerdi ve
+> **hiçbir zaman bir sayfaya çıkmadı**: uç kabul ediyordu, CHECK izin
+> veriyordu, şema yayımlıyordu, ve `LatexDocumentRenderer` onu bilerek entry
+> list'e düşürüyordu — üç şablon da tek kolon, gerekçesi § 33.5'te ATS
+> çıkarımı. Yani kişi bir düzen seçiyor, hiçbir şey söylenmiyor, ve belgesi
+> başkasını basıyordu; P4'ün yasakladığı şekil.
+>
+> V17'nin kaldırdığı öteki ölü sözlük değerleri **çıktılardı** ve frontend'e
+> boş bir dala mal oluyordu; bu **girdiydi** ve kullanıcıya verdiğini sandığı
+> bir seçime mal oluyordu. İki kolonlu bir şablon inerse değer onunla birlikte
+> geri gelir — bu bir kolon kararı değil, bir şablon kararı.
 
 Kullanıcı "Sertifikalar", "Yayınlar", "Gönüllü Çalışmalar" ekler; düzen tipini seçer. Her düzen tipinin sabit maliyeti şablon config'inde bir kez ölçülür.
 
@@ -1568,7 +1679,38 @@ bölümün sahip olduğu bir şekil değil.
 | **Modern** | Hafif renkli başlıklar, teknoloji sektörü | ~50 satır/sayfa |
 | **Kompakt** | Yüksek yoğunluk, çok deneyimli profiller | ~64 satır/sayfa |
 
-Her şablonun kapasitesi **bir kez ölçülür**, config'de saklanır.
+Tablodaki sayılar **katalog içindir** — bir seçim ekranında "bu şablon ne
+tutar" sorusuna verilen yaklaşık cevap. Sayfa garantisi onlarla çalışmıyor.
+
+> **"Config'de saklanır" Katman B'den beri doğru değil** (düzeltme, denetim
+> 2026-09-16). Kapasite şablona değil **özelleştirmeye** ait: punto kaydıran
+> bir kişi kimsenin derlemediği bir geometri soruyor ve cevabı bir LaTeX
+> koşusu üretiyor. Cevap `template_capacities`'e yazılıyor (§ 13.2), anahtarı
+> geometrinin kendisi.
+>
+> **`Capacities` üç kaynağı bu sırayla soruyor, ve sıra tasarımın kendisi:**
+>
+> 1. **`TemplateRegistry`'nin gömülü sabitleri** — klasik ve kompakt, kendi
+>    ayarlarında. Anlattıkları preamble'ın yanında duruyorlar, kalibrasyon
+>    testleri her koşuda yeniden türetiyor, ve değiştiklerinde bir insan
+>    bakıyor. Bir veritabanı satırı bunların hiçbiri değil, o yüzden ikisi aynı
+>    anahtar için değer taşıyorsa **sabit kazanıyor**: sapmış bir ölçüm —
+>    başka bir TeX Live, yarım kalmış bir kalibrasyon — test hattının kontrol
+>    ettiği bir sayının yerine sessizce geçemiyor.
+> 2. **Ölçülmüş satır**, ve yalnız **eksiksizse**. Model bir mobilya parçası
+>    kazandıktan önce ölçülmüş bir satırda o parça yok; sıfır saymak sayfayı
+>    sessizce taşırır, o yüzden hiç ölçülmemiş sayılıyor.
+> 3. **Tahmin** (`CapacityEstimator`), ve yalnız `resolve` çağrısında. Boş
+>    "kimse ölçmedi" demektir ve sıfır kapasite değildir — ama az önce kaydırıcıyı
+>    oynatmış bir kişi bekliyorken doğru cevap spinner değil, **sayfanın daha
+>    azını harcayan** bir CV: tahmin `estimated` bayrağıyla taşınıyor, trace'e
+>    öyle yazılıyor ve aynı anda bir ölçüm işi tetikleniyor, yani bir sonraki
+>    koşu tam oluyor. Kendi ölçülmüş varsayılanı olmayan bir şablonda tahmin de
+>    yok: hiçlikten tahmin etmek olurdu, ve üretim orada duruyor.
+>
+> Faz C'nin **atom** maliyeti için kullandığı tahmin (§ 26.4,
+> `trace.C.estimatedAtoms`) bundan ayrı bir şey — biri bir satırın yüksekliğini
+> bilmiyor, bu ise sayfanın ne tuttuğunu.
 
 ---
 

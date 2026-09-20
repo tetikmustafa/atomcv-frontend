@@ -133,6 +133,123 @@ describe('uploading a CV', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('a scan rather than text');
   });
+
+  /**
+   * `B-114`. All four extraction refusals arrived with an empty `resolutions`
+   * before it — a sentence and no button, on the screen where the reader is
+   * already stuck, which is the shape P4 forbids.
+   *
+   * `switch_to_manual_form` is the striking one: it had been in the published
+   * vocabulary the whole time with nothing producing it.
+   */
+  it('offers the manual form when nothing came out of the file', async () => {
+    await renderImport();
+    await upload(cv('scanned-cv.pdf'));
+
+    const panel = await screen.findByRole('alert');
+    await userEvent.click(
+      within(panel).getByRole('button', { name: en.resolutions.switch_to_manual_form }),
+    );
+
+    expect(push).toHaveBeenCalledWith('/profile');
+  });
+
+  /**
+   * And this one is **not** a retry, which is the distinction the item turns
+   * on: an encrypted file fails in the same place every time, so a retry
+   * button offers a door known to be locked. The reader may already have an
+   * unprotected copy.
+   */
+  it('reopens the picker for an encrypted file rather than offering a retry', async () => {
+    await renderImport();
+    await upload(cv('encrypted-cv.pdf'));
+
+    const panel = await screen.findByRole('alert');
+    expect(within(panel).queryByRole('button', { name: en.resolutions.retry })).toBeNull();
+
+    // jsdom has no picker, so the click is what is observable — and it is
+    // also the thing that would silently do nothing if the ref were lost.
+    const picker = screen.getByLabelText(en.Onboarding.fileLabel) as HTMLInputElement;
+    const opened = vi.spyOn(picker, 'click');
+
+    await userEvent.click(
+      within(panel).getByRole('button', { name: en.resolutions.upload_another_file }),
+    );
+
+    expect(opened).toHaveBeenCalled();
+    // The refused file is gone, so Upload cannot be pressed on it again —
+    // which would be the retry this button exists to avoid.
+    expect(picker.value).toBe('');
+    expect(screen.getByRole('button', { name: en.Onboarding.upload })).toBeDisabled();
+  });
+
+  /**
+   * `B-119`, and the test it replaces asserted the opposite.
+   *
+   * `choose_language` was dropped for as long as the answer had nowhere to
+   * travel: `POST /profile/import` published `mode` and nothing else, so the
+   * button would have reopened the same refusal. `F-037` asked for the field
+   * and got it — the multipart body now carries `language`, and a declared
+   * language **skips detection** rather than weighting it.
+   *
+   * The refusal comes out of the **worker**, not the gate: by the time the
+   * model cannot place the language there is no half-written profile to
+   * answer on, which is why the answer rides the next upload.
+   */
+  it('asks which language, and sends the answer with the next upload', async () => {
+    await renderImport();
+
+    const bodies: Promise<FormData>[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (request.url.includes('/profile/import')) bodies.push(request.clone().formData());
+    });
+
+    await upload(cv('undetected-cv.pdf'));
+
+    const panel = await screen.findByRole('alert', {}, { timeout: 4000 });
+    await userEvent.click(
+      within(panel).getByRole('button', { name: en.resolutions.choose_language }),
+    );
+
+    /*
+      The server's one guess is offered first — it is the answer the reader is
+      most likely to confirm — and the languages the session allows follow it.
+      Both halves are the server's: `detectedCandidates` off the refusal,
+      `allowedLanguages` off the session, and an anonymous one is English-only.
+    */
+    const chooser = screen.getByLabelText(en.Onboarding.languageLabel) as HTMLSelectElement;
+    expect([...chooser.options].map((option) => option.value)).toEqual(['tr', 'en']);
+
+    // The file is deliberately still selected: this is the same document, one
+    // question later.
+    await userEvent.click(screen.getByRole('button', { name: en.Onboarding.upload }));
+    await waitFor(() => expect(bodies).toHaveLength(2));
+
+    expect((await bodies[0]!).get('language')).toBeNull();
+    expect((await bodies[1]!).get('language')).toBe('tr');
+  });
+
+  /**
+   * The declaration belongs to the document it was made about (`B-119`).
+   *
+   * Carrying it into a different file would declare a language nobody said
+   * anything about — and since a declared language skips detection, the
+   * second CV would be read as the first one's language without being asked.
+   */
+  it('forgets the declared language when another file is chosen', async () => {
+    await renderImport();
+    await upload(cv('undetected-cv.pdf'));
+
+    const panel = await screen.findByRole('alert', {}, { timeout: 4000 });
+    await userEvent.click(
+      within(panel).getByRole('button', { name: en.resolutions.choose_language }),
+    );
+
+    await screen.findByLabelText(en.Onboarding.languageLabel);
+    await userEvent.upload(screen.getByLabelText(en.Onboarding.fileLabel), cv('another-cv.pdf'));
+
+    expect(screen.queryByLabelText(en.Onboarding.languageLabel)).toBeNull();
+  });
 });
 
 describe('when the account already has a profile', () => {

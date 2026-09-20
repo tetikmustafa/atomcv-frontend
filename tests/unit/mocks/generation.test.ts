@@ -661,17 +661,45 @@ describe('download and usage', () => {
   });
 
   /**
-   * \u00a7 35.3's map names a third format and nothing serves it. A silent PDF
-   * would make a "download the source" button hand back a PDF, which nobody
-   * would notice until they opened it \u2014 so the refusal is encoded.
+   * `B-105`. This asserted the opposite until the two landed \u2014 `format=source`
+   * had been in \u00a7 35.3's map since the first draft answering `400`, and the
+   * HTML renderer's package was empty.
+   *
+   * The file name is the assertion that matters for the source. The query
+   * value names a **format** and the file is a `.tex`, so a handler that
+   * interpolated the format would hand the browser
+   * `atomcv-cv-2026-09-20.source`, which the reader saves and nothing opens.
    */
-  it('refuses the source format rather than quietly sending a PDF', async () => {
+  it.each([
+    ['html', 'text/html', '.html', '<!doctype html>'],
+    ['source', 'text/plain', '.tex', '\\documentclass'],
+  ])('serves %s with the right media type and file name', async (format, type, extension, head) => {
+    const job = await start();
+    await readStream(job.streamUrl!);
+    const status = await api.get<JobStatus>(`/jobs/${job.jobId}`);
+
+    const response = await fetch(
+      `/api/v1/generations/${status.generationId}/download?format=${format}`,
+    );
+
+    expect(response.headers.get('Content-Type')).toContain(type);
+    expect(response.headers.get('Content-Disposition')).toContain(extension);
+    expect(await response.text()).toContain(head);
+  });
+
+  /**
+   * The refusal stays for everything else, and for the reason it was encoded
+   * in the first place: a silent fallback to PDF would let a button for a
+   * format nobody serves hand back a PDF, which nobody would notice until
+   * they opened it.
+   */
+  it('refuses an unserved format rather than quietly sending a PDF', async () => {
     const job = await start();
     await readStream(job.streamUrl!);
     const status = await api.get<JobStatus>(`/jobs/${job.jobId}`);
 
     const error = await rejection(
-      api.getFile(`/generations/${status.generationId}/download?format=source`),
+      api.getFile(`/generations/${status.generationId}/download?format=rtf`),
     );
 
     expect(error.status).toBe(400);

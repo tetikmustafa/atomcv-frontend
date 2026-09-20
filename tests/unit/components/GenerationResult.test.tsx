@@ -15,6 +15,7 @@ import {
   rejectNextCoverLetter,
 } from '@/mocks/generationFixture';
 import { server } from '@/mocks/node';
+import { useAnnouncerStore } from '@/stores/announcerStore';
 import { signIn } from '@/mocks/sessionFixture';
 import { formats } from '@/lib/i18n/formats';
 import en from '@/messages/en.json';
@@ -107,6 +108,56 @@ describe('a finished generation', () => {
     await waitFor(() => expect(requested).toContain('?format=docx'));
   });
 
+  /**
+   * `B-105`. `format=source` sat in § 35.3's map from the first draft and
+   * answered `400 VALIDATION_FAILED`, and the HTML renderer's package was
+   * empty — so neither button was drawn, which was right: a download button
+   * that opens an error panel is worse than one that was never there. Both
+   * are served now.
+   */
+  it.each([
+    ['Download HTML', '?format=html'],
+    ['Download the LaTeX source', '?format=source'],
+  ])('asks for %s as the query the server reads', async (name, query) => {
+    const generationId = await generate({ jobDescription: POSTING, acknowledgePreflight: false });
+    const user = userEvent.setup();
+
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+    await screen.findByRole('button', { name: 'Download PDF' });
+
+    const requested: string[] = [];
+    server.events.on('request:start', ({ request }) => {
+      const url = new URL(request.url, 'http://localhost');
+      if (url.pathname.endsWith('/download')) requested.push(url.search);
+    });
+
+    await user.click(screen.getByRole('button', { name }));
+
+    await waitFor(() => expect(requested).toContain(query));
+  });
+
+  /**
+   * The half of `B-105` that is a sentence rather than a button.
+   *
+   * The screen states a page count two lines above, and the limit means three
+   * different things across the four formats: exact in the PDF, approximate
+   * in Word, and **inapplicable** in HTML, which has no page to exceed. The
+   * last one is not a weaker version of the second — a reader pasting the
+   * HTML into a form needs to know the number does not describe it at all.
+   */
+  it('says the page limit does not apply to the HTML at all', async () => {
+    const generationId = await generate({ jobDescription: POSTING, acknowledgePreflight: false });
+
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+    await screen.findByRole('button', { name: 'Download PDF' });
+
+    const note = screen.getByText(en.Result.formatNote);
+
+    expect(note).toHaveTextContent(/HTML has no pages at all/);
+    // And Word's is still the *approximate* claim, not the same one.
+    expect(note).toHaveTextContent(/run a little over there/);
+  });
+
   it('shows countable facts and never a percentage', async () => {
     const generationId = await generate({ jobDescription: POSTING, acknowledgePreflight: false });
 
@@ -168,6 +219,61 @@ describe('a finished generation', () => {
 
     expect(level).toHaveTextContent('Orta eşleşme');
     expect(level).not.toHaveTextContent('MODERATE');
+  });
+
+  /**
+   * `B-118`, `F-039`. A thin profile may produce a CV shorter than it was
+   * allowed to be, and that is correct output: padding it would be inventing
+   * work nobody did. Said once, as a note — never a warning, and nothing
+   * offers to make it longer.
+   *
+   * The limit read is **this generation's** (`maxPages` on the response), not
+   * the profile's setting of today, which is the whole reason the field was
+   * asked for: a CV made under one page must not be called short because the
+   * preference has since been raised.
+   */
+  describe('when the CV came out under its page limit', () => {
+    it('says so, against the limit that generation was made under', async () => {
+      // Two allowed, one produced: the mock's documents are one page.
+      const generationId = await generate({ acknowledgePreflight: false, maxPages: 2 });
+
+      render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+      const note = await screen.findByTestId('length-note');
+
+      expect(note).toHaveTextContent('It came to one page where 2 were allowed');
+      expect(note).toHaveTextContent('Nothing was padded');
+    });
+
+    it('stays quiet when the document filled its limit', async () => {
+      // The profile's default is one page, and one page came out.
+      const generationId = await generate();
+
+      render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+      await screen.findByRole('button', { name: 'Download PDF' });
+      expect(screen.queryByTestId('length-note')).not.toBeInTheDocument();
+    });
+
+    /**
+     * A generation written before the limit was recorded carries no
+     * `maxPages`, and the server sends nothing rather than a plausible
+     * default. An absence is not a limit of one — drawing the note off a
+     * guessed number would tell somebody their CV is short against a rule
+     * that was never applied to it.
+     */
+    it('draws nothing where the generation does not carry a limit', async () => {
+      const generationId = await generate();
+      const job = generations.jobs.find(
+        (candidate) => candidate.kind === 'generation' && candidate.generationId === generationId,
+      );
+      if (job?.kind === 'generation') delete job.maxPages;
+
+      render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+      await screen.findByRole('button', { name: 'Download PDF' });
+      expect(screen.queryByTestId('length-note')).not.toBeInTheDocument();
+    });
   });
 
   /**
@@ -690,5 +796,87 @@ describe('the same result without an account', () => {
     render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
 
     expect(await screen.findByRole('button', { name: 'Download PDF' })).toBeEnabled();
+  });
+
+  /**
+   * `B-102`, and the third control missing for the same kind of reason as the
+   * other two — but with a difference worth naming: this one is not withheld,
+   * it is **meaningless**. An anonymous session's generations go with its
+   * profile, so a keep-mark would have nothing to keep.
+   */
+  it('draws no keep switch, because there would be nothing to keep', async () => {
+    const generationId = await generate();
+
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    await screen.findByRole('button', { name: 'Download PDF' });
+    expect(screen.queryByLabelText(en.Result.archive.label)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * `B-102`. The endpoint was in the resource map from the first draft and the
+ * `generations.archived` column has been there since V1; the two had never
+ * met.
+ */
+describe('marking a resume to keep', () => {
+  beforeEach(signIn);
+
+  it('starts off, because a generation is not made archived', async () => {
+    const generationId = await generate();
+
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    expect(await screen.findByLabelText(en.Result.archive.label)).not.toBeChecked();
+  });
+
+  it('marks it, and says so out loud rather than only moving a switch', async () => {
+    const generationId = await generate();
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    await userEvent.click(await screen.findByLabelText(en.Result.archive.label));
+
+    await waitFor(() => expect(screen.getByLabelText(en.Result.archive.label)).toBeChecked());
+    // Rule 6: the switch moving is a colour, and a colour is not the whole of
+    // what a change of state is owed.
+    expect(useAnnouncerStore.getState().announcement?.message).toBe(en.Result.archive.announceKept);
+  });
+
+  /**
+   * The mark survives a reload, which is the only thing it is for today: the
+   * retention rule it buys has nothing to bite on until object storage lands
+   * (§ 57.4), so "kept and read" is the whole of the promise — and this is
+   * the half that would silently not be true if the write went nowhere.
+   */
+  it('is still there on a fresh render', async () => {
+    const generationId = await generate();
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    await userEvent.click(await screen.findByLabelText(en.Result.archive.label));
+    await waitFor(() => expect(screen.getByLabelText(en.Result.archive.label)).toBeChecked());
+
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    await waitFor(() =>
+      expect(screen.getAllByLabelText(en.Result.archive.label).at(-1)).toBeChecked(),
+    );
+  });
+
+  /** The same endpoint clears it, which is the half `B-102` spells out. */
+  it('takes the mark off again', async () => {
+    const generationId = await generate();
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    const toggle = await screen.findByLabelText(en.Result.archive.label);
+
+    await userEvent.click(toggle);
+    await waitFor(() => expect(toggle).toBeChecked());
+
+    await userEvent.click(toggle);
+    await waitFor(() => expect(toggle).not.toBeChecked());
+    expect(useAnnouncerStore.getState().announcement?.message).toBe(
+      en.Result.archive.announceUnkept,
+    );
   });
 });

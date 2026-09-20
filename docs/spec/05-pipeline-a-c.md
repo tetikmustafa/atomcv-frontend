@@ -21,41 +21,56 @@ flowchart LR
     G --> C
 ```
 
-### 17.1 Faz arayüzü
+### 17.1 Faz arayüzü — yok, ve olmaması bir karar
 
-```java
-public interface PipelinePhase<I, O> {
-    String name();
-    Result<O> execute(I input, PipelineContext ctx);
-}
-
-public record PipelineContext(
-    UUID userId,
-    ProfileRef profileRef,
-    String correlationId,
-    UUID generationId,
-    GenerationOptions options,
-    ProfilePreferences preferences,
-    GenerationDirectives directives,
-    CapacityModel capacity,
-    SessionCapabilities capabilities,
-    Telemetry telemetry
-) {}
-```
+> **Sapma (denetim, 2026-09-16).** Bu bölüm bir `PipelinePhase<I, O>`
+> arayüzü ve on alanlı bir `PipelineContext` kaydı tanımlıyordu. **İkisi de
+> hiç yazılmadı**, ve § 17.2'nin adlandırdığı yedi girdi/çıktı tipinden
+> (`ScoringInput`, `ScoredAtoms`, `SelectionInput`, `RenderInput`,
+> `RenderedDocument`, `VerificationReport`, `EditRequest`) hiçbiri de yok.
+> Sapma iki denetim turunu geçti ve hiçbir yerde kayıtlı değildi.
+>
+> **Ortak arayüz yazılmadı, çünkü fazlar gerçekten heterojen.** `I` ile `O`
+> her fazda başka bir şey, ve aralarındaki tek ortak şey `Result` — yani
+> arayüz `execute`'un adını birleştirir, imzasını değil. Somut kazancı
+> "sırayı konfigüre etmek" olurdu (§ 6 bunu iddia ediyordu) ve bu boru
+> hattında sıra konfigüre edilebilir bir şey değil: Faz C'nin bütçesi Faz
+> B'nin skorlarını, Faz F'nin sayfa sayısı Faz E'nin kaynağını istiyor.
+> Sırası değiştirilemeyen bir zinciri konfigüre edilebilir kılmak, yalnız
+> yanlış konfigüre edilebilir kılar.
+>
+> **`PipelineContext` de yazılmadı**, ve sebebi daha dar: her fazın ihtiyacı
+> olan alanları taşıyan tek bir kayıt, hiçbir fazın ihtiyacı olmayan alanları
+> da her faza taşır. Mutlak kural 4 açısından bu bedava değil — bağlam
+> nesnesi büyüdükçe bir loglama noktasına kullanıcı içeriğinin ulaşması
+> kolaylaşır. Fazlar istediklerini parametre olarak alıyor.
+>
+> Boru hattını `GenerationPipeline` yürütüyor ve fazları adıyla çağırıyor;
+> ilerleme bildirimi ayrı bir sözlükte (`GenerationPhase` enum'u, § 30.6).
 
 ### 17.2 Faz sözleşmeleri
 
-| Faz | Girdi | Çıktı | LLM | Saf fonksiyon |
-|---|---|---|---|---|
-| A | `String jd` | `JobAnalysis` | ✅ | ❌ |
-| B | `ScoringInput` | `ScoredAtoms` | ❌ | ✅ |
-| C | `SelectionInput` | `SelectionState` | ❌ | ✅ |
-| D | `SelectionState` | `RewrittenContent` | ✅ | ❌ |
-| E | `RenderInput` | `RenderedSource` | ❌ | ✅ |
-| F | `RenderedDocument` | `VerificationReport` | ❌ | ❌ (derleme) |
-| G | `EditRequest` | `SelectionState` | ✅ | ❌ |
+Uygulanan imzalar. Faz F'nin kendi sınıfı yok: derleme döngüsü, `AtsCheck`
+ve `FitReport` `GenerationPipeline`'ın içinde, çünkü üçü tek bir "belge
+sığdı mı" sorusunun parçaları ve döngü bütçeyi kısıp Faz C'ye dönüyor.
+
+| Faz | Giriş noktası | LLM | Saf fonksiyon |
+|---|---|---|---|
+| A | `JobAnalysisPhase.analyse(String, boolean, …) → Result<JobAnalysis>` | ✅ | ❌ |
+| B | `RelevanceScoringService.scoreAgainst(…) → RelevanceScores` | ❌ | ✅ |
+| C | `SelectionPhase.select(SelectionRequest) → Result<SelectionState>` | ❌ | ✅ (`static`) |
+| D | `RewritePhase.rewrite(ProfileTree, SelectionState, RewriteContext, RewrittenContent) → RewriteOutcome` | ✅ | ❌ |
+| E | `RenderPhase.build(…) → RenderRequest` | ❌ | ✅ (`static`) |
+| F | `GenerationPipeline` içinde: derle → `X-Page-Count` → `AtsCheck` → `FitReport` | ❌ | ❌ (derleme) |
+| G | `EditPhase.parse(…) → Result<EditPlan>` | ✅ | ❌ |
 
 **B, C, E'nin saf fonksiyon olması kritik** — determinizm testinin temeli.
+C ile E'nin `static` olması o testin bedava gelen hâli: bir alanı olmayan
+fonksiyon, iki koşu arasında taşıyacak durumu da bulamaz.
+
+**Faz D bir `Result` döndürmüyor, ve bu § 21.6.1'in kararı:** bu katmanın
+çağırana bildirebileceği bir başarısızlık yok — reddedilen bir yeniden yazım
+kişinin kendi cümlesini bastırıyor.
 
 ---
 
@@ -93,7 +108,7 @@ Girdiğin metin bir iş ilanına benzemiyor.
 
 **Redde götüren kontrol telde de ayrışır**, `params.reason` ile: `too_short`, `too_long`, `low_entropy`, `not_job_like`. Katalog hâlâ **tek kod** yayımlıyor — API açısından sonuç aynı ve dört kardeş kod hiçbir şey kazandırmazdı — ama tek kod tek cümle demek değil. Ayrım zaten metrik ve log için gerekiyordu ("ilan reddedildi" hiçbir şey söylemez, "düşük entropiden reddedildi" sezgisel kuralın gözden geçirilmesi gerektiğini söyler); telde de gerekiyor, çünkü dört ret kullanıcıyı dört ayrı yere gönderiyor.
 
-`reason`'ın kapalı sözlüğü **sekiz** değer taşıyor: buradaki dördü ve § 18.4'ün dördü. İkisi çakışmaz, ve `reason` hangi kapının reddettiğini söyler — bu ayrım kullanıcıya görünür, çünkü ön kontrol **kullanıcının metnini** reddetmiştir ve kullanıcı sezgiselden iyi bilebilir, § 18.4 ise **modelin cevabını** reddetmiştir ve metinde düzeltilecek bir şey yoktur.
+`reason`'ın kapalı sözlüğü **yedi** değer taşıyor: buradaki dördü ve § 18.4'ün üçü (sekizinciydi, § 18.4'ün düzeltmesine bak). İkisi çakışmaz, ve `reason` hangi kapının reddettiğini söyler — bu ayrım kullanıcıya görünür, çünkü ön kontrol **kullanıcının metnini** reddetmiştir ve kullanıcı sezgiselden iyi bilebilir, § 18.4 ise **modelin cevabını** reddetmiştir ve metinde düzeltilecek bir şey yoktur.
 
 Sıra önemlidir: uzunluk entropiden **önce** bakılır, yoksa 40.000 karakterlik tekrarlı bir yapıştırma "tekrarlı olduğu için" reddedilir, gerçekte olduğu şey için değil.
 
@@ -158,7 +173,6 @@ yaz, ilan hangi dilde olursa olsun. Orijinal anlamı koru.
 Result<JobAnalysis> gate(JobAnalysis a) {
     if (a.confidence() < 0.55)          return err(JD_LOW_CONFIDENCE);
     if (a.requiredSkills().size() < 2)  return err(JD_TOO_FEW_SKILLS);
-    if (a.responsibilities().isEmpty()) return err(JD_NO_RESPONSIBILITIES);
     if (hasAbnormalFieldLength(a))      return err(JD_SUSPICIOUS_OUTPUT);
     return ok(a);
 }
@@ -173,15 +187,37 @@ boolean hasAbnormalFieldLength(JobAnalysis a) {
 
 Kapıdan geçemezse **Faz B'ye hiç geçilmez** — maliyet oluşmaz.
 
-Sıra önemlidir: incelik (güven, beceri sayısı, sorumluluk) **şekilden önce** bakılır, yani zayıf bir ilan zayıf olduğu için reddedilir, "şüpheli çıktı" diye değil.
+Sıra önemlidir: incelik (güven, beceri sayısı) **şekilden önce** bakılır, yani zayıf bir ilan zayıf olduğu için reddedilir, "şüpheli çıktı" diye değil.
 
-**Dört verdict telde `params.reason` olarak çıkar** (`low_confidence`, `too_few_skills`, `no_responsibilities`, `suspicious_output`), § 18.1'in dördüyle aynı kapalı sözlükte. Zorunluydu: `confidence` ve `skillsFound` yalnız ilk ikisini anlatıyor, ve `SUSPICIOUS_OUTPUT` ile reddedilen bir analiz `confidence: 0.95` taşıyabiliyor — ekranda "ilanı okuyamadık, güven %95" diye okunan bir çelişki.
+**Üç verdict telde `params.reason` olarak çıkar** (`low_confidence`, `too_few_skills`, `suspicious_output`), § 18.1'in dördüyle aynı kapalı sözlükte. Zorunluydu: `confidence` ve `skillsFound` yalnız ilk ikisini anlatıyor, ve `SUSPICIOUS_OUTPUT` ile reddedilen bir analiz `confidence: 0.95` taşıyabiliyor — ekranda "ilanı okuyamadık, güven %95" diye okunan bir çelişki.
+
+> **Düzeltme — dördüncü bir verdict vardı ve indi: `NO_RESPONSIBILITIES`**
+> (denetim, 2026-09-16; kapının kendisi bunu Aşama 3'te kaybetmişti, spec altı
+> yerde taşımaya devam etti). `responsibilities` boş dönen analizi reddediyordu
+> ve gerekçesi sağlamdı — Faz B maddeleri görevlerle eşliyor, görev yoksa
+> eşleyecek bir şey yok.
+>
+> **Kural dünya hakkında yanlıştı.** Gerçek ilanların çoğu hiçbir başlık
+> altında görev saymayan nitelik listeleridir; bunu düşüren ilan *"At least 5
+> years of hands-on software development experience in Java, Java EE"* diyordu
+> ve iş hakkında başka bir şey demiyordu. **0.92 güvenle, içinden yirmi beceri
+> okunmuşken reddedildi** — model ilanı anlamıştı, kapı cevabı çöpe attı.
+>
+> `job_analysis` **v2** görevleri metnin taşıdığı şeyden türetiyor, yani boş
+> liste artık "metin hiçbir iş tarif etmiyor" demek. Onu ölçen şey
+> `confidence`, ve o zaten burada ölçülüyor: aynı olguya ikinci bir kontrol
+> aynı ilanı iki kez reddediyordu.
+>
+> **Değer telden kalktı** ve bunu okuyan hiçbir şey yok, yani saklanmış hiçbir
+> ret bozulmuyor. Frontend `B-072`'nin cevabında dalı `en.json` ve `tr.json`'dan
+> çoktan kaldırdı ve neden listesi orada da yediye indi — **geride kalan tek
+> kopya buydu**, yani bu bir frontend aksiyonu değil, spec'in kendi gecikmesi.
 
 **Çıkış yolları sebebe göre değişir**, ve § 18.1'in üçlüsü buraya olduğu gibi gelmez:
 
 | `reason` | resolutions |
 |---|---|
-| `low_confidence`, `too_few_skills`, `no_responsibilities` | `paste_full_posting`, `continue_as_general_cv` |
+| `low_confidence`, `too_few_skills` | `paste_full_posting`, `continue_as_general_cv` |
 | `suspicious_output` | `retry`, `continue_as_general_cv` |
 
 **`continue_anyway` bu kapıda yoktur.** Onay yalnız ön kontrolü atlar, ve ön kontrol zaten geçilmiştir — yeniden gönderim aynı çağrıyı yapıp aynı kapıya çarpar. İki isim altında tek buton demekti, ve doğruyu söyleyen isim sunulan değildi.
@@ -219,10 +255,25 @@ hâlâ söylüyor, yanlış şirketi adlandıran satırı okuyanın ayırt etme 
 başka türlü yazıyor ("Senior Backend Engineer" ↔ "Backend Engineer (Senior)"),
 ve aynı kural orada gerçek başlıkları düşürürdü.
 
-**Prompt'ta da yazmalı, ve yazılmadı.** Yazmak yeni bir prompt sürümü demek
-(§ 53.2): üç fixture ve bir haftalık önbellek geçersiz olur, `local-fake`
-sentetik cevaba döner. `job_analysis` model seçimiyle birlikte `v2`'ye
-çıkacak; cümle o değişikliğe ait, ve kusuru kapatmak için gerekmiyor.
+**Prompt'ta da yazıyor, `v3`'ten beri** (düzeltme, denetim 2026-09-20). Bu
+paragraf uzun süre *"yazılmadı; `job_analysis` model seçimiyle birlikte `v2`'ye
+çıkacak, cümle o değişikliğe ait"* diyordu. **v2 çıktı ve cümle girmedi** —
+erteleme bir koşula bağlanmıştı, koşulu kontrol eden hiçbir şey yoktu, ve
+gerçekleştiğinde iş sessizce düştü.
+
+`v3` şunu söylüyor: `company.name` ilanın içerdiği bir addır ve **harfi harfine**
+kopyalanır — çevrilmez, kısaltması açılmaz, hukuki eki eklenip çıkarılmaz; ilan
+bir işveren adlandırmıyorsa **boş dize**, asla "Unknown" ya da "not specified".
+`role.title` bilerek dışarıda: model onu meşru biçimde başka türlü yazıyor ve
+hiçbir şey onu metne karşı denetlemiyor.
+
+**Ölçüldü** (EK C.3'ün istediği koşu, `make test-llm`): `schema_conforms`
+%100 (taban %99), `required_skills_found` %91.7 (taban %90),
+`nonsense_refused` %100 (taban %95). İkincisi tabana yakın — on iki vakanın
+on biri — ve bir sonraki sürümde ilk bakılacak sayı o.
+
+**Kontrol yine de duruyor.** Bir prompt kuralı bir ricadır; `EmployerName`
+karşılaştırması tutan yarıdır (§ 57.6).
 
 ### 18.5 Embedding hedefi sentezi
 
@@ -270,6 +321,35 @@ public record GenerationDirectives(
 ```
 
 **Neden JobAnalysis'ten ayrı:** İlan analizi cache'lenebilir (aynı ilan → aynı analiz), kullanıcı yönlendirmeleri her üretimde farklı. Karıştırılırsa cache bozulur.
+
+#### 18.7.1 Dört alanın üçü indi (denetim, 2026-09-15)
+
+**`emphasize` Faz B'ye bağlandı, ve bir ağırlık olarak değil bir terim
+olarak.** Kişinin öne çıkarılmasını istediği terimler ilanın kendi
+`keywords`'üne ve `tagsOf(posting)`'ine katılıyor; § 19.1'in formülü
+değişmiyor — aynı dört bileşen, aynı dört ağırlık, bir tık daha büyük bir
+küme. Yeni bir ağırlık ürünün her skorunu değiştirir ve
+`engine_version.scoringWeights`'i kendisinden önceki her üretim için yalan
+yapardı; bu, **tek bir üretimin girdisini** değiştiriyor, ki bir yönlendirme
+tam olarak odur.
+
+**Karşılığı olmayan bir terim de sayıları oynatıyor, ve bu doğru.** Keyword
+kapsaması terimlerin bir kesri (§ 19.2), yani eşleşmeyen bir terim paydayı
+büyütüyor ve bütün skorlar birlikte düşüyor — **sıra aynı kalıyor**. Vurgu bir
+CV'yi yeniden sıralar; olmayan bir alakayı icat etmez.
+
+Terimler bir kez ve `GenerationDirectives` içinde kanonikleşiyor (`Locale.ROOT`,
+mutlak kural 7). En çok on terim, her biri en çok 60 karakter: ötesi
+sıralamayı ilanın değil okuyanın listesi yapardı.
+
+**`freeformNote` inmedi, ve sebebi kaydedilmeli.** § 18.7 alanı adlandırıyor;
+**hiçbir bölüm onu kimin okuduğunu söylemiyor.** Tek makul okuyucu Faz D'nin
+prompt'u (§ 21.4), oraya bir cümle eklemek yeni bir prompt sürümü demek
+(§ 53.2), ve EK C.3 aktif sürümü değiştirmeden önce eval koşulmasını istiyor —
+o da gerçek bir sağlayıcı anahtarı. Uydurmak yerine kaydedildi; § 18.4.1 aynı
+şekildeki soruya aynı cevabı vermişti.
+
+`excludeAtoms`/`includeAtoms` § 24.4'ten beri zaten çalışıyor.
 
 ---
 
@@ -567,6 +647,15 @@ double renderCostPt(Atom atom, String lang, UUID customizationId) {
 
 Tahmin kullanıldığında `trace.C.estimatedAtoms` sayacı artar — teşhis için.
 
+> **Ve bir aşama boyunca artmıyordu** (düzeltme, denetim 2026-09-20). Sayı
+> hesaplanıyor (`SelectionRequestBuilder`), bir INFO satırına basılıyor ve
+> **atılıyordu**; bu bölüm ve § 26.5 onu iki ayrı yerde vaat ediyordu. Bir log
+> satırı kayıt değil: az dolu çıkmış bir sayfanın sebebi aylar sonra bu
+> kolondan okunuyor, ve "ölçüm işi bu profile yetişmemiş" ile "seçim yanlış"
+> onsuz aynı görünüyor. Artık `trace.C`'de, ve yanında bir seri var:
+> `generation.selection.costs`, `source` etiketi ölçülmüş ile tahmini ayırıyor
+> (§ 48.3'ün "tahmin kullanım oranı").
+
 ### 20.5 Çıktı
 
 ```java
@@ -574,19 +663,35 @@ public record SelectionState(
     List<SelectedAtom> selected,
     List<RejectedAtom> rejected,
     BudgetBreakdown budget,
-    String language,
-    UUID customizationId
+    List<UUID> headerOnlyEntries,      // § 20.2: maddesiz açılan entry
+    List<RejectedEntry> rejectedEntries
 ) {}
 
 public record SelectedAtom(
     UUID atomId, UUID variantId,
     double score, double renderCostPt,
-    List<String> matchedKeywords,
-    boolean forcedByLock
+    boolean forcedByLock,
+    List<String> matchedKeywords       // § 35.3.1, sıralı
 ) {}
 
 public record RejectedAtom(UUID atomId, double score, RejectionReason reason) {}
+public record RejectedEntry(UUID entryId, double score, RejectionReason reason) {}
 ```
+
+> **Kayıt dört yerde ayrılmıştı** (düzeltme, denetim 2026-09-16).
+> `language` ile `customizationId` **alan değil**: § 14.5 ikincisinin neden
+> id olarak yazılamadığını zaten kaydediyor (yeniden render fontu, kenar
+> boşluğunu ve satır aralığını istiyor, hiçbir şeye çözülen bir id değil) ve
+> ikisi de anlık görüntünün kendi kabuğunda duruyor. Buna karşılık
+> `headerOnlyEntries` ile `rejectedEntries` **var** — birincisini § 20.2 kendi
+> düzyazısında anıyor ama kayıt satırına hiç işlenmemişti, ikincisi ise hiçbir
+> yerde yazılı değildi.
+>
+> **`RejectedEntry` ayrı bir kayıt, ve bu bilerek:** iki id birbirinin yerine
+> geçmiyor. `rejected` listesi kullanıcıya atom atom gösteriliyor; içine
+> konan, hiçbir atoma çözülmeyen bir entry id'si sessizlikten kötü olurdu —
+> ki bir diploma satırının dolu bir sayfadan tek kelime etmeden kaybolmasının
+> sebebi tam olarak buydu.
 
 **Performans:** 200 atom için ~10ms toplam.
 

@@ -7,10 +7,12 @@ import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { describe, expect, it, vi } from 'vitest';
 import { AtomEditor } from '@/components/profile/AtomEditor';
+import { getSession } from '@/lib/api/endpoints/auth';
 import { listAtoms, type Atom } from '@/lib/api/endpoints/profile';
-import { profileKeys } from '@/lib/api/queryKeys';
+import { profileKeys, sessionKeys } from '@/lib/api/queryKeys';
 import en from '@/messages/en.json';
 import { server } from '@/mocks/node';
+import { signIn } from '@/mocks/sessionFixture';
 
 /*
   next-intl's client navigation is imported for one thing here: the editor
@@ -29,6 +31,16 @@ async function renderEditor(atomId: string, locale: 'en' | 'tr' = 'en') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+
+  /*
+    Signed in, because everything below describes a profile with two wordings
+    in it and an anonymous one is English-only (§ 35.7.2). The session used to
+    go unread here, which cost nothing until `B-115` made the staleness notice
+    depend on it — and the fixture it was reading was the wrong shape for the
+    atom it was rendering.
+  */
+  signIn();
+  await client.prefetchQuery({ queryKey: sessionKeys.current(), queryFn: getSession });
 
   const atoms = await listAtoms();
   for (const atom of atoms) client.setQueryData(profileKeys.atom(atom.id!), atom);
@@ -53,7 +65,9 @@ describe('an atom with one wording', () => {
     await renderEditor('atom-1');
 
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Text')).toBeInTheDocument();
+    // As parts, because this wording is marked (D13). What matters here is
+    // that the wording is editable at all without a strip around it.
+    expect(screen.getByLabelText('Part 1')).toBeInTheDocument();
   });
 });
 
@@ -93,18 +107,28 @@ describe('an atom with several wordings', () => {
   });
 
   /**
-   * ⚠️ Stage 1 publishes no endpoint that regenerates a stale wording, and
-   * `spec/09-frontend.md` § 37.6 draws a button for it. A control that cannot
-   * work is worse than none on a screen already telling the user something is
-   * wrong, so the badge stops at saying what is true (handoff B-024).
+   * This asserted the **opposite** until `B-115`, and it is worth keeping the
+   * record: "offers no regenerate button, because nothing could answer it",
+   * written when Stage 1 published no endpoint for it. Both halves of that
+   * changed in Stage 3 — `stale` became real and the patch that clears
+   * `userEdited` queues the translation — and neither the spec line nor this
+   * test moved. The doc said "do not draw it" for a whole stage.
+   *
+   * It also passed for a reason of its own: the match was `/regenerate/i` and
+   * the button reads "Write it again from the new source", so from the day
+   * the control landed this asserted the absence of something that was never
+   * going to be found by that name. A test can pin a stale decision and prove
+   * nothing at the same time.
    */
-  it('offers no regenerate button, because nothing could answer it', async () => {
+  it('offers the regenerate button, which has worked since Stage 3', async () => {
     const user = userEvent.setup();
     await renderEditor('atom-2');
 
     await user.click(screen.getByRole('tab', { name: /Turkish/ }));
 
-    expect(screen.queryByRole('button', { name: /regenerate/i })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: en.Editor.variants.staleRegenerate }),
+    ).toBeInTheDocument();
   });
 
   it('edits the wording that is selected, not the primary', async () => {

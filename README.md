@@ -20,11 +20,27 @@ service level agreement, and it is run by one person.
 
 ## Status
 
-**Stage 0 — skeleton.** The backend exposes only a health endpoint so far, so
-everything runs against [MSW](https://mswjs.io) mocks. What exists today:
-locale routing, the marketing and legal pages, the API client and its error
-handling, the app shell and accessibility baseline, and the test and CI
-pipeline. The product screens arrive in Stage 1.
+**Stage 4 — maturation, and feature-complete against the specification.**
+Every screen the product describes exists and is wired to the real API:
+the profile editor with its labels, importance and locks; CV import and its
+mandatory review; job-specific generation with a live progress stream;
+the result screen with its coverage report, its hand toggles and its natural
+language edits; downloads as PDF, Word, HTML or LaTeX source; history,
+application tracking, settings and account deletion. Anonymous use is fully
+functional and only narrower — English only, preset templates, nothing kept
+afterwards.
+
+**It has not been deployed.** There is no server and no domain yet, so
+`NEXT_PUBLIC_SITE_URL` falls back to localhost and five things are written
+but unmeasured: the OAuth round trip, the Turnstile challenge, the content
+security policy, the published privacy page against the processor list, and
+analytics — which is not written at all, deliberately, because there is
+nowhere to send it.
+
+**Development runs against [MSW](https://mswjs.io) mocks** by default, which
+is also what the test suites run against. The handlers encode behaviour
+rather than sample payloads, so a refusal seen in a test is the refusal a
+browser gets.
 
 ## Running it
 
@@ -67,6 +83,7 @@ Docker image pin the same version.
 src/
 ├── app/[locale]/          all routes; the root layout lives here
 │   ├── page.tsx           landing (static)
+│   ├── how-it-works/      what the product does and why (static)
 │   ├── legal/             privacy and terms (static)
 │   └── (app)/             the application shell and its providers
 ├── components/            ui (shadcn), layout, providers
@@ -109,6 +126,20 @@ build notes.
 `CLAUDE.md` is the working context: the decisions taken, the ones deliberately
 deferred, and what each later stage needs.
 
+**The specification stays in Turkish, by decision.** Code, comments, commit
+messages and every file in this list are English and will remain so, which is
+what somebody reading the code needs. Translating ~9,400 lines of
+specification would also mean keeping two copies in step, and the reader it
+would serve does not exist yet.
+
+## Contributing and security
+
+[CONTRIBUTING.md](CONTRIBUTING.md) covers how to run the thing, what the
+review looks for, and the handful of rules that are not negotiable.
+[SECURITY.md](SECURITY.md) is how to report a vulnerability, and what is in
+scope while there is no deployment.
+
 ## Licence
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE). There is no revenue model, no service level
+agreement, and it is run by one person.

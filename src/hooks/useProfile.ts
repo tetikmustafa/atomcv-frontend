@@ -19,12 +19,14 @@ import { profileKeys } from '@/lib/api/queryKeys';
 import type { Version } from '@/lib/api/etag';
 import {
   addVariant,
+  applyGitHubSuggestions,
   createAtom,
   createEntry,
   createSection,
   deleteAtom,
   deleteEntry,
   deleteSection,
+  deleteVariant,
   getProfile,
   listAtoms,
   listEntries,
@@ -38,6 +40,9 @@ import {
   reorderSections,
   replacePreferences,
   replaceProfile,
+  suggestFromGitHub,
+  tagAtom,
+  untagAtom,
   type Atom,
   type AtomCreate,
   type AtomPatch,
@@ -861,5 +866,137 @@ export function useDeleteAtom() {
   return useMutation({
     mutationFn: (id: string) => deleteAtom(id, versionOf(client, id)),
     onSuccess: () => invalidateWholeProfile(client),
+  });
+}
+
+/* -------------------------------- github ------------------------------- */
+
+/**
+ * Asking what a GitHub account has (`B-106`).
+ *
+ * **A mutation rather than a query**, although it reads: it is a `POST` that
+ * spends one of five an hour, so it must happen when somebody presses a
+ * button and never because a component mounted. A `useQuery` would refetch on
+ * focus and burn the allowance on a tab switch.
+ *
+ * Nothing is written, so nothing is invalidated.
+ */
+export function useGitHubSuggestions() {
+  return useMutation({
+    mutationFn: (username?: string) => suggestFromGitHub(username),
+  });
+}
+
+/**
+ * Writing the ones that were picked.
+ *
+ * **The whole profile is invalidated**, not a corner of it: an apply can add
+ * projects and merge into existing entries in one transaction, so sections,
+ * entries and atoms may all have moved — and `invalidateWholeProfile` is the
+ * call that exists for exactly this, never `profileKeys.all` (that key is
+ * also the prefix of the per-atom keys, and there is no endpoint behind
+ * those).
+ */
+export function useApplyGitHubSuggestions() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ repositories, username }: { repositories: string[]; username?: string }) =>
+      applyGitHubSuggestions(repositories, username),
+    onSuccess: () => invalidateWholeProfile(client),
+  });
+}
+
+/**
+ * Deleting one wording (D13).
+ *
+ * **The server refuses two cases and the screen must not pretend otherwise**
+ * (`B-036`): the last wording an atom has, and the one that is primary. Both
+ * are a `400` naming the field, and both are right — an atom with no wording
+ * is an atom with nothing to print, and demoting-by-deleting would leave the
+ * server choosing a new primary on somebody's behalf. So the control is drawn
+ * only where neither holds, and the refusals still render if a second tab got
+ * there first.
+ *
+ * This was a deliberate gap whose stated reason was that "the thing being
+ * deleted is the atom". That is true of the *usual* case and was never true
+ * of an atom with two wordings, where removing the Turkish one is a perfectly
+ * ordinary thing to want — the endpoint and its two refusals were already
+ * written, and only the button was missing.
+ */
+export function useDeleteVariant() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ atomId, variantId }: { atomId: string; variantId: string }) =>
+      deleteVariant(atomId, variantId, variantVersionOf(client, atomId, variantId)),
+
+    onSuccess: (_result, { atomId, variantId }) => {
+      updateAtomThrough(client, atomId, (atom) => ({
+        ...atom,
+        variants: (atom.variants ?? []).filter((variant) => variant.id !== variantId),
+      }));
+    },
+  });
+}
+
+/* --------------------------------- tags -------------------------------- */
+
+/**
+ * Putting a label on an atom (`B-103`).
+ *
+ * **No version is read and none is sent.** Every other write in this file
+ * carries one; a tag is a row of its own and the atom is untouched, so there
+ * is no version of the atom for a precondition to be about. Reaching for
+ * `versionOf` here would send an `If-Match` the endpoint does not want and
+ * would make two people tagging one atom a conflict, when the right outcome
+ * is both tags.
+ *
+ * **Written through with the server's row, never with what was typed.** The
+ * label is stored canonical — trimmed and lowercased, because that is what
+ * the scorer compares — so echoing the input would put a label on screen that
+ * does not match the one being scored. It also means an id: a tag has to be
+ * removable, and only the response carries one.
+ *
+ * **Idempotent server-side**, which is why the row is replaced by id rather
+ * than appended: tagging an atom that already wears the label returns the tag
+ * it already has, and appending would show it twice.
+ */
+export function useTagAtom() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ atomId, label }: { atomId: string; label: string }) => tagAtom(atomId, label),
+
+    onSuccess: (tag, { atomId }) => {
+      updateAtomThrough(client, atomId, (atom) => {
+        const tags = atom.tags ?? [];
+        const known = tags.some((existing) => existing.id === tag.id);
+
+        return { ...atom, tags: known ? tags : [...tags, tag] };
+      });
+    },
+  });
+}
+
+/**
+ * Taking a label off.
+ *
+ * Removed by **id** rather than by label: the same word can be stored once
+ * and worn by many atoms, and the row this deletes is the one joining this
+ * atom to it.
+ */
+export function useUntagAtom() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ atomId, tagId }: { atomId: string; tagId: string }) => untagAtom(atomId, tagId),
+
+    onSuccess: (_result, { atomId, tagId }) => {
+      updateAtomThrough(client, atomId, (atom) => ({
+        ...atom,
+        tags: (atom.tags ?? []).filter((tag) => tag.id !== tagId),
+      }));
+    },
   });
 }

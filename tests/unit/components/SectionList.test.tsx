@@ -41,6 +41,33 @@ function renderSections() {
 
 beforeEach(() => useEditorUiStore.getState().reset());
 
+/**
+ * What an atom's wording says, whichever editor is drawn for it (D13).
+ *
+ * A marked wording is edited as parts and an unmarked one as a field, and the
+ * stored `plainText` is the parts joined — so joining them here is reading
+ * the same value the server holds rather than reconstructing something.
+ *
+ * Read off the controls rather than off the rich-text preview above them,
+ * because the preview shows the **saved** copy: a test that read it would
+ * pass while an edit sat unsaved in the field beside it.
+ */
+function wordingOf(atom: HTMLElement): string {
+  /*
+    By role, not by label. The run editor's group is *also* named "Text" —
+    it has to be, since the heading names the whole thing — so a label query
+    finds the group for a marked wording and reads `.value` off a `<div>`,
+    which is `undefined` and looks like an empty sentence.
+  */
+  const plain = within(atom).queryByRole('textbox', { name: 'Text' });
+  if (plain) return (plain as HTMLTextAreaElement).value;
+
+  return within(atom)
+    .getAllByLabelText(/^Part \d+$/)
+    .map((field) => (field as HTMLInputElement).value)
+    .join('');
+}
+
 describe('the section list', () => {
   /** Bölüm 31.6: two hundred atoms at once overwhelms, so nothing starts open. */
   it('starts collapsed and loads a section’s atoms only when opened', async () => {
@@ -109,10 +136,17 @@ describe('the section list', () => {
     await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(3));
 
     const first = screen.getAllByRole('article')[0]!;
-    const field = within(first).getByLabelText('Text');
+    /*
+      "Part 1", not "Text". `atom-1`'s wording carries a `metric` mark, so
+      D13 draws the mark-aware editor for it — the plain field would have
+      deleted the mark on save, which is exactly what that editor exists to
+      stop. What is being tested here is the flush on unmount, and that is the
+      same either way.
+    */
+    const field = within(first).getByLabelText('Part 1');
 
     await user.clear(field);
-    await user.type(field, 'Half a thought');
+    await user.type(field, 'Half a thought ');
 
     // Collapsed through the store rather than by clicking the toggle.
     // Clicking blurs the textarea first, and blur flushes — which would make
@@ -124,7 +158,15 @@ describe('the section list', () => {
     await waitFor(async () => {
       const stored = await listAtoms({ sectionId: 'sec-experience' });
       const edited = stored.find((atom) => atom.id === 'atom-1');
-      expect(edited?.variants?.[0]?.plainText).toBe('Half a thought');
+      /*
+        The first part, not the whole wording. `atom-1` is marked, so D13
+        edits it as parts and the second one — the metric — is untouched by
+        this edit and still there. Asserting the whole string would be
+        asserting that the marks were destroyed, which is the thing that
+        stopped happening.
+      */
+      expect(edited?.variants?.[0]?.plainText).toMatch(/^Half a thought /);
+      expect(edited?.variants?.[0]?.plainText).toContain('900 stars');
     });
   });
 });
@@ -152,10 +194,7 @@ describe('entries inside a section', () => {
     // Read off the fields rather than the text, which also appears in each
     // atom's rich-text preview — and asserted as a list, because the order
     // inside a group is the half that was broken.
-    const wording = (group: HTMLElement) =>
-      within(group)
-        .getAllByLabelText('Text')
-        .map((field) => (field as HTMLTextAreaElement).value);
+    const wording = (group: HTMLElement) => within(group).getAllByRole('article').map(wordingOf);
 
     expect(wording(trendyol)).toEqual([
       'Built a query monitor that reached 900 stars',
@@ -204,8 +243,18 @@ describe('entries inside a section', () => {
     await user.click(await screen.findByRole('button', { name: 'Skills' }));
 
     await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(1));
-    // A section is a region; an entry is a group. There are no entries here.
-    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+
+    /*
+      A section is a region; an entry is a group. There are no entries here.
+
+      Named rather than counted, since D13: a marked wording puts its own
+      small grouping around the mark checkboxes, so "no groups at all" stopped
+      being the same claim as "no entries". What this test means has always
+      been the second one.
+    */
+    for (const title of ['Senior Backend Engineer', 'Backend Engineer', 'BSc Computer']) {
+      expect(screen.queryByRole('group', { name: new RegExp(title) })).toBeNull();
+    }
   });
 
   /**

@@ -8,6 +8,7 @@ import { GenerateScreen } from '@/components/generation/GenerateScreen';
 import { failNextJob, gateRefusal } from '@/mocks/generationFixture';
 import { server } from '@/mocks/node';
 import { signIn } from '@/mocks/sessionFixture';
+import { createCustomization, deleteCustomization } from '@/lib/api/endpoints/profile';
 import en from '@/messages/en.json';
 
 const push = vi.fn();
@@ -103,23 +104,219 @@ describe('starting a generation', () => {
     expect(await sent(0)).not.toHaveProperty('jobDescription');
   });
 
+  /**
+   * `B-104`, and the product rule decides the shape rather than the layout.
+   * "Manual control is optional" means the default output has to be usable
+   * without anyone touching anything — a screen that opens with three inputs
+   * has already told the reader the two empty ones matter.
+   */
+  describe('the directives', () => {
+    it('asks nothing of a reader who does not open them', async () => {
+      render(<GenerateScreen />, { wrapper });
+
+      expect(screen.queryByLabelText(en.Generation.directives.emphasizeLabel)).toBeNull();
+      expect(screen.queryByLabelText(en.Generation.directives.noteLabel)).toBeNull();
+      expect(screen.getByRole('button', { name: en.Generation.directives.show })).toHaveAttribute(
+        'aria-expanded',
+        'false',
+      );
+    });
+
+    it('sends neither field when they were opened and left empty', async () => {
+      const user = userEvent.setup();
+      render(<GenerateScreen />, { wrapper });
+
+      await user.click(screen.getByRole('button', { name: en.Generation.directives.show }));
+      await user.click(screen.getByRole('button', { name: 'Generate' }));
+
+      await waitFor(() => expect(bodies).toHaveLength(1));
+
+      // An empty `emphasize` is a directive naming no terms, and an empty
+      // `note` is a sentence the prompt would have to ignore. Neither is the
+      // same as not asking.
+      const body = await sent(0);
+      expect(body).not.toHaveProperty('emphasize');
+      expect(body).not.toHaveProperty('note');
+    });
+
+    it('sends both, trimmed, when they were filled in', async () => {
+      const user = userEvent.setup();
+      render(<GenerateScreen />, { wrapper });
+
+      await user.click(screen.getByRole('button', { name: en.Generation.directives.show }));
+
+      await user.type(
+        screen.getByLabelText(en.Generation.directives.emphasizeLabel),
+        'observability{Enter}',
+      );
+      await user.click(screen.getByLabelText(en.Generation.directives.noteLabel));
+      await user.paste('  Lead with the platform work.  ');
+
+      await user.click(screen.getByRole('button', { name: 'Generate' }));
+      await waitFor(() => expect(bodies).toHaveLength(1));
+
+      expect(await sent(0)).toMatchObject({
+        emphasize: ['observability'],
+        note: 'Lead with the platform work.',
+      });
+    });
+
+    /**
+     * Ten is the server's cap (§ 18.7), and the field stops taking entries
+     * rather than swallowing the eleventh. P8: a control that accepts a value
+     * and drops it teaches the reader their list is wrong one entry at a
+     * time — and here the list is what the ranking reads.
+     */
+    it('stops at ten terms and says why', async () => {
+      const user = userEvent.setup();
+      render(<GenerateScreen />, { wrapper });
+
+      await user.click(screen.getByRole('button', { name: en.Generation.directives.show }));
+
+      const field = screen.getByLabelText(en.Generation.directives.emphasizeLabel);
+      for (let index = 0; index < 10; index += 1) {
+        await user.type(field, `term-${index}{Enter}`);
+      }
+
+      expect(field).toBeDisabled();
+      expect(screen.getByRole('status')).toHaveTextContent("That's the limit of 10");
+
+      await user.click(screen.getByRole('button', { name: 'Generate' }));
+      await waitFor(() => expect(bodies).toHaveLength(1));
+
+      expect((await sent(0)).emphasize).toHaveLength(10);
+    });
+
+    /**
+     * `F-038`'s third field. A profile with no saved appearance sets is the
+     * ordinary case, and a chooser whose only option is "your usual settings"
+     * would be a control for a decision nobody has to make — it teaches the
+     * reader a feature is broken rather than absent.
+     */
+    it('draws no appearance chooser while there is nothing to choose', async () => {
+      const user = userEvent.setup();
+      render(<GenerateScreen />, { wrapper });
+
+      await user.click(screen.getByRole('button', { name: en.Generation.directives.show }));
+      await screen.findByLabelText(en.Generation.directives.noteLabel);
+
+      expect(screen.queryByLabelText(en.Generation.directives.appearanceLabel)).toBeNull();
+    });
+
+    it('offers the saved sets once there are any, and sends the one picked', async () => {
+      const user = userEvent.setup();
+      signIn();
+      await createCustomization({ name: 'Compact, one page', baseTemplateId: 'classic' });
+
+      render(<GenerateScreen />, { wrapper });
+      await user.click(screen.getByRole('button', { name: en.Generation.directives.show }));
+
+      const chooser = await screen.findByLabelText(en.Generation.directives.appearanceLabel);
+      // The empty value is first and selected: an omitted `customizationId` is
+      // what nearly every request means.
+      expect(chooser).toHaveValue('');
+
+      await user.selectOptions(chooser, 'Compact, one page');
+      await user.click(screen.getByRole('button', { name: 'Generate' }));
+
+      await waitFor(() => expect(bodies).toHaveLength(1));
+      expect(await sent(0)).toHaveProperty('customizationId');
+    });
+
+    /**
+     * `B-118`, `F-040`. A set deleted in another tab is the ordinary way to
+     * hold a stale id, and the check now runs **at the gate** rather than in
+     * the worker — so finding out costs a round trip instead of one of the
+     * day's generations.
+     *
+     * What the screen owes is the repair, not a sentence of its own: the
+     * panel draws the server's message, and the dead selection is dropped so
+     * that pressing Generate again is a different request rather than the
+     * same refusal.
+     */
+    it('drops a saved set the server says is gone', async () => {
+      const user = userEvent.setup();
+      signIn();
+      const saved = await createCustomization({ name: 'Roomy', baseTemplateId: 'classic' });
+
+      render(<GenerateScreen />, { wrapper });
+      await user.click(screen.getByRole('button', { name: en.Generation.directives.show }));
+
+      const chooser = await screen.findByLabelText(en.Generation.directives.appearanceLabel);
+      await user.selectOptions(chooser, 'Roomy');
+
+      // Deleted somewhere else entirely, which is what the item is about.
+      await deleteCustomization(saved.id!);
+
+      await user.click(screen.getByRole('button', { name: 'Generate' }));
+
+      await screen.findByRole('alert');
+      // Cleared, so the next press does not send the same dead id — and the
+      // refetched list no longer offers it.
+      await waitFor(() =>
+        expect(screen.queryByLabelText(en.Generation.directives.appearanceLabel)).toBeNull(),
+      );
+    });
+
+    /**
+     * Every way out of an error on this screen resubmits, and it resubmits
+     * what the reader meant. Dropping the directives would change the request
+     * behind a button whose whole purpose is to send the same one again.
+     */
+    it('keeps them across the resolution that sends the request again', async () => {
+      const user = userEvent.setup();
+      render(<GenerateScreen />, { wrapper });
+
+      await user.click(screen.getByRole('button', { name: en.Generation.directives.show }));
+      await user.type(
+        screen.getByLabelText(en.Generation.directives.emphasizeLabel),
+        'observability{Enter}',
+      );
+
+      await user.click(screen.getByLabelText('Job posting'));
+      await user.paste(NOT_A_POSTING);
+      await user.click(screen.getByRole('button', { name: 'Generate' }));
+
+      const panel = await screen.findByRole('alert');
+      await user.click(within(panel).getByRole('button', { name: en.resolutions.continue_anyway }));
+
+      await waitFor(() => expect(bodies).toHaveLength(2));
+      expect(await sent(1)).toMatchObject({
+        emphasize: ['observability'],
+        acknowledgePreflight: true,
+      });
+    });
+  });
+
   it('offers the three ways out of a refused posting, in the order sent', async () => {
     await submitPosting(NOT_A_POSTING);
 
     const panel = await screen.findByRole('alert');
-    const buttons = screen.getAllByRole('button').map((button) => button.textContent);
 
     // The sentence is the one for *this* refusal, not a generic one: three
     // words is `too_short`, and § 18.1's four measurements each say something
     // the others do not (`B-043`).
     expect(panel).toHaveTextContent('too short to work from');
-    expect(buttons).toEqual([
-      'Continue anyway',
-      'Paste the full posting',
-      'Build a general resume instead',
-      // The form's own submit, outside the resolution row.
-      'Generate',
-    ]);
+
+    /*
+      Scoped to the panel. This read every button on the screen until `B-104`
+      put a second control outside it, and the order it was asserting is the
+      **server's** — `resolutions` arrive ranked and the row must not re-sort
+      them. Counting the form's own submit into that list made the assertion
+      depend on how many other controls the screen happens to have, which is
+      not what it is about.
+    */
+    expect(
+      within(panel)
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['Continue anyway', 'Paste the full posting', 'Build a general resume instead']);
+
+    // Still outside the row, which is the other half of the claim: the
+    // panel's buttons are the server's, and the form's own submit is not one
+    // of them.
+    expect(within(panel).queryByRole('button', { name: 'Generate' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Generate' })).toBeInTheDocument();
   });
 
   it('acknowledges the preflight rather than repeating the request', async () => {

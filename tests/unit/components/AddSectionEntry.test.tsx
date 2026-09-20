@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
 import { NextIntlClientProvider } from 'next-intl';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -99,7 +99,11 @@ describe('adding a section', () => {
   it('offers every kind the API accepts', async () => {
     await openSectionForm();
 
-    const values = screen
+    // Scoped to the kind select. The form grew a second one when `B-116`'s
+    // four layouts landed (D13), and an unscoped query reads both lists as
+    // one — which passes or fails on how many dropdowns the form happens to
+    // have rather than on what this one offers.
+    const values = within(screen.getByLabelText(en.Editor.addSection.kind))
       .getAllByRole('option')
       .map((option) => (option as HTMLOptionElement).value);
 

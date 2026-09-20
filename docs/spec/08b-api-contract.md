@@ -90,10 +90,15 @@ yayımlanıyor** (`F-023`), alanın tipi `String` kalsa bile: `ImportWarning.cod
 JSONB'den geri okunduğu için `String` duruyor, şeması yine de enum.
 
 **`params.reason`** (`UNPARSEABLE_JOB_DESCRIPTION`) — bir ilanın neden analize
-dönüşemediği. Sekiz değer, tek kod: kod API sonucunu adlandırıyor, `reason`
-kullanıcıya söylenecek cümleyi. `confidence` ve `skillsFound` sekizden yalnız
+dönüşemediği. Yedi değer, tek kod: kod API sonucunu adlandırıyor, `reason`
+kullanıcıya söylenecek cümleyi. `confidence` ve `skillsFound` yediden yalnız
 ikisini ölçer ve ön kontrolden sıfır gelir, dolayısıyla **mesaj önce `reason`'a
 göre seçilir**.
+
+> **Sekizinci bir değer vardı ve kalktı: `no_responsibilities`** (düzeltme,
+> denetim 2026-09-16). Kapı onu Aşama 3'te kaybetti, bu tablo taşımaya devam
+> etti — gerekçesi ve ölçülmüş bedeli § 18.4'te. Frontend dalı `B-072`'nin
+> cevabında zaten kaldırmıştı; **sözlüğü sekiz sayan son yer burasıydı.**
 
 | `reason` | Nereden | Anlamı |
 |---|---|---|
@@ -103,7 +108,6 @@ göre seçilir**.
 | `not_job_like` | ön kontrol | Düzyazı, ama iş ilanına benzemiyor |
 | `low_confidence` | kapı (§ 18.4) | Model tahmin ettiğini bildirdi |
 | `too_few_skills` | kapı | İkiden az aranan beceri |
-| `no_responsibilities` | kapı | Sorumluluk yok; Faz B'nin eşleyeceği bir şey yok |
 | `suspicious_output` | kapı | Bir alan o alanın olabileceğinden çok uzun — cevap analiz şeklinde değil |
 
 Ayrım kullanıcıya görünür: ön kontrol **kullanıcının metnini** reddetti ve
@@ -121,68 +125,41 @@ Her kodun `params` anahtarları **ve tipleri** burada: ICU mesajı bunlarsız
 yazılamaz, çünkü `{pinnedPages, number}` biçimlendirir, `{pinnedPages}`
 yalnızca yerine koyar.
 
-| Kod | HTTP | `params` |
-|---|---|---|
-| `INSUFFICIENT_PROFILE` | 422 | `completeness: integer`, `missing: string[]` |
-| `UNPARSEABLE_JOB_DESCRIPTION` | 422 | `reason: string`, `confidence: number`, `skillsFound: integer` |
-| `CONFLICTING_PREFERENCES` | 409 | `pinnedPages: number`, `maxPages: integer` |
-| `FEATURE_REQUIRES_ACCOUNT` | 403 | `feature: string` |
-| `QUOTA_EXCEEDED` | 429 | `metric: string`, `resetsAt: timestamp` |
-| `ALL_PROVIDERS_UNAVAILABLE` | 503 | `tried: string[]` |
-| `COMPILATION_FAILED` | 502 | `detail: string`, `rawSourceAvailable: boolean` |
-| `PAGE_LIMIT_EXCEEDED` | 422 | `actual: integer`, `limit: integer` |
-| `REWRITE_VALIDATION_FAILED` | 500 | `atomId: uuid`, `issues: string[]` |
-| `COVER_LETTER_REJECTED` | 422 | `issues: string[]` |
-| `EMBEDDING_UNAVAILABLE` | 503 | — |
-| `GENERATION_PAUSED` | 503 | — |
-| `UNSUPPORTED_DOCUMENT` | 415 | `accepted: string[]` |
-| `DOCUMENT_TOO_LARGE` | 413 | `limitBytes: integer` |
-| `PDF_NOT_TEXT_BASED` | 422 | — |
-| `PDF_ENCRYPTED` | 422 | — |
-| `EXTRACTION_EMPTY` | 422 | — |
-| `EXTRACTION_TIMEOUT` | 504 | — |
-| `LANGUAGE_UNDETECTED` | 422 | `detectedCandidates: string[]` |
-| `PROFILE_QUOTA_EXCEEDED` | 429 | `limit: integer`, `resetsAt: timestamp` |
-| `ANONYMOUS_SESSION_EXPIRED` | 401 | — |
-| `ATOM_LIMIT_EXCEEDED` | 422 | `limit: integer`, `current: integer` |
-| `NO_ANONYMOUS_PROFILE` | 404 | — |
-| `PROFILE_ALREADY_EXISTS` | 409 | — |
-| `GENERATION_ARTIFACT_EXPIRED` | 410 | — |
-| `GENERATION_SUPERSEDED` | 409 | — |
-| `EDIT_NOT_UNDERSTOOD` | 422 | — |
-| `CSRF_TOKEN_INVALID` | 403 | — |
-| `AUTHENTICATION_REQUIRED` | 401 | — |
-| `OAUTH_FAILED` | 400 | `reason: string` |
-| `MAGIC_LINK_INVALID` | 400 | — |
-| `TRANSLATION_FAILED` | 422 | — |
-| `RATE_LIMITED` | 429 | `resetsAt: timestamp` |
-| `CHALLENGE_FAILED` | 403 | — |
-| `RESOURCE_NOT_FOUND` | 404 | — |
-| `VERSION_CONFLICT` | 412 | — |
-| `PRECONDITION_REQUIRED` | 428 | — |
-| `VALIDATION_FAILED` | 400 | `fields: string[]` |
-| `INTERNAL_ERROR` | 500 | — |
-| `METHOD_NOT_ALLOWED` | 405 | — |
-| `NOT_ACCEPTABLE` | 406 | — |
-| `UNSUPPORTED_MEDIA_TYPE` | 415 | — |
+**Tablonun kendisi artık burada değil: `error-catalogue.md`.** Repo kökünde,
+`openapi.json`'ın yanında, ve **`ErrorCode` enum'undan üretiliyor** — kod, HTTP
+durumu, parametre adları, tipleri ve sıraları. `make catalogue` yeniden üretir;
+`ErrorCatalogueDocumentTest` commit'li dosya ile enum ayrıştığı anda düşer.
+
+**Neden elle yazılan bir tablo olmaktan çıktı.** Elle yazılırken bir muhafız
+onu enum'a karşı okuyordu ve iş görüyordu — `F-017` ilk koşuşunda beş eksik
+satır buldu, yalnız biri bildirilmişti. Ama bu, belgeyi adım adım güncellenmesi
+gereken ikinci bir otorite yapıyordu, ve testi `docs/` altındaki bir yola
+bağlıyordu. Üretilen bir tablo kayamaz, ve dosya prose nereye taşınırsa taşınsın
+frontend'in çekebileceği yerde kalır.
+
+**Düzeltme — frontend bu tabloyu okumuyor, hiç okumadı.** Buradaki eski cümle
+*"frontend'in katalog testi `params`'ı bu tablodan okuyor"* diyordu; ölçüldü
+(2026-09-16) ve yanlış: `tests/unit/i18n/errorCatalogue.test.ts` kendi elle
+yazılmış `PARAMS` sabitini tutuyor ve tabloyu yalnızca yorumda kaynak olarak
+anıyor. Yani zincirin ortadaki halkası tek uçtan bağlıydı. `error-catalogue.md`
+artık **üretilen** taraf olduğu için frontend'in kopyasını karşılaştıracağı
+sabit bir şey var; ikisini bağlamak o reponun işi ve bir handoff maddesi
+(`B-110`).
 
 **`F-017`: tabloda beş satır eksikti, biri bildirilmişti.** Frontend
 `COVER_LETTER_REJECTED`'ı gördü; tabloyu `ErrorCode`'a karşı okuyan bir muhafız
-yazılınca dördü daha çıktı. Eksikliğin bedeli belge değil test:
-**frontend'in katalog testi `params`'ı bu tablodan okuyor**, yani satırı olmayan
-bir kodun mesajı yanlış argümanla yazılsa da yeşil kalıyor — `B-043`'ün delik
-bulduğu yerin aynısı.
+yazılınca dördü daha çıktı. Bu, tablonun üretilmesinin gerekçesi: bir kodun
+satırının olmaması yalnızca bir belge eksiği değil, o kodun mesajının yanlış
+argümanla yazılabilmesi demekti — `B-043`'ün delik bulduğu yerin aynısı.
 
 `GENERATION_PAUSED` § 44.3'ün acil freni, § 10-security.md'de tarif ediliyordu
 ve buraya hiç geçmemişti. `METHOD_NOT_ALLOWED`, `NOT_ACCEPTABLE` ve
 `UNSUPPORTED_MEDIA_TYPE` D.6.8'in kendi tablosunda duruyordu; **iki tablo bir
 kataloğun tamamı değil**, ve "tam katalog" diyen bu.
 
-**Tablo artık bir testin okuduğu şey.** `ErrorCatalogueSpecTest` her satırı
-enum'a karşı doğruluyor — kod, HTTP durumu, parametre adları, tipleri ve
-sıraları — ve iki yönde de: koda karşılık gelmeyen bir satır da düşürüyor.
-Sıra da denetleniyor, çünkü tabloyu okuyan kişi ICU mesajını hangi
-parametrenin önce geldiğine bakarak yazıyor.
+**Sıra da sözleşmenin parçası**, çünkü tabloyu okuyan kişi ICU mesajını hangi
+parametrenin önce geldiğine bakarak yazıyor — üretim onu enum'un bildirim
+sırasından alıyor.
 
 **`COVER_LETTER_REJECTED`'ın `issues` sözlüğü kapalı** ve altı değerli:
 `unsupported_claim`, `number_invented`, `experience_overstated`,
@@ -482,7 +459,7 @@ Sayaçlar (`generationsUsedToday`, `dailyGenerationQuota`, `quotaResetsAt`)
 | Süre dolduğunda | `401` + `ANONYMOUS_SESSION_EXPIRED` + `sign_up` resolution'ı. |
 | TTL davranışı (Bölüm 9 "2 saat sonra silinir" diyor) | **TTL kayar: etkinlikte tazelenir.** Mutlak iki saat, inceleme ekranında çalışmakta olan kullanıcıyı keserdi — P8'in önlemek için var olduğu emek kaybı. Kullanıcıya gösterilen metin "son etkinliğinden iki saat sonra" demeli. |
 | CSRF (Bölüm 40.1 adını koyup tanımlamıyor) | Spring Security'nin double-submit varsayılanı: sunucu okunabilir (HttpOnly olmayan) `XSRF-TOKEN` çerezi verir, istemci güvensiz metotlarda (POST/PUT/PATCH/DELETE) `X-XSRF-TOKEN` başlığında yankılar, uyuşmazlıkta `403` + `CSRF_TOKEN_INVALID`. Oturum çerezi zaten `SameSite=Strict` olduğu için asıl vektör kapalı; bu derinlemesine savunmadır, o yüzden kimlikle birlikte gelir, öne çekilmez. |
-| Profil devralma | `POST /api/v1/profile/claim` → `200`, `404 NO_ANONYMOUS_PROFILE`, `409 PROFILE_ALREADY_EXISTS`. 409 yalnız **değiştir veya koru** sunar, **birleştir sunmaz**: birleştirme atom düzeyinde tekilleştirme demek (Bölüm 7, Jaro-Winkler + embedding) ve o Aşama 4 işi. Erken sunmak ya endpoint'i alakasız bir işe bağlar ya da içeriği sessizce çoğaltan bir birleştirme gönderir — P8 ikincisini yasaklar. API, yerine getiremeyeceği bir resolution'ı adlandırmamalı. |
+| Profil devralma | **Böyle bir uç yok, ve olamaz — § 41.3.3 bunu zaten yazıyor** (düzeltme, denetim 2026-09-15). Devralma girişin *içinde* koşuyor: giriş yeni bir oturum ve yeni bir çerez yazıyor, anonim oturum id'si yalnız o tek istek boyunca okunabiliyor, ve anonim profilin id'si ondan tek yönlü türüyor. Sonradan çağrılan bir uç, tarayıcının çoktan attığı bir tanımlayıcıyı isterdi. Sonuç `POST /auth/verify`'ın `profileUpgrade` alanında dönüyor — dört değerli: `upgraded`, `none`, `kept_existing`, `unavailable`. **`NO_ANONYMOUS_PROFILE` bu yüzden katalogdan kaldırıldı**: hiçbir şeyin üretemediği bir kod, frontend'in hiç görünmeyecek bir cümle yazmasıdır. `PROFILE_ALREADY_EXISTS` kalıyor — onu içe aktarım üretiyor. Birleştirme hâlâ sunulmuyor, ve gerekçesi aynı: atom düzeyinde tekilleştirme (Bölüm 7) ayrı bir iş, ve içeriği sessizce çoğaltan bir birleştirme P8'i çiğner. |
 
 **`AUTHENTICATION_REQUIRED` neden ayrı bir kod (Adım 3.3).** Katalog uzun süre
 oturumu **hiç olmayan** bir isteğe cevapsızdı: `ANONYMOUS_SESSION_EXPIRED`
@@ -519,6 +496,12 @@ ile yönlendirmedir. Katalogdaki 400, biri onu JSON olarak isterse ne olacağıd
 - **`/api/v1/warmup` public API değildir** (Bölüm 52.5). OpenAPI şemasının
   dışında tutulur, nginx üzerinden yönlendirilmez, üretilen tiplerde
   görünmemelidir.
+- **`POST /api/v1/webhooks/resend` de şemada yoktur** (kayıt: denetim
+  2026-09-20). Sözleşme Resend'in; frontend tiplerini bu belgeden üretiyor ve
+  hiç çağırmayacağı bir gövdenin tipini almasının karşılığı yok. Uç `@Hidden`,
+  gerekçe controller'ın javadoc'unda, ve § 35.2'nin kaynak haritası artık
+  satırın yanında bunu söylüyor — söylemediği sürece haritayı `openapi.json`'a
+  karşı okuyan her denetim onu eksik bir uç sanıyor.
 
 **Etkinleştirici.** springdoc-openapi ilk endpoint'le birlikte gelir. On altı
 maddenin altısı, `npm run gen:api` çalışabilir olduğu anda kendiliğinden kapanır

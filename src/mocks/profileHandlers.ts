@@ -20,6 +20,10 @@ import {
   type MockSection,
 } from './profileFixture';
 import { currentMaxAtoms, isAccount, TEMPLATES } from './sessionFixture';
+import { ACCENT_COLOR_PATTERN, APPEARANCE_RANGES } from '@/lib/api/endpoints/profile';
+import type { components } from '@/types/api';
+
+type Schemas = components['schemas'];
 
 /**
  * Skill names the dictionary folds into one (`B-077`).
@@ -141,6 +145,154 @@ function completenessOf(selfDescription: string | undefined): number {
 function findAtom(id: string): MockAtom | undefined {
   return fixture.atoms.find((atom) => atom.id === id);
 }
+
+/**
+ * What `GET /templates` publishes, **read off the running backend**
+ * (2026-09-20) rather than copied from § 33.5's table.
+ *
+ * Those two disagree, and the section says they may: its numbers are written
+ * as approximations "for the catalogue", and the endpoint exists because a
+ * chooser needs the measured answer. Classic is 53 rather than ~54 and modern
+ * 52 rather than ~50 — close enough that a copied table looks right and far
+ * enough that a screen built on it would print a figure the server never sent.
+ *
+ * **The versions are not all the same**, which the first draft of this
+ * assumed: classic is on 6, modern on 3 and compact on 2. They move when a
+ * template's geometry does, so they move independently.
+ */
+const TEMPLATE_REGISTRY: Schemas['TemplateSummary'][] = [
+  {
+    id: 'classic',
+    version: 6,
+    pageTextHeightPt: 722.7,
+    baselineSkipPt: 13.6,
+    approximateLinesPerPage: 53,
+  },
+  {
+    id: 'compact',
+    version: 2,
+    pageTextHeightPt: 737.15489,
+    baselineSkipPt: 11.39996,
+    approximateLinesPerPage: 64,
+  },
+  {
+    id: 'modern',
+    version: 3,
+    pageTextHeightPt: 715.47255,
+    baselineSkipPt: 13.6,
+    approximateLinesPerPage: 52,
+  },
+];
+
+/**
+ * What a template's own settings are, when a saved set names none of them.
+ *
+ * **Measured against the running backend, and it is a behaviour rather than a
+ * payload:** `POST /customizations` does not echo what it was sent — it
+ * resolves every omitted field to the template's own and returns the whole
+ * set. A mock that echoed would let a screen be written against blanks and
+ * then show real numbers in production, which is the wrong way round for a
+ * surprise.
+ *
+ * `modern`'s blue accent is `B-092`'s, and the other two are black — the one
+ * difference the section calls out by name.
+ */
+const TEMPLATE_DEFAULTS: Record<
+  string,
+  Pick<
+    Schemas['CustomizationResponse'],
+    'fontSizePt' | 'marginInches' | 'lineSpacing' | 'fontFamily' | 'accentColor'
+  >
+> = {
+  classic: {
+    fontSizePt: 11,
+    marginInches: 0.5,
+    lineSpacing: 1,
+    fontFamily: 'modern',
+    accentColor: '000000',
+  },
+  compact: {
+    fontSizePt: 10,
+    marginInches: 0.4,
+    lineSpacing: 0.95,
+    fontFamily: 'modern',
+    accentColor: '000000',
+  },
+  modern: {
+    fontSizePt: 11,
+    marginInches: 0.55,
+    lineSpacing: 1,
+    fontFamily: 'modern',
+    accentColor: '1D4ED8',
+  },
+};
+
+/** Twenty per profile, which the endpoint states and this enforces. */
+const CUSTOMIZATION_LIMIT = 20;
+
+/**
+ * Which published ranges a body falls outside of, if any.
+ *
+ * Encoded rather than trusted to the sliders: the controls cannot produce an
+ * out-of-range value, which is exactly why the refusal has to live here — a
+ * bound only the client keeps holds until somebody writes a second caller,
+ * and "a bad page is not reachable from here" is the promise the ranges make.
+ */
+function boundsRefusal(body: {
+  fontSizePt?: number;
+  marginInches?: number;
+  lineSpacing?: number;
+  accentColor?: string;
+}): string[] | undefined {
+  const fields: string[] = [];
+
+  for (const [field, range] of Object.entries(APPEARANCE_RANGES)) {
+    const value = body[field as keyof typeof APPEARANCE_RANGES];
+    if (value !== undefined && (value < range.min || value > range.max)) fields.push(field);
+  }
+
+  if (body.accentColor !== undefined && !ACCENT_COLOR_PATTERN.test(body.accentColor)) {
+    fields.push('accentColor');
+  }
+
+  return fields.length > 0 ? fields : undefined;
+}
+
+/**
+ * What a public GitHub account has on offer (`B-106`, § 31.8).
+ *
+ * **One of each kind**, and that is the whole reason this is a list rather
+ * than a single row: a suggestion carrying `matchedEntryId` is a **merge**
+ * onto a project already written about — it adds languages and a link and
+ * leaves the person's sentences alone — while one without becomes a **new
+ * project** with GitHub's own description as its first line. Those do
+ * different things to somebody's own writing, and a fixture with only one of
+ * them would let the screen be written as though there were one outcome.
+ *
+ * `matchedEntryId` points at a real entry in this fixture, so the merge case
+ * names something that exists rather than a uuid nobody can look up.
+ */
+const GITHUB_SUGGESTIONS = [
+  {
+    name: 'query-monitor',
+    description: 'Watches slow queries and says which index would have helped',
+    url: 'https://github.com/elifyildirim/query-monitor',
+    stars: 900,
+    skills: ['go', 'postgres'],
+    matchedEntryId: 'entry-getir',
+    confidence: 0.82,
+    merge: true,
+  },
+  {
+    name: 'ingest-bench',
+    description: 'A small benchmark for streaming ingestion pipelines',
+    url: 'https://github.com/elifyildirim/ingest-bench',
+    stars: 41,
+    skills: ['kafka', 'java'],
+    confidence: 0.55,
+    merge: false,
+  },
+] satisfies Schemas['GitHubSuggestion'][];
 
 export const profileHandlers = [
   /** The head. Never 404s, and its version travels only as an ETag. */
@@ -919,6 +1071,79 @@ export const profileHandlers = [
     });
   }),
 
+  /**
+   * Putting a label on an atom (`B-103`).
+   *
+   * Three things are encoded here because each is something a client gets
+   * wrong by assuming the opposite:
+   *
+   * - **The stored form is canonical** — trimmed and lowercased — and that is
+   *   what comes back, not what was typed. A screen echoing its own input
+   *   would show a word that is not the one being scored.
+   * - **No `If-Match`.** A tag is a row of its own and the atom is untouched,
+   *   so there is no version of the atom for a precondition to be about. The
+   *   operation declares 412 and 428 the way its siblings on this path do;
+   *   neither is reachable through it.
+   * - **Idempotent**, and the second call returns the tag that is already
+   *   there **with its original `source`**. Re-tagging does not rewrite who
+   *   put it there, so a person typing over the extraction's guess does not
+   *   quietly claim it.
+   */
+  http.post('*/api/v1/profile/atoms/:id/tags', async ({ request, params }) => {
+    const id = String(params.id);
+    const instance = `/api/v1/profile/atoms/${id}/tags`;
+    const atom = findAtom(id);
+
+    if (!atom) {
+      return HttpResponse.json(problem(404, 'RESOURCE_NOT_FOUND', instance), { status: 404 });
+    }
+
+    const body = (await request.json()) as { label?: unknown };
+    const raw = typeof body.label === 'string' ? body.label.trim() : '';
+
+    if (raw === '' || raw.length > 60) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['label'] }),
+        { status: 400 },
+      );
+    }
+
+    // `toLocaleLowerCase('en')`, never the runner's locale: this is the
+    // scorer's comparison form, and Turkish folds `I` to `ı` (rule 11).
+    const label = raw.toLocaleLowerCase('en');
+    const existing = (atom.tags ?? []).find((tag) => tag.label === label);
+
+    if (existing) return HttpResponse.json(existing, { status: 201 });
+
+    const tag = { id: crypto.randomUUID(), label, source: 'user' as const };
+    atom.tags = [...(atom.tags ?? []), tag];
+
+    return HttpResponse.json(tag, { status: 201 });
+  }),
+
+  /**
+   * Taking a label off.
+   *
+   * `404` when this atom is not wearing that tag: a removal that did not
+   * happen is not reported as one, and a client that treated a missing row as
+   * success would leave a tag on screen that it believes it deleted.
+   */
+  http.delete('*/api/v1/profile/atoms/:id/tags/:tagId', ({ params }) => {
+    const id = String(params.id);
+    const tagId = String(params.tagId);
+    const instance = `/api/v1/profile/atoms/${id}/tags/${tagId}`;
+    const atom = findAtom(id);
+    const worn = (atom?.tags ?? []).some((tag) => tag.id === tagId);
+
+    if (!atom || !worn) {
+      return HttpResponse.json(problem(404, 'RESOURCE_NOT_FOUND', instance), { status: 404 });
+    }
+
+    atom.tags = (atom.tags ?? []).filter((tag) => tag.id !== tagId);
+
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   http.patch('*/api/v1/profile/atoms/:id/variants/:variantId', async ({ request, params }) => {
     const id = String(params.id);
     const variantId = String(params.variantId);
@@ -971,6 +1196,20 @@ export const profileHandlers = [
     if (body.content) {
       variant.content = body.content;
       variant.plainText = (body.content.runs ?? []).map((run) => run.t).join('');
+
+      /*
+        **Writing words is what makes a wording yours** (`B-052`, and the
+        other side of the refusal above). The flag is the server's to set and
+        it sets it here rather than taking anybody's word for it — which is
+        also what ends the note on a machine translation (`B-107`): the reader
+        edits the sentence, the row stops being one nobody wrote, and the
+        notice goes for the one reason that means they read it.
+
+        Missing until now, and invisible while nothing drew the flag: the mock
+        happily kept `userEdited: false` on a row the client had just
+        rewritten.
+      */
+      variant.userEdited = true;
     }
 
     // Three-state: absent keeps what is there, `null` returns to the neutral
@@ -1108,6 +1347,265 @@ export const profileHandlers = [
     }
 
     atom!.variants = atom!.variants?.filter((candidate) => candidate.id !== variantId);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  /**
+   * What a public GitHub account has that this profile does not (`B-106`).
+   *
+   * The shapes that matter to a screen are the ones encoded here:
+   *
+   * - **a merge and a new project are different suggestions**, and the fixture
+   *   carries one of each. A list with only new projects would let the screen
+   *   be written as though there were one outcome, and the two do different
+   *   things to somebody's own sentences.
+   * - **an empty list is one state, not four.** An account that does not
+   *   exist, a GitHub that will not answer and one with nothing significant
+   *   in it all come back the same way, because none of them is something a
+   *   person can act on.
+   * - **the refusal is a `400` with `username`**, and only when the request
+   *   names no account *and the profile names none either*. A screen that
+   *   required the field would be enforcing something the endpoint does not.
+   */
+  http.post('*/api/v1/profile/github/suggestions', async ({ request }) => {
+    const instance = '/api/v1/profile/github/suggestions';
+    const body = (await request.json().catch(() => ({}))) as { username?: unknown };
+    const username =
+      typeof body.username === 'string' && body.username.trim() !== ''
+        ? body.username.trim()
+        : (fixture.profile.contact?.github ?? '');
+
+    if (username === '') {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['username'] }),
+        { status: 400 },
+      );
+    }
+
+    // A name a test can use to reach the state that is not an error and not a
+    // list either. Every other name answers with the fixture.
+    if (username === 'nobody') return HttpResponse.json([]);
+
+    return HttpResponse.json(GITHUB_SUGGESTIONS);
+  }),
+
+  /**
+   * Writes the ones that were picked.
+   *
+   * **One transaction, and a repository the account no longer has is skipped
+   * rather than refused** — the list is a moment old and a repository can be
+   * renamed between reading it and choosing it. So `applied` can be smaller
+   * than what was asked for, and a screen that assumed the two were equal
+   * would report a number nobody promised.
+   */
+  http.post('*/api/v1/profile/github/apply', async ({ request }) => {
+    const instance = '/api/v1/profile/github/apply';
+    const body = (await request.json().catch(() => ({}))) as { repositories?: unknown };
+    const asked = Array.isArray(body.repositories) ? body.repositories.map(String) : [];
+
+    if (asked.length === 0) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['repositories'] }),
+        { status: 400 },
+      );
+    }
+
+    const known: string[] = GITHUB_SUGGESTIONS.map((suggestion) => suggestion.name);
+    const applied = asked.filter((name) => known.includes(name)).length;
+
+    return HttpResponse.json({ applied });
+  }),
+
+  /**
+   * The registry's own list, with the measured capacity of each (§ 33.5).
+   *
+   * **Not the same question as `capabilities.allowedTemplates`**: that says
+   * which of these a caller may pick, this says what they are. The numbers
+   * are § 33.5's — classic ~54 lines a page, modern ~50, compact ~64 — and
+   * they are the whole reason the endpoint exists, because a chooser showing
+   * three names and no density asks somebody to pick blind.
+   *
+   * **No display name and no description**, deliberately: those are
+   * sentences, and the server sends keys. The id is the key.
+   */
+  http.get('*/api/v1/templates', () => HttpResponse.json(TEMPLATE_REGISTRY)),
+
+  /** The sets this profile has kept, oldest first — the order they were made. */
+  http.get('*/api/v1/customizations', () => HttpResponse.json(fixture.customizations)),
+
+  /**
+   * Keeping a set under a name (`F-038`, § 13.2).
+   *
+   * Three refusals are encoded, because each is a state the screen has to be
+   * able to reach:
+   *
+   * - **names are unique within a profile**, so a second set called the same
+   *   thing is a `409` rather than a silent second row;
+   * - **twenty per profile**, which is a `422` naming the limit;
+   * - **every value is bounded by the published ranges**, and that is what
+   *   makes a bad page unreachable from here.
+   */
+  http.post('*/api/v1/customizations', async ({ request }) => {
+    const instance = '/api/v1/customizations';
+    const body = (await request.json()) as Partial<Schemas['CustomizationRequest']>;
+
+    const name = (body.name ?? '').trim();
+    const baseTemplateId = body.baseTemplateId ?? '';
+
+    if (name === '' || !TEMPLATES.includes(baseTemplateId)) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], {
+          fields: [
+            ...(name === '' ? ['name'] : []),
+            ...(TEMPLATES.includes(baseTemplateId) ? [] : ['baseTemplateId']),
+          ],
+        }),
+        { status: 400 },
+      );
+    }
+
+    if (fixture.customizations.some((saved) => saved.name === name)) {
+      return HttpResponse.json(
+        problem(409, 'VALIDATION_FAILED', instance, [], { fields: ['name'] }),
+        {
+          status: 409,
+        },
+      );
+    }
+
+    if (fixture.customizations.length >= CUSTOMIZATION_LIMIT) {
+      return HttpResponse.json(
+        problem(422, 'VALIDATION_FAILED', instance, [], { fields: ['name'] }),
+        { status: 422 },
+      );
+    }
+
+    const outOfRange = boundsRefusal(body);
+    if (outOfRange) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: outOfRange }),
+        { status: 400 },
+      );
+    }
+
+    /*
+      **Resolved, not echoed** — measured against the running backend on
+      2026-09-20. Sending only `fontSizePt` comes back with the margin, the
+      line spacing, the family and the accent filled in from the template's
+      own settings, and with *that* template's version rather than a constant.
+
+      Echoing instead would let a screen be written against blanks and then
+      meet real numbers in production, which is the wrong direction for a
+      surprise: a list of saved sets showing "—" in development and "0.55in"
+      once deployed is a bug nobody finds until it is live.
+    */
+    const saved: Schemas['CustomizationResponse'] = {
+      id: crypto.randomUUID(),
+      name,
+      baseTemplateId,
+      templateVersion:
+        TEMPLATE_REGISTRY.find((template) => template.id === baseTemplateId)?.version ?? 1,
+      ...TEMPLATE_DEFAULTS[baseTemplateId],
+      ...(body.fontSizePt === undefined ? {} : { fontSizePt: body.fontSizePt }),
+      ...(body.marginInches === undefined ? {} : { marginInches: body.marginInches }),
+      ...(body.lineSpacing === undefined ? {} : { lineSpacing: body.lineSpacing }),
+      ...(body.fontFamily ? { fontFamily: body.fontFamily } : {}),
+      ...(body.accentColor ? { accentColor: body.accentColor } : {}),
+      createdAt: new Date().toISOString(),
+    };
+
+    fixture.customizations.push(saved);
+
+    return HttpResponse.json(saved, { status: 201 });
+  }),
+
+  /**
+   * Rename, or re-set.
+   *
+   * **The settings are replaced whole when `baseTemplateId` is present.**
+   * Every parameter is read together by the renderer and a half-applied
+   * geometry is a page nobody asked for — so a body carrying only a name is a
+   * rename that leaves the settings alone, and that difference is encoded
+   * rather than described.
+   */
+  http.patch('*/api/v1/customizations/:id', async ({ params, request }) => {
+    const id = String(params.id);
+    const instance = `/api/v1/customizations/${id}`;
+    const saved = fixture.customizations.find((candidate) => candidate.id === id);
+
+    if (!saved) {
+      return HttpResponse.json(problem(404, 'RESOURCE_NOT_FOUND', instance), { status: 404 });
+    }
+
+    const body = (await request.json()) as Partial<Schemas['CustomizationPatch']>;
+
+    if (body.name !== undefined) {
+      const name = body.name.trim();
+
+      if (name === '') {
+        return HttpResponse.json(
+          problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['name'] }),
+          { status: 400 },
+        );
+      }
+
+      if (fixture.customizations.some((other) => other.id !== id && other.name === name)) {
+        return HttpResponse.json(
+          problem(409, 'VALIDATION_FAILED', instance, [], { fields: ['name'] }),
+          { status: 409 },
+        );
+      }
+
+      saved.name = name;
+    }
+
+    if (body.baseTemplateId !== undefined) {
+      const outOfRange = boundsRefusal(body);
+      if (outOfRange) {
+        return HttpResponse.json(
+          problem(400, 'VALIDATION_FAILED', instance, [], { fields: outOfRange }),
+          { status: 400 },
+        );
+      }
+
+      saved.baseTemplateId = body.baseTemplateId;
+
+      // Replaced whole: a field left out of a settings write is cleared, not
+      // kept, because the renderer reads them together.
+      for (const field of [
+        'fontSizePt',
+        'marginInches',
+        'lineSpacing',
+        'fontFamily',
+        'accentColor',
+      ] as const) {
+        if (body[field] === undefined) delete saved[field];
+        else Object.assign(saved, { [field]: body[field] });
+      }
+    }
+
+    return HttpResponse.json(saved);
+  }),
+
+  /**
+   * Deleting one.
+   *
+   * **A generation already made with it is unaffected**: the snapshot holds
+   * the settings themselves rather than an id, so the document still
+   * re-renders exactly as it was sent. Nothing cascades, and the screen owes
+   * no warning about old resumes.
+   */
+  http.delete('*/api/v1/customizations/:id', ({ params }) => {
+    const id = String(params.id);
+    const instance = `/api/v1/customizations/${id}`;
+    const known = fixture.customizations.some((candidate) => candidate.id === id);
+
+    if (!known) {
+      return HttpResponse.json(problem(404, 'RESOURCE_NOT_FOUND', instance), { status: 404 });
+    }
+
+    fixture.customizations = fixture.customizations.filter((saved) => saved.id !== id);
+
     return new HttpResponse(null, { status: 204 });
   }),
 ];

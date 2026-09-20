@@ -21,6 +21,224 @@ Aşama 3 iki tarafta da kapandı (2026-09-02): on üç dilim, açık `B-nnn` de
 `F-nnn` de yok, ve dağıtım isteyen ikisi dışında her yol gerçek uca karşı
 ölçüldü.
 
+### Kapanış sırası — karar 2026-09-20
+
+**Bir kereliğine sabit bir sıra var.** § XI-A.7 "sabit sıra yok" diyor ve bu
+hâlâ doğru; aşağıdaki, o serbestliğin bir kez kullanılmasıdır: on yedi açık
+madde, şemanın dokümanı geçtiği dört nokta ve § 55'in kalan `[F]` kalemleri
+tek bir listeye dizildi ki "bitti" denebilecek bir son olsun.
+
+**Verilen dört karar.** Kapsam **§ 55'in `[F]` kalemlerinin tamamı** — kasıtlı
+boşluklar dahil, büyüme ve açık kaynak dahil. **VPS bu turda alınmıyor**, yani
+ölçüm isteyen her şey D14'te toplanıyor ve kod onsuz yazılmıyor. **`B-110`
+bağlanıyor** (D2). Sıra önce yazıldı, sonra koşulacak.
+
+**Ölçüm — bu listenin başlangıç noktası, 2026-09-20.** `npm run gen:api`
+koşuldu (`api.d.ts` 964 satır), **821 birim testinin hepsi yeşil**, ve
+`typecheck` **sekiz** hata veriyor. Sekizi de aşağıda bir dilime bağlı;
+başka hiçbir yerde kırık yok.
+
+| # | Dilim | Kapattığı |
+|---|---|---|
+| D1 | Şemanın açtığı sekiz kırık + iki bayat çeviri anahtarı | `B-111`, `B-112`, `B-116` |
+| D2 | `errorCatalogue.test` üretilen tabloyu ayrıştırır | `B-110` |
+| D3 | `EXTRACTION_TIMEOUT` metni 503'ten ayrılır; `archive` dalı; iki yeni çözüm anahtarı ve davranışı | `B-113`, `B-114` |
+| D4 | `StaleWording` anonimde çizilmez | `B-115`'in tek eksiği |
+| D5 | İndirme: `html` + `source` | `B-105` |
+| D6 | Üretim isteği: `emphasize`, `note` | `B-104` + `F-038` |
+| D7 | Arşivleme | `B-102` |
+| D8 | Seçim gerekçeleri: `matchedKeywords`, `heldBackReason` ×4 | `B-108` |
+| D9 | Atom etiketleri | `B-103` |
+| D10 | `auto` çevirinin üç sonucu | `B-107` |
+| D11 | GitHub içe aktarımı | `B-106` |
+| D12 | Şablon kapasitesi + adlandırılmış özelleştirmeler + `customizationId` | `F-038` |
+| D13 | Kasıtlı boşlukların kapananları | aşağıdaki tablo |
+| D14 | Açık kaynak ve büyüme | § 55 `[F]` |
+
+**Sıranın gerekçesi.** D1-D4 bugünkü kırığı kapatır ve hiçbir yeni yüzey
+açmaz — CI yeşile dönmeden yeni ekran çizmek, kırığı iki katına çıkarmaktır.
+D5-D8 telde **zaten var olan** alanları okur, yani en ucuz getiri. D9-D12
+yeni ekran ister. D13-D14 karar ve metin ağırlıklı, ve ikisi de kodun geri
+kalanı otururken yazılmalı.
+
+**İki `F-nnn` açıldı (D3'te).** `F-038` şemada olup hiçbir maddede
+adlandırılmayan **dördünü** tek maddede soruyor: `POST /generations`'ın
+**`note`** alanı geldi ve `B-104` "gelmedi ve bilerek" diyor, `customizationId`
+de öyle, ve `GET /templates` ile `/customizations` hiç anılmadı. Dördü de
+`gen:api`'nin bulduğu şeyler, bir maddenin değil — **şema dokümanı geçti**, ve
+bu, `B-101`'in bağlamak istediği muhafızın yokluğunun ta kendisi. `F-037` ise
+`choose_language`'ın dolduracağı alanı istiyor.
+
+**Ucu olmayan üç iş `F-nnn` olarak kalır, D13'e girmez:** § 37.5'in arka plan
+iş göstergesi, § 33.3'ün "yeniden hesaplanıyor"u, ve ürün dokümanının saydığı
+ATS uyumluluk doğrulaması. Üçünün de bugün yayımlanan bir durumu yok. **Dördü
+`keep_top_pinned`** — sunucu bu çözümü gönderebiliyor, `ErrorPanel` onu
+bilerek çizmiyor, çünkü basıldığında dolduracağı istek alanı yok. Çizilmemesi
+doğru ama kalıcı değil: mutlak kural 7 sunucunun gönderdiği bir çözümün düğme
+olmasını istiyor, yani burada ya alan gelir ya çözüm kalkar.
+
+**D13 — kasıtlı boşlukların verdikti.** Aşağıdaki tablonun gerekçeleri
+duruyor; değişen, hangilerinin artık kapatılacağı. Bir boşluğu kapatmaya
+"gerekçesi bayatladı" dendiği için karar veriliyor, "artık yapabiliriz"
+dendiği için değil.
+
+| Boşluk | Verdikt |
+|---|---|
+| Mark'ları düşüren metin düzenleme | **Kapanıyor.** Mutlak kural 4 zaten bileşeni adıyla sayıyor; uyarı bir köprüydü, şablon değil |
+| Sözcükleme tek başına silinemiyor | **Kapanıyor.** `deleteVariant` uçta ve `endpoints/profile.ts`'te var, iki reddi de mock üretiyor, yalnız düğme yok |
+| Profil başında dil eksenleri | **Kapanıyor.** Gerekçesi 2026-09-08'de bayatladı; `allowedLanguages` yayımlanıyor ve okunuyor |
+| Bölüm düzeni seçici | **Kapanıyor**, ve `two_column` kalktığı için artık dört değer. Dördünün ICU adı ve About için `paragraph` varsayılanı ile — yarısı bu boşluğun kendisiydi |
+| "Bir sayfadan kısa CV" notu | **Kalıyor — verdikt ölçümle düzeltildi (D13).** "`pageCount < maxPages` sayılabilir bir olgu" doğru ama `GenerationResponse` **`maxPages` yayımlamıyor**; profilin bugünkü tercihiyle karşılaştırmak o üretimin neyle yapıldığını değil bugün neyin ayarlı olduğunu söylerdi. `F-039` alanı istiyor |
+| `format=source` düğmesi | D5'te kapanıyor — uç artık `400` dönmüyor |
+| PDF önizlemesi | **Kalıyor.** Ölçülmüş karar ve ölçümü değiştiren bir şey olmadı |
+| Başvurularda duruma göre süzme | **Kalıyor.** `B-093`'ün gerekçesi aynen geçerli; tek sayfanın üstünde istemci süzgeci, süzdüğünü sandığı şeyi süzmez |
+
+**D14'ün ikiye ayrıldığı yer.** `README` (bugün hâlâ "Stage 0 — skeleton"
+diyor), `CONTRIBUTING`, `SECURITY` ve `.env.example` denetimi dağıtım
+istemiyor ve yazılır. **Analitik, `deploy.yml` ve `NEXT_PUBLIC_SITE_URL`
+istiyor** — bunlar yazılmaz, aşağıdaki dağıtım kontrol listesine geçer.
+Ölçümü alacak bir yer yokken huni ölçen kod yazmak, çalıştığını hiç
+görmeyeceğimiz bir şeyi bakım yüküne çevirmek olurdu.
+
+**§ 55'in iki büyüme kalemi kapsam dışı bırakıldı, ve ikisi de kendi
+gerekçesiyle** — `handoff/to-backend.md`'ye `F-nnn` gitmiyor, ikisi de
+frontend'in kendi kararı:
+
+- **Blog yazılmayacak.** Yerine **tek bir statik "nasıl çalışıyor"
+  sayfası**: sayfa garantisini ve atom modelini anlatan, çevrilmiş, kendi JS'i
+  olmayan bir pazarlama sayfası. SEO getirisi blogun çoğu, bakım yükü yok —
+  bir blog, yazılacak içeriği olmayan bir hattır, ve boş hat SEO getirmez.
+  Sayfa `(app)` dışında kalır, yani landing'in 0.0 KB'ı korunur ve
+  next-intl'in `Link`'i yerine açık locale önekli `<a>` kullanılır.
+- **Üçüncü arayüz dili eklenmeyecek.** 495 anahtar, ve sayı asıl maliyet
+  değil: her ICU dalı — `UNPARSEABLE_JOB_DESCRIPTION`'ın yedi reason'ı,
+  `OAUTH_FAILED`'ın yedisi, `FEATURE_REQUIRES_ACCOUNT`'ın beşi,
+  `COVER_LETTER_REJECTED`'ın altısı — elle doğrulanmak zorunda, ve
+  `errorCatalogue.test` her birini ayrı cümle olmaya zorluyor. Kullanıcısı
+  olmayan bir dil, yazılan her yeni mesajda ödenen bir vergidir. **İçerik dili
+  ekseni bundan ayrı** ve değişmiyor: `allowedLanguages` backend'in, bugün
+  `["en","tr"]`, ve `auto` ilanı takip ediyor (`B-107`).
+
+### Kapanan dilimlerin kaydı → `archive/stage-4.md`
+
+D1…D14 oraya indi (2026-09-20), 400 satır sınırı yüzünden. Burada
+yalnız **hâlâ geçerli olan** kalıyor; bir dilimde neyin neden öyle yapıldığını
+arıyorsan `rg -n "D1 kapandı" docs/notes/archive/`.
+
+### Gerçek uca karşı ölçüm, ve atlanmış bir madde (2026-09-20)
+
+**`B-101` sıraya hiç girmemişti.** Analizde "küçük iş" diye durdu ve
+D1…D14'ün hiçbirine yazılmadı; kapanış "on yedisi de kapandı" diye bildirildi
+ve yanlıştı. Üstelik atlanan şey, `F-038`'de tekrar tekrar işaret edilen
+muhafızın ta kendisi — **şemanın dokümanı geçmesine izin veren şeyin
+yokluğu**. Bir kapanış listesinin kendi kalemini düşürmesi, listenin ölçülmesi
+gereken şey olduğunu söylüyor.
+
+Şimdi CI'da: `contract-check` backend'in `main/openapi.json`'ını çekiyor,
+tipleri yeniden üretiyor ve commit'liyle farkta düşüyor. **`main`, `build`
+değil** — maddenin asıl bulgusu buydu: eski URL üretilen ve gitignore'lu bir
+yolu gösteriyordu, yani hep 404 veriyor ve iş hep "skipping" dalına gidiyordu.
+**Atlayan bir muhafız, hiç olmayandan kötüdür: başarı bildirir.** `curl`
+`--fail-with-body` ile, çünkü sessizlik bu işin ortadan kaldırmak için var
+olduğu arıza biçimi. Yerelde koşuldu: backend'in commit'li şeması bizim
+`api.d.ts`'imizle **birebir**.
+
+**Yeni yüzeyin hepsi yalnız MSW'ye karşı doğrulanmıştı**, ve mock kendisiyle
+çelişemez. `:8080`'e karşı bir sonda koşuldu (§ Test ve ölçüm'ün kuralı) —
+etiketler, şablon registry'si, özelleştirmeler, GitHub önerileri, bölüm düzeni,
+`emphasize`/`note` sınırları. 18 kontrolün 17'si geçti; "düşen" biri sondanın
+kendi hatasıydı (`POST /auth/session` diye bir uç yok). **Üç fark çıktı.**
+
+**1. Registry'nin sayıları § 33.5'in tablosundan farklı.** Klasik 53 (tablo
+~54), modern 52 (tablo ~50). Bölüm kendi sayılarını "katalog için, yaklaşık"
+diye yazıyor ve uç zaten **ölçülmüş** cevabı vermek için var — yani çelişki
+değil, ama mock tabloyu kopyalamıştı. Kopyalanmış bir tablo *doğru görünür*:
+fark, ekranın sunucunun hiç göndermediği bir rakamı basması için yeterli.
+Mock artık ölçülen değerleri taşıyor, ve **sürümler de aynı değil** (klasik 6,
+modern 3, kompakt 2 — ilk taslak üçüne de 6 vermişti).
+
+**2. `POST /customizations` yankılamıyor, çözüyor.** Yalnız `fontSizePt`
+gönderilen bir istek, kenar boşluğu, satır aralığı, aile ve vurgu rengi
+şablonun kendisinden doldurulmuş olarak geri geliyor. Yankılayan bir mock,
+ekranın **boşluklara** karşı yazılıp üretimde gerçek sayılarla karşılaşmasına
+izin verirdi — sürprizin yanlış yönü: geliştirmede "—", dağıtımda "0.55in"
+gösteren bir liste, canlıya çıkana kadar kimsenin bulmadığı bir kusurdur.
+
+**3. Bilinmeyen bir `customizationId` reddedilmiyor** — `202`, iş kuyruğa
+giriyor. Uç açıklaması "başkasına ait bir set bulunamaz" diyor. Bu
+`B-116`'nın `two_column`'uyla **aynı şekil**: kişi bir şey seçiyor, hiçbir şey
+söylenmiyor, belgesi başkasını basıyor. `F-040`.
+
+**Bir de küçük bir alan adı farkı:** çok uzun bir terim `emphasize[0]` diye
+geri geliyor, `emphasize` diye değil — listeyi adlandıran bir cümleyle
+içindeki girdiyi adlandıran cümle arasındaki fark.
+
+**Kapasite testi sayıya değil iddiaya bağlandı.** Ölçülen değerleri teste
+yazmak, bir rakamı sabitlemek olurdu; test artık ucu okuyup ekranın **onu**
+bastığını doğruluyor — birisi makul görünen bir sayıyı koda gömdüğü gün düşer.
+
+**`B-100`…`B-116` ACK'lendi ve indi.** `to-frontend.md` 347 → **43 satır**;
+satır satır kayıt `resolved/to-frontend-2026-09.md`'de.
+
+### `B-117`…`B-119` — backend'in üç cevabı (2026-09-21)
+
+**`B-117` kod yazdırmadı:** dördü de D6 ve D12'de inmişti (`note`,
+`customizationId`, `GET /templates`, `/customizations` + 20 tavanı).
+
+**Sapma — tipler koşan sunucudan değil, backend'in commit'li şemasından
+üretildi.** `:8080`'deki derleme bayattı: `npm run gen:api` `api.d.ts`'i **hiç
+değiştirmedi**, ne `maxPages` ne `language` içindeydi. Kaynak
+`../atomcv-backend/openapi.json` (CI'ın `contract-check`'i de `main`'den onu
+çekiyor). **Bayat bir sunucu, eksik bir şemadan ayırt edilemez** — ikisi de
+"alan yok" der, ve dokümanın yanıldığı sonucuna götürür. Ayırt eden şey,
+şemanın **iki kopyasının** olması oldu.
+
+**`B-119` bir politikayı tersine çevirdi, kuralı değil.** `B-114` kaydı
+"`choose_language` çizilmiyor" diyor ve gerekçesi *cevabın gidecek alanı yok*
+idi; alan geldi, düğme çizildi. Yokluğunu doğrulayan test silinmedi,
+**yerine geçeni yazıldı** — o test zaten "alan indiği gün bu düğme borçtur"
+demek için vardı. Dropping kuralı yerinde: `keep_top_pinned` hâlâ düşüyor.
+Seçicinin listesi **iki yarısı da sunucunun**: reddin `detectedCandidates`'i
+önce (onaylanması en olası cevap), sonra `capabilities.allowedLanguages`.
+Beyan **dosya değişince düşer** — bir CV hakkında verilen cevap ötekini
+bağlamaz, üstelik beyan tespiti atlattığı için sessizce yanlış dil yazardı.
+
+**`B-118`'in notu yalnız üretimin kendi sınırına karşı çiziliyor.** `maxPages`
+yoksa not yok: eksik bir alan "sınır bir sayfaydı" demek değil. Satırda da
+**tek olgu** — sayfa sayısının yanına "kısa" rozeti aynı şeyi ikinci kez, ve
+doğru çıkmış bir belgeden daha yüksek sesle söylerdi. Bayat bir
+`customizationId`'nin `404`'ünde ekran **cümle yazmıyor**: paneli sunucunun
+metni çiziyor, ekranın yaptığı yalnız ölü seçimi düşürüp listeyi tazelemek —
+onarım, hata arayüzü değil (kural 7). Onarılmazsa bir sonraki basış aynı ölü
+id'yi yollar, yani çıkış değil döngü olur.
+
+**Kapı sırası ölçüldü, madde açılmadı.** Backend yeniden başlayınca üç sonda:
+11 MB + `language=zz` → **`413`**; `.png` + `language=zz` → **`400`,
+`fields:["language"]`** (`415` değil); aynı `.png` dilsiz → **`409`**. Sıra
+**413 → `400` → 409 → 415**; mock `language`'ı 413'ün önüne koymuştu,
+düzeltildi. Sorulacak değil bakılacak bir şeydi — `B-051`'de kapı sırası bir
+kez varsayılmış ve yanlış çıkmıştı. Aynı koşuda `gen:api` commit'li şemadan
+üretilenle **bayt bayt aynı** dosyayı verdi, yani yukarıdaki sapma kapandı.
+
+### Dağıtım günü — sırayla denenecekler
+
+Kod tarafında hiçbiri beklemiyor; hepsi **ölçüm** bekliyor.
+
+1. **`NEXT_PUBLIC_SITE_URL`'i ayarla.** Canonical, hreflang, `robots.txt` ve
+   `sitemap.xml` hepsi ondan kuruluyor; ayarlanmazsa localhost'a düşüyor.
+2. **CSP'yi gözle** (`B-100`). Politika `default-src 'self'` idi ve
+   Turnstile'ın script'iyle iframe'ini sessizce blokluyordu — düzeltildi, ve
+   düzeldiğinin tek kanıtı widget'ın çizilmesi.
+3. **OAuth sıçraması** (`B-048`), **sihirli bağlantının Turnstile'ı**
+   (`B-050`), **`B-083`'ün challenge'ı.** Üçü de bugüne kadar yalnız mock'a
+   karşı doğrulandı. `B-100` üçünün önündeki kapıyı açtı, yani sıra bu.
+4. **Yayımlanan gizlilik sayfasını `ProcessorAudit`'in açılış satırına karşı
+   oku** (`B-076`'dan kalan tek şey).
+5. **Analitik kararı yeniden açılır.** Umami, huni ölçümü — artık ölçümü
+   alacak bir yer var.
+6. **`deploy.yml`.** CI action'ları `@v5` ve bu yalnız push'ta doğrulanabilir;
+   `@v4` revert.
+
 ### Aşama 3'ten devrolan açıklar
 
 - ~~**Gizlilik politikasının sağlayıcı listesi eksik.**~~ **Bayat çıktı
@@ -86,7 +304,7 @@ yöntemi). Panel kapalı başlıyor, yani listeyi açmayan kimse ikinci isteği
 | **Profil başında dil eksenleri düzenlenemiyor** | `sourceLanguage`/`enabledLanguages` **içerik dili** ekseni (Bölüm 38.1), arayüz dili değil. Form ikisini de olduğu gibi geçiriyor ve ikisi de gövdede zorunlu (B-035). ⚠ **Gerekçesi bayatladı ve düzeltildi (2026-09-08):** satır "hangi diller sunulabilir `capabilities`'e bağlı ve o yayımlanmadı" diyordu — `allowedLanguages` yayımlanıyor ve okunuyor, gerçek uca karşı `["en","tr"]`. Bekleyen bağımlılık yok; kalan şey **çizilmemiş bir kontrol**, yani karar. Denetimde 8 satırın 7'si doğru çıktı, bu biri değil. |
 | **Bölüm düzeni seçtiren arayüz yok** | `sections.layout` beş değer alıyor (`B-073` ile `paragraph` da) ama hiçbir ekran onu göstermiyor ya da seçtirmiyor; sunucu her bölüm türü için doğrusunu zaten yazıyor. Çizilecekse beşinin de ICU adı ve About için `paragraph` varsayılanı gerekir — yarım hâli kullanıcıya anlamını bilmediği bir seçim verir. |
 | **"Yeniden hesaplanıyor…" göstergesi yok** | § 33.3 istiyor, durumu yayımlayan uç yok, ve `B-091` ekranda bir şey gerekmediğini söylüyor. Beklenmeyen bir iş için bekleme hissi üretmek olurdu. |
-| **`format=source` düğmesi yok** | Uç bugün `400` dönüyor (`B-094`). Çizilse hata paneline basardı; mock reddi üretiyor ki bir gün çağıran olursa orada görülsün. |
+| ~~**`format=source` düğmesi yok**~~ | **Kapandı, D5 (2026-09-20).** Gerekçesi "uç `400` dönüyor" idi ve `B-105` ikisini birden indirdi — `source` da `html` de. İki aşama boyunca çizilmemesi doğruydu: bir indirme düğmesinin hata paneli açması, hiç çizilmemiş olmasından kötüdür. |
 | **Başvurularda duruma göre süzme yok** | `B-093`: sayfalama gerektiğinde birlikte geliyor. Filtresi olmayan bir liste, filtresi olan bir ucın taklidinden iyidir. |
 
 ---

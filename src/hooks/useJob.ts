@@ -179,6 +179,9 @@ function toProgress(job: CachedJob | undefined): JobProgress {
     generationId: job?.generationId ?? null,
     pageCount: job?.pageCount ?? null,
     failure: job?.error ?? null,
-    done: status === 'completed' || status === 'failed' || status === 'cancelled',
+    // `cancelled` was a third arm here until `B-116` took it off the wire.
+    // Nothing cancels a job, so the value could not arrive; `isTerminal` in
+    // `endpoints/jobs.ts` carries the check that notices if it ever does.
+    done: status === 'completed' || status === 'failed',
   };
 }

@@ -65,13 +65,12 @@ POST   /api/v1/profile/atoms/{id}/tags
 DELETE /api/v1/profile/atoms/{id}/tags/{tagId}
 
 ── Ingestion ───────────────────────────────────────
-POST   /api/v1/ingestion/cv                 multipart → job
-POST   /api/v1/ingestion/cv/{jobId}/apply   gözden geçirme onayı
-POST   /api/v1/ingestion/github/connect
-POST   /api/v1/ingestion/github/apply
+POST   /api/v1/profile/import               multipart → job (F-029)
+POST   /api/v1/profile/github/suggestions   önerir, yazmaz
+POST   /api/v1/profile/github/apply         seçilenleri yazar
 
 ── Şablon ──────────────────────────────────────────
-GET    /api/v1/templates
+GET    /api/v1/templates                    şablon kataloğu
 GET    /api/v1/customizations
 POST   /api/v1/customizations
 PATCH  /api/v1/customizations/{id}
@@ -81,7 +80,7 @@ DELETE /api/v1/customizations/{id}
 POST   /api/v1/generations                  → 202 + job
 GET    /api/v1/generations
 GET    /api/v1/generations/{id}
-GET    /api/v1/generations/{id}/download?format=pdf|docx|source
+GET    /api/v1/generations/{id}/download?format=pdf|docx|html|source
 GET    /api/v1/generations/{id}/selection   tartılan satırlar, metniyle
 POST   /api/v1/generations/{id}/edits       Faz G: doğal dil
 POST   /api/v1/generations/{id}/selection   manuel toggle
@@ -101,12 +100,65 @@ DELETE /api/v1/applications/{id}
 
 ── Hesap ───────────────────────────────────────────
 GET    /api/v1/account/usage
-PATCH  /api/v1/account/email-preferences
+GET    /api/v1/account                      ayarlar
+PATCH  /api/v1/account                      ayarlar (§ 57.7'nin tercihi)
 DELETE /api/v1/account                      unutulma hakkı
+POST   /api/v1/email/unsubscribe            oturumsuz, opak jetonla
 
 ── Webhook ─────────────────────────────────────────
-POST   /webhooks/resend                     imza doğrulamalı
+POST   /api/v1/webhooks/resend              imza doğrulamalı · şemada YOK
 ```
+
+> **Webhook `openapi.json`'da yayımlanmıyor, ve bu bir karar** (kayıt: denetim
+> 2026-09-20). Uç `@Hidden`: sözleşme Resend'in, bizim değil, ve frontend
+> tiplerini o belgeden üretiyor — bizim hiç çağırmayacağı bir şeklin tipini
+> almasının karşılığı yok. Burada listelenmesinin sebebi haritanın **var olan
+> uçların** listesi olması; kaydın olmaması, haritayı şemaya karşı okuyan her
+> mekanik denetimin bunu "eksik uç" diye işaretlemesi demekti. Şema dışında
+> tutulan öteki uç `/api/v1/warmup` (EK D.6.7).
+
+#### 35.2.1 Haritanın yazıldığı gibi inmediği beş yer (denetim, 2026-09-15)
+
+Kaynak haritası ilk taslaktan beri değişmedi; kod beş yerde ondan ayrıldı ve
+ayrımların hiçbiri kayıtlı değildi. Yukarısı düzeltilmiş hâli, aşağısı
+gerekçeleri.
+
+| Haritada | Gerçekte | Neden |
+|---|---|---|
+| `POST /ingestion/cv` + `/{jobId}/apply` | `POST /profile/import` | `F-029`. Yapılan şey bir profile yazmak; ve gözden geçirme ayrı bir uç değil, § 31.6'nın ekranı profilin kendi uçlarını kullanıyor |
+| `/ingestion/github/connect` \| `/apply` | `/profile/github/suggestions` \| `/apply` | Aynı karar. **`connect` diye bir adım yok**: § 31.8 yalnız public veri okuyor, yani bağlanacak bir şey ve saklanacak bir token yok (§ 40.6.1) |
+| `PATCH /account/email-preferences` | `PATCH /account` | § 57.7'nin kararı: tercih hesabın bir ayarı, ve hesabın tek bir ayar nesnesi var |
+| `POST /webhooks/resend` | `POST /api/v1/webhooks/resend` | Tek bir önek. Sürümsüz bir yol, sürümlenmiş bir API'nin yanında ikinci bir sözleşme olurdu |
+| `GET /templates`, `/customizations` × 4 | **beşi de var** | Aşağıda |
+
+**Tablo satır kazandı, ve beş uç da indi.** Bu blok bir aşama boyunca
+tersini söyledi — `template_customizations`'a hiçbir şey yazmadığını, Katman
+B'nin ayarlarının `profiles.preferences.appearance` içinde yaşadığını, ve
+"tablo satır kazandığı gün beş uç da gerekir; o gün geldiğinde bu blok
+silinir" diye bitiyordu. O gün geldi; blok silinmedi.
+
+Bugünkü hâli: `SavedCustomization` `template_customizations`'a yazıyor,
+`CustomizationController` `GET`/`POST /customizations` ve
+`PATCH`/`DELETE /customizations/{id}` yayımlıyor, ve `GET /templates` katalogu
+veriyor. Beşi de `openapi.json`'da.
+
+> **Ve haritanın kendisi bir tur daha "(uç yok)" dedi** (denetim,
+> 2026-09-16). 09-15 turu bu tabloyu düzeltti, § 35.2'nin Şablon bölümü ise
+> olduğu gibi kaldı — yani aynı dosya seksen satır arayla iki şey söylüyordu,
+> ve okuyanın önce gördüğü yanlış olanıydı. Harita artık beş ucu da sayıyor.
+> Aşağıdaki ders bu yüzden iki kez kazanıldı: **bir bloğu düzeltmek, onu
+> gösteren satırı düzeltmiyor.**
+
+**`capabilities.allowedTemplates` kalktığı yerde durmuyor** (§ 35.7). İkisi
+farklı soruya cevap veriyor: yetenek listesi *bu oturumun neyi
+kullanabileceğini* söylüyor (anonim çağıran daha azını görüyor),
+`GET /templates` ise kayıttaki şablonların kendisini — adı, sürümü, yaklaşık
+kapasitesi. Bir seçim ekranı ikisini birden istiyor.
+
+> **Ders, ve tek satır:** *bir bloğun kendi çıkış koşulunu yazması onu
+> silmiyor.* Bu paragraf "o gün geldiğinde silinir" diyordu ve o günü kimse
+> fark etmedi, çünkü koşulu kontrol eden hiçbir şey yoktu. Denetim
+> (2026-09-16) onu koda karşı okuyarak buldu.
 
 > **Entry tarih aralığı sıralı olmak zorunda (F-002).** `startDate` ve `endDate`
 > ikisi de doluysa `endDate >= startDate`; ihlal **400 `VALIDATION_FAILED`** +
@@ -192,8 +244,9 @@ bir tane var.
 
 > **Düzeltme (`F-009`).** Yukarıdaki gövde **düzdür**; `directives` ve
 > `options` diye iç içe nesneler yoktur. Alanlar: `jobDescription?`,
-> `acknowledgePreflight`, `maxPages?`, `language?` — ve **`generalMode` diye
-> bir alan yoktur.** Bir süre şemada göründü, çünkü `GenerationRequest`
+> `acknowledgePreflight`, `maxPages?`, `language?`, `coverLetter?`,
+> `challengeToken?` ve `emphasize?` (§ 18.7.1, denetim 2026-09-15) — ve
+> **`generalMode` diye bir alan yoktur.** Bir süre şemada göründü, çünkü `GenerationRequest`
 > üzerindeki `isGeneralMode()` türetilmiş metodunu Jackson bir alan sandı;
 > `@JsonIgnore` ile kapatıldı. Genel modu isteyen tek şey `jobDescription`'ın
 > yokluğudur, ikinci bir bayrak iki ayrı "genel" tanımı doğururdu.
@@ -257,11 +310,45 @@ bir tane var.
 > **Buradaki her id'yi düzenleme ucu kabul eder**; maddenin tamamı budur.
 >
 > `text` **o CV'nin bastığı** metindir, bugünkü profilin değil (§ 24.2'nin
-> gerekçesi). Skor yayımlanmaz — § 23.3'ün yüzdeye itirazı bir madde yanındaki
-> sayı için de geçerli, ve sıra zaten sıralamayı söylüyor. Üst sınır yok:
-> modele gösterilen 30 satır prompt'un bedeliyle ilgilidir, kendi geçmişini
-> gezen kişi satır başına ödemiyor. Profilden silinmiş atom listelenmez, geri
-> konamaz çünkü.
+> gerekçesi). Üst sınır yok: modele gösterilen 30 satır prompt'un bedeliyle
+> ilgilidir, kendi geçmişini gezen kişi satır başına ödemiyor. Profilden
+> silinmiş atom listelenmez, geri konamaz çünkü.
+
+#### 35.3.1 P7'nin üçünden ikisi indi (denetim, 2026-09-16)
+
+**İlke 7 her seçimin gerekçesinin gösterilmesini istiyor ve üç şey
+adlandırıyor: skor, eşleşen keyword'ler, red nedeni.** Üçü de
+hesaplanıyordu. Hiçbiri yayımlanmıyordu — `SelectionLine` `atomId`, `text` ve
+`onPage` taşıyordu, yani **gerekçesi bildirilmemiş bir sıralama**, ki İlke 7
+tam olarak o şekli dışlamak için var. § 1.2'nin beşinci iddiası da bunun
+üstünde duruyor.
+
+**`matchedKeywords` ve `heldBackReason` indi. Skor inmedi, ve bu bir karar.**
+§ 23.3'ün yüzdeye itirazı bir madde yanındaki sayı için de geçerli — okuyanı
+onu kendi emeği hakkında bir hüküm saymaya davet ediyor — ve sıra zaten
+sıralamanın söylediğini söylüyor. Öteki ikisi hüküm değil, **kanıt**.
+
+**`matchedKeywords` yayımlanabilmek için önce hesaplanmak zorundaydı.**
+§ 14.5 ve § 20.5 alanı ikisi de listeliyor ve ne `SelectedAtom` ne
+`ScoredAtom` taşıyordu: Faz B'nin iki karşılaştırması bunu zaten belirleyip
+yalnız **sayısını** tutuyordu. "8'in 2'si eşleşti" bir not, "go, postgres" bir
+gerekçe. Sıralı, ve bu bir sunum tercihi değil: okunduğu kümeler `Set.copyOf`
+sonucu ve JVM koşusu başına salt'lanmış sırada geziliyor (CLAUDE.md), yani
+sırasız bir liste JSONB kolona ve § 51.2'nin determinizm karşılaştırmasına her
+koşuda başka türlü düşerdi — yerelde geçen, runner'da düşen, flake gibi okunan.
+
+**`heldBackReason`'ın hesaplanacak bir şeyi yoktu.** Dört değeri okuyanı dört
+ayrı yere gönderiyor: `BUDGET` sayfa sınırına, `INACTIVE` profil editörüne,
+`EXCLUDED_BY_DIRECTIVE` bu CV üzerinde yaptığı düzenlemeye,
+`ENTRY_BELOW_MINIMUM` bütün olarak düşen entry'ye. Şemada **kapalı enum**:
+istemci ICU `select`'ini ancak sözlüğü bilerek yazabilir.
+
+**Sayfaya girmeyen satır eşleşen terim taşımıyor.** Anlık görüntüye yalnız
+seçilenler yazılıyor, ve burada uydurmak Faz B'yi yeniden koşturmak olurdu —
+§ 24.1'in yapmayın dediği tek şey.
+
+**Eski anlık görüntüler boş okunuyor**, düşmüyor: geçen hafta yapılmış bir
+üretim yine açılıyor.
 
 > **`supersededByGenerationId` (`F-031`).** Emekli bir üretim halefini
 > adlandırır; yalnız `status` `superseded` iken gelir. Kenar veritabanında ters
@@ -298,11 +385,20 @@ bir tane var.
 
 **Sunucu çeviri anahtarı gönderir, metin değil.** Frontend `errors.CONFLICTING_PREFERENCES` anahtarını kendi dilinde çözer. `resolutions` dizisinden butonlar otomatik üretilir.
 
-> **Frontend (EK D.9 · 7, 10-11).** Tam katalog **EK D.6.1'de**: 27 kod, HTTP
-> durumları ve her kodun `params` anahtarları **tipleriyle**. `en.json` ve
-> `tr.json` artık buradan yazılabilir. Üç kod dokümanın gövdesinde yoktur ve
-> Adım 1.2'de eklendi: `RESOURCE_NOT_FOUND`, `VERSION_CONFLICT`,
-> `VALIDATION_FAILED`.
+> **Frontend (EK D.9 · 7, 10-11).** Tam katalog **repo kökündeki
+> `error-catalogue.md`'de**: kod, HTTP durumu, `params` anahtarları ve
+> **tipleri**. `en.json` ve `tr.json` buradan yazılır.
+>
+> **Bu satır EK D.6.1'i gösteriyordu ve oraya bakmak artık yanlış cevap
+> veriyordu** (denetim, 2026-09-16). Tablo `ErrorCode` enum'undan
+> **üretilen** bir dosyaya taşındı (§ 08b) ve `ErrorCatalogueDocumentTest`
+> ikisi ayrıştığı an düşüyor; EK D'deki elle yazılmış kopya ise olduğu yerde
+> kaldı ve bayatladı. Ayrılık ölçüldü: o kopya **27 kod** sayıyor, enum
+> **41**; üretemediğimiz bir kod listeliyor (`NO_ANONYMOUS_PROFILE`, 09-15
+> denetiminde kaldırıldı) ve `UNPARSEABLE_JOB_DESCRIPTION`'ın
+> `params.reason`'ını hiç taşımıyor — kullanıcıyı dört ayrı ekrana gönderen
+> alan o. Oradan yazılan bir `en.json`, hiç görünmeyecek bir cümle yazıp
+> gereken dördünü yazmazdı.
 >
 > Sunucu **bildirilmemiş bir `params` alanı göndermez** — gövde kurulurken
 > katalog doğrulanıyor, eksik ya da fazla anahtar orada patlıyor. Bir alan

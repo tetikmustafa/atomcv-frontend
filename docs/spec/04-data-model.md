@@ -74,6 +74,18 @@ Bu tasarım, alternatif metin özelliğini "özel durum" olmaktan çıkarıp mod
 > Migration uygulandığı için artık değiştirilemez; farkı buradan değil EK D'den
 > oku.
 
+> **Ve aşağıdaki blok V1'dir, bugünkü şema değil** (düzeltme, denetim
+> 2026-09-16). On altı migration daha uygulandı ve hiçbiri buraya işlenmedi;
+> blokta duran satırların bir kısmı bugünkü veritabanı hakkında yanlış:
+> `profiles.user_id` nullable, `profiles` iki kolon daha taşıyor, `generations`
+> bir tane, `sections.layout` **dört** değer alıyor (V9 beşinciyi ekledi, V17
+> `two_column`'u düşürdü), `jobs`'un idempotency indeksi başka bir indeks,
+> `jobs.status` dört değerli ve `jobs.type` artık bir CHECK taşıyor,
+> `generations.status` da öyle, `email_preferences` diye bir tablo yok, ve
+> `template_capacities` diye bir tablo var. **Delta § 13.2'de**, ve bölüm
+> kendine "tam" dediği için orası bu bölümün parçası — blokta durup okuyan biri
+> şemayı bildiğini sanarak çıkıyordu.
+
 ```sql
 -- ══════════════════════════════════════════════════════════
 -- V1__initial_schema.sql
@@ -440,6 +452,67 @@ CREATE TABLE feature_flags (
 | `version` kolonları | JPA `@Version` → optimistic locking → ETag desteği |
 | Ebeveynlerde `UNIQUE (id, profile_id)` + kompozit FK | Denormalize edilen `profile_id`'nin ebeveyn satırınkiyle aynı olduğunu hiçbir şey garanti etmiyordu; uyuşmazlık sessiz bir kiracılar-arası sızıntı olurdu. `atoms.entry_id IS NULL` durumunda uygulanmaz — bölüm düzeyi atomlar kasıtlı olarak öyle |
 
+### 13.2 V1'den sonra uygulananlar
+
+Yukarıdaki blok `V1__initial_schema.sql`'i anlatıyor. Uygulanmış bir migration
+değiştirilemediği için (mutlak kural 2) şema ondan sonra yalnız yeni dosyalarla
+ilerledi. **Bu bölüm deltadır ve bloğa geri işlenmez:** birebir kopyası olduğu
+dosya duruyorken bloğu düzenlemek, onu ne V1 ne bugün yapardı — iki sürümün
+ortasında, hangisini anlattığı belirsiz bir metin kalırdı.
+
+**Kural: yeni bir migration buraya bir satır ekler, aynı commit'te.**
+
+| Migration | Şemaya ne oldu |
+|---|---|
+| `V2__narrow_oauth_providers` | `oauth_identities.provider` CHECK'i `('google','github')` — LinkedIn çıktı. Blokta işli olan tek delta |
+| `V3__job_idempotency_covers_anonymous` | `jobs (user_id, idempotency_key)` unique indeksi **düştü**; yerine `jobs_owner_idempotency_key_idx`, `(COALESCE(user_id::text, anon_session_id), idempotency_key)` üzerinde. Anonim işte `user_id` NULL'dır ve NULL hiçbir unique kısıtı çiğnemez — eski indeks anonim tarafta hiçbir şey korumuyordu |
+| `V4__one_feedback_per_generation` | `generation_feedback_one_per_user`, `(generation_id, user_id)` üzerinde unique indeks |
+| `V5`, `V6`, `V7`, `V8` | **Yalnız veri.** İçe aktarımın yazdığı ulaşılamaz `min_atoms` değerlerini, `layout`'ları ve uydurulmuş bir bölüm başlığını mevcut satırlarda onarır; kolon yok, kısıt yok |
+| `V9__a_summary_is_a_paragraph` | `sections_layout_check` artık **beş** değer alıyor: `bullet_list`, `entry_list`, `inline_list`, `two_column`, **`paragraph`**. Düzyazı madde imi almaz, ve `paragraph` `inline_list`'in yeniden kullanımı değil |
+| `V10__an_anonymous_profile_is_a_row_with_an_expiry` | `profiles.user_id` **nullable**; `profiles.expires_at TIMESTAMPTZ`; `profiles_owner_xor_expiry` CHECK'i `((user_id IS NULL) <> (expires_at IS NULL))`; `expires_at IS NOT NULL` üzerinde kısmi indeks. Kısıt bir konvansiyon değil, **değişmez**: bir profilin ya sahibi vardır ya son kullanma tarihi — ikisi birden de, hiçbiri de olamaz. Kayıt olmayı da atomik yapar, çünkü `user_id`'yi yazan UPDATE `expires_at`'i aynı ifadede temizlemek zorunda |
+| `V11__a_rewrite_outlives_the_generation_that_made_it` | `generations.rewritten_content JSONB`, atom id'siyle anahtarlı. `content_snapshot` bunu taşıyor **gibi görünür ve taşımaz** — `RenderRequest` id, skor ve kilit taşımıyor, yalnız basılanı, yani oradaki metin ait olduğu atoma geri eşlenemez (§ 24.2) |
+| `V12__a_measured_capacity_outlives_the_request_that_paid_for_it` | Yeni tablo: `template_capacities` — aşağıda |
+| `V13__a_header_is_as_tall_as_its_own_text` | `profiles.header_costs JSONB NOT NULL DEFAULT '{}'`, geometri **ve** dile göre anahtarlı: aynı başlık başka bir kenar boşluğunda başka türlü sarıyor, ve "E-posta" ile "Email" aynı genişlikte değil |
+| `V14__a_person_can_stop_the_post` | `users.lifecycle_emails BOOLEAN NOT NULL DEFAULT true` ve `users.unsubscribe_token UUID NOT NULL DEFAULT gen_random_uuid()`; ikincisi UNIQUE, çünkü bağlantıya tıklayanın elinde yalnız o token var (§ 57.7) |
+| `V15__a_preference_lives_on_the_account_that_holds_it` | **`email_preferences` düştü.** Bloktaki üç kolonuna (`onboarding`, `product_updates`, `unsubscribed_at`) hiçbir zaman hiçbir şey yazmadı: tercih V14'te `users`'a indi, çünkü bir gelen kutusunun oturumu yok ve bağlantının oturumsuz ulaşılabilir olması gerekiyordu. Tabloyu canlı gösteren tek şey **iki entegrasyon testiydi** — biri varlığını, öteki kaskadın sildiğini doğruluyordu. Dururken, bir e-posta tercihini uygulayacak bir sonraki kişiye iki makul yer sunuyordu ve biri yanlıştı (denetim, beşinci tur) |
+| `V16__the_column_says_what_can_actually_write_to_it` | `atom_variants_created_by_check`: `created_by IN ('user','llm_translate')`. V1'in kolon yorumu dört yazar sayıyordu, kolon iki tanesini gördü — `llm_extract` hiç yazılmadı (içe aktarım kişinin kendi cümlelerini tutuyor ve bilerek `user` işaretliyor), `llm_rewrite` de yazılmaz (Faz D'nin yeniden yazımı varyant değil, `generations.rewritten_content`; § V11). İkisi de Java enum'unda ve **yayımlanan API şemasındaydı**, yani frontend hiç gelmeyecek bir değer için dal yazabilirdi. EK D "kapalı sözlüğün sahibi migration'dır" diyor; bu kolonun kısıtı hiç yoktu (denetim, beşinci tur) |
+| `V17__four_vocabularies_narrow_to_what_can_be_written` | **Dört kapalı sözlük, üretilemeyen değerlerinden arındı** (denetim, altıncı tur). `generations.status` ilk kez bir CHECK aldı ve `('completed','superseded')` diyor — `failed`'i hiçbir şey yazmıyordu, çünkü `selection_state` `NOT NULL` ve seçimden önce düşen koşunun yazacak satırı yok; enum'un kendi javadoc'u bunu zaten söylüyor, şema ise değeri yayımlıyordu. `jobs.status` beşten dörde indi: `cancelled`'ı yalnız `Job.cancel` yazabilirdi ve onun tek çağıranı kendi testiydi. `jobs.type` **ilk kez bir CHECK aldı** (V1 altısını yorumda sayıyordu, bir yorum hiçbir şey reddetmez) ve `email` listeden çıktı — ne kuyruğa veren var ne handler'ı, posta commit sonrası olayla gidiyor. `sections.layout` dörde indi: **`two_column` bir girdiydi** — uç kabul ediyordu, CHECK izin veriyordu, renderer bilerek entry list basıyordu (§ 33.5, ATS), yani kişi bir düzen seçiyor ve belgesi başkasını basıyordu. Tek veri onarımı bu sonuncusunda: satırlar zaten basıldıkları şeye, `entry_list`'e çevriliyor |
+
+```sql
+-- ══════════════════════════════════════════════════════════
+-- V12__a_measured_capacity_outlives_the_request_that_paid_for_it.sql
+-- ══════════════════════════════════════════════════════════
+
+-- Katman B: font, kenar boşluğu, satır aralığı — verili bir geometrinin
+-- sayfasının ne tuttuğu, bir kez ölçülür.
+--
+-- Kapasite kişiye değil özelleştirmeye aittir: 9.5pt'de 0.6in kenar
+-- boşluğundaki iki kişi aynı soruyu soruyor ve cevap aynı on yedi sayı. Bu
+-- yüzden tabloda ne `user_id` ne `profile_id` var ve kapsamlı bir
+-- repository'den geçmiyor — mutlak kural 3 kullanıcı verisi hakkındadır, bu
+-- ise bir sayfa hakkında aritmetik.
+CREATE TABLE template_capacities (
+    cost_key                TEXT PRIMARY KEY,
+    page_text_height_pt     DOUBLE PRECISION NOT NULL,
+    text_width_pt           DOUBLE PRECISION NOT NULL,
+    baseline_skip_pt        DOUBLE PRECISION NOT NULL,
+    item_baseline_skip_pt   DOUBLE PRECISION NOT NULL,
+    fixed_costs             JSONB NOT NULL,
+    measured_at             TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+`fixed_costs` tek JSONB kolon, parça başına bir kolon değil: mobilya
+renderer'ın işi ve iki kez büyüdü (`SECTION_LIST_CLOSE`, `INLINE_ROW`),
+kolonlaştırmak her seferinde bir migration demekti — ve satır ya bütün olarak
+okunuyor ya hiç.
+
+**Hiçbir satır seed edilmiyor.** Klasik ve kompakt ölçülmüş sayılarını
+`TemplateRegistry`'de tutuyor: anlattıkları preamble'ın yanında okunabildikleri
+ve `LatexCalibrationIT`'in her koşuda yeniden türetebildiği yerde. Buraya
+kopyalamak tek bir doğruya iki kaynak verirdi, ve veritabanındaki kimsenin
+kontrol etmediği olurdu.
+
 ---
 
 ## 14. JSONB Yapıları
@@ -548,7 +621,27 @@ isteğin kendi `language` alanı ikisini de yener.
 }
 ```
 
-`rejected.reason` değerleri: `BUDGET` | `LOW_SCORE` | `INACTIVE` | `DIVERSITY_CAP` | `USER_EXCLUDED`
+`rejected.reason` değerleri: `BUDGET` | `INACTIVE` | `EXCLUDED_BY_DIRECTIVE` | `ENTRY_BELOW_MINIMUM`
+
+> **Sözlük üç yerden ayrılmıştı** (düzeltme, denetim 2026-09-16). Satır
+> `BUDGET | LOW_SCORE | INACTIVE | DIVERSITY_CAP | USER_EXCLUDED` diyordu:
+>
+> - **`LOW_SCORE` ve `DIVERSITY_CAP` üretilemez.** § 19.3 mutlak eşiği
+>   reddediyor — sistem elemiyor değil sıralıyor — yani düşük skor tek başına
+>   hiçbir atomu düşürmüyor; ve § 20.3'ün çeşitlilik kısıtı bir **tavan**
+>   değil bir **azalan getiri**: skoru düşürüyor, atomu reddetmiyor. İkisi de
+>   sözlükte olup kodda olmaması bir isim meselesi değil, iki tane olmayan
+>   davranışın belgelenmesiydi.
+> - **`USER_EXCLUDED` → `EXCLUDED_BY_DIRECTIVE`.** Ad § 08b ile § 35.3.1'de
+>   zaten yeniydi; burası geride kalmıştı. Ayrım ürünün kendisi: `INACTIVE`
+>   profil hakkında duran bir karar, bu ise **bu CV'nin** düzenlemesi, ve
+>   ikisini karıştıran bir ekran kalıcı kararı geri alır (`B-108`).
+> - **`ENTRY_BELOW_MINIMUM` eksikti** — § 20.2'nin minimumuna ulaşamayıp
+>   bütün olarak düşen entry.
+>
+> `selection_state` kalıcı bir JSONB anlık görüntüsü: belgelenen sözlüğe göre
+> yazılmış bir okuyucu hiç gelmeyecek iki nedeni bekler ve gelen birini
+> kaçırırdı.
 
 **Sapma — `customizationId` yerine özelleştirmenin kendisi yazılır.** İşaret
 edilecek bir `template_customizations` satırı yok (A şama 2 sabit bir
@@ -561,19 +654,49 @@ onlara join edebilir; bu alan **ne çalıştığının** kaydı olarak kalır.
 
 ```json
 {
-  "A": { "durationMs": 1840, "provider": "gemini", "promptVersion": "v2",
-         "confidence": 0.91, "requiredSkillsFound": 4, "cacheHit": false },
-  "B": { "durationMs": 47, "atomsScored": 63,
-         "scoreDistribution": { "p10": 0.11, "p50": 0.44, "p90": 0.87 } },
-  "C": { "durationMs": 12, "selected": 16, "rejected": 47,
-         "rejectionReasons": { "BUDGET": 31, "DIVERSITY_CAP": 9, "INACTIVE": 7 },
-         "pinnedCostPt": 84.2, "estimatedAtoms": 2 },
-  "D": { "durationMs": 3120, "attempts": 6, "accepted": 5, "rejected": 1,
-         "rejectReasons": ["NUMBER_LOST"], "translationsUsed": 4, "translationsGenerated": 2 },
-  "E": { "durationMs": 210, "sourceBytes": 8420 },
-  "F": { "durationMs": 4900, "pageCount": 1, "driftPt": 2.1, "atsExtractionOk": true }
+  "B": { "weights": "DEFAULT" },
+  "C": { "selected": 16, "rejected": 47,
+         "rejectionReasons": { "BUDGET": 31, "EXCLUDED_BY_DIRECTIVE": 9, "INACTIVE": 7 },
+         "pinnedCostPt": 84.2,
+         "budget": { "totalPt": 648.0, "fixedPt": 142.0, "freePt": 506.0,
+                     "usedPt": 498.3, "remainingPt": 7.7 },
+         "estimatedAtoms": 2 },
+  "D": { "rewritten": 5,
+         "calls": { "bullet_rewrite": 6, "about_synthesis": 1 },
+         "rejectReasons": { "NUMBER_LOST": 1 },
+         "unreachable": 0 },
+  "F": { "pageCount": 1, "attempts": 1, "budgetFactor": 1.0 }
 }
 ```
+
+> **Blok yazıldığı gibi inmedi, ve kalıcı bir JSONB kolonunu anlatıyor**
+> (düzeltme, denetim 2026-09-20). § 13 ve § 14.5 dördüncü turda gerçeğe
+> çevrilmişti; bu blok atlandı ve iki tur daha bugün yazılmayan alanları
+> belgelemeye devam etti — § 48.5'in replay'i ve "hangi prompt koştu" sorusu
+> tam olarak bu kolonu okuyor.
+>
+> - **A ve E yok, ve bu bir karar:** ikisini zamanlayan bir şey yok, ve sıfır
+>   taşıyan bir trace "anlık" diye okunur, "ölçülmedi" diye değil. Kayıtlı
+>   olan `engine_version.promptVersions`.
+> - **Süreler hiçbir fazda yok**, aynı sebeple; faz gecikmesi `job.phase`
+>   metriğinde (§ 48.3).
+> - **B bir ağırlık seti adı taşıyor**, skor dağılımı değil: genel modda ilan
+>   yok ve `weights` orada "general-mode" diyor — "hiç koşmadı" ile "koştu ve
+>   hiçbir şey bulamadı"yı ayıran tek şey o.
+> - **C bütçeyi taşıyor** ve § 14.5'in aksine bu bir tekrar değil: bir sayfa
+>   az dolu çıktığında `"rejected": 13`'ün yanında ne kadar yerden
+>   döndürüldüğü yazmıyorsa, seçim kusuru ile bütçe kusuru ayırt edilemiyor.
+> - **`estimatedAtoms` altıncı turda yazılmaya başladı.** § 20.4 ve § 26.5
+>   sayacı iki kez vaat ediyordu; hesaplanıyor, INFO'ya basılıyor ve atılıyordu.
+> - **D'nin şekli değişti:** `rewritten: 0`'ın dört ayrı sebebi var (aday
+>   yoktu, cevap gelmedi, geldi ve reddedildi, faz hiç koşmadı) ve sayfa
+>   dördünde de aynı görünüyor — `calls` ilk ikisini son ikisinden,
+>   `rejectReasons` onları birbirinden, `unreachable` sağlayıcının payını
+>   ayırıyor.
+> - **F'te `driftPt` ve `atsExtractionOk` yok.** Ölçülen sapma sayfa
+>   cinsinden ve `generation.pages.drift` metriğinde (§ 26.6); ATS sonucu
+>   `generation.ats.clean` / `.defect` sayaçlarında, çünkü rapor bölüm
+>   başlıklarını taşıyor ve onlar kullanıcının kendi metni (mutlak kural 4).
 
 ### 14.7 `generations.engine_version`
 
@@ -582,7 +705,7 @@ onlara join edebilir; bu alan **ne çalıştığının** kaydı olarak kalır.
   "pipeline": "1.4.0",
   "scoringWeights": "v3",
   "template": "modern:v2",
-  "promptVersions": { "job_analysis": "v2", "atom_rewrite": "v1", "about_synthesis": "v1" }
+  "promptVersions": { "job_analysis": "v2", "bullet_rewrite": "v2", "about_synthesis": "v1" }
 }
 ```
 
@@ -614,15 +737,52 @@ onlara join edebilir; bu alan **ne çalıştığının** kaydı olarak kalır.
 ```
 src/main/resources/db/migration/
 ├── V1__initial_schema.sql
-├── V2__add_template_customizations.sql
-└── V3__add_content_version.sql
+├── V2__narrow_oauth_providers.sql
+├── V3__job_idempotency_covers_anonymous.sql
+├── V4__one_feedback_per_generation.sql
+├── V5__clamp_unreachable_entry_minimums.sql
+├── V6__languages_are_an_inline_list.sql
+├── V7__an_about_entry_is_one_paragraph.sql
+├── V8__a_summary_hangs_off_its_section.sql
+├── V9__a_summary_is_a_paragraph.sql
+├── V10__an_anonymous_profile_is_a_row_with_an_expiry.sql
+├── V11__a_rewrite_outlives_the_generation_that_made_it.sql
+├── V12__a_measured_capacity_outlives_the_request_that_paid_for_it.sql
+├── V13__a_header_is_as_tall_as_its_own_text.sql
+├── V14__a_person_can_stop_the_post.sql
+├── V15__a_preference_lives_on_the_account_that_holds_it.sql
+├── V16__the_column_says_what_can_actually_write_to_it.sql
+└── V17__four_vocabularies_narrow_to_what_can_be_written.sql
 ```
+
+> **Ağaç uydurmaydı** (düzeltme, denetim 2026-09-16): `V2__add_template_customizations`
+> ile `V3__add_content_version` diye dosyalar hiç olmadı — `template_customizations`
+> V1'in içinde, içerik sürümü ise § 16.2'nin JSONB damgası, bir kolon değil.
+> **Ad bir migration'da yorum değil kayıttır:** dosya adı `V<n>__` ile
+> sıralanıyor, checksum'la korunuyor ve bir daha değişmiyor, yani yanlış
+> yazılmış bir ad bir sonraki okuyucuyu var olmayan bir dosyayı aramaya
+> gönderir. Ne yaptıkları § 13.2'de.
 
 **Kurallar:**
 - Uygulanmış migration dosyası **asla değiştirilmez** (checksum korumalı)
 - `flyway.validateOnMigrate=true`
-- Migration **deploy'dan önce** çalışır (CI adımı), uygulama başlangıcında değil (üretimde)
-- Lokalde uygulama başlangıcında çalışabilir
+- Migration **uygulama açılışında** çalışır, üretimde de — ve **tek örnekle**
+- Yeni bir migration § 13.2'ye aynı commit'te bir satır ekler
+
+> **Üçüncü kural tersini söylüyordu** (düzeltme, denetim 2026-09-20).
+> "Deploy'dan önce çalışır (CI adımı), uygulama başlangıcında değil" satırı
+> 2026-08-28'de verilen kararın tam tersi: § 47'nin önerdiği
+> `--spring.flyway.migrate-only=true` diye bir Spring Boot özelliği yok
+> (EK D.1), ve iki gerçek seçenekten — ayrı bir Flyway CLI adımı, ya da açılışta
+> bırakıp tek örnekle deploy etmek — ikincisi seçildi.
+>
+> **Güvenli kılan şey tek örnek, kilit değil.** Flyway kendi kilidini zaten
+> alıyor; risk iki migrator değil, **tek şemaya karşı iki uygulama sürümü**.
+> `scripts/deploy.sh` bileşeni `--no-deps` ile yerinde değiştiriyor. Yatay
+> ölçeklemeye geçilirse karar yeniden açılır. Pratik sonucu geri almada
+> görünür: deploy imajı geri alır, **migration'ı geri almaz** — yani her
+> migration geriye dönük uyumlu olmak zorunda. § 47.1 ve
+> `docs/vps-dagitim-plani.md` § 0 aynı kararı taşıyor.
 
 **Expand-contract deseni** (rollback mümkün kalsın):
 ```

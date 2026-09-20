@@ -79,17 +79,35 @@ export function getGeneration(generationId: string) {
 }
 
 /**
- * The two formats the endpoint serves (`B-094`).
+ * The four formats the endpoint serves (`B-094`, `B-105`).
  *
  * **Not derived from the schema**, because there is nothing there to derive
  * from: `format` is published as a bare `string` with a default, so the
- * generated type says nothing a union here would not say better. § 35.3's map
- * lists a third value, `source`, and asking for it is `400 VALIDATION_FAILED`
- * today — nothing serves it. It is left out rather than offered and refused:
- * a "download the source" button that answers with an error panel is worse
- * than one that was never drawn.
+ * generated type says nothing a union here would not say better. The one
+ * place the four are named together is the `400`'s description, which is
+ * prose rather than a type.
+ *
+ * `source` was left out of this union for two stages, and rightly: the value
+ * was in § 35.3's map from the first draft and answered
+ * `400 VALIDATION_FAILED`, so a button for it would have opened an error
+ * panel. `B-105` served it, and the HTML renderer's empty package with it.
  */
-export type DownloadFormat = 'pdf' | 'docx';
+export type DownloadFormat = 'pdf' | 'docx' | 'html' | 'source';
+
+/**
+ * What the file is called when the server does not say.
+ *
+ * `source` is the reason this exists rather than an interpolated `format`:
+ * the query value is the name of a **format**, and the file is a `.tex`. A
+ * fallback name of `atomcv-<id>.source` would be saved by the browser as
+ * exactly that, and nothing on the reader's machine opens it.
+ */
+export const DOWNLOAD_EXTENSION: Record<DownloadFormat, string> = {
+  pdf: 'pdf',
+  docx: 'docx',
+  html: 'html',
+  source: 'tex',
+};
 
 /**
  * The finished document, re-rendered from the stored snapshot rather than
@@ -105,7 +123,10 @@ export type DownloadFormat = 'pdf' | 'docx';
  * The page count promised on screen is the **PDF's**. Word sets the same
  * atoms in whatever room its own fonts take (§ 22.6), so a one-page CV can
  * run over there; the backend claims no page count for DOCX, and neither may
- * the screen.
+ * the screen. **In HTML the limit does not apply at all** — not approximately,
+ * as in Word, but not at all: there is no page to exceed. The two are worth
+ * keeping apart on screen, because "roughly one page" and "no such thing as a
+ * page" are different promises.
  */
 export function downloadGeneration(generationId: string, format: DownloadFormat = 'pdf') {
   const query = format === 'pdf' ? '' : `?format=${format}`;
@@ -273,6 +294,33 @@ export type Feedback = Returns<'recordFeedback'>;
  */
 export function submitFeedback(generationId: string, body: FeedbackRequest) {
   return api.post<Feedback>(`/generations/${generationId}/feedback`, body);
+}
+
+/* ------------------------------- archiving ------------------------------ */
+
+/**
+ * Marking a generation to keep, or taking the mark off (`B-102`, § 13).
+ *
+ * The endpoint had been in the resource map from the beginning and the
+ * `generations.archived` column since V1; they had simply never met.
+ *
+ * **An omitted body archives.** That is the server's default and this sends
+ * it as one — `{ archived: true }` rather than nothing — for the reason every
+ * other body on this client states what it asked for: a request that names
+ * its intent cannot drift when a default moves. Clearing the mark has to be
+ * explicit either way.
+ *
+ * **It is idempotent**, so a second press on an archived generation is not an
+ * error, and the screen has nothing to guard against.
+ *
+ * **What the mark buys is a retention rule, and there is nothing to retain
+ * yet.** An archived generation's artifact never expires; until object
+ * storage lands nothing expires either way (§ 57.4). So the honest thing for
+ * the screen to promise today is that the mark is **kept and read**, not that
+ * it is protecting a file from deletion — and the copy says the first.
+ */
+export function archiveGeneration(generationId: string, archived: boolean) {
+  return api.post<Generation>(`/generations/${generationId}/archive`, { archived });
 }
 
 /* -------------------------------- history ------------------------------ */

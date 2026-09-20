@@ -45,6 +45,37 @@ test.describe('skip link', () => {
   });
 });
 
+/**
+ * The page § 55's "SEO landing + blog" became (D14).
+ *
+ * A blog is a pipeline, and a pipeline with nothing written for it indexes
+ * nothing and costs maintenance. What a search engine can use is a page that
+ * answers the question somebody arrives with, and there is one of those.
+ */
+test.describe('how it works', () => {
+  test('is reachable from the footer, in the reader’s language', async ({ page }) => {
+    await page.goto('/tr');
+
+    await page.getByRole('link', { name: 'Nasıl çalışıyor' }).click();
+
+    await expect(page).toHaveURL('/tr/how-it-works');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('AtomCV nasıl çalışıyor');
+  });
+
+  /**
+   * It is outside `(app)`, so it pays for none of the providers — which is
+   * the whole reason it is a marketing page rather than a screen. Asserted
+   * through the metadata a crawler reads, since that is what it is for.
+   */
+  test('is indexable and says which page is its translation', async ({ page }) => {
+    await page.goto('/en/how-it-works');
+
+    await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+    await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
+    await expect(page.locator('link[rel="alternate"][hreflang="tr"]')).toHaveCount(1);
+  });
+});
+
 test.describe('legal documents', () => {
   test('are reachable from the footer and keep the locale', async ({ page }) => {
     await page.goto('/tr');

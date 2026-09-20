@@ -112,7 +112,22 @@ R2_ACCOUNT_ID=  R2_ACCESS_KEY=  R2_SECRET_KEY=  R2_BUCKET=
 
 # Bütçe
 ANOMALY_DAILY_BUDGET_USD=40
+
+# Denetimle eklenenler (2026-09-15)
+GITHUB_API_TOKEN=            # opsiyonel; yalnız § 31.8'in hız sınırı için
+UMAMI_APP_SECRET=            # yalnız `--profile analytics` ile başlatılırsa
 ```
+
+**`GITHUB_API_TOKEN` bir izin değil bir kota.** § 31.8 yalnız public veri
+okuyor ve tokensız çalışıyor; kimliksiz GitHub saatte 60 istek / adres veriyor
+ve onu bütün dağıtım paylaşıyor, tokenla 5.000 oluyor. Hiçbir kapsam
+istenmiyor — ve bu, § 40.6.1'in **kişiye ait** sağlayıcı token'ı değil:
+dağıtıma ait.
+
+**`UMAMI_APP_SECRET` yalnız analitik profili açıksa gerekiyor**
+(`docker compose --profile analytics`). Kapalıyken servis hiç başlamıyor:
+hiçbir şeyin rapor vermediği bir panel, sekiz gigabaytlık bir makinede yarım
+gigabayt.
 
 **`SESSION_SECRET` yok, ve olmamalı.** Oturum kimliği `SecureRandom`'dan gelen
 256 bitlik opak bir değer ve Redis'te duruyor; imzalanan hiçbir şey yok,
@@ -150,7 +165,13 @@ geliyor — `OTLP_AUTHORIZATION` `Bearer ` önekini de taşır, ve
 
 > **Kritik:** Bunlar **iki ayrı dosyadır, iki ayrı repoda.** Tek bir workflow'da `needs: [backend, frontend]` yazılamaz — repolar arası job bağımlılığı GitHub Actions'ta mümkün değildir. Her repo kendi testini çalıştırır, kendi imajını üretir, kendi bileşenini deploy eder.
 
-#### `atomcv-backend/.github/workflows/ci-cd.yml`
+#### `atomcv-backend/.github/workflows/` — aşağıdaki taslak, inen dördü değil
+
+> **Başlık `ci-cd.yml` diyordu ve öyle bir dosya yok** (düzeltme, denetim
+> 2026-09-16). Düzeltmenin kendisi seksen satır aşağıda duruyordu, yani bölüm
+> doğruyu söylerken başlığı yanlış söylüyordu — ve okuyanın önce gördüğü
+> başlıktı. İnen dört dosya ve ne yaptıkları: aşağıdaki taslaktan sonraki
+> nottadır.
 
 ```yaml
 name: CI/CD
@@ -165,10 +186,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with: { java-version: '21', distribution: 'temurin', cache: gradle }
+      - run: sh ./gradlew spotlessCheck       # biçim kapısı, ÖNCE
       - run: sh ./gradlew build -x test
       - run: sh ./gradlew test                # unit + ArchUnit
       - run: sh ./gradlew integrationTest     # Testcontainers
-      # - run: sh ./gradlew spotlessCheck     # formatter yapılandırılınca aç
 
   security:
     runs-on: ubuntu-latest
@@ -227,14 +248,52 @@ jobs:
             "cd /opt/atomcv && ./scripts/deploy.sh backend ${{ github.sha }}"
 ```
 
-> **Bugünkü hâli (Aşama 1).** Repoda `ci.yml` var, `ci-cd.yml` yok: sunucu
-> olmadığı için `deploy` ve `publish-schema` işleri henüz yazılmadı, `llm-eval`
-> ise Aşama 2'de prompt'larla gelir. Çalışan işler `build` (derleme + test +
-> integrationTest + her koşulda rapor yükleme), `codeql` ve `scan`; sırlar ayrı
-> bir `secrets-scan.yml` dosyasında, tüm geçmişi tarayacak şekilde
-> (`fetch-depth: 0`). Action sürümleri yukarıdakilerden yeni — Dependabot
-> yükseltiyor, elle sabitlenmiş bir liste tutulmuyor. CodeQL dili
-> `java-kotlin`'dir; `java` artık geçerli bir tanımlayıcı değil.
+> **Güncel (denetim, 2026-09-15).** `publish-schema` ve `llm-eval` indi,
+> ikisi de yukarıdakinden farklı şekilde.
+>
+> **Şema bir Gradle eklentisiyle değil, zaten koşan lane ile üretiliyor.**
+> springdoc'un eklentisi belgeyi okumak için uygulamayı başlatıyor, yani bir
+> veritabanı istiyor — ki entegrasyon lane'inde zaten var. `OpenApiDocumentIT`
+> yayımlanan belgeyi **commit'li `openapi.json`** ile karşılaştırıyor ve
+> ayrışmada düşüyor; `make openapi` yeniden kaydediyor. CI işi yalnız dosyayı
+> artefakt olarak dışarı taşıyor.
+>
+> **Ve dosya `build/` altında değil, repo kökünde.** Frontend'in
+> `contract-check`'i onu `raw.githubusercontent.../build/openapi.json`'dan
+> çekiyordu; `build/` üretilen ve gitignore'lu bir dizin, yani o URL her zaman
+> 404 verdi ve iş her koşuda "skipping" dalını aldı — **iki reponun
+> ayrışmasına karşı tek muhafız, bir aşama boyunca kendini atladı.**
+>
+> **`llm-eval` yalnız bir prompt değiştiğinde ve `continue-on-error`'sız
+> koşuyor.** § 53.5'in bloker metriği var (yeni teknoloji uydurma, sıfır
+> tolerans) ve yalnız uyaran bir kapı kapı değildir. Anahtar yoksa iş bir
+> `::warning::` basıp geçiyor: koşmamış bir değerlendirmenin yeşil raporlaması
+> § 51.7'nin üçüncü kuralının tam olarak yasakladığı şey.
+>
+> **Aşama 1'den kalan.** Repoda `ci.yml` var, `ci-cd.yml` yok: **sunucu
+> henüz olmadığı için dağıtım ayrı bir dosyada duruyor** (`deploy.yml`) ve
+> `push` tetikleyicisi yorumlu — el ile koşturuluyor.
+>
+> *(Bu paragrafın ortası bir düzenlemede yenmişti ve cümle "sunucu Çalışan
+> işler `build`…" diye devam ediyordu; denetim, 2026-09-16.)*
+>
+> **Dört workflow dosyası var:** `ci.yml` (`build` — derleme + test +
+> integrationTest + her koşulda rapor yükleme —, `codeql`, `scan` ve
+> **`llm-eval`**), `secrets-scan.yml` (gitleaks, tüm geçmiş,
+> `fetch-depth: 0`), `deploy.yml` (elle) ve **`latex.yml`** — yalnız
+> `gradlew latexTest`'in dokunduğu yollar değiştiğinde koşuyor, çünkü gerçek
+> bir derleyiciyle dakikalar sürüyor (§ 29, § 51.1).
+>
+> Action sürümleri yukarıdakilerden yeni — Dependabot yükseltiyor, elle
+> sabitlenmiş bir liste tutulmuyor. CodeQL dili `java-kotlin`'dir; `java`
+> artık geçerli bir tanımlayıcı değil.
+>
+> **Yerel taraf ayrı ve bir kez sessizce düştü:** `pre-commit` hook'unu
+> `.git/hooks`'a kuruyor, `core.hooksPath` ayarlanınca git o dizine hiç
+> bakmıyor, ve `.githooks/` yalnız `post-commit` taşıyordu — yani gitleaks
+> bir süre hiç koşmadı, hatasız ve çıktısız. Hook artık `.githooks/pre-commit`
+> olarak commit'li ve `pre-commit` yoksa **commit'i durduruyor**: taranmamış
+> bir commit'i geçirmek, düzeltilen kusurun ta kendisi.
 
 #### `atomcv-frontend/.github/workflows/ci-cd.yml`
 
@@ -326,7 +385,7 @@ jobs:
 |---|---|
 | **İmaj tag'i = git SHA** | `latest` kullanma — hangi sürümün canlıda olduğunu bilemezsin, rollback imkânsızlaşır |
 | **Bir kere build, her yerde aynı imaj** | Deploy sırasında yeniden build etme |
-| **Migration deploy'dan ÖNCE** | Expand-contract deseniyle geriye uyumlu |
+| **Migration açılışta, tek örnekle** | Ayrı bir adım yok (§ 47.1'in kutusu). Geri alma imajı geri alır, şemayı değil — her migration geriye dönük uyumlu olmak zorunda, expand-contract deseniyle |
 | **Health check + otomatik rollback** | Bozuk deploy canlıda kalmasın |
 | **Build sunucuda yapılmaz** | RAM tükenir |
 
@@ -376,6 +435,31 @@ public record ContentShape(
 
 `{ charCount: 187, runCount: 5, hasSpecialLatex: true, renderCostPt: 41.2 }` — içeriği bilmeden "bu atom anormal uzun ve özel karakter içeriyor" teşhisi mümkün.
 
+> **Bu bölüm bir kaydı tanımlıyordu ve kayıt yoktu** (denetim, 2026-09-16).
+> On alanın hiçbiri hiçbir yerde yazılı değildi; buna rağmen EK A onu
+> sözlükte listeliyor, § XI-B.9 "içerik yerine `ContentShape` logla" diyor,
+> `CLAUDE.md`'nin mutlak kural 4'ü adını veriyor, ve **`noContentInLogs`
+> muhafızının kendi javadoc'u** okuyanı ona yönlendiriyordu — yani kuralı
+> çiğnemek üzere olan geliştirici, import edemeyeceği bir tipe gönderiliyordu.
+>
+> Fiilen olan şey aynı kuralın kaçış şıkkıydı ("*or a stage's own*"), ve
+> `ExtractedText.shape()` o davayı iyi savunuyor: onun alanları bir
+> **dosyanın**, buradakiler bir **atomun**, ve paylaşılan bir kayıt iki
+> çağıranda da yarı yarıya sıfır olurdu. İtiraz geçerli ve kaydın javadoc'unda
+> cevaplanıyor — çıkarım aşaması hakkında, atomlar hakkında değil.
+>
+> **`profile.domain.content.ContentShape` olarak indi, ve bağlı olarak indi**
+> — çağıranı olmayan bir kayıt aynı boşluğun başka bir şeklidir. Üç yer:
+> reddedilen bir yeniden yazım (`TOO_LONG`, 190 tavanına karşı, orijinal 186
+> karakterken bir şey söyler, 60 karakterken başka bir şey), derleyicinin
+> ölçüm döndürmediği bir sözcükleme (sessizdi; ters eğik çizgi ya da ASCII
+> dışı karakter ilk şüphelidir), ve ölçülmüş bir sözcüklemenin yüksekliğinin
+> yanındaki şekli (`debug`).
+>
+> `renderCostPt` **0 iken "ölçüm yok" demektir** ve satırdan düşer;
+> `properNounCount` atomun altındaki bir çağıran için 0'dır. İkisi de kaydın
+> javadoc'unda yazılı.
+
 ### 48.3 İzlenecek metrikler
 
 | Kategori | Metrik |
@@ -387,6 +471,27 @@ public record ContentShape(
 | **Kullanıcı** | Manuel düzenleme oranı, geri bildirim oranı |
 | **Sistem** | CPU, RAM, disk, kuyruk bekleme süresi |
 | **E-posta** | Teslimat oranı, bounce oranı |
+
+> **Bu tablonun üç satırı yıllarca bir seriye sahip değildi** (düzeltme,
+> denetim 2026-09-20). `MetricCatalogueTest` kodla katalogu **birbirine** karşı
+> tutuyordu — var olan her ölçerin yazılı olduğunu ve yazılı her ölçerin hâlâ
+> var olduğunu — ve **istenenin verilip verilmediğini** hiç sormuyordu. Üç
+> satır sessizce cevapsızdı: *bütçe doluluk oranı*, *tahmin kullanım oranı* ve
+> *geri bildirim oranı*. Sonuncusunun kodda bir izi bile vardı: bir log
+> satırının üstünde "this is the feedback rate" yazıyordu, ki bir oran değil bir
+> cümledir — o dakika bakan kişiye bir kez cevap verir, çizilemez.
+>
+> Üçünün karşılığı indi: `generation.budget.fill` (serbest bütçenin ne kadarı
+> kullanıldı — bir sayfa sınırın altında kalıp yarı boş çıkarsa garanti tutar,
+> maksat kaçar, ve `overshoot` bunu göremez), `generation.selection.costs`
+> (`source` etiketi ölçülmüş/tahmini oranı), `generation.feedback` (`verdict`
+> etiketi, paydası `job.run{type=generation}`).
+>
+> **Ve yön artık tutuluyor:** aynı test bu tablonun satırlarını dosyadan
+> okuyup her birine bir seri eşliyor. Tabloya eklenen bir satır, onu cevaplayan
+> bir ölçer çıkana kadar CI'yı düşürüyor — `build.gradle.kts` bu bölümü test
+> girdisi olarak ilan ediyor, yoksa dosyayı düzenlemek görevi UP-TO-DATE
+> bırakırdı.
 
 ### 48.4 Kullanıcı onaylı teşhis
 
@@ -478,6 +583,39 @@ enum tamamen düşüyor. Üçü birden gerekiyor, ve bunu `OpenApiSchemaIT` tutu
 
 Faz B, C, E saf fonksiyon → `selection_state` ile kendi makinende yeniden çalıştırma. Üretim verisine erişmeden hata ayıklama.
 
+> **Düzeltme (2026-09-15) — görev var, ve komut satırı bir dosya alıyor.**
+> Bu aracın öncülü "üretim verisine erişmeden", yani elde bir dosya olması
+> gerekiyordu ve onu verecek hiçbir şey yoktu: `GET /generations/{id}` seçim
+> durumunu yayımlamıyor (mutlak kural 4'ün yanındaki karar) ve
+> `GET /generations/{id}/selection` tartılan satırları metniyle veriyor — aynı
+> şey değil. Biçim artık `GenerationExport`, ve onu yazan şey § 48.4'ün
+> **çevrimdışı okuyucusu**: aynı izin, aynı damga, aynı içerik.
+>
+> ```bash
+> ./scripts/support-read.sh <generation-id> --export=export.json
+> ./scripts/replay.sh export.json out.tex     # ./gradlew replay -Preplay.file=…
+> ```
+>
+> **Replay eden faz E'dir, ve sebebi veridir.** `content_snapshot` zaten
+> § 22.2'nin `RenderRequest`'i — yani Faz E'nin girdisinin ta kendisi: aynı
+> anlık görüntü aynı baytları üretiyor ve gönderilenle karşılaştırması bir
+> diff. **Faz B ve Faz C replay edilemiyor**, ikisi de saf olduğu hâlde:
+> Faz B puanlanmış bir ağaç, Faz C ise her atomun ölçülmüş yüksekliğini taşıyan
+> `SelectionRequest` istiyor ve ikisi de hiçbir yerde saklanmıyor. Bugünün
+> profilinden yeniden kurmak, geçen haftaya ait bir soruya bu haftanın metniyle
+> cevap vermek olurdu — `content_snapshot`'ın var olma sebebi tam olarak bu
+> (EK D.6.3). Saklanmaları bir hata ayıklama kolaylığı değil, birinin profilinin
+> tamamının kopyası hakkında bir saklama kararıdır; `GenerationExport`'un
+> javadoc'u hangi alanların gerekeceğini adıyla yazıyor.
+>
+> **Dosya, çıktısı terminalde ölen bir okumadan daha tehlikelidir.** Bir işverene
+> gönderilmiş belgenin kendisi; her iki script de bunu söylüyor ve export
+> alındığı anı kaydediyor — bir grant kırk sekiz saat sürüyor, bir dosya sürmüyor.
+>
+> **Faz B ve C için bugün aynı işi gören şey golden set:** `GoldenSelectionTest`
+> onları yedi profil × üç şablon × iki dil × iki sayfa sınırıyla koşuyor —
+> veritabanı yok, derleyici yok, tek komut.
+
 ---
 
 ## 49. Yedekleme ve Felaket Kurtarma
@@ -491,6 +629,19 @@ Faz B, C, E saf fonksiyon → `selection_state` ile kendi makinende yeniden çal
 ```
 
 **Aynı diskteki yedek, yedek sayılmaz** — disk arızası, ransomware, hesap kilitlenmesi senaryolarında işe yaramaz.
+
+> **Üçüncü bacak indi (denetim, 2026-09-16).** `backup.sh` bir aşama boyunca
+> yalnız günlük R2 yazıyordu ve saklaması tek bir `7d` idi: ne ikinci
+> sağlayıcı vardı ne § 49.4'ün "7 gün + 4 hafta + 6 ay"ı. **Aynı sağlayıcıda
+> yedeklilik 3-2-1 değil** — bir hesap askıya alınması ya da konsolda bir
+> yanlış tık, tek yerdeki bütün kopyaları aynı anda götürür, ki ikinci kopya
+> tam olarak onun için var.
+>
+> Haftalık ve aylık kopyalar artık `BACKUP_ARCHIVE_REMOTE`'a gidiyor.
+> **İkinci remote yapılandırılmamışsa günlük yedek yine alınıyor** ve log bir
+> `WARNING` basıyor: var olan bir günlük yedek, ikinci kopya yüzünden düşmüş
+> bir cron'dan değerlidir — ama tek sağlayıcıyla koşan bir dağıtım 3-2-1
+> koşmuyordur, ve bunu söyleyebilecek tek yer o log.
 
 ### 49.2 Yedek script'i
 
@@ -523,6 +674,42 @@ archive_command = 'rclone copy %p r2:atomcv-wal/'
 ```
 
 Veri kaybı penceresi: gecelik snapshot yerine ~5 dakika.
+
+#### 49.3.1 İnen hâli (denetim, 2026-09-16)
+
+**Bu bölüm yazılıydı ve kurulmamıştı.** `docker-compose.prod.yml` yalnız
+`wal_level=replica` taşıyordu — arşivleme olmadan hiçbir segment hiçbir yere
+gitmiyor, yani § 49.5'in yayımladığı "~5 dakika" gerçekte **03:00'a kadar**
+demekti. Ayarın yarısının orada durması bunu daha da görünmez yapıyordu:
+yapılandırılmış görünen, açılan, ve hiçbir şey arşivlemeyen bir veritabanı.
+
+**Sapma — `archive_command` rclone çağırmıyor, bir volume'e kopyalıyor.**
+Yukarıdaki komut `pgvector/pgvector:pg17` imajında olmayan bir ikili istiyor;
+eklemek tek bir binary için imajın türevini bakmak demekti. Postgres
+`walarchive` volume'üne kopyalıyor, `scripts/archive-wal.sh` host'tan okuyup
+şifreliyor ve gönderiyor — **şifreleme host'ta kalıyor**, age anahtarının
+zaten yaşadığı yerde (§ 49.2: bir segment, dump'ın taşıdığı CV'lerin aynısını
+taşır). Komut `test ! -f` ile başlıyor: Postgres arşivlediği bir segmenti
+yeniden deneyebilir ve üzerine yazan bir komut sağlam dosyayı yarım dosyayla
+kesebilir.
+
+**Ekleme — `archive_timeout=300`.** Sessiz bir veritabanı segmenti
+kapatmıyor, yani onsuz pencere "beş dakika" değil "bir sonraki yazmaya kadar".
+
+**Ekleme — haftalık `pg_basebackup`, ve o olmadan arşiv işe yaramaz.** WAL bir
+**fiziksel** temele oynanır; § 49.2'nin `pg_dump`'ı **mantıksal** bir yedek.
+İkisini yan yana koymak, hiçbir prosedürün uygulayamayacağı segmentler
+göndermek olurdu — logda var olan, gerçekte olmayan bir kurtarma penceresi.
+`backup.sh` pazar günü bir temel alıyor, ve **haftalık-yedi-güne-karşı bir
+tesadüf değil kısıt**: pazarın temeli artı o günden beri saklanan segmentler
+herhangi bir cumartesiyi kapsıyor, ve temel aralığını WAL saklamasının ötesine
+uzatmak öbür uçta sessiz bir delik açıyor.
+
+**Uyarı — arşivi boşaltan bir şey yoksa Postgres yazmayı durdurur.** Bu
+`archive_mode`'un tasarımı, kusuru değil: arşivlemesi söylenen ve
+yapamayan bir veritabanı aksi hâlde kurtarma penceresini sessizce kaybederdi.
+`scripts/archive-wal.sh` beş dakikada bir koşmak zorunda; koşmazsa arıza
+gürültülüdür ve çözümü onu koşturmaktır.
 
 ### 49.4 ⚠️ Restore testi
 
