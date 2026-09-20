@@ -2,7 +2,14 @@ import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { useAtom, useAtoms, usePatchAtom, usePatchVariant } from '@/hooks/useProfile';
+import {
+  useAtom,
+  useAtoms,
+  usePatchAtom,
+  usePatchVariant,
+  useProfile,
+  useReplacePreferences,
+} from '@/hooks/useProfile';
 import { profileKeys } from '@/lib/api/queryKeys';
 import { patchAtom, type Atom } from '@/lib/api/endpoints/profile';
 import { isApiError } from '@/lib/api/errors';
@@ -280,5 +287,64 @@ describe('promoting a wording', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.isError).toBe(false);
+  });
+});
+
+/**
+ * `PUT /profile/preferences` replaces, and two screens own different parts of
+ * it. Nothing in the type system says a body carrying only `defaults` wipes
+ * the writing style — both halves are optional — so this is the only place
+ * that says it.
+ */
+describe('writing preferences', () => {
+  async function seedHead(client: QueryClient) {
+    const { result } = renderHook(() => useProfile(), { wrapper: wrapperFor(client) });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  }
+
+  it('keeps the writing style when a caller sends only the defaults', async () => {
+    const client = makeClient();
+    await seedHead(client);
+
+    const { result } = renderHook(() => useReplacePreferences(), { wrapper: wrapperFor(client) });
+
+    result.current.mutate({ defaults: { templateId: 'modern' } });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(fixture.profile.preferences?.writingStyle?.tone).toBe('formal');
+    expect(fixture.profile.preferences?.defaults?.templateId).toBe('modern');
+  });
+
+  /**
+   * The other half of the same rule. One screen owns all four writing-style
+   * fields, so an omitted one is a deletion the reader asked for — merging
+   * would put the sentence they just cleared back.
+   */
+  it('replaces the writing style wholesale rather than merging it', async () => {
+    const client = makeClient();
+    await seedHead(client);
+
+    const { result } = renderHook(() => useReplacePreferences(), { wrapper: wrapperFor(client) });
+
+    result.current.mutate({ writingStyle: { tone: 'technical' } });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(fixture.profile.preferences?.writingStyle).toEqual({ tone: 'technical' });
+  });
+
+  /** The keys the other screen owns survive a write from this one. */
+  it('merges the defaults so two owners do not erase each other', async () => {
+    const client = makeClient();
+    await seedHead(client);
+
+    const { result } = renderHook(() => useReplacePreferences(), { wrapper: wrapperFor(client) });
+
+    result.current.mutate({ defaults: { cvLanguage: 'tr' } });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    result.current.mutate({ defaults: { templateId: 'compact' } });
+    await waitFor(() => expect(fixture.profile.preferences?.defaults?.templateId).toBe('compact'));
+
+    expect(fixture.profile.preferences?.defaults?.cvLanguage).toBe('tr');
   });
 });

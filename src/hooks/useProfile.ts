@@ -196,20 +196,51 @@ export function useReplaceProfile() {
 }
 
 /**
- * Replacing the preferences: the template, the appearance and the writing
- * style (`B-090`, `B-091`, `B-092`).
+ * A change to the preferences, stated as the part the caller owns.
+ *
+ * The two halves merge differently, and each rule is the one its owner needs.
+ *
+ * **`writingStyle` is replaced**, because one screen owns all four of its
+ * fields. Clearing the custom instructions means sending the object without
+ * them, so merging would resurrect the sentence the reader just deleted.
+ *
+ * **`defaults` is merged**, because two screens own different keys of it —
+ * `CvAppearance` the template and the appearance, `GenerationDefaults` the
+ * page limit and the two languages. Replacing it would make whichever saved
+ * last erase the other's fields.
+ *
+ * **`defaults.appearance` is a key inside that merge, so it is replaced**,
+ * which is what keeps "reset is an omission" true: `CvAppearance` drops a
+ * field to return it to the template's own setting, and a deeper merge would
+ * put the old number back.
+ */
+function mergePreferences(
+  current: Profile['preferences'],
+  patch: PreferencesUpdate,
+): PreferencesUpdate {
+  const writingStyle = patch.writingStyle ?? current?.writingStyle;
+  const defaults = { ...current?.defaults, ...patch.defaults };
+
+  return {
+    ...(writingStyle ? { writingStyle } : {}),
+    ...(Object.keys(defaults).length > 0 ? { defaults } : {}),
+  };
+}
+
+/**
+ * Replacing the preferences: the template, the appearance, the page limit,
+ * the output languages and the writing style (`B-090`, `B-091`, `B-092`).
  *
  * **`PUT`, so a field left out is cleared** — the same rule as the head, one
  * resource down. It is separate from the head so that editing a headline
- * cannot reset somebody's writing style by omission, and that separation is
- * exactly why a caller here must hand over the **whole** preferences object
- * rather than the part that changed. `CvAppearance` builds it from the cached
- * copy for that reason.
+ * cannot reset somebody's writing style by omission.
  *
- * Inside `appearance` the same rule reads differently and deliberately so: an
- * omitted field is the **template's own setting**, which is the state a
- * slider returns to rather than a value of ours. So "reset" is an omission,
- * not a number.
+ * **That is why the whole body is built here rather than at the call site.**
+ * It used to be the caller's job, and it worked while there was one caller;
+ * the moment a second screen wrote preferences, the rule "send everything,
+ * including the parts you do not own" had to be remembered twice, and the
+ * copy that forgot would silently wipe a section. Callers now send the part
+ * they own and `mergePreferences` says what that means.
  *
  * The version is the head's `ETag`, read from the cache at call time. The
  * response is the head again — with a `completeness` computed after the
@@ -219,11 +250,14 @@ export function useReplacePreferences() {
   const client = useQueryClient();
 
   return useMutation({
-    mutationFn: (body: PreferencesUpdate) =>
-      replacePreferences(
-        body,
-        client.getQueryData<Versioned<Profile>>(profileKeys.head())?.version as Version,
-      ),
+    mutationFn: (patch: PreferencesUpdate) => {
+      const head = client.getQueryData<Versioned<Profile>>(profileKeys.head());
+
+      return replacePreferences(
+        mergePreferences(head?.data.preferences, patch),
+        head?.version as Version,
+      );
+    },
 
     onSuccess: (result) => client.setQueryData(profileKeys.head(), result),
   });
