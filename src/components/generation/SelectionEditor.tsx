@@ -37,6 +37,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useEditSelection, useGenerationEdited, useSelection } from '@/hooks/useGeneration';
+import { Link } from '@/lib/i18n/navigation';
 import { announce } from '@/stores/announcerStore';
 import type { Resolution } from '@/types/domain';
 
@@ -199,7 +200,7 @@ export function SelectionEditor({ generationId }: { generationId: string }) {
                   disabled={edit.isPending}
                   onCheckedChange={(next) => toggle(atomId, line.text ?? '', next)}
                 />
-                <div className="flex flex-col gap-0.5">
+                <div className="flex flex-col gap-1">
                   <Label htmlFor={id} className="font-normal">
                     {line.text}
                   </Label>
@@ -212,6 +213,74 @@ export function SelectionEditor({ generationId }: { generationId: string }) {
                   <p className="text-muted-foreground text-xs">
                     {onPage ? t('selectionOnPage') : t('selectionHeldBack')}
                   </p>
+
+                  {/*
+                    Principle 7, which wants the reason a line was chosen shown
+                    beside it (`B-108`). Three things were named and all three
+                    were being computed; none of them was on the wire until
+                    that audit, so this list was a ranking whose grounds were
+                    never published.
+
+                    **The score is deliberately still absent** and should not
+                    be asked for: § 23.3's objection to a percentage holds for
+                    a number beside a bullet, and the order already says what
+                    the ranking was.
+
+                    An **absent** `matchedKeywords` draws nothing, which is
+                    not the same as an empty one. The server omits the field
+                    rather than sending `[]`, because an empty array beside a
+                    chosen line reads as "nothing matched" — and in general CV
+                    mode, with no posting at all, that would be a claim about
+                    the content. Generations made before the audit carry no
+                    keywords either: Faz B was not recording them, so the
+                    absence is normal and needs no empty state.
+                  */}
+                  {line.matchedKeywords && line.matchedKeywords.length > 0 && (
+                    <ul aria-label={t('selectionMatched')} className="flex flex-wrap gap-1 pt-0.5">
+                      {line.matchedKeywords.map((keyword) => (
+                        <li
+                          key={keyword}
+                          className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-xs"
+                        >
+                          {keyword}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {/*
+                    Why it is not there, and the four say four different
+                    things — which is the whole of what `B-108` asked for.
+                    A single "it did not fit" would be wrong for three of
+                    them, and dangerously wrong for one: `EXCLUDED_BY_DIRECTIVE`
+                    is an edit made to **this resume**, and a screen that let
+                    the reader undo it as though it were a profile setting
+                    would have them revoke something permanent.
+
+                    Drawn on the **draft** rather than on the server's answer:
+                    once the switch is on, the line is going to the page and a
+                    sentence explaining its absence would be describing a
+                    state the reader has just left. The field is absent for a
+                    line the server put on the page, so a line the reader
+                    removed says nothing here either — the server never held
+                    it back, they did.
+                  */}
+                  {!onPage && line.heldBackReason && (
+                    <p
+                      data-testid={`held-back-${atomId}`}
+                      className="text-muted-foreground text-xs"
+                    >
+                      {t('selectionHeldBackReason', { reason: line.heldBackReason })}
+                      {line.heldBackReason === 'INACTIVE' && (
+                        <>
+                          {' '}
+                          <Link href="/profile" className="underline underline-offset-4">
+                            {t('selectionHeldBackProfile')}
+                          </Link>
+                        </>
+                      )}
+                    </p>
+                  )}
                 </div>
               </li>
             );

@@ -167,6 +167,50 @@ için istek atmak olurdu.
 
 **Ölçüm:** 909 birim testi yeşil, typecheck ve lint temiz.
 
+### D8 kapandı — seçimin gerekçeleri (2026-09-20)
+
+`B-108`: İlke 7 her seçimin gerekçesinin gösterilmesini istiyor ve **üç şey**
+adlandırıyor — skor, eşleşen keyword'ler, red nedeni. Üçü de hesaplanıyordu,
+hiçbiri telde değildi; yani bu liste **gerekçesi hiç yayımlanmamış** bir
+sıralamaydı.
+
+**Skor hâlâ yok ve istenmemeli.** § 23.3'ün yüzdeye itirazı bir madde
+yanındaki sayı için de geçerli, ve sıra zaten sıralamayı söylüyor.
+
+**Yokluk sözleşmenin parçası, eksiklik değil.** `matchedKeywords` **hiç
+gelmiyor**, boş dizi olarak değil: seçilmiş bir satırın yanındaki boş dizi
+"hiçbir şey eşleşmedi" diye okunur, ve genel CV modunda — ortada ilan
+yokken — bu içerik hakkında bir iddia olurdu. Mock ikisini de üretiyor: hem
+alanı, hem alanın olmayışını. Hep gönderen bir fixture, ekranın sunucunun hiç
+göndermediği bir şekle karşı yazılmasına izin verirdi.
+
+**Dört neden dört ayrı cümle, ve biri tehlikeli.**
+`EXCLUDED_BY_DIRECTIVE` **bu CV'de** yapılmış bir düzenleme; onu profil ayarı
+gibi geri aldıran bir ekran, kişiye kalıcı bir kararı geri aldırır. Cümle
+"profiline hiç dokunulmadı" diyor. `INACTIVE` tersi — profil hakkında bir
+olgu — ve **tek** profil bağlantısı taşıyan o.
+
+**Cümle taslağa göre çiziliyor, sunucunun cevabına göre değil.** Switch
+açıldığı anda satır sayfaya gidiyor; yokluğu açıklayan bir cümle, kişinin az
+önce terk ettiği bir durumu tarif ederdi. Alan zaten sayfaya giren satırda
+yok, yani kişinin kendi çıkardığı satır da burada bir şey söylemiyor —
+sunucu onu geri tutmadı, kişi tuttu.
+
+**Mock'un `EXCLUDED_BY_DIRECTIVE`'i bir düzenlemeden doğuyor**, `weigh`'den
+değil: tek üreteni bir insan, ve `include` gelen satırda alan **siliniyor** —
+seçilmiş bir satırın yanında bayat bir neden, olmayan bir yokluğu açıklardı.
+
+**Kapalı atom testte kuruluyor, ortak fixture'da değil.** `INACTIVE` profil
+hakkında bir olgu, yani durum kişinin kuracağı gibi kurulmalı; seed profilde
+kapalı atom yok ve olmamalı — editörün kendi testlerindeki her atom sayısı
+onunla kayardı. `resetProfileFixture` geri alıyor.
+
+**Bir sorgu kapsandı ve sebebi kayda değer:** birkaç satır terim taşıyor, yani
+kapsamsız bir `getByRole('list')` ya yanlış satırı bulur ya da **başka bir
+satıra ait** bir çiple geçer.
+
+**Ölçüm:** 914 birim testi yeşil, typecheck ve lint temiz.
+
 ### Aşama 3'ten devrolan açıklar
 
 - ~~**Gizlilik politikasının sağlayıcı listesi eksik.**~~ **Bayat çıktı

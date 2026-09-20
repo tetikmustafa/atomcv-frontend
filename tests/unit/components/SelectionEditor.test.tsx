@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NextIntlClientProvider } from 'next-intl';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GenerationResult } from '@/components/generation/GenerationResult';
 import { api } from '@/lib/api/client';
 import { generationOf } from '@/mocks/generationFixture';
+import { fixture } from '@/mocks/profileFixture';
 import { server } from '@/mocks/node';
 import { useAnnouncerStore } from '@/stores/announcerStore';
 import { formats } from '@/lib/i18n/formats';
@@ -272,6 +273,145 @@ describe('choosing the lines by hand', () => {
     await openPanel(user);
 
     expect(screen.getByText(en.Result.selectionCost)).toBeInTheDocument();
+  });
+
+  /**
+   * Principle 7 (`B-108`). Three grounds were named — the score, the matched
+   * keywords and the reason for a refusal — and all three were being computed
+   * with none of them on the wire, so this list was a ranking whose grounds
+   * were never published.
+   */
+  describe('why each line is where it is', () => {
+    it('shows the posting terms a chosen line carries', async () => {
+      const generationId = await generate();
+      const user = userEvent.setup();
+
+      render(<GenerationResult generationId={generationId} />, { wrapper: Wrapper });
+      await openPanel(user);
+
+      const published = await linesOf(generationId);
+      const withKeywords = published.find((line) => (line.matchedKeywords ?? []).length > 0);
+      expect(withKeywords, 'the fixture must publish at least one').toBeDefined();
+
+      // Scoped to the row rather than to the screen: several lines carry
+      // terms, so an unscoped query finds the wrong one — or, worse, passes
+      // on a chip that belongs to a different line.
+      const row = screen.getByRole('switch', { name: withKeywords!.text! }).closest('li')!;
+      const chips = within(row).getByRole('list', { name: en.Result.selectionMatched });
+
+      for (const keyword of withKeywords!.matchedKeywords!) {
+        expect(within(chips).getByText(keyword)).toBeInTheDocument();
+      }
+    });
+
+    /**
+     * The absence is the contract, not an oversight: the server omits the
+     * field rather than sending `[]`, because an empty array beside a chosen
+     * line reads as "nothing matched" — and in general CV mode, with no
+     * posting at all, that would be a claim about the content.
+     */
+    it('draws nothing at all for a line that carries none', async () => {
+      const generationId = await generate();
+      const user = userEvent.setup();
+
+      render(<GenerationResult generationId={generationId} />, { wrapper: Wrapper });
+      await openPanel(user);
+
+      const published = await linesOf(generationId);
+      const without = published.filter((line) => line.matchedKeywords === undefined);
+      expect(without.length, 'the fixture must publish at least one').toBeGreaterThan(0);
+
+      // One chip list per line that has terms, and no empty lists.
+      expect(screen.getAllByRole('list', { name: en.Result.selectionMatched })).toHaveLength(
+        published.filter((line) => (line.matchedKeywords ?? []).length > 0).length,
+      );
+    });
+
+    /**
+     * The four say four different things, which is the whole of what the item
+     * asked for. A single "it did not fit" would be wrong for three of them
+     * and **dangerous** for one: `EXCLUDED_BY_DIRECTIVE` is an edit made to
+     * this resume, and a screen that offered to undo it as a profile setting
+     * would have somebody revoke something permanent.
+     */
+    it('says why a line was held back, in that reason’s own words', async () => {
+      const generationId = await generate();
+      const user = userEvent.setup();
+
+      render(<GenerationResult generationId={generationId} />, { wrapper: Wrapper });
+      await openPanel(user);
+
+      const published = await linesOf(generationId);
+      const held = published.filter((line) => line.heldBackReason !== undefined);
+      expect(held.length, 'the fixture must hold something back').toBeGreaterThan(0);
+
+      for (const line of held) {
+        const note = screen.getByTestId(`held-back-${line.atomId}`);
+        expect(note.textContent?.length ?? 0).toBeGreaterThan(0);
+        // An unresolved ICU `select` renders as its own key path.
+        expect(note).not.toHaveTextContent('Result.');
+        expect(note).not.toHaveTextContent(line.heldBackReason!);
+      }
+    });
+
+    /**
+     * `INACTIVE` is the one that is not about this resume at all — the item is
+     * switched off in the profile — so it is the only one that sends the
+     * reader somewhere else.
+     */
+    it('sends only the profile-level reason to the profile', async () => {
+      /*
+        Switched off **here** rather than in the shared fixture, and the
+        difference matters: `INACTIVE` is the one reason that is a fact about
+        the profile rather than about this resume, so the state has to be set
+        the way a person would set it. The seeded profile has no inactive atom
+        and should not grow one — every atom count in the editor's own tests
+        would move with it. `resetProfileFixture` puts this back.
+      */
+      const off = fixture.atoms.at(-1)!;
+      off.active = false;
+
+      const generationId = await generate();
+      const user = userEvent.setup();
+
+      render(<GenerationResult generationId={generationId} />, { wrapper: Wrapper });
+      await openPanel(user);
+
+      const published = await linesOf(generationId);
+      const inactive = published.find((line) => line.heldBackReason === 'INACTIVE');
+      const budget = published.find((line) => line.heldBackReason === 'BUDGET');
+      expect(inactive, 'the fixture must have a switched-off atom').toBeDefined();
+      expect(budget, 'the fixture must run out of page').toBeDefined();
+
+      expect(
+        within(screen.getByTestId(`held-back-${inactive!.atomId}`)).getByRole('link'),
+      ).toBeInTheDocument();
+      expect(
+        within(screen.getByTestId(`held-back-${budget!.atomId}`)).queryByRole('link'),
+      ).toBeNull();
+    });
+
+    /**
+     * Drawn on the **draft**, not on the server's answer. Once the switch is
+     * on, the line is going to the page, and a sentence explaining its
+     * absence would be describing a state the reader has just left.
+     */
+    it('stops explaining an absence the reader has just undone', async () => {
+      const generationId = await generate();
+      const user = userEvent.setup();
+
+      render(<GenerationResult generationId={generationId} />, { wrapper: Wrapper });
+      await openPanel(user);
+
+      const published = await linesOf(generationId);
+      const held = published.find((line) => line.heldBackReason !== undefined)!;
+
+      expect(screen.getByTestId(`held-back-${held.atomId}`)).toBeInTheDocument();
+
+      await user.click(screen.getByRole('switch', { name: held.text! }));
+
+      expect(screen.queryByTestId(`held-back-${held.atomId}`)).toBeNull();
+    });
   });
 
   it('has no accessibility violations with the list open', async () => {

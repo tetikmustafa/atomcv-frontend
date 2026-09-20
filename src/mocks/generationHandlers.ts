@@ -1394,14 +1394,31 @@ function supersede(
     // the new generation is the old selection with the toggles moved
     // (§ 24.4). Re-weighing here would make the page limit a fresh promise
     // instead of the one that was already kept.
-    selection: source.selection.map((line) => ({
-      ...line,
-      onPage: change.include.includes(line.atomId)
-        ? true
-        : change.exclude.includes(line.atomId)
-          ? false
-          : line.onPage,
-    })),
+    selection: source.selection.map((line) => {
+      if (change.include.includes(line.atomId)) {
+        // Back on the page, so whatever kept it off no longer applies. The
+        // field is **removed** rather than set to something: `B-108` says it
+        // is absent on a line that reached the page, and a client reading a
+        // stale reason beside a chosen line would explain an absence that is
+        // not there.
+        return {
+          atomId: line.atomId,
+          text: line.text,
+          onPage: true,
+          ...(line.matchedKeywords ? { matchedKeywords: line.matchedKeywords } : {}),
+        };
+      }
+
+      if (change.exclude.includes(line.atomId)) {
+        // The one reason a **reader** can produce, and the one the screen has
+        // to keep apart from the rest: this is an edit to *this resume*, and
+        // a screen that offered to undo it as though it were a profile
+        // setting would have somebody revoke something permanent.
+        return { ...line, onPage: false, heldBackReason: 'EXCLUDED_BY_DIRECTIVE' as const };
+      }
+
+      return line;
+    }),
     jobId: crypto.randomUUID(),
     generationId: crypto.randomUUID(),
     startedAt: Date.now(),
@@ -1499,17 +1516,52 @@ function frame(step: PhaseEvent): PhaseEvent {
  *
  * The text is the primary wording's, copied now. That is the snapshot the
  * endpoint promises: § 24.2 numbers the lines this CV printed.
+ *
+ * **Both of `B-108`'s fields are produced, and their absence is produced
+ * too** — which is the half a fixture gets wrong most easily. An on-page line
+ * with no skills carries no `matchedKeywords` at all rather than an empty
+ * array, and a line that reached the page carries no `heldBackReason`. A mock
+ * that always sent both would let a screen be written against a shape the
+ * server never sends, and the shape in question is the one that means
+ * "nothing matched" when it is empty.
+ *
+ * The reasons are decided on the profile, like everything else here:
+ * a switched-off atom is `INACTIVE` — which is a real state the fixture has —
+ * and the rest of what the page could not hold is `BUDGET`.
+ * `EXCLUDED_BY_DIRECTIVE` is written by an **edit**, so it appears where an
+ * edit puts it rather than here, and `ENTRY_BELOW_MINIMUM` needs an entry to
+ * fall out whole, which this fixture's `minAtoms` never reaches.
  */
 function weigh(): MockSelectionLine[] {
-  return fixture.atoms
-    .map((atom) => ({
+  const ranked = fixture.atoms
+    .map((atom) => {
+      const active = atom.active !== false;
+
+      return {
+        atom,
+        active,
+        onPage: active && (atom.importance ?? 0) >= 0.5,
+        importance: atom.importance ?? 0,
+      };
+    })
+    .sort((a, b) => Number(b.onPage) - Number(a.onPage) || b.importance - a.importance);
+
+  // Mapped in a second pass rather than destructured with a discard, so the
+  // ranking key never has to appear on the published line.
+  return ranked.map(({ atom, active, onPage }) => {
+    const keywords = [...(atom.skills ?? [])].sort((a, b) => a.localeCompare(b, 'en'));
+
+    return {
       atomId: atom.id ?? '',
       text: (atom.variants ?? []).find((variant) => variant.primary)?.plainText ?? '',
-      onPage: (atom.importance ?? 0) >= 0.5,
-      importance: atom.importance ?? 0,
-    }))
-    .sort((a, b) => Number(b.onPage) - Number(a.onPage) || b.importance - a.importance)
-    .map(({ atomId, text, onPage }) => ({ atomId, text, onPage }));
+      onPage,
+      // Only on the lines that reached the page: the snapshot records the
+      // chosen ones, so a held-back line has none by construction rather
+      // than by omission.
+      ...(onPage && keywords.length > 0 ? { matchedKeywords: keywords } : {}),
+      ...(onPage ? {} : { heldBackReason: active ? ('BUDGET' as const) : ('INACTIVE' as const) }),
+    };
+  });
 }
 
 /**
