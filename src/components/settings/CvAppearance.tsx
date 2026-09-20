@@ -114,8 +114,7 @@ export function CvAppearance() {
   );
   const canCustomize = capabilities?.canCustomizeTemplate ?? false;
 
-  const preferences = profile?.data.preferences;
-  const defaults = preferences?.defaults;
+  const defaults = profile?.data.preferences?.defaults;
 
   /*
     The form's own copy, re-seeded whenever the server's answer changes.
@@ -193,15 +192,18 @@ export function CvAppearance() {
     if (!valid) delete nextAppearance.accentColor;
 
     /*
-      The **whole** preferences object, not the part that changed: `PUT`
-      replaces, and a body carrying only `defaults` would clear the writing
-      style — which is the very omission the endpoint was split off the head
-      to prevent.
+      Only what this screen owns. `PUT` replaces, so the body that reaches the
+      wire still has to carry everything — but that is `useReplacePreferences`'
+      job now, merged from the cache. Building it here meant remembering to
+      carry the writing style through a screen that has nothing to do with it,
+      and the second screen to write preferences would have had to remember
+      the same thing about this one.
+
+      `appearance` goes whole rather than field by field: an omitted field is
+      the template's own setting, so dropping one is how a slider is reset.
     */
     const body: PreferencesUpdate = {
-      ...(preferences?.writingStyle ? { writingStyle: preferences.writingStyle } : {}),
       defaults: {
-        ...defaults,
         ...(templateId ? { templateId } : {}),
         appearance: nextAppearance,
       },
