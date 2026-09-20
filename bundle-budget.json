@@ -1,4 +1,4 @@
-﻿{
+{
   "$comment": [
     "Initial JS per route, gzipped. Checked by scripts/check-bundle-size.mjs.",
     "Ceilings come from Bolum 52.3; this file is the enforcing copy and must not",
