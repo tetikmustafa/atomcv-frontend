@@ -27,6 +27,8 @@ import {
   deleteEntry,
   deleteSection,
   deleteVariant,
+  exportProfileAsJson,
+  exportProfileAsMarkdown,
   getProfile,
   listAtoms,
   listEntries,
@@ -50,6 +52,7 @@ import {
   type EntryCreate,
   type EntryPatch,
   type Profile,
+  type ProfileExport,
   type Section,
   type PreferencesUpdate,
   type ProfileUpdate,
@@ -260,6 +263,35 @@ export function useReplacePreferences() {
     },
 
     onSuccess: (result) => client.setQueryData(profileKeys.head(), result),
+  });
+}
+
+export type ExportFormat = 'json' | 'markdown';
+
+/**
+ * Taking the profile out (§ 57.5).
+ *
+ * **A mutation rather than a query**, though it only reads: a query would
+ * fetch on mount and cache a copy of the whole profile that nobody asked for,
+ * and the thing being modelled here is a button press. The same reasoning as
+ * `useDownloadGeneration`.
+ *
+ * The two formats share one mutation so that `variables.format` says which
+ * button is waiting. A second piece of state for that would have to be kept
+ * true alongside the mutation's own.
+ *
+ * **Not gated on an account.** The endpoint declares no `401`, `capabilities`
+ * carries no flag for it, and portability is the one guarantee § 58.2 makes
+ * unconditional — an anonymous profile expiring in two hours is the case
+ * where taking a copy matters most.
+ */
+export function useExportProfile() {
+  return useMutation({
+    // Annotated, because the two branches resolve to different shapes — a
+    // parsed document and a string — and the inference would take the first
+    // one it sees and call the other a mistake.
+    mutationFn: (format: ExportFormat): Promise<ProfileExport | string> =>
+      format === 'json' ? exportProfileAsJson() : exportProfileAsMarkdown(),
   });
 }
 

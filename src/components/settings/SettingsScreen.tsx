@@ -3,9 +3,13 @@
 /**
  * Two things, and they belong to different owners.
  *
- * **How the CV looks belongs to the profile**, which an anonymous caller also
- * has — a narrower one (preset templates, no Layer B), but a real one. So
- * that section is drawn for everybody and gates itself on `capabilities`.
+ * **What belongs to the profile** — how the CV looks, and the copy you can
+ * take away — is drawn for everybody. An anonymous caller has a profile too:
+ * a narrower one (preset templates, no Layer B), but a real one, so the
+ * appearance section gates itself on `capabilities` rather than on having an
+ * account. Export gates on nothing at all: § 58.2 makes portability
+ * unconditional, and a profile that expires in two hours is the one most
+ * worth copying.
  *
  * **The account section belongs to an account.** Deleting one is not a
  * feature an anonymous caller has a narrower version of: there is no account.
@@ -17,6 +21,7 @@
 
 import { useTranslations } from 'next-intl';
 import { CvAppearance } from '@/components/settings/CvAppearance';
+import { DataExport } from '@/components/settings/DataExport';
 import { DeleteAccount } from '@/components/settings/DeleteAccount';
 import { LifecycleEmails } from '@/components/settings/LifecycleEmails';
 import { useSession } from '@/hooks/useSession';
@@ -33,6 +38,7 @@ export function SettingsScreen() {
   return (
     <div className="flex flex-col gap-10">
       <CvAppearance />
+      <DataExport />
 
       {session.authenticated ? (
         <>

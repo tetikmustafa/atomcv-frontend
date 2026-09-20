@@ -694,7 +694,16 @@
     "deleteAction": "Hesabımı sil",
     "deleteConfirmTitle": "Hesabın silinsin mi?",
     "deleteConfirmBody": "Bu, profilini — {sections, plural, =1 {bir bölüm} other {# bölüm}} ve {atoms, plural, =1 {bir madde} other {# madde}} — {generations, plural, =0 {ürettiğin bütün CV'leri} =1 {ürettiğin tek CV'yi} other {ürettiğin # CV'nin hepsini}} ve onlardan çıkan belgeleri, sırada bekleyen işleri, kullanım sayaçlarını ve e-posta tercihlerini siler. Geri alınamaz.\n\nİki şey kalıyor. Üretimlerinin maliyet kaydı, seninle bağı koparılmış olarak duruyor; artık kimseyi göstermiyor. Ve adresin bir kez geri döndüyse ya da bizi şikâyet ettiyse, o kayıt hesaba değil **adrese** ait olduğu için kalıyor — silmek, bize yazma dememiş olan bir adrese yeniden yazmamıza izin verirdi.\n\nYapay zekâ sağlayıcıları kendi taraflarında kısa ömürlü kayıtlar tutabiliyor. Hangileri olduğu gizlilik politikasında.",
-    "deleteConfirmAction": "Her şeyi sil"
+    "deleteConfirmAction": "Her şeyi sil",
+    "export": {
+      "title": "Verini yanına al",
+      "intro": "Profilindeki her şey, sende kalacak bir dosya olarak. Bunu yapmak hiçbir şeyi silmez — bu bir kopya.",
+      "json": "JSON'u indir",
+      "markdown": "Markdown'ı indir",
+      "preparing": "Dosya hazırlanıyor…",
+      "formats": "JSON tam kopya, başka bir program okusun diye. Markdown okunabilir olan, başka bir yere yapıştırmak için — yalnız bu uygulamanın kullandığı kısımları dışarıda bırakır.",
+      "announceStarted": "İndirme başladı"
+    }
   },
   "Appearance": {
     "title": "CV’nin görünüşü",
