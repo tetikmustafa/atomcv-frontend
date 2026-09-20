@@ -38,6 +38,8 @@ import {
   reorderSections,
   replacePreferences,
   replaceProfile,
+  tagAtom,
+  untagAtom,
   type Atom,
   type AtomCreate,
   type AtomPatch,
@@ -861,5 +863,66 @@ export function useDeleteAtom() {
   return useMutation({
     mutationFn: (id: string) => deleteAtom(id, versionOf(client, id)),
     onSuccess: () => invalidateWholeProfile(client),
+  });
+}
+
+/* --------------------------------- tags -------------------------------- */
+
+/**
+ * Putting a label on an atom (`B-103`).
+ *
+ * **No version is read and none is sent.** Every other write in this file
+ * carries one; a tag is a row of its own and the atom is untouched, so there
+ * is no version of the atom for a precondition to be about. Reaching for
+ * `versionOf` here would send an `If-Match` the endpoint does not want and
+ * would make two people tagging one atom a conflict, when the right outcome
+ * is both tags.
+ *
+ * **Written through with the server's row, never with what was typed.** The
+ * label is stored canonical — trimmed and lowercased, because that is what
+ * the scorer compares — so echoing the input would put a label on screen that
+ * does not match the one being scored. It also means an id: a tag has to be
+ * removable, and only the response carries one.
+ *
+ * **Idempotent server-side**, which is why the row is replaced by id rather
+ * than appended: tagging an atom that already wears the label returns the tag
+ * it already has, and appending would show it twice.
+ */
+export function useTagAtom() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ atomId, label }: { atomId: string; label: string }) => tagAtom(atomId, label),
+
+    onSuccess: (tag, { atomId }) => {
+      updateAtomThrough(client, atomId, (atom) => {
+        const tags = atom.tags ?? [];
+        const known = tags.some((existing) => existing.id === tag.id);
+
+        return { ...atom, tags: known ? tags : [...tags, tag] };
+      });
+    },
+  });
+}
+
+/**
+ * Taking a label off.
+ *
+ * Removed by **id** rather than by label: the same word can be stored once
+ * and worn by many atoms, and the row this deletes is the one joining this
+ * atom to it.
+ */
+export function useUntagAtom() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ atomId, tagId }: { atomId: string; tagId: string }) => untagAtom(atomId, tagId),
+
+    onSuccess: (_result, { atomId, tagId }) => {
+      updateAtomThrough(client, atomId, (atom) => ({
+        ...atom,
+        tags: (atom.tags ?? []).filter((tag) => tag.id !== tagId),
+      }));
+    },
   });
 }

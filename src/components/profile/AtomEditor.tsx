@@ -32,6 +32,7 @@ import { RichText } from '@/components/profile/RichText';
 import { TagInput } from '@/components/profile/TagInput';
 import { StaleWording } from '@/components/profile/StaleWording';
 import { AddWording } from '@/components/profile/AddWording';
+import { AtomTags } from '@/components/profile/AtomTags';
 import { VariantTabs } from '@/components/profile/VariantTabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -320,6 +321,21 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
       ))}
 
       <SaveStatus status={controls.status} onRetry={controls.retry} onDiscard={controls.discard} />
+
+      {/*
+        The labels, and they are **not** one of the lists above (`B-103`).
+        Those are fields on `AtomPatch` and get replaced whole; a tag is a row
+        with an id, added and removed one call at a time and carrying who put
+        it there. It also has its own error surface, because it has its own
+        request — the save indicator above belongs to the patch.
+
+        Drawn for everybody. The lists next to it are, and `atom_controls` —
+        the one capability that closes controls here — names importance,
+        availability and the two locks. A tag is neither: it is how somebody
+        says what their own work was about, and a quarter of the raw score
+        reads it.
+      */}
+      <AtomTags atomId={atomId} tags={atom.tags ?? []} />
 
       {/*
         A refused save is already reported by the indicator next to the field

@@ -272,6 +272,15 @@
       "completenessLabel": "Profile completeness",
       "completeness": "Profile: {percent} complete"
     },
+    "atomTags": {
+      "label": "Labels",
+      "hint": "What this item is about, in your own words. Matching reads these against the posting, so a label here is a scoring decision rather than a note to yourself.",
+      "placeholder": "Type a label and press Enter",
+      "remove": "Remove the label {label}",
+      "source": "{source, select, auto {Suggested when your CV was read} user {Added by you} other {Label}}",
+      "announceAdded": "Added the label {label}",
+      "announceRemoved": "Removed the label {label}"
+    },
     "tags": {
       "placeholder": "Type and press Enter",
       "remove": "Remove {value}",

@@ -211,6 +211,50 @@ satıra ait** bir çiple geçer.
 
 **Ölçüm:** 914 birim testi yeşil, typecheck ve lint temiz.
 
+### D9 kapandı — atom etiketleri, ve sıfırdan çıkan çeyrek (2026-09-20)
+
+`B-103` sayıyı veriyor: **Faz B'nin ham skorunun dörtte biri** atomun
+etiketleriyle ilanın istedikleri arasındaki örtüşme, ve `tags` ile `atom_tags`
+tablolarına **hiçbir şey** yazılmıyordu — içe aktarım modelin bulduğu
+etiketleri normalize edip düşürüyordu. Yani o çeyrek, her atom için her ilana
+karşı **yapısal olarak sıfırdı**. § 55'in "etiket / önem / kilit" editörünün
+eksik yarısı buydu.
+
+**`TagInput` yeniden kullanılmadı, ve bu bir tekrar değil.** Yanındaki üç
+liste `AtomPatch`'in **alanları** ve bütün olarak değişiyor; etiketler **satır**
+— id'si var, tek tek ekleniyor ve siliniyor, ve kimin koyduğunu taşıyor. Ortak
+kontrol, ya tek etiket alan bir uca bütün liste göndermek ya da satır şeklinde
+bir şeyi alan gibi göstermek olurdu. `TagInput`'a eklenen tek şey D6'nın
+`maxCount`'u.
+
+**`auto` ile `user` farklı çiziliyor, çünkü farklı iddialar.** `auto` çıkarımın
+kişinin işi hakkındaki tahmini, `user` kişinin kendi kararı. Aynı çizilseler
+tahmin bir seçim gibi görünürdü — ve hangisinin hangisi olduğunu ayırt
+edemeyen birinin ikisini de düzeltmek için sebebi olmaz. Ayrım kenarlıkla
+**ve sözle** (kural 6).
+
+**Hiçbir sürüm gitmiyor**, ve bu dosyadaki diğer her yazmadan farkı bu: etiket
+kendi satırı, atoma dokunulmuyor, yani önkoşulun hakkında olacağı bir atom
+sürümü yok. `versionOf`'a uzanmak, uçun istemediği bir `If-Match` göndermek ve
+bir atomu etiketleyen iki kişiyi çakışma saymak olurdu — doğru sonuç iki
+etiket. Test bunu **hem başlığın yokluğuyla hem atom sürümünün kıpırdamamasıyla**
+sabitliyor.
+
+**Ekranda yazılan değil, dönen çiziliyor.** Etiket kırpılmış ve küçük harfe
+çevrilmiş saklanıyor, çünkü skorlayıcının karşılaştırdığı biçim o; girdiyi
+yankılamak, skorlanan sözcük olmayan bir sözcüğü göstermek olurdu.
+
+**Zaten taşınan bir etiket istek üretmiyor.** Uç idempotent, yani zararsız
+olurdu — ama boşa bir gidiş dönüş ve alanın bir şey yapmış gibi göründüğü bir
+an. Karşılaştırma `toLocaleLowerCase('en')` ile: `ETL` okuyucunun Türkçe
+locale'inde `etl`'ye eşleşmezdi (kural 11).
+
+**Mock idempotent çağrıda `source`'u yeniden yazmıyor:** çıkarımın tahmininin
+üstüne aynı etiketi yazan kişi, onu sessizce sahiplenmiyor.
+
+**Ölçüm:** 922 birim testi yeşil; `/profile` **255.8 → 256.5 KB** (tavan 280),
+landing 0.0 KB.
+
 ### Aşama 3'ten devrolan açıklar
 
 - ~~**Gizlilik politikasının sağlayıcı listesi eksik.**~~ **Bayat çıktı

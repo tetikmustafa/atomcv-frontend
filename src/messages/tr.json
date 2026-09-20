@@ -272,6 +272,15 @@
       "completenessLabel": "Profil tamamlanma oranı",
       "completeness": "Profil: {percent} tamamlandı"
     },
+    "atomTags": {
+      "label": "Etiketler",
+      "hint": "Bu maddenin neyle ilgili olduğu, kendi sözcüklerinle. Eşleştirme bunları ilana karşı okuyor; yani buradaki bir etiket kendine not değil, bir skorlama kararı.",
+      "placeholder": "Etiket yaz ve Enter'a bas",
+      "remove": "{label} etiketini kaldır",
+      "source": "{source, select, auto {CV'n okunurken önerildi} user {Sen ekledin} other {Etiket}}",
+      "announceAdded": "{label} etiketi eklendi",
+      "announceRemoved": "{label} etiketi kaldırıldı"
+    },
     "tags": {
       "placeholder": "Yaz ve Enter’a bas",
       "remove": "{value} sil",

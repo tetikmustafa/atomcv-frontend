@@ -919,6 +919,79 @@ export const profileHandlers = [
     });
   }),
 
+  /**
+   * Putting a label on an atom (`B-103`).
+   *
+   * Three things are encoded here because each is something a client gets
+   * wrong by assuming the opposite:
+   *
+   * - **The stored form is canonical** — trimmed and lowercased — and that is
+   *   what comes back, not what was typed. A screen echoing its own input
+   *   would show a word that is not the one being scored.
+   * - **No `If-Match`.** A tag is a row of its own and the atom is untouched,
+   *   so there is no version of the atom for a precondition to be about. The
+   *   operation declares 412 and 428 the way its siblings on this path do;
+   *   neither is reachable through it.
+   * - **Idempotent**, and the second call returns the tag that is already
+   *   there **with its original `source`**. Re-tagging does not rewrite who
+   *   put it there, so a person typing over the extraction's guess does not
+   *   quietly claim it.
+   */
+  http.post('*/api/v1/profile/atoms/:id/tags', async ({ request, params }) => {
+    const id = String(params.id);
+    const instance = `/api/v1/profile/atoms/${id}/tags`;
+    const atom = findAtom(id);
+
+    if (!atom) {
+      return HttpResponse.json(problem(404, 'RESOURCE_NOT_FOUND', instance), { status: 404 });
+    }
+
+    const body = (await request.json()) as { label?: unknown };
+    const raw = typeof body.label === 'string' ? body.label.trim() : '';
+
+    if (raw === '' || raw.length > 60) {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['label'] }),
+        { status: 400 },
+      );
+    }
+
+    // `toLocaleLowerCase('en')`, never the runner's locale: this is the
+    // scorer's comparison form, and Turkish folds `I` to `ı` (rule 11).
+    const label = raw.toLocaleLowerCase('en');
+    const existing = (atom.tags ?? []).find((tag) => tag.label === label);
+
+    if (existing) return HttpResponse.json(existing, { status: 201 });
+
+    const tag = { id: crypto.randomUUID(), label, source: 'user' as const };
+    atom.tags = [...(atom.tags ?? []), tag];
+
+    return HttpResponse.json(tag, { status: 201 });
+  }),
+
+  /**
+   * Taking a label off.
+   *
+   * `404` when this atom is not wearing that tag: a removal that did not
+   * happen is not reported as one, and a client that treated a missing row as
+   * success would leave a tag on screen that it believes it deleted.
+   */
+  http.delete('*/api/v1/profile/atoms/:id/tags/:tagId', ({ params }) => {
+    const id = String(params.id);
+    const tagId = String(params.tagId);
+    const instance = `/api/v1/profile/atoms/${id}/tags/${tagId}`;
+    const atom = findAtom(id);
+    const worn = (atom?.tags ?? []).some((tag) => tag.id === tagId);
+
+    if (!atom || !worn) {
+      return HttpResponse.json(problem(404, 'RESOURCE_NOT_FOUND', instance), { status: 404 });
+    }
+
+    atom.tags = (atom.tags ?? []).filter((tag) => tag.id !== tagId);
+
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   http.patch('*/api/v1/profile/atoms/:id/variants/:variantId', async ({ request, params }) => {
     const id = String(params.id);
     const variantId = String(params.variantId);

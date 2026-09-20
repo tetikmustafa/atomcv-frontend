@@ -225,6 +225,21 @@ function initial(): ProfileFixture {
         skills: ['ETL'],
         metrics: [],
         properNouns: [],
+        /*
+          Both sources, on one atom, on purpose (`B-103`): an `auto` tag is
+          the extraction's guess about somebody's work and a `user` tag is
+          their own decision, so the editor draws them differently — and a
+          fixture carrying only one of them would let the screen be written
+          as though there were one kind.
+
+          Canonical, because that is how the server stores them: the label is
+          trimmed and lowercased before it is written, since that is the form
+          the scorer compares.
+        */
+        tags: [
+          { id: 'tag-auto-1', label: 'data-engineering', source: 'auto' },
+          { id: 'tag-user-1', label: 'etl', source: 'user' },
+        ],
         source: 'manual',
         verified: false,
         version: 0,
@@ -281,6 +296,7 @@ function initial(): ProfileFixture {
         skills: ['Kafka'],
         metrics: [],
         properNouns: [],
+        tags: [{ id: 'tag-auto-2', label: 'streaming', source: 'auto' }],
         source: 'manual',
         verified: false,
         version: 0,

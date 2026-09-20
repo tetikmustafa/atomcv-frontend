@@ -316,6 +316,43 @@ export function deleteVariant(atomId: string, variantId: string, version: Versio
   });
 }
 
+/* --------------------------------- tags -------------------------------- */
+
+/**
+ * The labels an atom wears (`B-103`, § 19.1).
+ *
+ * **A scoring control, not decoration**, and the item is blunt about what was
+ * wrong before it: nothing was writing to `tags` or `atom_tags` at all — the
+ * import normalised what the model found and dropped it — so Faz B's tag
+ * overlap, **a quarter of the raw score**, was structurally zero for every
+ * atom against every posting.
+ *
+ * **No `If-Match`, and that is not an omission.** A tag is a row of its own
+ * and the atom is untouched, so there is no version of the atom for a
+ * precondition to be about. Two people tagging one atom end up with both
+ * tags, which is what each of them asked for.
+ *
+ * **Stored canonical** — trimmed and lowercased, because that is the form the
+ * scorer compares — and the response carries the stored form back rather than
+ * what was typed. So the screen renders what came back; echoing the input
+ * would show a label that does not match the one being scored.
+ */
+export type AtomTag = NonNullable<Atom['tags']>[number];
+
+export type TagSource = NonNullable<AtomTag['source']>;
+
+export function tagAtom(atomId: string, label: string) {
+  return api.post<Returns<'tagAtom'>>(`/profile/atoms/${atomId}/tags`, { label });
+}
+
+/**
+ * `404` when the atom is not wearing that tag: a removal that did not happen
+ * is not reported as one.
+ */
+export function untagAtom(atomId: string, tagId: string) {
+  return api.delete<Returns<'untagAtom'>>(`/profile/atoms/${atomId}/tags/${tagId}`);
+}
+
 /* -------------------------------- export ------------------------------- */
 
 /**
