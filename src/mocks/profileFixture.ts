@@ -312,6 +312,33 @@ function initial(): ProfileFixture {
             stale: false,
             version: 0,
           },
+          {
+            /*
+              A wording nobody here typed (`B-107`). `auto` follows the posting
+              now: missing wordings are translated between Faz B and Faz C and
+              **written back to the profile**, so rows like this appear in the
+              editor without anyone adding them, and § 32.5 asks for them to be
+              read.
+
+              **Up to date and still worth a look**, which is the state the
+              note beside it is for and the reason it is a separate fact from
+              staleness: `stale: false` and `userEdited: false` at the same
+              time. `atom-2`'s Turkish wording carries the other pair.
+
+              `createdBy` has exactly two values since `B-112` — `user` and
+              `llm_translate` — so this is the whole of the other one.
+            */
+            id: 'variant-3-tr',
+            primary: false,
+            language: 'tr',
+            content: { v: 1, runs: [{ t: 'Kurye atamasını yeniden yazdım', m: [] }] },
+            plainText: 'Kurye atamasını yeniden yazdım',
+            contentHash: 'seeded',
+            createdBy: 'llm_translate',
+            userEdited: false,
+            stale: false,
+            version: 0,
+          },
         ],
       },
       {

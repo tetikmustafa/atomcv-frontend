@@ -1044,6 +1044,20 @@ export const profileHandlers = [
     if (body.content) {
       variant.content = body.content;
       variant.plainText = (body.content.runs ?? []).map((run) => run.t).join('');
+
+      /*
+        **Writing words is what makes a wording yours** (`B-052`, and the
+        other side of the refusal above). The flag is the server's to set and
+        it sets it here rather than taking anybody's word for it — which is
+        also what ends the note on a machine translation (`B-107`): the reader
+        edits the sentence, the row stops being one nobody wrote, and the
+        notice goes for the one reason that means they read it.
+
+        Missing until now, and invisible while nothing drew the flag: the mock
+        happily kept `userEdited: false` on a row the client had just
+        rewritten.
+      */
+      variant.userEdited = true;
     }
 
     // Three-state: absent keeps what is there, `null` returns to the neutral

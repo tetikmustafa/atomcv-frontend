@@ -31,6 +31,7 @@ import { LockToggles, type LockToggle } from '@/components/profile/LockToggles';
 import { RichText } from '@/components/profile/RichText';
 import { TagInput } from '@/components/profile/TagInput';
 import { StaleWording } from '@/components/profile/StaleWording';
+import { TranslatedWording } from '@/components/profile/TranslatedWording';
 import { AddWording } from '@/components/profile/AddWording';
 import { AtomTags } from '@/components/profile/AtomTags';
 import { VariantTabs } from '@/components/profile/VariantTabs';
@@ -163,6 +164,15 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
         has no strip and would otherwise never say it was out of date.
       */}
       <StaleWording atomId={atomId} variant={selected} />
+
+      {/*
+        And the other thing that can be true about a wording nobody typed
+        (`B-107`): it may be perfectly up to date and still be a machine
+        translation. The two notes are separate because they are separate
+        facts — one is about the source having moved, the other about who
+        wrote this line — and an atom can carry either, both or neither.
+      */}
+      <TranslatedWording variant={selected} />
 
       {/*
         The stored content, as it will be read. Kept visible while editing:
