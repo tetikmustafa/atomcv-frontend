@@ -694,7 +694,16 @@
     "deleteAction": "Delete my account",
     "deleteConfirmTitle": "Delete your account?",
     "deleteConfirmBody": "This deletes your profile — {sections, plural, =1 {one section} other {# sections}} and {atoms, plural, =1 {one item} other {# items}} — along with {generations, plural, =0 {every resume you generate} =1 {the one resume you have generated} other {all # resumes you have generated}} and the documents they made, anything still queued, your usage counters and your email preferences. It cannot be undone.\n\nTwo things stay. Our record of what your generations cost is kept with the link to you cut, so it no longer shows anyone. And if your address ever bounced or reported us, that record stays with the address rather than with the account — deleting it would let us write to you again after being told not to.\n\nThe AI providers may hold their own short-lived logs on their side. The privacy policy says which.",
-    "deleteConfirmAction": "Delete everything"
+    "deleteConfirmAction": "Delete everything",
+    "export": {
+      "title": "Take your data with you",
+      "intro": "Everything in your profile, as a file you keep. Nothing is deleted by doing this — it is a copy.",
+      "json": "Download JSON",
+      "markdown": "Download Markdown",
+      "preparing": "Preparing the file…",
+      "formats": "JSON is the complete copy, meant to be read by another program. Markdown is the readable one, for pasting somewhere else — it leaves out the parts only this app uses.",
+      "announceStarted": "Download started"
+    }
   },
   "Appearance": {
     "title": "How your resume looks",

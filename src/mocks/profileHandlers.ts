@@ -294,6 +294,52 @@ const GITHUB_SUGGESTIONS = [
   },
 ] satisfies Schemas['GitHubSuggestion'][];
 
+const byDisplayOrder = (a: { displayOrder?: number }, b: { displayOrder?: number }) =>
+  (a.displayOrder ?? 0) - (b.displayOrder ?? 0);
+
+/** The wording a reader would recognise: the primary one, or the first. */
+function exportedText(atom: MockAtom): string {
+  const variants = atom.variants ?? [];
+  const chosen = variants.find((variant) => variant.primary) ?? variants[0];
+
+  return chosen?.plainText ?? '';
+}
+
+/**
+ * The human-readable half of § 57.5, assembled from the same fixture the JSON
+ * half reads.
+ *
+ * Headings rather than a transcript of the data model: the point of this
+ * format is that it can be pasted into something else, so a section is a
+ * heading, an entry is a heading with its dates, and an atom is a bullet.
+ */
+function toMarkdown(exported: Schemas['ProfileExport']): string {
+  const profile = exported.profile ?? {};
+  const lines: string[] = [`# ${profile.headline ?? 'Profile'}`];
+
+  const contact = profile.contact ?? {};
+  const reachable = [contact.name, contact.email, contact.location].filter(Boolean);
+  if (reachable.length > 0) lines.push('', reachable.join(' · '));
+
+  if (profile.selfDescription) lines.push('', profile.selfDescription);
+
+  for (const { section, entries = [], atoms = [] } of exported.sections ?? []) {
+    lines.push('', `## ${section?.title ?? ''}`);
+
+    for (const atom of atoms) lines.push('', `- ${exportedText(atom)}`);
+
+    for (const { entry, atoms: entryAtoms = [] } of entries) {
+      const dates = [entry?.startDate, entry?.endDate ?? 'present'].filter(Boolean).join(' – ');
+      const heading = [entry?.title, entry?.organization].filter(Boolean).join(' — ');
+
+      lines.push('', `### ${heading}`, '', dates);
+      for (const atom of entryAtoms) lines.push(`- ${exportedText(atom)}`);
+    }
+  }
+
+  return `${lines.join('\n')}\n`;
+}
+
 export const profileHandlers = [
   /** The head. Never 404s, and its version travels only as an ETag. */
   http.get('*/api/v1/profile', () =>
@@ -301,6 +347,63 @@ export const profileHandlers = [
       headers: { ETag: `"${fixture.profileVersion}"` },
     }),
   ),
+
+  /**
+   * Taking the profile out (§ 57.5 — the portability half of the privacy
+   * policy, and § 58.2 calls it the most important guarantee).
+   *
+   * **Two bodies behind one path**, picked by `?format=`: JSON is the
+   * complete machine-readable copy, Markdown is the one that can be pasted
+   * into something else. The schema declares both media types on the same
+   * `200`.
+   *
+   * **The `400` is mocked because it is the interesting half.** A client that
+   * quietly treated an unknown format as JSON would look correct here and
+   * hand somebody the wrong file in production; the schema declares that
+   * refusal, so the mock produces it.
+   *
+   * The Markdown is assembled from the fixture rather than stored as a
+   * sample. A fixed document would go on saying "Senior Backend Engineer"
+   * after a test renamed the entry — and then the test would be checking that
+   * the mock is consistent with itself.
+   */
+  http.get('*/api/v1/profile/export', ({ request }) => {
+    const instance = '/api/v1/profile/export';
+    const format = new URL(request.url).searchParams.get('format') ?? 'json';
+
+    if (format !== 'json' && format !== 'markdown') {
+      return HttpResponse.json(
+        problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['format'] }),
+        { status: 400 },
+      );
+    }
+
+    const exported = {
+      exportedAt: new Date().toISOString(),
+      profile: fixture.profile,
+      sections: [...fixture.sections].sort(byDisplayOrder).map((section) => ({
+        section,
+        entries: fixture.entries
+          .filter((entry) => entry.sectionId === section.id)
+          .sort(byDisplayOrder)
+          .map((entry) => ({
+            entry,
+            atoms: fixture.atoms.filter((atom) => atom.entryId === entry.id).sort(byDisplayOrder),
+          })),
+        // Atoms hanging straight off the section — the other shape a section
+        // comes in, and the one a single-shape export would drop silently.
+        atoms: fixture.atoms
+          .filter((atom) => atom.sectionId === section.id && !atom.entryId)
+          .sort(byDisplayOrder),
+      })),
+    } satisfies Schemas['ProfileExport'];
+
+    if (format === 'json') return HttpResponse.json(exported);
+
+    return new HttpResponse(toMarkdown(exported), {
+      headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
+    });
+  }),
 
   /**
    * Replacing the head. **`PUT`, and an omitted field is cleared** — verified
