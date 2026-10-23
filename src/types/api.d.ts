@@ -1125,7 +1125,8 @@ export interface components {
             marginInches?: number;
             /** Format: double */
             lineSpacing?: number;
-            fontFamily?: string;
+            /** @enum {string} */
+            fontFamily?: "modern" | "serif" | "sans" | "book";
             accentColor?: string;
         };
         Contact: {
@@ -1241,7 +1242,8 @@ export interface components {
             marginInches?: number;
             /** Format: double */
             lineSpacing?: number;
-            fontFamily?: string;
+            /** @enum {string} */
+            fontFamily?: "modern" | "serif" | "sans" | "book";
             accentColor?: string;
         };
         DefaultsUpdate: {
@@ -1684,6 +1686,19 @@ export interface components {
              * @example Lead with the platform work rather than the ML.
              */
             note?: string;
+            /**
+             * Format: int32
+             * @description The answer to a `keep_top_pinned` resolution: carry only the
+             *     most relevant `keepPinned` of the profile's pinned atoms on
+             *     this one CV. The rest are not dropped -- they compete for the
+             *     page like any other atom. Send the `params.keep` the refusal
+             *     offered. Absent forces every pin, which is the ordinary case.
+             *
+             *     It changes nothing on the profile: a pin outlives this
+             *     generation, the cap does not.
+             * @example 3
+             */
+            keepPinned?: number;
         };
         /**
          * @description Which atoms this CV should keep and which it should drop, whatever Faz B thought of them. The generation is re-made from its own selection state — the page limit is re-checked and still holds, however many times it is edited — and a new generation replaces the one that was edited.
@@ -1756,6 +1771,11 @@ export interface components {
              * @example They open-sourced their scheduler last year.
              */
             companyNote?: string;
+            /**
+             * @description The letter's language, as an ISO 639-1 code — one of `capabilities.allowedLanguages`. Omitted, the profile's `defaults.coverLetterLanguage` decides, and its `auto` follows the posting.
+             * @example en
+             */
+            language?: string;
         };
         /** @description A covering letter */
         CoverLetterResponse: {
@@ -1891,8 +1911,9 @@ export interface components {
             /**
              * @description One of the whitelisted families
              * @example sans
+             * @enum {string}
              */
-            fontFamily?: string;
+            fontFamily?: "modern" | "serif" | "sans" | "book";
             /**
              * @description Six hex digits, no hash
              * @example 1D4ED8
@@ -1913,7 +1934,8 @@ export interface components {
             marginInches?: number;
             /** Format: double */
             lineSpacing?: number;
-            fontFamily?: string;
+            /** @enum {string} */
+            fontFamily?: "modern" | "serif" | "sans" | "book";
             accentColor?: string;
             /** Format: date-time */
             createdAt?: string;
@@ -2038,7 +2060,8 @@ export interface components {
             marginInches?: number;
             /** Format: double */
             lineSpacing?: number;
-            fontFamily?: string;
+            /** @enum {string} */
+            fontFamily?: "modern" | "serif" | "sans" | "book";
             accentColor?: string;
         };
         /**

@@ -527,7 +527,8 @@ export const profileHandlers = [
       ...outOfRange
         .filter(([, value, min, max]) => value !== undefined && (value < min || value > max))
         .map(([field]) => field),
-      ...(appearance.fontFamily && !['MODERN', 'SERIF', 'SANS'].includes(appearance.fontFamily)
+      ...(appearance.fontFamily &&
+      !['modern', 'serif', 'sans', 'book'].includes(appearance.fontFamily.toLowerCase())
         ? ['fontFamily']
         : []),
       ...(appearance.accentColor && !/^[0-9A-Fa-f]{6}$/.test(appearance.accentColor)
@@ -570,7 +571,13 @@ export const profileHandlers = [
         defaults: {
           ...body.defaults,
           templateId: templateId && TEMPLATES.includes(templateId) ? templateId : 'classic',
-          appearance,
+          // One spelling back, whatever case was sent (B-120).
+          appearance: appearance?.fontFamily
+            ? {
+                ...appearance,
+                fontFamily: appearance.fontFamily.toLowerCase() as typeof appearance.fontFamily,
+              }
+            : appearance,
         },
       },
     };
