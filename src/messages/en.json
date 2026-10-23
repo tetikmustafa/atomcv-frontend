@@ -770,9 +770,10 @@
     "lineSpacingValue": "{value}×",
     "fontFamily": "Typeface",
     "fontFamilies": {
-      "MODERN": "Modern",
-      "SERIF": "Serif",
-      "SANS": "Sans serif"
+      "modern": "Modern",
+      "serif": "Serif",
+      "sans": "Sans serif",
+      "book": "Book"
     },
     "accentColor": "Accent colour",
     "accentColorHint": "Six hex digits, no #. Left empty, the template picks its own — which is not black for every template.",

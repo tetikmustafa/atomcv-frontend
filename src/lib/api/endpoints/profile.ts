@@ -149,14 +149,29 @@ export const LANGUAGE_FOLLOWS_POSTING = 'auto';
  */
 export const ATS_READABLE_FONT_SIZE_PT = 10;
 
+/** The typefaces a CV can be set in, as the schema publishes them (`B-120`). */
+export type FontFamily = NonNullable<Schemas['AppearanceUpdate']['fontFamily']>;
+
 /**
- * The three families the pattern allows.
+ * The same four, as a list a picker can draw.
  *
- * The schema publishes `fontFamily` as a `string` with a regex, so there is no
- * generated union to derive from. A value outside this list is the server's to
- * refuse; what this list decides is only which three buttons get drawn.
+ * A union has no runtime form, so the list is written out — and checked
+ * against the union both ways: `satisfies` refuses a value the server would
+ * not accept, and `MissingFamily` turns a fifth value from the next `gen:api`
+ * into a typecheck failure here instead of a typeface nobody can pick. Until
+ * `B-120` the field was a plain string, this list said three and § 38.5 said
+ * four, and nothing could see it (`F-041`).
  */
-export const FONT_FAMILIES = ['MODERN', 'SERIF', 'SANS'] as const;
+export const FONT_FAMILIES = [
+  'modern',
+  'serif',
+  'sans',
+  'book',
+] as const satisfies readonly FontFamily[];
+
+type MissingFamily = Exclude<FontFamily, (typeof FONT_FAMILIES)[number]>;
+export const FONT_FAMILIES_ARE_EXHAUSTIVE: [MissingFamily] extends [never] ? true : MissingFamily =
+  true;
 
 /** Six hex digits, no `#` — the shape the server stores and validates. */
 export const ACCENT_COLOR_PATTERN = /^[0-9A-Fa-f]{6}$/;

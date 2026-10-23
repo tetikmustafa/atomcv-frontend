@@ -770,9 +770,10 @@
     "lineSpacingValue": "{value}×",
     "fontFamily": "Yazı tipi",
     "fontFamilies": {
-      "MODERN": "Modern",
-      "SERIF": "Tırnaklı",
-      "SANS": "Tırnaksız"
+      "modern": "Modern",
+      "serif": "Tırnaklı",
+      "sans": "Tırnaksız",
+      "book": "Kitap"
     },
     "accentColor": "Vurgu rengi",
     "accentColorHint": "Altı onaltılık hane, # olmadan. Boş bırakırsan şablon kendi rengini seçer — ve bu her şablonda siyah değil.",

@@ -129,6 +129,33 @@ describe('how the CV looks', () => {
     expect(fixture.profile.preferences?.writingStyle?.tone).toBe('formal');
   });
 
+  /**
+   * `B-120`. § 38.5 names four typefaces and this offered three, because the
+   * field was a plain string and nothing could see the difference. The list
+   * is now checked against the schema's union, and the value goes out in the
+   * one spelling the server answers with.
+   */
+  it('offers all four typefaces and stores the one picked in lower case', async () => {
+    signIn();
+    const user = userEvent.setup();
+
+    render(<CvAppearance />, { wrapper: wrapperFor('en') });
+
+    const group = await screen.findByRole('group', { name: en.Appearance.fontFamily });
+    expect(
+      within(group)
+        .getAllByRole('radio')
+        .map((radio) => radio.getAttribute('value')),
+    ).toEqual(['modern', 'serif', 'sans', 'book', '']);
+
+    await user.click(within(group).getByRole('radio', { name: en.Appearance.fontFamilies.book }));
+    await user.click(screen.getByRole('button', { name: en.Appearance.save }));
+
+    await waitFor(() => {
+      expect(fixture.profile.preferences?.defaults?.appearance?.fontFamily).toBe('book');
+    });
+  });
+
   /** The colour is the one free change (§ 33.1), stored without a `#`. */
   it('stores an accent colour as six hex digits', async () => {
     signIn();
