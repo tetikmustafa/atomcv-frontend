@@ -42,10 +42,13 @@ import type { Resolution } from '@/types/domain';
  * What this screen can actually do about each way out the server offers.
  *
  * Everything reachable from `POST /generations` and from a failed job is
- * here. The rest is dropped rather than drawn: `keep_top_pinned` needs a
- * request field the schema does not publish, and `switch_to_manual_form`
+ * here. The rest is dropped rather than drawn: `switch_to_manual_form`
  * belongs to extraction. A button that does nothing is worse than one that
  * was never offered.
+ *
+ * `keep_top_pinned` was dropped for two stages for exactly that reason — the
+ * schema had no field to carry "the top N pins" — and is drawn since
+ * `B-123` published `keepPinned`.
  *
  * `sign_up` used to be on that list and no longer is. It was dropped because
  * there was nowhere for it to go, which was true of the whole product until
@@ -60,6 +63,7 @@ const HANDLED = [
   'complete_profile',
   'review_pins',
   'increase_page_limit',
+  'keep_top_pinned',
   'sign_up',
   'retry',
 ] as const;
@@ -247,6 +251,14 @@ export function GenerateScreen() {
       case 'increase_page_limit': {
         const maxPages = resolution.params?.maxPages;
         return submit(typeof maxPages === 'number' ? { maxPages } : {});
+      }
+
+      case 'keep_top_pinned': {
+        // The same request, carrying only the most relevant `keep` pins; the
+        // rest compete for the page instead of being forced onto it. A run
+        // that still does not fit is offered a smaller number, never this one.
+        const keep = resolution.params?.keep;
+        return submit(typeof keep === 'number' ? { keepPinned: keep } : {});
       }
 
       case 'retry':

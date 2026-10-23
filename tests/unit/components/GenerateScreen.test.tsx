@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NextIntlClientProvider } from 'next-intl';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GenerateScreen } from '@/components/generation/GenerateScreen';
 import { failNextJob, gateRefusal } from '@/mocks/generationFixture';
@@ -62,6 +63,8 @@ afterEach(() => {
 });
 
 const NOT_A_POSTING = 'hire someone good';
+const POSTING =
+  'Senior backend engineer. Go, PostgreSQL and Kafka in production; on-call for a payments platform.';
 
 /**
  * Pasted, not typed, and not only because it is what the screen asks for.
@@ -400,6 +403,46 @@ describe('starting a generation', () => {
     // Blank, which the schema says means the same as omitted. What matters
     // is that the text the preflight refused is not sent again.
     expect(await sent(1)).toMatchObject({ jobDescription: '', acknowledgePreflight: false });
+  });
+
+  /**
+   * `B-123`. Dropped for two stages because the schema had no field for "the
+   * top N pins", which made the button a way back into the same refusal. It
+   * resends the same request carrying `keepPinned`, and nothing else changes.
+   */
+  it('keeps the top pins by resending the same request with the cap', async () => {
+    server.use(
+      http.post('*/api/v1/generations', () =>
+        bodies.length > 1
+          ? HttpResponse.json(
+              { jobId: 'job-pins', status: 'queued', streamUrl: '/api/v1/jobs/job-pins/stream' },
+              { status: 202 },
+            )
+          : HttpResponse.json(
+              {
+                type: 'about:blank',
+                title: 'Conflicting preferences',
+                status: 409,
+                code: 'CONFLICTING_PREFERENCES',
+                params: { pinnedPages: 2.3, maxPages: 1 },
+                resolutions: [
+                  { action: 'increase_page_limit', params: { maxPages: 2 } },
+                  { action: 'review_pins' },
+                  { action: 'keep_top_pinned', params: { keep: 3 } },
+                ],
+              },
+              { status: 409, headers: { 'Content-Type': 'application/problem+json' } },
+            ),
+      ),
+    );
+    const user = await submitPosting(POSTING);
+
+    const panel = await screen.findByRole('alert');
+    await user.click(within(panel).getByRole('button', { name: 'Keep the top 3' }));
+
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    expect(await sent(1)).toMatchObject({ jobDescription: POSTING, keepPinned: 3 });
+    expect(await sent(0)).not.toHaveProperty('keepPinned');
   });
 
   it('shows the progress bar once a job is accepted', async () => {
