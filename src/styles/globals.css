@@ -51,7 +51,14 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
+  /*
+    Monochrome, and polished by layering rather than by hue (the visual
+    direction decided 2026-10-23). The page is a faint off-white and every
+    surface that holds content is a white card on it, so hierarchy comes from
+    depth and type — the destructive red stays the only colour in the product,
+    and it only ever means "this deletes".
+  */
+  --background: oklch(0.985 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -88,15 +95,15 @@
     AA, including the one a sweep cannot reach.
   */
   --destructive: oklch(0.51 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: oklch(0.915 0 0);
+  --input: oklch(0.89 0 0);
+  --ring: oklch(0.55 0 0);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  --radius: 0.75rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -108,11 +115,11 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  --background: oklch(0.13 0 0);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
+  --card: oklch(0.18 0 0);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
+  --popover: oklch(0.2 0 0);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0.205 0 0);
@@ -141,6 +148,22 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+@theme inline {
+  --shadow-card: 0 1px 2px 0 oklch(0 0 0 / 0.04), 0 1px 3px 0 oklch(0 0 0 / 0.04);
+  --shadow-raised: 0 4px 12px -2px oklch(0 0 0 / 0.08), 0 2px 4px -2px oklch(0 0 0 / 0.04);
+}
+
+/*
+  The faint grid behind the landing hero. A texture rather than an image, so
+  it costs no request and follows the theme.
+*/
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 2.5rem 2.5rem;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -150,6 +173,13 @@
   }
   html {
     @apply font-sans;
+    /* The page scrolls under a sticky header; anchors should not land under it. */
+    scroll-padding-top: 5rem;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply tracking-tight text-balance;
   }
 
   /* Every interactive element must show where the keyboard is (rule 5).
