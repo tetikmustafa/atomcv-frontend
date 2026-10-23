@@ -446,6 +446,39 @@ describe('the covering letter', () => {
   });
 
   /**
+   * `B-121`: the letter takes a language of its own — the concept's "a choice
+   * each" for the resume and the letter. Left alone, nothing is sent and the
+   * profile's default decides.
+   */
+  it('sends the letter’s own language only when one was picked', async () => {
+    const bodies: Promise<string>[] = [];
+    const capture = ({ request }: { request: Request }) => {
+      if (request.url.includes('cover-letter')) bodies.push(request.clone().text());
+    };
+    server.events.on('request:start', capture);
+
+    try {
+      const generationId = await generate();
+      render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+      await userEvent.click(await screen.findByRole('button', { name: en.Result.coverLetterAsk }));
+      await screen.findByTestId('cover-letter');
+
+      await userEvent.selectOptions(
+        await screen.findByLabelText(en.Result.coverLetterLanguage),
+        'tr',
+      );
+      await userEvent.click(screen.getByRole('button', { name: en.Result.coverLetterAnother }));
+
+      await waitFor(() => expect(bodies).toHaveLength(2));
+      expect(JSON.parse(await bodies[0]!)).not.toHaveProperty('language');
+      expect(JSON.parse(await bodies[1]!)).toMatchObject({ language: 'tr' });
+    } finally {
+      server.events.removeListener('request:start', capture);
+    }
+  });
+
+  /**
    * Each press replaces the stored letter (§ 34), so trying another draft
    * leaves one letter rather than three.
    */
