@@ -62,6 +62,13 @@
     "retry": "Try again",
     "complete_profile": "Open the profile editor"
   },
+  "import": {
+    "phase": {
+      "STRUCTURING": "Reading your CV",
+      "NORMALIZING": "Organising what it found",
+      "SAVING": "Saving your profile"
+    }
+  },
   "generation": {
     "phase": {
       "ANALYSING": "Reading the posting",

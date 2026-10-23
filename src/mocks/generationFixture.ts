@@ -299,26 +299,22 @@ export const SCHEDULE = [
 ] as const satisfies readonly { at: number; phase?: string; label?: string; pct: number }[];
 
 /**
- * The import job's progression, and it is deliberately thinner.
+ * The import job's progression: the three phases the real handler reports, in
+ * its order and at its percentages, each with its `import.phase.*` key
+ * (`B-122`).
  *
- * **No `label`, because none is published.** § 31 names three stages — read,
- * structure, normalise — but nothing says what translation keys the import
- * job sends, and inventing `generation.phase.EXTRACTING` would put a token on
- * the wire the server may never send and the catalogue would then have to
- * carry. A frame with a `pct` and no key is a shape the client already
- * handles: `usePhaseLabel` renders no caption, and the screen says what it is
- * doing in its own words. Asked as part of `F-018`.
- *
- * `running` stands in for the `phase` field the generation schedule uses to
- * mean "this job has started". Without it a job with no phases would report
- * `queued` for its whole life.
+ * This schedule used to carry no `label`, because the server sent English
+ * sentences there and a mock that invented keys would have put a token on the
+ * wire the server never sent. The keys are published now, so the mock sends
+ * exactly them — and the caption test fails if either side spells one
+ * differently.
  */
 export const IMPORT_SCHEDULE = [
   { at: 0, pct: 0 },
-  { at: 300, pct: 20, running: true },
-  { at: 800, pct: 55, running: true },
-  { at: 1400, pct: 85, running: true },
-] as const satisfies readonly { at: number; pct: number; running?: true }[];
+  { at: 300, phase: 'structuring', label: 'import.phase.STRUCTURING', pct: 20 },
+  { at: 800, phase: 'normalizing', label: 'import.phase.NORMALIZING', pct: 70 },
+  { at: 1400, phase: 'saving', label: 'import.phase.SAVING', pct: 90 },
+] as const satisfies readonly { at: number; phase?: string; label?: string; pct: number }[];
 
 /** When the terminal event lands. Nothing is emitted between it and the last phase. */
 export const TERMINAL_AT = 2000;
