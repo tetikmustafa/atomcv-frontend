@@ -24,6 +24,7 @@ import { UsageNote } from '@/components/generation/UsageNote';
 import { ProgressBar } from '@/components/feedback/ProgressBar';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { usePhaseLabel } from '@/hooks/useErrorMessage';
 import { useJobStream } from '@/hooks/useJob';
 import { useImportCv, useProfileReplaced } from '@/hooks/useProfileImport';
 import { useCapabilities, useIsAnonymous } from '@/hooks/useSession';
@@ -389,10 +390,11 @@ export function ImportScreen() {
  * The job, from the 202 to whichever way it ends.
  *
  * Separate from the generation's progress screen rather than shared with it:
- * the two agree on a bar and on nothing else. This one has no phase names to
- * render — the import job publishes no `label` keys — so the caption is this
- * screen's own sentence about what it is doing, which is not rule 8's
- * territory: rule 8 governs text the *server* owns.
+ * the two agree on a bar and on nothing else. The caption is the phase the
+ * server named, as an `import.phase.*` key (`B-122`), and this screen's own
+ * sentence until the first phase arrives. Until `B-122` the job sent English
+ * sentences in `label`, which rule 8 forbids drawing, so the bar never said
+ * which of its three steps it was on.
  */
 function ImportProgress({
   jobId,
@@ -412,6 +414,8 @@ function ImportProgress({
   const t = useTranslations('Onboarding');
   const router = useRouter();
   const progress = useJobStream(jobId, streamUrl);
+  const phaseName = usePhaseLabel();
+  const caption = phaseName(progress.phaseKey) ?? t('reading');
   const profileReplaced = useProfileReplaced();
 
   const spoken = useRef<string | null>(null);
@@ -469,8 +473,8 @@ function ImportProgress({
 
   return (
     <div className="flex flex-col gap-3">
-      <ProgressBar pct={progress.pct} label={t('progressLabel')} valueText={t('reading')} />
-      <p className="text-muted-foreground text-sm">{t('reading')}</p>
+      <ProgressBar pct={progress.pct} label={t('progressLabel')} valueText={caption} />
+      <p className="text-muted-foreground text-sm">{caption}</p>
     </div>
   );
 }

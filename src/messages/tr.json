@@ -62,6 +62,13 @@
     "retry": "Tekrar dene",
     "complete_profile": "Profil düzenleyiciyi aç"
   },
+  "import": {
+    "phase": {
+      "STRUCTURING": "CV'n okunuyor",
+      "NORMALIZING": "Bulunanlar düzenleniyor",
+      "SAVING": "Profilin kaydediliyor"
+    }
+  },
   "generation": {
     "phase": {
       "ANALYSING": "İlan okunuyor",
