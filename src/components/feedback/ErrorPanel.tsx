@@ -20,9 +20,9 @@
  * - **A resolution the screen cannot carry out is dropped too**, through
  *   `canResolve`. Dropping is not inventing: the alternative is a button that
  *   looks like the way forward and does nothing when pressed, on the screen
- *   where the user is already stuck. `sign_up` reaches a product with no
- *   sign-up route yet, and `keep_top_pinned` asks for a request field the
- *   schema does not publish.
+ *   where the user is already stuck. Each screen says which of the vocabulary
+ *   it can carry out; extraction cannot change a page limit, generation
+ *   cannot switch to a manual form.
  */
 
 import { useTranslations } from 'next-intl';
