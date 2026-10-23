@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
-import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { setRequestLocale } from 'next-intl/server';
+import { SiteFooter } from '@/components/layout/SiteFooter';
 import { routing } from '@/lib/i18n/routing';
 
 /**
@@ -21,19 +22,14 @@ export default async function LegalLayout({ children, params }: LayoutProps<'/[l
   if (!hasLocale(routing.locales, locale)) notFound();
 
   setRequestLocale(locale);
-  const t = await getTranslations('Legal');
 
+  // The header, the draft notice and `<main>` are each document's own
+  // (`LegalDocument`): the header's language links keep the page's path,
+  // which a layout cannot know.
   return (
-    <main id="main" tabIndex={-1} className="flex-1 outline-none">
-      <div className="mx-auto flex max-w-3xl flex-col gap-8 px-8 py-16">
-        <p
-          role="note"
-          className="border-border bg-muted text-muted-foreground rounded-md border px-4 py-3 text-sm"
-        >
-          {t('draftNotice')}
-        </p>
-        {children as ReactNode}
-      </div>
-    </main>
+    <>
+      {children as ReactNode}
+      <SiteFooter />
+    </>
   );
 }

@@ -22,8 +22,9 @@
  * is not a choice anybody makes on a page they have been on for four seconds.
  */
 
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useId, useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
+import { NativeSelect } from '@/components/ui/native-select';
 import {
   applyTheme,
   DARK_QUERY,
@@ -52,8 +53,10 @@ function subscribe(onChange: () => void) {
   };
 }
 
-export function ThemeToggle() {
+export function ThemeToggle({ className }: { className?: string }) {
   const t = useTranslations('Theme');
+  // An id per instance: the sidebar and the phone's menu can both hold one.
+  const id = useId();
 
   const theme = useSyncExternalStore(subscribe, storedTheme, () => 'system' as Theme);
 
@@ -69,8 +72,8 @@ export function ThemeToggle() {
   );
 
   return (
-    <div className="flex items-center gap-2">
-      <label htmlFor="theme" className="sr-only">
+    <div className={className}>
+      <label htmlFor={id} className="sr-only">
         {t('label')}
       </label>
 
@@ -80,18 +83,18 @@ export function ThemeToggle() {
         third state — "follow the machine" — is the one nobody guesses is
         there.
       */}
-      <select
-        id="theme"
+      <NativeSelect
+        id={id}
         value={theme}
         onChange={(event) => isTheme(event.target.value) && choose(event.target.value)}
-        className="border-border bg-background text-muted-foreground focus-visible:ring-ring/50 rounded-md border px-2 py-1 text-sm outline-none focus-visible:ring-3"
+        className="sm:w-full"
       >
         {THEMES.map((option) => (
           <option key={option} value={option}>
             {t('options', { theme: option })}
           </option>
         ))}
-      </select>
+      </NativeSelect>
     </div>
   );
 }

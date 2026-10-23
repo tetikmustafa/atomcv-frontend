@@ -85,7 +85,12 @@
     "generate": "Generate",
     "history": "Your resumes",
     "applications": "Applications",
-    "settings": "Settings"
+    "settings": "Settings",
+    "home": "{appName} — home",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "menuTitle": "Menu",
+    "preferences": "Preferences"
   },
   "History": {
     "title": "Your resumes",
@@ -194,7 +199,7 @@
   "Landing": {
     "tagline": "Build your profile once, generate a tailored resume for every job posting.",
     "intro": "Your professional history is structured data, not a document. {appName} keeps it that way, then produces a resume for each posting from that data — inside a page limit that is calculated rather than hoped for.",
-    "cta": "Start building your profile",
+    "cta": "Start with your CV",
     "featuresHeading": "What makes it different",
     "features": {
       "pageLimit": {
@@ -218,7 +223,61 @@
         "body": "Every item shows its score and the keywords it matched. Content left out is listed and can be added back in one click."
       }
     },
-    "openSourceNote": "Free and open source under the MIT licence. Run by one person, with no service guarantee — if it is ever shut down, notice comes at least 30 days in advance."
+    "openSourceNote": "Free and open source under the MIT licence. Run by one person, with no service guarantee — if it is ever shut down, notice comes at least 30 days in advance.",
+    "signIn": "Sign in",
+    "tryIt": "Try it free",
+    "eyebrow": "Free and open source",
+    "ctaManual": "or build your profile by hand",
+    "ctaHow": "See how it works",
+    "noAccount": "No account needed to try it. A guest session ends two hours after your last activity.",
+    "visual": {
+      "label": "A profile becomes a one-page resume",
+      "profile": "Your profile",
+      "posting": "The posting",
+      "resume": "Tailored resume",
+      "pageLimit": "1 page, measured",
+      "matched": "Required skills 4/4"
+    },
+    "stepsHeading": "From profile to resume in three steps",
+    "steps": {
+      "upload": {
+        "title": "Bring what you have",
+        "body": "Upload a CV and every line becomes its own item. You check what was read before anything is used — that review is never skipped."
+      },
+      "paste": {
+        "title": "Paste a job posting",
+        "body": "The posting is read for the skills and duties it names. Your items are scored against it, in code, the same way every time."
+      },
+      "download": {
+        "title": "Download a resume that fits",
+        "body": "The best items are chosen to fill the page and no more. PDF, Word, HTML or LaTeX — and a covering letter if you ask for one."
+      }
+    },
+    "compareHeading": "Try it without an account",
+    "compareIntro": "A guest session has the same quality and the same page guarantee — only the scope is narrower.",
+    "compare": {
+      "feature": "Feature",
+      "guest": "Guest",
+      "account": "Account",
+      "yes": "Included",
+      "no": "Not included",
+      "rows": {
+        "upload": "CV upload or manual entry",
+        "measure": "Measured page limit",
+        "languages": "Resume languages",
+        "templates": "Templates",
+        "controls": "Tags, importance and locks",
+        "history": "History and application tracking"
+      },
+      "values": {
+        "englishOnly": "English",
+        "allLanguages": "Every language you enable",
+        "presets": "Presets",
+        "customise": "Presets and customisation"
+      }
+    },
+    "closingTitle": "Your next application, from the profile you already have",
+    "closingBody": "Build the profile once. Every posting after that takes about half a minute."
   },
   "HowItWorks": {
     "title": "How {appName} works",
@@ -257,7 +316,8 @@
         "body": "The templates are single-column with real text rather than images, which is what those systems extract cleanly. The skills you label are the ones the matching reads, so what a system finds is what you said was there."
       }
     },
-    "cta": "Start building a profile"
+    "cta": "Start with your CV",
+    "ctaLead": "Ready to try it on your own CV?"
   },
   "Editor": {
     "save": {
@@ -659,7 +719,11 @@
     "howItWorks": "How it works",
     "privacy": "Privacy",
     "terms": "Terms",
-    "sourceCode": "Source code"
+    "sourceCode": "Source code",
+    "tagline": "Structured profile in, tailored resume out.",
+    "product": "Product",
+    "legal": "Legal",
+    "openSource": "Open source"
   },
   "Legal": {
     "draftNotice": "This document is a draft. It lists what must be covered and is not yet a published policy. It must be completed and reviewed before the service accepts real users.",
@@ -816,5 +880,23 @@
       "length_out_of_range": "a length that was well off",
       "cliche": "a worn-out phrase"
     }
+  },
+  "Locale": {
+    "label": "Interface language",
+    "names": {
+      "en": "English",
+      "tr": "Türkçe"
+    }
+  },
+  "Shell": {
+    "notFoundTitle": "This page does not exist",
+    "notFoundBody": "The address may be mistyped, or the page may have moved. Nothing you saved is affected.",
+    "notFoundHome": "Go to the home page",
+    "notFoundProfile": "Open your profile",
+    "errorTitle": "Something went wrong on this screen",
+    "errorBody": "Your profile and your resumes are safe — this screen failed to draw. Trying again usually works.",
+    "errorRetry": "Try again",
+    "errorHome": "Go to the home page",
+    "loading": "Loading…"
   }
 }

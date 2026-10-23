@@ -58,6 +58,7 @@ export default async function PrivacyPage({ params }: PageProps<'/[locale]/legal
 
   return (
     <LegalDocument
+      path="/legal/privacy"
       title={t('title')}
       sections={SECTION_KEYS.map((key) => ({
         id: key,
