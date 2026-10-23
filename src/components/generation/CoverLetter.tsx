@@ -20,14 +20,16 @@
  * asking for a draft.
  */
 
-import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useId, useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useCoverLetter } from '@/hooks/useGeneration';
 import { useErrorMessage } from '@/hooks/useErrorMessage';
+import { useCapabilities } from '@/hooks/useSession';
+import { languageName } from '@/lib/i18n/languageNames';
 import { toErrorLike } from '@/lib/errors/errorLike';
 import type { CoverLetterRequest } from '@/lib/api/endpoints/generations';
 import { announce } from '@/stores/announcerStore';
@@ -62,6 +64,18 @@ export function CoverLetter({ generationId, letter }: CoverLetterProps) {
 
   const [style, setStyle] = useState<CoverLetterRequest['style']>('default');
   const [companyNote, setCompanyNote] = useState('');
+  /**
+   * The letter's own language (`B-121`, concept § 10.1: "a choice each").
+   * Empty is the profile's `defaults.coverLetterLanguage`, whose `auto`
+   * follows the posting. The list is `allowedLanguages`, not the profile's
+   * enabled ones: a letter is written from scratch rather than assembled from
+   * wordings, so it needs no wording in that language — and the server checks
+   * the same list.
+   */
+  const [language, setLanguage] = useState('');
+  const languageId = useId();
+  const locale = useLocale();
+  const languages = useCapabilities()?.allowedLanguages ?? [];
   const [copied, setCopied] = useState(false);
 
   const failure = write.error ? toErrorLike(write.error) : null;
@@ -143,6 +157,26 @@ export function CoverLetter({ generationId, letter }: CoverLetterProps) {
                 what stops it being written as a prompt. */}
             <p className="text-muted-foreground text-xs">{t('coverLetterNoteHint')}</p>
           </div>
+
+          {languages.length > 1 && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor={languageId}>{t('coverLetterLanguage')}</Label>
+              <select
+                id={languageId}
+                value={language}
+                onChange={(event) => setLanguage(event.target.value)}
+                className="border-input bg-background h-9 w-fit rounded-md border px-3 text-sm"
+              >
+                <option value="">{t('coverLetterLanguageDefault')}</option>
+                {languages.map((code) => (
+                  <option key={code} value={code}>
+                    {languageName(code, locale) ?? code}
+                  </option>
+                ))}
+              </select>
+              <p className="text-muted-foreground text-xs">{t('coverLetterLanguageHint')}</p>
+            </div>
+          )}
         </div>
       </details>
 
@@ -168,6 +202,7 @@ export function CoverLetter({ generationId, letter }: CoverLetterProps) {
               // that says what it asked for cannot drift.
               style,
               ...(companyNote.trim() ? { companyNote: companyNote.trim() } : {}),
+              ...(language ? { language } : {}),
             });
           }}
         >

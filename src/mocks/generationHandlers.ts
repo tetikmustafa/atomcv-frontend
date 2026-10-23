@@ -1260,6 +1260,16 @@ export const generationHandlers = [
       const id = String(params.generationId);
       const instance = `/api/v1/generations/${id}/cover-letter/regenerate`;
       const job = findGeneration(id);
+      // Read once, here: the language is refused by name ahead of the lookup
+      // on the real endpoint (`B-121`), after the account gate.
+      const body = ((await request.json().catch(() => ({}))) ?? {}) as Partial<CoverLetterRequest>;
+
+      if (isAccount() && body.language !== undefined && !['en', 'tr'].includes(body.language)) {
+        return HttpResponse.json(
+          problem(400, 'VALIDATION_FAILED', instance, [], { fields: ['language'] }),
+          { status: 400 },
+        );
+      }
 
       if (!job) return notFound(instance);
 
@@ -1301,7 +1311,6 @@ export const generationHandlers = [
 
       // The body is entirely optional: `{}` is a valid request, and the server
       // defaults the style.
-      const body = ((await request.json().catch(() => ({}))) ?? {}) as Partial<CoverLetterRequest>;
       const style = body.style ?? 'default';
 
       if (claimCoverLetterRejection()) {
