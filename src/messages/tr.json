@@ -85,7 +85,12 @@
     "generate": "CV oluştur",
     "history": "CV'lerin",
     "applications": "Başvurular",
-    "settings": "Ayarlar"
+    "settings": "Ayarlar",
+    "home": "{appName} — ana sayfa",
+    "openMenu": "Menüyü aç",
+    "closeMenu": "Menüyü kapat",
+    "menuTitle": "Menü",
+    "preferences": "Tercihler"
   },
   "History": {
     "title": "CV'lerin",
@@ -194,7 +199,7 @@
   "Landing": {
     "tagline": "Profilini bir kez oluştur, her iş ilanına özel CV üret.",
     "intro": "Profesyonel geçmişin bir doküman değil, yapılandırılmış bir veri kümesi. {appName} onu öyle tutar ve her ilan için o veriden bir CV üretir — umut edilen değil, hesaplanan bir sayfa sınırı içinde.",
-    "cta": "Profilini oluşturmaya başla",
+    "cta": "CV'nle başla",
     "featuresHeading": "Farkı ne",
     "features": {
       "pageLimit": {
@@ -218,7 +223,61 @@
         "body": "Her madde kendi skorunu ve eşleştiği anahtar kelimeleri gösterir. Dışarıda kalan içerik listelenir ve tek tıkla geri eklenir."
       }
     },
-    "openSourceNote": "MIT lisanslı, ücretsiz ve açık kaynak. Tek kişi tarafından yürütülüyor ve hizmet garantisi yok — kapatılması halinde en az 30 gün önceden bildirilir."
+    "openSourceNote": "MIT lisanslı, ücretsiz ve açık kaynak. Tek kişi tarafından yürütülüyor ve hizmet garantisi yok — kapatılması halinde en az 30 gün önceden bildirilir.",
+    "signIn": "Giriş yap",
+    "tryIt": "Ücretsiz dene",
+    "eyebrow": "Ücretsiz ve açık kaynak",
+    "ctaManual": "ya da profilini elle oluştur",
+    "ctaHow": "Nasıl çalıştığını gör",
+    "noAccount": "Denemek için hesap gerekmez. Misafir oturumu son etkinliğinden iki saat sonra sona erer.",
+    "visual": {
+      "label": "Bir profil tek sayfalık bir CV'ye dönüşüyor",
+      "profile": "Profilin",
+      "posting": "İlan",
+      "resume": "İlana özel CV",
+      "pageLimit": "1 sayfa, ölçülmüş",
+      "matched": "Gerekli beceriler 4/4"
+    },
+    "stepsHeading": "Profilden CV'ye üç adımda",
+    "steps": {
+      "upload": {
+        "title": "Elindekini getir",
+        "body": "Bir CV yükle; her satırı ayrı bir öğe olur. Bir şey kullanılmadan önce ne okunduğunu kontrol edersin — bu gözden geçirme hiç atlanmaz."
+      },
+      "paste": {
+        "title": "Bir ilan yapıştır",
+        "body": "İlan, adını koyduğu beceriler ve görevler için okunur. Öğelerin ona karşı puanlanır — kodla, her seferinde aynı şekilde."
+      },
+      "download": {
+        "title": "Sayfaya sığan bir CV indir",
+        "body": "En iyi öğeler sayfayı dolduracak kadar seçilir, fazlası değil. PDF, Word, HTML ya da LaTeX — istersen bir ön yazı da."
+      }
+    },
+    "compareHeading": "Hesap açmadan dene",
+    "compareIntro": "Misafir oturumu aynı kaliteye ve aynı sayfa garantisine sahip — yalnız kapsamı daha dar.",
+    "compare": {
+      "feature": "Özellik",
+      "guest": "Misafir",
+      "account": "Hesap",
+      "yes": "Var",
+      "no": "Yok",
+      "rows": {
+        "upload": "CV yükleme ya da elle giriş",
+        "measure": "Ölçülmüş sayfa sınırı",
+        "languages": "CV dilleri",
+        "templates": "Şablonlar",
+        "controls": "Etiket, önem ve kilitler",
+        "history": "Geçmiş ve başvuru takibi"
+      },
+      "values": {
+        "englishOnly": "İngilizce",
+        "allLanguages": "Etkinleştirdiğin her dil",
+        "presets": "Hazır şablonlar",
+        "customise": "Hazır şablonlar ve özelleştirme"
+      }
+    },
+    "closingTitle": "Bir sonraki başvurun, zaten sahip olduğun profilden",
+    "closingBody": "Profili bir kez oluştur. Ondan sonraki her ilan yaklaşık yarım dakika sürer."
   },
   "HowItWorks": {
     "title": "{appName} nasıl çalışıyor",
@@ -257,7 +316,8 @@
         "body": "Şablonlar tek kolon ve görsel değil gerçek metin — o sistemlerin temiz çıkardığı biçim bu. Etiketlediğin yetkinlikler eşleştirmenin okuduğu şey, yani bir sistemin bulduğu şey senin orada olduğunu söylediğin şey oluyor."
       }
     },
-    "cta": "Profil kurmaya başla"
+    "cta": "CV'nle başla",
+    "ctaLead": "Kendi CV'nde denemeye hazır mısın?"
   },
   "Editor": {
     "save": {
@@ -659,7 +719,11 @@
     "howItWorks": "Nasıl çalışıyor",
     "privacy": "Gizlilik",
     "terms": "Kullanım Şartları",
-    "sourceCode": "Kaynak kodu"
+    "sourceCode": "Kaynak kodu",
+    "tagline": "Yapılandırılmış profil girer, ilana özel CV çıkar.",
+    "product": "Ürün",
+    "legal": "Yasal",
+    "openSource": "Açık kaynak"
   },
   "Legal": {
     "draftNotice": "Bu belge bir taslaktır. Nelerin yer alması gerektiğini listeler; henüz yayımlanmış bir politika değildir. Hizmet gerçek kullanıcı kabul etmeden önce tamamlanmalı ve gözden geçirilmelidir.",
@@ -816,5 +880,23 @@
       "length_out_of_range": "epeyce şaşmış bir uzunluk",
       "cliche": "klişe bir ifade"
     }
+  },
+  "Locale": {
+    "label": "Arayüz dili",
+    "names": {
+      "en": "English",
+      "tr": "Türkçe"
+    }
+  },
+  "Shell": {
+    "notFoundTitle": "Bu sayfa yok",
+    "notFoundBody": "Adres yanlış yazılmış ya da sayfa taşınmış olabilir. Kaydettiğin hiçbir şey etkilenmedi.",
+    "notFoundHome": "Ana sayfaya git",
+    "notFoundProfile": "Profilini aç",
+    "errorTitle": "Bu ekranda bir şeyler ters gitti",
+    "errorBody": "Profilin ve CV'lerin güvende — yalnız bu ekran çizilemedi. Yeniden denemek çoğu zaman işe yarar.",
+    "errorRetry": "Yeniden dene",
+    "errorHome": "Ana sayfaya git",
+    "loading": "Yükleniyor…"
   }
 }

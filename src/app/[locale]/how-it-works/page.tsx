@@ -4,6 +4,9 @@ import { hasLocale } from 'next-intl';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { routing } from '@/lib/i18n/routing';
 import { absoluteUrl, alternatesFor, APP_NAME } from '@/lib/seo';
+import { ArrowRight } from 'lucide-react';
+import { MarketingHeader } from '@/components/layout/MarketingHeader';
+import { SiteFooter } from '@/components/layout/SiteFooter';
 import { buttonVariants } from '@/components/ui/button';
 
 /**
@@ -71,51 +74,77 @@ export default async function HowItWorksPage({ params }: PageProps<'/[locale]/ho
   const t = await getTranslations('HowItWorks');
 
   return (
-    <main id="main" tabIndex={-1} className="flex-1 outline-none">
-      <div className="mx-auto flex max-w-3xl flex-col gap-12 px-8 py-16">
-        <header className="flex flex-col gap-4">
-          <h1 className="text-4xl font-semibold tracking-tight">
-            {t('title', { appName: APP_NAME })}
-          </h1>
-          <p className="text-muted-foreground max-w-prose">{t('intro', { appName: APP_NAME })}</p>
-        </header>
+    <>
+      <MarketingHeader path="/how-it-works" />
+      <main id="main" tabIndex={-1} className="flex-1 outline-none">
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-14 px-4 py-12 sm:px-6 sm:py-20 lg:px-8">
+          <header className="flex flex-col gap-4">
+            <h1 className="text-4xl font-semibold sm:text-5xl">
+              {t('title', { appName: APP_NAME })}
+            </h1>
+            <p className="text-muted-foreground max-w-2xl text-lg">
+              {t('intro', { appName: APP_NAME })}
+            </p>
+          </header>
 
-        <section aria-labelledby="steps-heading" className="flex flex-col gap-6">
-          <h2 id="steps-heading" className="text-2xl font-semibold tracking-tight">
-            {t('stepsHeading')}
-          </h2>
+          <section aria-labelledby="steps-heading" className="flex flex-col gap-6">
+            <h2 id="steps-heading" className="text-2xl font-semibold sm:text-3xl">
+              {t('stepsHeading')}
+            </h2>
 
-          {/* An ordered list, because the order is the explanation. */}
-          <ol className="flex flex-col gap-6">
-            {STEP_KEYS.map((key, index) => (
-              <li key={key} className="flex flex-col gap-1">
-                <h3 className="font-medium">
-                  {index + 1}. {t(`steps.${key}.title`)}
-                </h3>
-                <p className="text-muted-foreground max-w-prose">{t(`steps.${key}.body`)}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
+            {/* An ordered list, because the order is the explanation. */}
+            <ol className="relative flex flex-col gap-4">
+              {STEP_KEYS.map((key, index) => (
+                <li
+                  key={key}
+                  className="bg-card shadow-card flex gap-4 rounded-xl border p-5 sm:gap-5 sm:p-6"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="bg-primary text-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-lg text-sm font-semibold"
+                  >
+                    {index + 1}
+                  </span>
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-lg font-semibold">
+                      <span className="sr-only">{index + 1}. </span>
+                      {t(`steps.${key}.title`)}
+                    </h3>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {t(`steps.${key}.body`)}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
 
-        <section aria-labelledby="questions-heading" className="flex flex-col gap-6">
-          <h2 id="questions-heading" className="text-2xl font-semibold tracking-tight">
-            {t('questionsHeading')}
-          </h2>
-          <ul className="flex flex-col gap-6">
-            {QUESTION_KEYS.map((key) => (
-              <li key={key} className="flex flex-col gap-1">
-                <h3 className="font-medium">{t(`questions.${key}.title`)}</h3>
-                <p className="text-muted-foreground max-w-prose">{t(`questions.${key}.body`)}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
+          <section aria-labelledby="questions-heading" className="flex flex-col gap-6">
+            <h2 id="questions-heading" className="text-2xl font-semibold sm:text-3xl">
+              {t('questionsHeading')}
+            </h2>
+            <ul className="grid gap-4 md:grid-cols-3">
+              {QUESTION_KEYS.map((key) => (
+                <li key={key} className="flex flex-col gap-2 rounded-xl border p-5">
+                  <h3 className="font-semibold">{t(`questions.${key}.title`)}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {t(`questions.${key}.body`)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </section>
 
-        <a href={`/${locale}/profile`} className={`${buttonVariants({ size: 'lg' })} self-start`}>
-          {t('cta')}
-        </a>
-      </div>
-    </main>
+          <div className="bg-card shadow-card flex flex-col items-start gap-4 rounded-2xl border p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+            <p className="text-lg font-semibold">{t('ctaLead')}</p>
+            <a href={`/${locale}/onboarding`} className={buttonVariants({ size: 'lg' })}>
+              {t('cta')}
+              <ArrowRight aria-hidden="true" />
+            </a>
+          </div>
+        </div>
+      </main>
+      <SiteFooter />
+    </>
   );
 }

@@ -42,6 +42,7 @@ export default async function TermsPage({ params }: PageProps<'/[locale]/legal/t
 
   return (
     <LegalDocument
+      path="/legal/terms"
       title={t('title')}
       sections={SECTION_KEYS.map((key) => ({
         id: key,

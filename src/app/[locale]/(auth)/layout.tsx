@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
-import { setRequestLocale } from 'next-intl/server';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { Logo } from '@/components/layout/Logo';
+import { SiteFooter } from '@/components/layout/SiteFooter';
+import { APP_NAME } from '@/lib/seo';
 import { AppProviders } from '@/components/providers/AppProviders';
 import { routing } from '@/lib/i18n/routing';
 
@@ -36,12 +39,29 @@ export default async function AuthLayout({ children, params }: LayoutProps<'/[lo
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
 
+  const nav = await getTranslations('Nav');
+
+  // A quiet frame: the mark back to the front page and nothing else to press.
+  // Signing in is one task, and a navigation beside it is somewhere to go
+  // instead of finishing it.
   return (
     <NextIntlClientProvider>
       <AppProviders>
-        <main id="main" tabIndex={-1} className="flex-1 outline-none">
+        <header className="border-b">
+          <div className="mx-auto flex h-16 w-full max-w-5xl items-center px-4 sm:px-6 lg:px-8">
+            <a
+              href={`/${locale}`}
+              aria-label={nav('home', { appName: APP_NAME })}
+              className="rounded-lg text-lg"
+            >
+              <Logo />
+            </a>
+          </div>
+        </header>
+        <main id="main" tabIndex={-1} className="flex flex-1 flex-col outline-none">
           {children}
         </main>
+        <SiteFooter />
       </AppProviders>
     </NextIntlClientProvider>
   );

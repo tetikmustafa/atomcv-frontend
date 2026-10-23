@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
-import { SiteFooter } from '@/components/layout/SiteFooter';
 import { SkipLink } from '@/components/layout/SkipLink';
 import { locales } from '@/lib/i18n/locales';
 import { routing } from '@/lib/i18n/routing';
@@ -105,7 +104,6 @@ export default async function RootLayout({ children, params }: LayoutProps<'/[lo
       <body className="flex min-h-full flex-col">
         <SkipLink />
         {children}
-        <SiteFooter />
       </body>
     </html>
   );
