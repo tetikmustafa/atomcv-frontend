@@ -283,9 +283,15 @@ describe('the history', () => {
     seedGenerations(1, { outcome: 'failed' });
     renderHistory();
 
-    // The empty state, not a row without a link.
+    // The empty state, not a row without a link. Its one link is the way to
+    // make a first resume, never a row.
     expect(await screen.findByText(en.History.empty)).toBeInTheDocument();
-    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(
+      screen
+        .queryAllByRole('link')
+        .filter((link) => link.getAttribute('href')?.includes('/generations/')),
+    ).toHaveLength(0);
+    expect(screen.getByRole('link', { name: en.History.generate })).toBeInTheDocument();
   });
 
   /**

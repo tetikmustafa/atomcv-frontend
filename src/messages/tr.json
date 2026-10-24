@@ -106,7 +106,11 @@
     "status": "{status, select, superseded {Daha yeni bir sürümle değiştirildi.} other {}}",
     "open": "CV'yi aç: {facts}",
     "more": "Daha eskilerini göster",
-    "loadingMore": "Getiriliyor…"
+    "loadingMore": "Getiriliyor…",
+    "anonymousTitle": "Geçmiş hesaplar için tutulur",
+    "signIn": "Giriş yap ya da hesap oluştur",
+    "generate": "CV oluştur",
+    "description": "Oluşturduğun her CV, en yenisi önce. Her biri yapıldığı haliyle açılır ve indirilir."
   },
   "Onboarding": {
     "title": "Elindeki CV'den başla",
@@ -171,11 +175,28 @@
     },
     "moved": "{status, select, applied {Başvuruldu} interview {Görüşmede} offer {Teklif} rejected {Reddedildi} withdrawn {Geri çekildi} other {{status}}} durumuna taşındı.",
     "openResume": "CV’yi aç",
-    "resumeDeleted": "O CV silinmiş.",
     "notes": "Notlar",
     "notesLabel": "Hatırlamaya değer bir şey",
     "saveNotes": "Notları kaydet",
-    "forget": "Bunu unut"
+    "forget": "Bunu unut",
+    "description": "Her CV'nin nereye gittiği ve nasıl gittiği.",
+    "anonymousTitle": "Başvurular hesaplar için tutulur",
+    "filterLabel": "Göster",
+    "filterAll": "Tümü ({count})",
+    "filterStatus": "{status, select, applied {Başvuruldu} interview {Mülakat} offer {Teklif} rejected {Ret} withdrawn {Geri çekildi} other {{status}}} ({count})",
+    "noneInFilter": "Bu durumda bir şey yok.",
+    "appliedOn": "{date} tarihinde başvuruldu",
+    "edit": "Düzenle",
+    "editTitle": "{company} kaydını düzenle",
+    "save": "Kaydet",
+    "saving": "Kaydediliyor…",
+    "cancel": "Vazgeç",
+    "appliedAt": "Başvuru tarihi",
+    "forgetTitle": "Bu başvuru unutulsun mu?",
+    "forgetBody": "{company} — {position} kaydı gider. İşaret ettiği CV geçmişinde kalır.",
+    "forgetConfirm": "Unut",
+    "forgetCancel": "Kalsın",
+    "forgetTrigger": "{company} — {position} kaydını unut"
   },
   "Session": {
     "expiring": "Bu oturum {at, time, short} itibarıyla sona eriyor — buradaki son işleminden iki saat sonra, yani çalışmaya devam etmek bu süreyi ileri atıyor. Henüz bir hesaba kaydedilmiş bir şey yok."

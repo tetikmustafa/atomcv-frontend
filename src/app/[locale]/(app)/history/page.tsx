@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { History } from '@/components/generation/History';
+import { Page, PageHeader } from '@/components/layout/Page';
 import { routing } from '@/lib/i18n/routing';
 
 /**
@@ -21,10 +22,10 @@ export default async function HistoryPage({ params }: PageProps<'/[locale]/histo
   const t = await getTranslations({ locale, namespace: 'History' });
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-8 py-12">
-      <h1 className="text-xl font-semibold">{t('title')}</h1>
+    <Page width="narrow">
+      <PageHeader title={t('title')} description={t('description')} />
       <History />
-    </div>
+    </Page>
   );
 }
 

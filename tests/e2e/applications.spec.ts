@@ -41,7 +41,8 @@ test.describe('the application tracker', () => {
     await page.getByLabel('Status').selectOption('offer');
     await expect(page.getByLabel('Status')).toHaveValue('offer');
 
-    await page.getByRole('button', { name: 'Forget this' }).click();
+    await page.getByRole('button', { name: /^Forget / }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Forget it' }).click();
     await expect(page.getByText('Nothing here yet.')).toBeVisible();
   });
 
