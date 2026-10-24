@@ -13,8 +13,7 @@
       "Bash(gh pr review:*)",
       "Bash(*sync-handoff.sh*)",
       "Bash(npm publish:*)",
-      "Bash(git clean -fdx*)",
-      "Write(docs/spec/**)"
+      "Bash(git clean -fdx*)"
     ],
     "allow": [
       "Bash(git commit:*)",

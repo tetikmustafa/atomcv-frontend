@@ -2,8 +2,8 @@
 # Mirror of atomcv-backend/.githooks/post-commit — same mechanism, opposite
 # direction. Copies docs/handoff/**.md and docs/STATUS.md into the sibling
 # backend repo and stops there: it does not stage or commit anything on that
-# side. Never touches docs/spec/** (frontend doesn't own spec; that stays a
-# manual/Claude-run sync via scripts/sync-spec.sh, run from backend).
+# side. Never touches docs/error-catalogue.md: the backend generates it, and
+# scripts/sync-error-catalogue.sh, run from there, carries it here.
 #
 # Setup (once per machine):
 #   git config core.hooksPath .githooks

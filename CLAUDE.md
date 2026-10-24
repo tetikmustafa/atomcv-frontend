@@ -11,20 +11,20 @@ logic belongs there. In local development it runs at `localhost:8080`.
 
 ### Documentation Access — Manual Only
 
-Do NOT read anything under `docs/` — `INDEX.md`, `STATUS.md`, `spec/**`,
-`notes/**`, `handoff/**` — at the start of a session, at the start of a task,
+Do NOT read anything under `docs/` — `STATUS.md`, `notes/**`, `handoff/**`,
+the concept document — at the start of a session, at the start of a task,
 or proactively while working, **unless the user's current message explicitly
 asks you to.**
 
 Explicit means one of:
 
-- "check the spec for X" / "read INDEX.md" / "what's in STATUS.md"
+- "check the concept document for X" / "what's in STATUS.md"
 - "check if there's anything from backend/frontend" (→ read the handoff file only)
 - "update the notes" / "record this as a deviation"
 - the user names a section by number ("per Bölüm 20")
 
 If you think consulting a doc would help and the user hasn't asked for it,
-**ask in one sentence instead of reading it**: "İlgili kararı `spec/05-...`'de
+**ask in one sentence instead of reading it**: "İlgili kararı notlarda
 kontrol edeyim mi?" Wait for yes.
 
 If you're missing a fact you'd normally get from a doc, ask the user for the
@@ -43,9 +43,8 @@ I will run it myself.
 - `git push`, `git merge`, `git rebase`, anything touching a remote or moving
   `main`
 - `gh pr create`, `gh pr merge`, `gh pr review`
-- `scripts/sync-handoff.sh`, or any script under `scripts/` whose job is
-  repo-to-repo sync. (**`sync-spec.sh` lives in `atomcv-backend`**, and
-  `INDEX.md` now says so — `F-042`, answered.)
+- `scripts/sync-handoff.sh`, or any script whose job is repo-to-repo sync
+  (`sync-error-catalogue.sh` lives in `atomcv-backend`)
 - Anything under `docker-compose.prod.yml` or touching the deploy pipeline
 - Database migrations against anything other than the local dev database
 - Any command that deletes data (`git clean -fdx`, `docker volume rm`, etc.)
@@ -59,49 +58,37 @@ any `gradlew`/`npm` script that only touches this repo's own working tree.
 
 ### Read on demand — never in full
 
-Once reading **has** been asked for: `docs/INDEX.md` routes it, then `rg` the
-range. Most often `spec/09-frontend.md`, `08-api.md`, `08b-api-contract.md`,
-`01-foundations.md`.
+Once reading **has** been asked for: `rg` the term, read the range.
 
-### ⚠️ `docs/spec/**` is a read-only copy
-
-It is synced from `atomcv-backend`. **Editing it here is pointless** — the next sync
-overwrites your change.
-
-Need a spec change? Write an item in `docs/handoff/to-backend.md` instead.
+**There is no specification any more** (removed 2026-10-24, once the product
+was finished): the code, its tests and the OpenAPI schema are the authority.
+`§ nn` references left in comments point at the retired spec and are history
+— `git show <commit>:docs/spec/<file>` still reads it.
 
 ### Ownership
 
-| Path                            | Owner        | Synced                       |
-| ------------------------------- | ------------ | ---------------------------- |
-| `docs/spec/**`, `docs/INDEX.md` | backend repo | ← read-only copy             |
-| `docs/STATUS.md`                | shared       | both ways                    |
-| `docs/handoff/**`               | shared       | both ways — the real channel |
-| `docs/notes/**`                 | this repo    | never synced                 |
+| Path                      | Owner        | Synced                       |
+| ------------------------- | ------------ | ---------------------------- |
+| `docs/error-catalogue.md` | backend repo | ← generated, read-only copy  |
+| `docs/STATUS.md`          | shared       | both ways                    |
+| `docs/handoff/**`         | shared       | both ways — the real channel |
+| `docs/notes/**`           | this repo    | never synced                 |
 
 ## Recording Deviations, and Asking the Backend
 
-Deviations go in `docs/notes/current.md`, same format as backend. A **spec**
-change is not ours to make: ask for it in `docs/handoff/to-backend.md` as an
+Decisions go in `docs/notes/current.md`, same format as backend. Anything the
+backend must change is asked for in `docs/handoff/to-backend.md` as an
 `F-nnn` item.
 
 ## Where the Standing Answers Live
 
-These are specified, not summarised here — a second copy would drift.
-
-| Question                                                  | File                           |
-| --------------------------------------------------------- | ------------------------------ |
-| The eight design principles every decision traces back to | `spec/01-foundations.md` § 4   |
-| Why this technology and not that one                      | `spec/02-tech-stack.md`        |
-| Run/mark model — `href`, unknown marks, `m`, `v`          | `spec/04-data-model.md` § 14.1 |
-| `content_hash` is the hash of the plain text              | `spec/04-data-model.md` § 16.2 |
-| Endpoints, ETag scope, PATCH semantics, `completeness`    | `spec/08-api.md` § 35.6        |
-| Error catalogue, `params` discipline, closed vocabularies | `spec/08b-api-contract.md`     |
-| Anonymous TTL slides — "two hours after last activity"    | `spec/08-api.md` § 35.7        |
-| Frontend architecture, profile editor, i18n, a11y         | `spec/09-frontend.md` § 36-39  |
-| Test strategy, the tests that matter most                 | `spec/12-quality.md` § 51      |
-| Performance budgets                                       | `spec/12-quality.md` § 52      |
-| Anything else                                             | `docs/INDEX.md` routes it      |
+| Question                               | Where                                       |
+| -------------------------------------- | ------------------------------------------- |
+| Endpoints, fields, closed vocabularies | `src/types/api.d.ts` (from `openapi.json`)  |
+| Error codes and their `params`         | `docs/error-catalogue.md`                   |
+| Product intent                         | `docs/urun-konsept-dokumani-v2.md`          |
+| Why a screen does what it does         | the component's own comment, then `git log` |
+| Decisions, deviations, deliberate gaps | `docs/notes/current.md`                     |
 
 `src/lib/content/richContent.ts` owns the run/mark invariants in code, and
 every editor path goes through it — they are not re-litigated per component.
@@ -109,8 +96,8 @@ every editor path goes through it — they are not re-litigated per component.
 Stack: Next.js 16 (App Router, Turbopack), React 19, TypeScript strict,
 Tailwind v4 + shadcn/ui on Radix, TanStack Query (**server state**), Zustand
 (**transient UI state only**), React Hook Form + Zod, next-intl with ICU,
-dnd-kit, MSW. **Where we deviate from `spec/02-tech-stack.md` the reason is
-recorded in `docs/notes/current.md` § D.10, not repeated here.**
+dnd-kit, MSW. Where a choice departs from the obvious one, the reason is
+recorded in `docs/notes/current.md` § D.10, not repeated here.
 
 **Next 16 has breaking changes relative to earlier versions.** Full docs ship
 with the package at `node_modules/next/dist/docs/`. Read the relevant file
@@ -178,7 +165,7 @@ rather than a promise.
 
 **Where the schema and the docs disagree, the schema wins** — but record which
 in `docs/notes/current.md`, because it is usually the schema that is
-incomplete, and raise an `F-nnn` item if the spec text needs correcting.
+incomplete, and raise an `F-nnn` item if the backend needs to correct it.
 
 ## Local Development Against Mocks
 
@@ -233,8 +220,7 @@ import it. Its own header carries the rules for emptying it.
 
 ## Product Behaviors That Are Easy to Get Wrong
 
-Specified in `spec/01-foundations.md` and `spec/09-frontend.md`; listed here
-because each has already been got wrong somewhere.
+Listed here because each has already been got wrong somewhere.
 
 - **Manual control is optional.** The default output must be usable without
   the user touching anything. Never force a review step after generation.
@@ -281,7 +267,7 @@ npm run gen:api      # regenerate API types (backend must be running)
 
 ## Testing
 
-Strategy is `spec/12-quality.md` § 51. What is specific to this repo:
+What is specific to this repo:
 
 `tests/unit` (Vitest, jsdom) and `tests/e2e` (Playwright, Chromium) run
 against **the same MSW handlers** as the browser, through `tests/setup.ts` and
@@ -303,9 +289,6 @@ request escaping to the network in a test is a bug in the test.
 - Conversation with the developer: **Turkish**
 - UI source strings: **English** in `src/messages/en.json`; Turkish is a
   translation in `src/messages/tr.json`
-- Exception: where `spec/` specifies exact user-facing copy, the Turkish
-  string is reproduced **verbatim** and the English source is authored to
-  match it. The spec is the authority on tone, not the translation direction.
 - Commit format: Conventional Commits
 - Prefer server components where possible; `'use client'` only when needed
 
@@ -347,10 +330,8 @@ from the one that is real.
 3. **`docs/notes/current.md`** — the invariants that span files, the
    deliberate gaps that must not be "fixed" without asking, and what earlier
    stages handed forward. Short by design; the archive holds the rest.
-4. **The step's plan** — `docs/INDEX.md` routes it. The frontend build order
-   is `spec/15-repos-and-claude.md` § XI-B.9.2; Stage 4 is
-   `spec/14-build-guide.md` § XI-A.7, and § 55 is the list it points at.
-   Search the file, read the range.
+4. **The next step** is the developer's call — there is no build guide left
+   to look it up in.
 
 Close the step the way _Recording Deviations_ and _Cross-Repo Communication_
 describe: a record in `docs/notes/current.md`, an `F-nnn` item if the backend

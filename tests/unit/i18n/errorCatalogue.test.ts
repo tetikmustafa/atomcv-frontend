@@ -120,14 +120,14 @@ void _everyCodeIsCovered;
 /**
  * The generated catalogue, read as data (`B-110`).
  *
- * `docs/error-catalogue.md` arrives through the spec sync and is produced
+ * `docs/error-catalogue.md` arrives through `sync-error-catalogue.sh` and is produced
  * from the `ErrorCode` enum; `ErrorCatalogueDocumentTest` fails the backend's
  * build when the committed file and the enum diverge. Reading it here closes
  * the second link: a code whose params change fails **this** build too,
  * before anybody writes a sentence against the old shape.
  *
  * Read from disk rather than imported, because it is a document rather than a
- * module — and it is the same copy `INDEX.md` routes a person to.
+ * module — and it is the copy a person reads.
  *
  * **Resolved in two steps, and the one-liner is wrong here.** Vite gives
  * `new URL(path, import.meta.url)` a meaning of its own — it is how an asset
