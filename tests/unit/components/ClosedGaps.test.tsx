@@ -237,7 +237,7 @@ describe('deleting one wording', () => {
 
   it('offers nothing at all on an atom with one wording', async () => {
     await openEditor('atom-1');
-    await screen.findByLabelText(en.Editor.atom.text);
+    await screen.findByRole('button', { name: /^Edit the text of/ });
 
     expect(screen.queryByRole('tablist')).toBeNull();
     expect(screen.queryByRole('button', { name: /Delete the .* wording/ })).toBeNull();

@@ -71,15 +71,22 @@ export function FitReport({ report }: { report: FitReportData }) {
             })}
           </dd>
         </div>
-        <div className="flex gap-2">
-          <dt>{t('preferred')}</dt>
-          <dd data-testid="fit-preferred" className="font-medium">
-            {t('count', {
-              covered: report.preferredCovered ?? 0,
-              total: report.preferredTotal ?? 0,
-            })}
-          </dd>
-        </div>
+        {/*
+          Only when the posting named any. "0/0" next to "8/11" reads as a
+          second score the CV got nothing on, when it is a posting that drew
+          no line between required and nice-to-have.
+        */}
+        {(report.preferredTotal ?? 0) > 0 && (
+          <div className="flex gap-2">
+            <dt>{t('preferred')}</dt>
+            <dd data-testid="fit-preferred" className="font-medium">
+              {t('count', {
+                covered: report.preferredCovered ?? 0,
+                total: report.preferredTotal ?? 0,
+              })}
+            </dd>
+          </div>
+        )}
       </dl>
 
       <Skills label={t('covered')} skills={report.coveredSkills} />

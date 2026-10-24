@@ -124,6 +124,7 @@ describe('the atom editor', () => {
    * gate that took the atom's own text with it would be the second thing.
    */
   it('hides the atom controls from a session that may not use them', async () => {
+    const user = userEvent.setup();
     const { client } = await renderEditor('atom-1', { authenticated: false });
 
     // Waited for, not assumed. Asserting an absence before the session has
@@ -135,7 +136,9 @@ describe('the atom editor', () => {
     expect(screen.queryByRole('switch', { name: /always include/i })).not.toBeInTheDocument();
     // Still editable, as parts: `atom-1`'s wording is marked (D13), and
     // section 9 promises a narrower product rather than a degraded one.
-    // Lazily loaded (rule 4), so it arrives a tick after the card.
+    // Lazily loaded (rule 4), so it arrives a tick after the card — and only
+    // once asked for, since a marked wording reads as its sentence first.
+    await user.click(await screen.findByRole('button', { name: /^Edit the text of/ }));
     expect(await screen.findByLabelText('Part 1')).toBeInTheDocument();
   });
 
@@ -183,7 +186,14 @@ describe('the atom editor', () => {
    * destroy something" is not to do it.
    */
   it('gives a marked wording an editor that can hold its marks', async () => {
+    const user = userEvent.setup();
     await renderEditor();
+
+    // Read as the sentence until somebody asks to change it: an imported CV
+    // marks nearly every line, and every one of them opened straight into
+    // the parts, five fields and twenty-five checkboxes per bullet.
+    expect(screen.queryByRole('list', { name: en.Editor.atom.text })).not.toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: /^Edit the text of/ }));
 
     // The list rather than a field: a `<label>` names one control and this is
     // several, so the set of parts carries the name.

@@ -28,7 +28,7 @@ export async function MarketingHeader({ path = '' }: { path?: string }) {
 
   return (
     <header className="bg-background/85 sticky top-0 z-40 border-b backdrop-blur">
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-4 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-2 px-4 sm:gap-4 sm:px-6 lg:px-8">
         <a
           href={`/${locale}`}
           aria-label={nav('home', { appName: APP_NAME })}
@@ -37,7 +37,10 @@ export async function MarketingHeader({ path = '' }: { path?: string }) {
           <Logo />
         </a>
 
-        <nav aria-label={localeNames('label')} className="ml-auto flex items-center gap-1 text-sm">
+        <nav
+          aria-label={localeNames('label')}
+          className="ml-auto flex items-center text-sm sm:gap-1"
+        >
           {locales.map((option) => (
             <a
               key={option}
@@ -58,13 +61,17 @@ export async function MarketingHeader({ path = '' }: { path?: string }) {
           ))}
         </nav>
 
-        <a
-          href={`/${locale}/login`}
-          className={cn(buttonVariants({ variant: 'ghost' }), 'hidden sm:inline-flex')}
-        >
+        {/*
+          On a phone too. It was the one hidden below `sm` to make room, and a
+          returning person on their phone then had no way to sign in from the
+          front page short of starting a guest session first. The call to try
+          it gives way instead: the hero's own button says the same thing a
+          few pixels further down.
+        */}
+        <a href={`/${locale}/login`} className={buttonVariants({ variant: 'ghost' })}>
           {t('signIn')}
         </a>
-        <a href={`/${locale}/onboarding`} className={buttonVariants()}>
+        <a href={`/${locale}/onboarding`} className={cn(buttonVariants(), 'hidden sm:inline-flex')}>
           {t('tryIt')}
         </a>
       </div>

@@ -110,6 +110,8 @@ export type MockGenerationJob = MockJobCommon & {
    */
   contentLanguage?: string;
   postingLanguage?: string;
+  /** What the request named, kept beside what the document came out in. */
+  requestedLanguage?: string;
   /**
    * The page limit **this** generation was made under (`B-118`, `F-039`) —
    * what the request asked for, or the profile's default when it asked for

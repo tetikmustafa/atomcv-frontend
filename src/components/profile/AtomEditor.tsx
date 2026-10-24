@@ -43,6 +43,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import { useAccountResolution } from '@/hooks/useAccountResolution';
 import { useAutosave } from '@/hooks/useAutosave';
 import {
@@ -141,6 +142,16 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
    * the controls say is summarised beside it, so nothing is hidden unseen.
    */
   const [expanded, setExpanded] = useState(false);
+  /**
+   * Whether the run editor is open, for a wording that has marks.
+   *
+   * Closed by default for the reason the controls are: an imported CV marks
+   * nearly every line — a technology, a number — so every atom used to open
+   * straight into the run editor, five fields and twenty-five checkboxes for
+   * one sentence, and a section of four bullets ran to four screens. Read as
+   * the sentence it is until somebody asks to change it.
+   */
+  const [editingRuns, setEditingRuns] = useState(false);
   const selected = variants.find((variant) => variant.id === selectedId) ?? variants[0];
 
   const content = selected?.content ? parseRichContent(selected.content) : undefined;
@@ -217,7 +228,13 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
           which is exactly the navigation § 39.2 lists landmarks to fix rather
           than a use of them.
         */
-        <span id={`${atomId}-text-label`} className="text-sm font-medium">
+        // Read aloud always, drawn only while the parts are open: closed, the
+        // card is the sentence, and a "Text" heading over every bullet in a
+        // section was a label repeated down the page.
+        <span
+          id={`${atomId}-text-label`}
+          className={editingRuns ? 'text-sm font-medium' : 'sr-only'}
+        >
           {t('text')}
         </span>
       ) : (
@@ -241,13 +258,34 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
       <TranslatedWording variant={selected} />
 
       {/*
-        The stored content, as it will be read. Kept visible while editing:
-        it is the only place the marks are still shown, and the textarea
-        below cannot represent them.
+        The stored content, as it will be read — the whole of a marked
+        wording until its editor is opened, and its preview while it is: the
+        only place the marks are drawn as marks. An unmarked wording needs no
+        preview, since its field already shows every character it holds.
       */}
-      <p className="text-muted-foreground text-sm">
-        <RichText runs={runs} />
-      </p>
+      {marked && (
+        <div className="flex items-start gap-3">
+          <p
+            data-testid="wording-preview"
+            className={cn(
+              'min-w-0 flex-1',
+              editingRuns ? 'text-muted-foreground text-sm' : 'text-sm leading-relaxed',
+            )}
+          >
+            <RichText runs={runs} />
+          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-expanded={editingRuns}
+            aria-label={t(editingRuns ? 'textEditDone' : 'textEditOpen', { text: label })}
+            onClick={() => setEditingRuns((open) => !open)}
+          >
+            {t(editingRuns ? 'textEditDoneShort' : 'textEditOpenShort')}
+          </Button>
+        </div>
+      )}
 
       {/*
         Two editors, and which one is drawn is decided by the **content**
@@ -263,15 +301,17 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
         atoms have no marks, and most sessions never open one that does.
       */}
       {marked ? (
-        <RunEditor
-          runs={runs}
-          labelledBy={`${atomId}-text-label`}
-          disabled={wording.status === 'saving'}
-          onChange={(next) => {
-            setDraft(null);
-            wording.change(next);
-          }}
-        />
+        editingRuns && (
+          <RunEditor
+            runs={runs}
+            labelledBy={`${atomId}-text-label`}
+            disabled={wording.status === 'saving'}
+            onChange={(next) => {
+              setDraft(null);
+              wording.change(next);
+            }}
+          />
+        )
       ) : (
         <Textarea
           id={`${atomId}-text`}

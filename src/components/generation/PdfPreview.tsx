@@ -8,10 +8,14 @@
  * react-pdf and not for the question: the browser already renders PDFs, so an
  * `<iframe>` on the downloaded bytes costs nothing in the bundle.
  *
- * **On demand, not on load.** A download re-renders the document from its
- * snapshot (nothing is stored yet, § 57.4), so a preview that loaded itself
- * would be a compilation on every visit to a result — most of them by people
- * who only came to press "Download". One press, then cached for the session.
+ * **On demand, not on load — except when the result is new.** A download
+ * re-renders the document from its snapshot (nothing is stored yet, § 57.4),
+ * so a preview that loaded itself would be a compilation on every visit to a
+ * result — most of them by people who only came to press "Download". The one
+ * visit that is not like that is the first: the person has just waited for
+ * this page, and seeing it is the point of arriving. So a result finished in
+ * the last few minutes opens its preview; an older one waits for the press.
+ * Either way it is cached for the session.
  *
  * The frame is the file itself, so what it shows is exactly what downloads:
  * the page limit can be checked by eye.
@@ -27,9 +31,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { downloadGeneration } from '@/lib/api/endpoints/generations';
 import { generationKeys } from '@/lib/api/queryKeys';
 
-export function PdfPreview({ generationId }: { generationId: string }) {
+export function PdfPreview({
+  generationId,
+  fresh = false,
+}: {
+  generationId: string;
+  /** Just produced, so the preview opens without being asked for. */
+  fresh?: boolean;
+}) {
   const t = useTranslations('Result');
-  const [asked, setAsked] = useState(false);
+  const [asked, setAsked] = useState(fresh);
   const [url, setUrl] = useState<string | null>(null);
 
   const pdf = useQuery({
@@ -58,7 +69,7 @@ export function PdfPreview({ generationId }: { generationId: string }) {
 
   if (!asked) {
     return (
-      <div className="bg-muted/40 flex aspect-[1/1.414] w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed p-6 text-center">
+      <div className="bg-muted/40 flex w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-6 py-12 text-center">
         <p className="text-muted-foreground max-w-xs text-sm">{t('previewHint')}</p>
         <Button type="button" variant="outline" onClick={() => setAsked(true)}>
           <Eye aria-hidden="true" />

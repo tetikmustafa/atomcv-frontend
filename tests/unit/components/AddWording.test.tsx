@@ -78,7 +78,7 @@ describe('adding a wording', () => {
 
     await mountEditor();
 
-    await screen.findByLabelText(en.Editor.atom.text);
+    await screen.findByRole('button', { name: /^Edit the text of/ });
     expect(screen.queryByRole('button', { name: en.Editor.variants.add })).not.toBeInTheDocument();
   });
 

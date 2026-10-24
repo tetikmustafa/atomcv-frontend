@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
-import { api } from '@/lib/api/client';
+import { afterEach, describe, expect, it } from 'vitest';
+import { api, setSessionRecovery } from '@/lib/api/client';
 import { ApiError, isApiError, isRetriable } from '@/lib/api/errors';
 import { getSession, requestMagicLink } from '@/lib/api/endpoints/auth';
 import { toErrorLike } from '@/lib/errors/errorLike';
@@ -165,5 +165,83 @@ describe('the wait a 429 asks for', () => {
 
     if (!isApiError(error)) throw new Error('expected an ApiError');
     expect(error.retryAfterSeconds).toBeUndefined();
+  });
+});
+
+/**
+ * A write the server refused for want of a session, before the session read
+ * had answered or after a guest's two hours ran out. Measured on the real
+ * stack: an upload pressed as the page drew came back "you need to be signed
+ * in" on the screen that says no account is needed.
+ */
+describe('a write that raced the session', () => {
+  const refuseOnce = (code: string, status: number) => {
+    let refused = false;
+    let seen = 0;
+    server.use(
+      http.post('*/api/v1/applications', () => {
+        seen += 1;
+        if (refused) return HttpResponse.json({ id: 'app-1' }, { status: 201 });
+        refused = true;
+        return HttpResponse.json(problem(status, code, '/api/v1/applications'), { status });
+      }),
+    );
+    return () => seen;
+  };
+
+  afterEach(() => setSessionRecovery(undefined));
+
+  it('repeats once after the recovery has fetched a session', async () => {
+    const calls = refuseOnce('AUTHENTICATION_REQUIRED', 401);
+    const reasons: string[] = [];
+    setSessionRecovery(async (reason) => {
+      reasons.push(reason);
+      return true;
+    });
+
+    await expect(api.post('/applications', { company: 'Acme' })).resolves.toEqual({ id: 'app-1' });
+    expect(calls()).toBe(2);
+    expect(reasons).toEqual(['session']);
+  });
+
+  it('does not repeat for a caller last seen signed in', async () => {
+    const calls = refuseOnce('AUTHENTICATION_REQUIRED', 401);
+    setSessionRecovery(async () => false);
+
+    await expect(api.post('/applications', { company: 'Acme' })).rejects.toMatchObject({
+      code: 'AUTHENTICATION_REQUIRED',
+    });
+    expect(calls()).toBe(1);
+  });
+
+  it('repeats a write sent before any token existed, as a token problem', async () => {
+    // No XSRF-TOKEN cookie in jsdom here, so the write goes out without one.
+    document.cookie = 'XSRF-TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+    const calls = refuseOnce('CSRF_TOKEN_INVALID', 403);
+    const reasons: string[] = [];
+    setSessionRecovery(async (reason) => {
+      reasons.push(reason);
+      return true;
+    });
+
+    await api.post('/applications', { company: 'Acme' });
+    expect(calls()).toBe(2);
+    expect(reasons).toEqual(['token']);
+  });
+
+  it('repeats at most once', async () => {
+    let seen = 0;
+    server.use(
+      http.post('*/api/v1/applications', () => {
+        seen += 1;
+        return HttpResponse.json(problem(401, 'AUTHENTICATION_REQUIRED', '/api/v1/applications'), {
+          status: 401,
+        });
+      }),
+    );
+    setSessionRecovery(async () => true);
+
+    await expect(api.post('/applications', {})).rejects.toBeInstanceOf(ApiError);
+    expect(seen).toBe(2);
   });
 });

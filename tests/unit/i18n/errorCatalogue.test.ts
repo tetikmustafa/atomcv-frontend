@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createTranslator } from 'next-intl';
+import { formats } from '@/lib/i18n/formats';
 import { describe, expect, it } from 'vitest';
 import en from '@/messages/en.json';
 import tr from '@/messages/tr.json';
@@ -687,7 +688,10 @@ describe('when a quota renews', () => {
     new Intl.DateTimeFormat(locale, { timeStyle: 'short' }).format(RESETS_AT);
 
   it.each(CATALOGUES)('says the time in %s, in the reader’s own zone', (locale, messages) => {
-    const t = createTranslator({ locale, messages, namespace: 'errors' });
+    // With the app's own named formats: without them `date, short` and
+    // `time, short` are ICU's defaults, and the sentence that printed the
+    // date and the hour twice in the browser passed here.
+    const t = createTranslator({ locale, messages, namespace: 'errors', formats });
 
     // `RATE_LIMITED` is **not** in this list, although it carries `resetsAt`
     // too. Its sentence is built from `Retry-After` instead (`B-050`), and

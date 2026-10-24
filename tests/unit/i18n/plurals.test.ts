@@ -46,4 +46,23 @@ describe('message catalogues', () => {
   it('has the same keys in both languages', () => {
     expect(flatten(tr).sort()).toEqual(flatten(en).sort());
   });
+
+  /**
+   * Plain text, with emphasis only through `t.rich` tags. A sentence is
+   * printed as it is written, so markdown in a catalogue reaches the reader as
+   * asterisks — the account-deletion warning said "hesaba değil **adrese**"
+   * in the one dialog where every word is read closely.
+   */
+  it('carries no markdown emphasis in either language', () => {
+    const strings = (value: unknown): string[] =>
+      typeof value === 'string'
+        ? [value]
+        : typeof value === 'object' && value !== null
+          ? Object.values(value).flatMap(strings)
+          : [];
+
+    for (const catalogue of [en, tr]) {
+      expect(strings(catalogue).filter((text) => /\*\*|__/.test(text))).toEqual([]);
+    }
+  });
 });
