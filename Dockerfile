@@ -30,6 +30,22 @@ COPY . .
 ENV NEXT_PUBLIC_API_MOCKING=disabled
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# The deployment's own public values, for the same reason: inlined here or
+# nowhere. Without the site URL every canonical link, hreflang, robots.txt and
+# sitemap names localhost; without the Turnstile site key the widget never
+# renders, and production — which requires the challenge — answers every
+# sign-in, guest import and guest generation with CHALLENGE_FAILED. Setting
+# either on the running container changes nothing.
+#
+#   docker build --build-arg NEXT_PUBLIC_SITE_URL=https://atomcv.mustafatetik.com \
+#                --build-arg NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x... .
+ARG NEXT_PUBLIC_SITE_URL=http://localhost:3000
+ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY=
+ARG NEXT_PUBLIC_API_BASE_URL=/api/v1
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
+ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+
 RUN npm run build
 
 # ── Runtime ──────────────────────────────────────────────────────────────────
