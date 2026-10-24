@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { Page, PageHeader } from '@/components/layout/Page';
 import { ImportScreen } from '@/components/onboarding/ImportScreen';
 import { routing } from '@/lib/i18n/routing';
 
@@ -19,14 +20,10 @@ export default async function OnboardingPage({ params }: PageProps<'/[locale]/on
   const t = await getTranslations({ locale, namespace: 'Onboarding' });
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-8 py-12">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-xl font-semibold">{t('title')}</h1>
-        <p className="text-muted-foreground text-sm">{t('intro')}</p>
-      </header>
-
+    <Page width="narrow">
+      <PageHeader title={t('title')} description={t('intro')} />
       <ImportScreen />
-    </div>
+    </Page>
   );
 }
 

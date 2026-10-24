@@ -131,7 +131,23 @@
     "reviewWarningsList": "What we were unsure about",
     "warning": "{code, select, ambiguous_date {A date could not be read.} missing_organization {An entry has no employer or school on it.} unclear_section {Something could not be placed in a section with any confidence.} scrambled_text {Some of the text came out of the file scrambled.} overlapping_dates {Two entries cover the same dates.} untranslatable_atom {A line could not be given an English wording.} unsupported_by_source {A name here does not appear in the file you uploaded.} other {Something could not be settled.}}",
     "warningAt": "{warning} In {section}.",
-    "confirm": "Looks right — continue"
+    "confirm": "Looks right — continue",
+    "stepsLabel": "Getting started",
+    "steps": {
+      "upload": "Upload",
+      "read": "Read",
+      "review": "Review",
+      "generate": "First resume"
+    },
+    "stepState": "{state, select, done {done} current {current step} other {to do}}",
+    "dropTitle": "Drop your CV here",
+    "dropOr": "or",
+    "browse": "choose a file",
+    "chosen": "{name} · {size}",
+    "summary": "We found {sections, plural, =0 {no sections} one {# section} other {# sections}} and {atoms, plural, =0 {no items} one {# item} other {# items}}.",
+    "summaryLanguage": "Read as {language}.",
+    "manual": "Rather type it yourself?",
+    "manualLink": "Build the profile by hand"
   },
   "Applications": {
     "title": "Applications",

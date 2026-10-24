@@ -131,7 +131,23 @@
     "reviewWarningsList": "Emin olamadıklarımız",
     "warning": "{code, select, ambiguous_date {Bir tarih okunamadı.} missing_organization {Bir kaydın kurum ya da şirket adı yok.} unclear_section {Bir şeyin hangi bölüme ait olduğu anlaşılamadı.} scrambled_text {Dosyadan çıkan metnin bir kısmı karışık geldi.} overlapping_dates {İki kayıt aynı tarihleri kapsıyor.} untranslatable_atom {Bir maddenin İngilizce karşılığı üretilemedi.} unsupported_by_source {Bu satırda, yüklediğiniz dosyada geçmeyen bir ad var.} other {Bir şey netleştirilemedi.}}",
     "warningAt": "{warning} {section} bölümünde.",
-    "confirm": "Doğru görünüyor — devam et"
+    "confirm": "Doğru görünüyor — devam et",
+    "stepsLabel": "Başlangıç",
+    "steps": {
+      "upload": "Yükle",
+      "read": "Oku",
+      "review": "Gözden geçir",
+      "generate": "İlk CV"
+    },
+    "stepState": "{state, select, done {tamamlandı} current {şu anki adım} other {sırada}}",
+    "dropTitle": "CV'ni buraya bırak",
+    "dropOr": "ya da",
+    "browse": "bir dosya seç",
+    "chosen": "{name} · {size}",
+    "summary": "{sections, plural, =0 {Hiç bölüm} one {# bölüm} other {# bölüm}} ve {atoms, plural, =0 {hiç öğe} one {# öğe} other {# öğe}} bulduk.",
+    "summaryLanguage": "{language} olarak okundu.",
+    "manual": "Kendin yazmayı mı tercih edersin?",
+    "manualLink": "Profili elle oluştur"
   },
   "Applications": {
     "title": "Başvurular",

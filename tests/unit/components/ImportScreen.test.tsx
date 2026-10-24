@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NextIntlClientProvider } from 'next-intl';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ImportScreen } from '@/components/onboarding/ImportScreen';
@@ -90,6 +90,31 @@ describe('uploading a CV', () => {
     await renderImport();
 
     expect(screen.getByRole('button', { name: en.Onboarding.upload })).toBeDisabled();
+  });
+
+  /** Concept § 13: the CV is dragged in. The input stays the control. */
+  it('takes a file dropped onto the area around the picker', async () => {
+    await renderImport();
+
+    const input = screen.getByLabelText(en.Onboarding.fileLabel);
+    fireEvent.drop(input.parentElement!, { dataTransfer: { files: [cv('dropped.pdf')] } });
+
+    expect(await screen.findByText(/dropped\.pdf/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: en.Onboarding.upload })).toBeEnabled();
+  });
+
+  /**
+   * `B-122`: the bar names the step the job is on. Until then it drew one
+   * sentence for the whole import, because the server sent English prose it
+   * could not translate.
+   */
+  it('names the phase the server reports', async () => {
+    await renderImport();
+    await upload();
+
+    expect(
+      await screen.findByText(en.import.phase.NORMALIZING, {}, { timeout: 3000 }),
+    ).toBeVisible();
   });
 
   it('follows the job and hands over to the review', async () => {
