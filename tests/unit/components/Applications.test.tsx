@@ -157,16 +157,17 @@ describe('the application tracker', () => {
   /**
    * A row whose CV was deleted keeps its place and loses its download: the
    * record of applying outlives the document, and a link to a `404` would be
-   * worse than the sentence.
+   * worse than nothing. It used to say "that resume has been deleted", which
+   * the wire cannot know — a row recorded by hand has no resume either.
    */
-  it('offers no resume for a row whose CV has been deleted', async () => {
+  it('offers no resume for a row with none attached, and claims nothing', async () => {
     signIn();
     const created = await record();
     forgetGenerationOf(created.id!);
 
     render(<Applications />, { wrapper: Wrapper });
 
-    expect(await screen.findByText(en.Applications.resumeDeleted)).toBeInTheDocument();
+    expect(await screen.findByLabelText(en.Applications.status)).toBeInTheDocument();
     expect(
       screen.queryByRole('link', { name: en.Applications.openResume }),
     ).not.toBeInTheDocument();
@@ -179,7 +180,10 @@ describe('the application tracker', () => {
 
     render(<Applications />, { wrapper: Wrapper });
 
-    await user.click(await screen.findByRole('button', { name: en.Applications.forget }));
+    // Behind the confirmation every other deletion has.
+    await user.click(await screen.findByRole('button', { name: /^Forget / }));
+    expect(applications).toHaveLength(1);
+    await user.click(await screen.findByRole('button', { name: en.Applications.forgetConfirm }));
 
     await waitFor(() => expect(applications).toHaveLength(0));
     expect(await screen.findByText(en.Applications.empty)).toBeInTheDocument();
@@ -258,5 +262,41 @@ describe('the application endpoints', () => {
     // echo back.
     expect(Array.isArray(rows)).toBe(true);
     expect(rows).toHaveLength(2);
+  });
+});
+
+describe('the filter and the edit', () => {
+  it('narrows the list by status, with each count in the button', async () => {
+    signIn();
+    await record();
+    const user = userEvent.setup();
+
+    render(<Applications />, { wrapper: Wrapper });
+
+    const all = await screen.findByRole('button', { name: 'All (1)' });
+    expect(all).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: 'Applied (1)' }));
+    expect(screen.getByRole('button', { name: 'Applied (1)' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByLabelText(en.Applications.status)).toBeInTheDocument();
+  });
+
+  /** A typo in an employer's name no longer costs the row its history. */
+  it('corrects the company in place', async () => {
+    signIn();
+    await record();
+    const user = userEvent.setup();
+
+    render(<Applications />, { wrapper: Wrapper });
+
+    await user.click(await screen.findByRole('button', { name: /^Edit / }));
+    const company = screen.getAllByLabelText(en.Applications.company).at(-1)!;
+    await user.clear(company);
+    await user.type(company, 'Acme Ltd');
+    await user.click(screen.getByRole('button', { name: en.Applications.save }));
+
+    await waitFor(() => expect(applications[0]?.company).toBe('Acme Ltd'));
   });
 });

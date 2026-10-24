@@ -18,7 +18,11 @@
  */
 
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
-import { Button } from '@/components/ui/button';
+import { Archive, ChevronRight, FileStack, FileText, Sparkles } from 'lucide-react';
+import { EmptyState } from '@/components/layout/EmptyState';
+import { Badge } from '@/components/ui/badge';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useGenerationHistory } from '@/hooks/useGeneration';
 import { useCapabilities } from '@/hooks/useSession';
 import type { GenerationSummary } from '@/lib/api/endpoints/generations';
@@ -43,9 +47,16 @@ function NoHistoryKept() {
   // narrower — the resume is built and downloaded exactly as it would be, it
   // simply is not listed afterwards.
   return (
-    <p className="border-border bg-muted/50 rounded-md border px-3 py-2 text-sm">
-      {t('anonymous')}
-    </p>
+    <EmptyState
+      icon={FileStack}
+      title={t('anonymousTitle')}
+      description={t('anonymous')}
+      action={
+        <Link href="/login?next=%2Fhistory" className={buttonVariants()}>
+          {t('signIn')}
+        </Link>
+      }
+    />
   );
 }
 
@@ -54,7 +65,18 @@ function HistoryList() {
   const { data, isPending, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useGenerationHistory();
 
-  if (isPending) return <p className="text-muted-foreground text-sm">{t('loading')}</p>;
+  if (isPending) {
+    return (
+      <div className="flex flex-col gap-3">
+        <p role="status" className="sr-only">
+          {t('loading')}
+        </p>
+        {[0, 1, 2].map((index) => (
+          <Skeleton key={index} className="h-20 w-full rounded-xl" />
+        ))}
+      </div>
+    );
+  }
   // Nothing is rendered from a failed read — an empty list here would say
   // "you have made nothing", which is a different and wrong sentence.
   if (isError) return <p className="text-sm">{t('failed')}</p>;
@@ -64,7 +86,20 @@ function HistoryList() {
   // rather than what has been walked to, so it does not climb as pages load.
   const total = data.pages[0]?.total ?? rows.length;
 
-  if (rows.length === 0) return <p className="text-muted-foreground text-sm">{t('empty')}</p>;
+  if (rows.length === 0) {
+    return (
+      <EmptyState
+        icon={FileStack}
+        title={t('empty')}
+        action={
+          <Link href="/generate" className={buttonVariants()}>
+            <Sparkles aria-hidden="true" />
+            {t('generate')}
+          </Link>
+        }
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -72,7 +107,7 @@ function HistoryList() {
         {t('shown', { shown: rows.length, total })}
       </p>
 
-      <ul className="flex flex-col gap-2">
+      <ul className="flex flex-col gap-3">
         {rows.map((row) => (
           <li key={row.generationId}>
             <Row row={row} />
@@ -163,6 +198,13 @@ function Row({ row }: { row: GenerationSummary }) {
 
   const body = (
     <>
+      <span
+        aria-hidden="true"
+        className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-lg"
+      >
+        <FileText className="size-4" />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
       {label.length > 0 && (
         <span className="flex flex-wrap items-baseline gap-x-2 text-sm">
           {row.roleTitle && <span className="font-medium">{row.roleTitle}</span>}
@@ -175,10 +217,21 @@ function Row({ row }: { row: GenerationSummary }) {
       {row.status && row.status !== 'completed' && (
         <span className="text-muted-foreground text-xs">{t('status', { status: row.status })}</span>
       )}
+      </span>
+      {row.archived === true && (
+        <Badge variant="outline" className="hidden sm:inline-flex" aria-hidden="true">
+          <Archive />
+          {t('kept')}
+        </Badge>
+      )}
+      {row.generationId && (
+        <ChevronRight className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
+      )}
     </>
   );
 
-  const className = 'border-border flex flex-col gap-1 rounded-md border px-3 py-2';
+  const className =
+    'bg-card shadow-card flex items-center gap-4 rounded-xl border px-4 py-3 transition-colors';
 
   /*
     This tested `status === 'failed'` as well until `B-116`, and the branch
@@ -204,7 +257,7 @@ function Row({ row }: { row: GenerationSummary }) {
       // screen exists to answer. A row without a label falls back to its
       // facts, which is all it has.
       aria-label={t('open', { facts: [...label, ...facts].join(', ') })}
-      className={`${className} hover:bg-muted/50 focus-visible:ring-ring block focus-visible:ring-3 focus-visible:outline-none`}
+      className={`${className} hover:bg-muted/50 focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none`}
     >
       {body}
     </Link>
