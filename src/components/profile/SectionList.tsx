@@ -26,6 +26,8 @@
  */
 
 import { useTranslations } from 'next-intl';
+import { ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { AddAtom } from '@/components/profile/AddAtom';
 import { AddEntry } from '@/components/profile/AddEntry';
@@ -36,7 +38,6 @@ import { EditEntry } from '@/components/profile/EditEntry';
 import { EditSection } from '@/components/profile/EditSection';
 import { EntryHeading } from '@/components/profile/EntryHeading';
 import { SortableList } from '@/components/profile/SortableList';
-import { Button } from '@/components/ui/button';
 import {
   useAtoms,
   useDeleteEntry,
@@ -273,7 +274,11 @@ function SectionAtoms({ section }: { section: Section }) {
                   related controls that does not belong in a page summary,
                   which is what an entry's bullets are.
                 */
-                <div role="group" aria-labelledby={headingId} className="flex flex-col gap-2">
+                <div
+                  role="group"
+                  aria-labelledby={headingId}
+                  className="bg-background/60 flex flex-col gap-3 rounded-lg border p-3 sm:p-4"
+                >
                   <div className="flex items-start justify-between gap-2">
                     <EntryHeading entry={entry} id={headingId} />
                     <div className="flex shrink-0 items-center">
@@ -307,7 +312,7 @@ function SectionAtoms({ section }: { section: Section }) {
           sits beside deleting rather than next to the heading: the heading is
           the collapse toggle, and hanging controls off it makes the one thing
           on screen you press most often into a cluster. */}
-      <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+      <div className="flex flex-wrap items-center gap-2 border-t pt-4">
         <EditSection section={section} />
         <DeleteSectionControl section={section} entries={entries.length} atoms={atoms.length} />
       </div>
@@ -327,17 +332,31 @@ function SectionRow({ section }: { section: Section }) {
   const panelId = `section-${section.id}`;
 
   return (
-    <section aria-labelledby={`${panelId}-heading`}>
-      <h2 id={`${panelId}-heading`}>
-        <Button
+    <section
+      aria-labelledby={`${panelId}-heading`}
+      className="bg-card shadow-card overflow-hidden rounded-xl border"
+    >
+      <h2 id={`${panelId}-heading`} className="text-base">
+        {/*
+          The whole bar is the toggle, and its name is the title alone: the
+          chevron is a picture of `aria-expanded`, which already says it.
+        */}
+        <button
           type="button"
-          variant="ghost"
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => toggle(section.id!)}
+          className="hover:bg-muted/60 focus-visible:ring-ring/50 flex w-full items-center gap-3 px-4 py-3.5 text-left font-semibold outline-none focus-visible:ring-3 focus-visible:ring-inset"
         >
+          <ChevronRight
+            aria-hidden="true"
+            className={cn(
+              'text-muted-foreground size-4 shrink-0 transition-transform',
+              open && 'rotate-90',
+            )}
+          />
           {section.title}
-        </Button>
+        </button>
       </h2>
 
       {/*
@@ -346,7 +365,7 @@ function SectionRow({ section }: { section: Section }) {
         — and each of them subscribes to a cache key.
       */}
       {open && (
-        <div id={panelId} className="pt-2">
+        <div id={panelId} className="border-t px-3 py-4 sm:px-5">
           <SectionAtoms section={section} />
         </div>
       )}

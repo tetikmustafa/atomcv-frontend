@@ -14,6 +14,7 @@
  */
 
 import { useLocale, useTranslations } from 'next-intl';
+import { Badge } from '@/components/ui/badge';
 import { formatMonthYear } from '@/lib/i18n/dates';
 import type { Entry } from '@/lib/api/endpoints/profile';
 
@@ -35,7 +36,7 @@ export function EntryHeading({ entry, id }: EntryHeadingProps) {
 
   return (
     <div className="flex flex-col gap-0.5">
-      <h3 id={id} className="text-sm font-medium">
+      <h3 id={id} className="text-sm font-semibold">
         {entry.title}
       </h3>
 
@@ -47,6 +48,24 @@ export function EntryHeading({ entry, id }: EntryHeadingProps) {
         */}
         {[entry.organization, entry.location, range].filter(Boolean).join(' · ')}
       </p>
+
+      {(entry.url || entry.active === false) && (
+        <p className="flex flex-wrap items-center gap-2 text-xs">
+          {entry.url && (
+            // The address itself as the text: it is what gets printed beside
+            // the title, so it is what the reader should check.
+            <a
+              href={entry.url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="text-muted-foreground hover:text-foreground max-w-full truncate underline underline-offset-2"
+            >
+              {entry.url.replace(/^https?:\/\//, '')}
+            </a>
+          )}
+          {entry.active === false && <Badge variant="secondary">{t('inactive')}</Badge>}
+        </p>
+      )}
     </div>
   );
 }

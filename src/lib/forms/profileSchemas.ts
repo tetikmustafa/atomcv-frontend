@@ -51,6 +51,9 @@ export const VALIDATION_KEYS = [
   'locationTooLong',
   'endBeforeStart',
   'invalidDate',
+  'invalidUrl',
+  'urlTooLong',
+  'minAtomsRange',
   'invalid',
 ] as const;
 
@@ -180,7 +183,17 @@ export const entryForm = z
     // Empty strings rather than `undefined`, because that is what an untouched
     // text input holds; they are dropped on the way out, not sent as blanks.
     organization: z.string().trim().max(200, 'organizationTooLong'),
-    location: z.string().trim().max(200, 'locationTooLong'),
+    // 120, the server's limit (`EntryCreate.location`). This said 200, so a
+    // location between the two passed here and came back as a 400.
+    location: z.string().trim().max(120, 'locationTooLong'),
+    url: z.union([
+      z.literal(''),
+      z
+        .string()
+        .trim()
+        .max(300, 'urlTooLong')
+        .regex(/^https?:\/\/\S+$/i, 'invalidUrl'),
+    ]),
     startDate: z.union([isoDate, z.literal('')]),
     endDate: z.union([isoDate, z.literal('')]),
   })
@@ -200,7 +213,11 @@ export type EntryFormValues = z.infer<typeof entryForm>;
  * the difference between a job with no end date — which the heading reads as
  * "still there" — and one with an end date the formatter cannot parse.
  */
-export function toEntryCreate(sectionId: string, values: EntryFormValues): EntryCreate {
+export function toEntryCreate(
+  sectionId: string,
+  values: EntryFormValues,
+  controls?: EntryControls,
+): EntryCreate {
   return {
     sectionId,
     title: values.title.trim(),
@@ -208,8 +225,54 @@ export function toEntryCreate(sectionId: string, values: EntryFormValues): Entry
     ...(values.location.trim() ? { location: values.location.trim() } : {}),
     ...(values.startDate ? { startDate: values.startDate } : {}),
     ...(values.endDate ? { endDate: values.endDate } : {}),
+    ...(values.url.trim() ? { url: values.url.trim() } : {}),
+    // `active` is not on the create body: a new entry is in use, and turning
+    // it off is an edit.
+    ...(controls
+      ? {
+          importance: controls.importance,
+          alwaysInclude: controls.alwaysInclude,
+          verbatim: controls.verbatim,
+          minAtoms: controls.minAtoms,
+        }
+      : {}),
   };
 }
+
+/**
+ * What selection is told about an entry as a whole — the controls an atom
+ * has, one level up (§ 14). Not part of the zod form: a slider and switches
+ * have nothing to validate, and they are drawn only where `canEditAtomControls`
+ * says the caller may set them, so a guest's form sends none.
+ */
+export type EntryControls = {
+  importance: number;
+  active: boolean;
+  alwaysInclude: boolean;
+  verbatim: boolean;
+  minAtoms: number;
+};
+
+/** The server's defaults (`EntryCreate.minAtoms` "defaults to 2"). */
+export const DEFAULT_ENTRY_CONTROLS: EntryControls = {
+  importance: 0.5,
+  active: true,
+  alwaysInclude: false,
+  verbatim: false,
+  minAtoms: 2,
+};
+
+/** `EntryPatch.minAtoms`'s published bounds. */
+export const MIN_ATOMS_RANGE = { min: 0, max: 50 } as const;
+
+/** A section's own switches (§ 14), gated like an atom's. */
+export type SectionControls = { active: boolean; alwaysInclude: boolean; verbatim: boolean };
+
+export const DEFAULT_SECTION_CONTROLS: SectionControls = {
+  active: true,
+  alwaysInclude: false,
+  verbatim: false,
+};
 
 /**
  * What the entry form sends when it is editing rather than adding.
@@ -229,12 +292,14 @@ export function toEntryCreate(sectionId: string, values: EntryFormValues): Entry
  * `title` is the exception. It is required, so it has no cleared state and
  * `null` is not a value the schema accepts for it.
  */
-export function toEntryPatch(values: EntryFormValues): EntryPatch {
+export function toEntryPatch(values: EntryFormValues, controls?: EntryControls): EntryPatch {
   return {
     title: values.title.trim(),
     organization: values.organization.trim() || null,
     location: values.location.trim() || null,
     startDate: values.startDate || null,
     endDate: values.endDate || null,
+    url: values.url.trim() || null,
+    ...(controls ?? {}),
   };
 }

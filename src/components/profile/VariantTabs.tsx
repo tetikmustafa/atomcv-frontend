@@ -40,9 +40,15 @@ export type VariantTabsProps = {
   children: (variant: Variant) => React.ReactNode;
 };
 
-function labelFor(variant: Variant, languageName: (code: string) => string): string {
+function labelFor(
+  variant: Variant,
+  languageName: (code: string) => string,
+  toneName: (tone: string) => string,
+): string {
   const language = languageName(variant.language ?? '');
-  return variant.tone ? `${language} · ${variant.tone}` : language;
+  // Translated: this printed the wire value — "Türkçe · formal" — onto a
+  // Turkish screen.
+  return variant.tone ? `${language} · ${toneName(variant.tone)}` : language;
 }
 
 export function VariantTabs({
@@ -63,6 +69,7 @@ export function VariantTabs({
   // screen needs it too. Only the sentence for "no language at all" is ours:
   // the helper returns `undefined` there rather than inventing one.
   const nameOf = (code: string) => languageName(code, locale) ?? t('unknownLanguage');
+  const toneOf = (tone: string) => t('tone', { tone });
 
   const selected = variants.find((variant) => variant.id === selectedId);
 
@@ -75,7 +82,7 @@ export function VariantTabs({
             value={variant.id!}
             className="data-[state=active]:bg-muted data-[state=active]:text-foreground text-muted-foreground focus-visible:ring-ring/50 flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm outline-none focus-visible:ring-3"
           >
-            <span>{labelFor(variant, nameOf)}</span>
+            <span>{labelFor(variant, nameOf, toneOf)}</span>
 
             {variant.primary && (
               <span className="text-muted-foreground text-xs">{t('primary')}</span>
@@ -117,7 +124,7 @@ export function VariantTabs({
 
           {onDelete && (
             <DeleteControl
-              triggerLabel={t('deleteTrigger', { language: labelFor(selected, nameOf) })}
+              triggerLabel={t('deleteTrigger', { language: labelFor(selected, nameOf, toneOf) })}
               title={t('deleteTitle')}
               description={t('deleteBody')}
               confirmLabel={t('deleteConfirm')}

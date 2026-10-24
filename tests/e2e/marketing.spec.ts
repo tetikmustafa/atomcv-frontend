@@ -102,22 +102,35 @@ test.describe('legal documents', () => {
  * A route that only a bookmark can reach is not reachable.
  */
 test.describe('getting into the product', () => {
-  test('the front page leads to the editor, in the reader’s language', async ({ page }) => {
+  /**
+   * The primary path is the CV upload — the concept's "value first, effort
+   * later" — and it is the first link in the hero.
+   */
+  test('the front page leads to the upload, in the reader’s language', async ({ page }) => {
     await page.goto('/tr');
 
-    await page.getByRole('link', { name: 'Profilini oluşturmaya başla' }).click();
+    await page.getByRole('link', { name: "CV'nle başla" }).first().click();
+
+    await expect(page).toHaveURL('/tr/onboarding');
+    // Not just the URL: the upload has to have rendered something.
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  });
+
+  test('and to the editor for whoever would rather type', async ({ page }) => {
+    await page.goto('/tr');
+
+    await page.getByRole('link', { name: 'ya da profilini elle oluştur' }).click();
 
     await expect(page).toHaveURL('/tr/profile');
-    // Not just the URL: the editor has to have rendered something.
     await expect(page.getByRole('progressbar', { name: 'Profil tamamlanma oranı' })).toBeVisible();
   });
 
   test('and keeps English readers in English', async ({ page }) => {
     await page.goto('/en');
 
-    await page.getByRole('link', { name: 'Start building your profile' }).click();
+    await page.getByRole('link', { name: 'Start with your CV' }).first().click();
 
-    await expect(page).toHaveURL('/en/profile');
+    await expect(page).toHaveURL('/en/onboarding');
   });
 });
 

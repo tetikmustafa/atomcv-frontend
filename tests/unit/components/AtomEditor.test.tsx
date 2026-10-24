@@ -10,6 +10,7 @@ import { listAtoms, patchAtom, type Atom } from '@/lib/api/endpoints/profile';
 import { profileKeys, sessionKeys } from '@/lib/api/queryKeys';
 import { signIn } from '@/mocks/sessionFixture';
 import en from '@/messages/en.json';
+import { openAtomDetails } from '../../support/atomDetails';
 
 /*
   The editor carries out the `sign_up` the server offers when an anonymous
@@ -66,7 +67,10 @@ async function renderEditor(atomId = 'atom-1', { authenticated = true } = {}) {
   }
 
   const utils = render(<AtomEditor atomId={atomId} />, { wrapper: Wrapper });
-  if (authenticated) await screen.findByRole('slider', { name: 'Importance' });
+  if (authenticated) {
+    await openAtomDetails();
+    await screen.findByRole('slider', { name: 'Importance' });
+  }
 
   return { ...utils, client };
 }
@@ -131,7 +135,8 @@ describe('the atom editor', () => {
     expect(screen.queryByRole('switch', { name: /always include/i })).not.toBeInTheDocument();
     // Still editable, as parts: `atom-1`'s wording is marked (D13), and
     // section 9 promises a narrower product rather than a degraded one.
-    expect(screen.getByLabelText('Part 1')).toBeInTheDocument();
+    // Lazily loaded (rule 4), so it arrives a tick after the card.
+    expect(await screen.findByLabelText('Part 1')).toBeInTheDocument();
   });
 
   /**

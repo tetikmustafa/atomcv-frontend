@@ -16,19 +16,31 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState, type ChangeEvent } from 'react';
+import { useId, useState, type ChangeEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
+import { Switch } from '@/components/ui/switch';
+import { useCapabilities } from '@/hooks/useSession';
 import { useCreateSection, usePatchSection } from '@/hooks/useProfile';
 import {
   DEFAULT_LAYOUT,
+  DEFAULT_SECTION_CONTROLS,
   sectionForm,
   validationKey,
+  type SectionControls,
   type SectionFormValues,
 } from '@/lib/forms/profileSchemas';
+
+/** The switches, with the message keys each one reads. */
+const SWITCHES = [
+  { name: 'active', label: 'sectionActive' },
+  { name: 'alwaysInclude', label: 'sectionAlwaysInclude' },
+  { name: 'verbatim', label: 'sectionVerbatim' },
+] as const;
 import { announce } from '@/stores/announcerStore';
 import type { Section } from '@/lib/api/endpoints/profile';
 
@@ -54,6 +66,22 @@ export function SectionForm({ section, onDone }: SectionFormProps) {
   const patch = usePatchSection();
 
   const editing = section !== undefined;
+  /**
+   * A section's own switches (§ 14), behind the same gate an atom's are.
+   * `active` is an edit's: the create body has no such field, and a new
+   * section is in use.
+   */
+  const canControl = useCapabilities()?.canEditAtomControls === true;
+  const [controls, setControls] = useState<SectionControls>(
+    section
+      ? {
+          active: section.active ?? true,
+          alwaysInclude: section.alwaysInclude ?? false,
+          verbatim: section.verbatim ?? false,
+        }
+      : DEFAULT_SECTION_CONTROLS,
+  );
+  const controlsId = useId();
   const pending = editing ? patch.isPending : create.isPending;
   const error = editing ? patch.error : create.error;
 
@@ -93,7 +121,7 @@ export function SectionForm({ section, onDone }: SectionFormProps) {
 
     if (editing) {
       patch.mutate(
-        { id: section.id!, patch: values },
+        { id: section.id!, patch: canControl ? { ...values, ...controls } : values },
         {
           onSuccess: (updated) => {
             onDone();
@@ -104,7 +132,8 @@ export function SectionForm({ section, onDone }: SectionFormProps) {
       return;
     }
 
-    create.mutate(values, {
+    const creatable = { alwaysInclude: controls.alwaysInclude, verbatim: controls.verbatim };
+    create.mutate(canControl ? { ...values, ...creatable } : values, {
       onSuccess: (created) => {
         reset();
         onDone();
@@ -114,7 +143,11 @@ export function SectionForm({ section, onDone }: SectionFormProps) {
   });
 
   return (
-    <form onSubmit={submit} noValidate className="flex flex-col gap-3 rounded-lg border p-4">
+    <form
+      onSubmit={submit}
+      noValidate
+      className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-4 sm:p-5"
+    >
       <div className="flex flex-col gap-2">
         <Label htmlFor="section-kind">{t('kind')}</Label>
 
@@ -126,7 +159,8 @@ export function SectionForm({ section, onDone }: SectionFormProps) {
           4 makes the rest of the argument: this is the least-used control here
           and it would not be worth kilobytes.
         */}
-        <select
+        <NativeSelect
+          className="sm:w-full"
           id="section-kind"
           {...register('kind', {
             /*
@@ -140,14 +174,13 @@ export function SectionForm({ section, onDone }: SectionFormProps) {
               setValue('layout', DEFAULT_LAYOUT[event.target.value as SectionFormValues['kind']]);
             },
           })}
-          className="border-border bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-lg border px-3 text-sm outline-none focus-visible:ring-3"
         >
           {KINDS.map((kind) => (
             <option key={kind} value={kind}>
               {tk(kind)}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -167,18 +200,18 @@ export function SectionForm({ section, onDone }: SectionFormProps) {
           own condition: every value needs a word somebody can read, or the
           control hands out a choice whose meaning is unavailable.
         */}
-        <select
+        <NativeSelect
+          className="sm:w-full"
           id="section-layout"
           aria-describedby="section-layout-hint"
           {...register('layout', { onChange: () => setLayoutTouched(true) })}
-          className="border-border bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-lg border px-3 text-sm outline-none focus-visible:ring-3"
         >
           {LAYOUTS.map((layout) => (
             <option key={layout} value={layout}>
               {tl(layout)}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -197,6 +230,32 @@ export function SectionForm({ section, onDone }: SectionFormProps) {
           </p>
         )}
       </div>
+
+      {canControl && (
+        <fieldset className="bg-muted/40 flex flex-col gap-3 rounded-lg border p-4">
+          <legend className="px-1 text-sm font-medium">{t('controls')}</legend>
+          <ul className="flex flex-col gap-3">
+            {SWITCHES.filter(({ name }) => editing || name !== 'active').map(({ name, label }) => (
+              <li key={name} className="flex items-start gap-3">
+                <Switch
+                  id={`${controlsId}-${name}`}
+                  aria-describedby={`${controlsId}-${name}-hint`}
+                  checked={controls[name]}
+                  onCheckedChange={(next) =>
+                    setControls((current) => ({ ...current, [name]: next }))
+                  }
+                />
+                <div className="flex flex-col gap-0.5">
+                  <Label htmlFor={`${controlsId}-${name}`}>{t(label)}</Label>
+                  <p id={`${controlsId}-${name}-hint`} className="text-muted-foreground text-xs">
+                    {t(`${label}Hint`)}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </fieldset>
+      )}
 
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={pending}>

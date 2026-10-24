@@ -11,6 +11,7 @@ const entry = (over: Partial<EntryFormValues> = {}): EntryFormValues => ({
   title: 'Backend Engineer',
   organization: '',
   location: '',
+  url: '',
   startDate: '',
   endDate: '',
   ...over,
@@ -112,5 +113,44 @@ describe('a message with no key', () => {
     expect(validationKey('titleRequired')).toBe('titleRequired');
     expect(validationKey('Invalid input')).toBe('invalid');
     expect(validationKey(undefined)).toBe('invalid');
+  });
+});
+
+describe('the entry link', () => {
+  it('is left out when blank and sent trimmed when given', () => {
+    expect(toEntryCreate('s1', entry())).not.toHaveProperty('url');
+    expect(toEntryCreate('s1', entry({ url: ' https://example.com/x ' }))).toMatchObject({
+      url: 'https://example.com/x',
+    });
+  });
+
+  it('refuses an address without a scheme', () => {
+    const result = entryForm.safeParse(entry({ url: 'example.com' }));
+
+    expect(result.success).toBe(false);
+    expect(validationKey(result.error?.issues[0]?.message)).toBe('invalidUrl');
+  });
+
+  /** 120, the server's limit — this allowed 200 and the server answered 400. */
+  it('holds a location to the server’s length', () => {
+    expect(entryForm.safeParse(entry({ location: 'x'.repeat(121) })).success).toBe(false);
+    expect(entryForm.safeParse(entry({ location: 'x'.repeat(120) })).success).toBe(true);
+  });
+});
+
+describe('the entry controls', () => {
+  it('travel only when given, and a new entry never says it is unused', () => {
+    expect(toEntryCreate('s1', entry())).not.toHaveProperty('importance');
+
+    const sent = toEntryCreate('s1', entry(), {
+      importance: 0.8,
+      active: false,
+      alwaysInclude: true,
+      verbatim: false,
+      minAtoms: 3,
+    });
+
+    expect(sent).toMatchObject({ importance: 0.8, alwaysInclude: true, minAtoms: 3 });
+    expect(sent).not.toHaveProperty('active');
   });
 });

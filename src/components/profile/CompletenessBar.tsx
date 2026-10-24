@@ -26,7 +26,10 @@ export function CompletenessBar({ value }: CompletenessBarProps) {
   const percent = format.number(value / 100, { style: 'percent' });
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-2">
+      <p className="text-3xl font-semibold tabular-nums" aria-hidden="true">
+        {percent}
+      </p>
       <div
         role="progressbar"
         aria-valuenow={value}
@@ -38,10 +41,13 @@ export function CompletenessBar({ value }: CompletenessBarProps) {
         aria-label={t('completenessLabel')}
         className="bg-muted h-2 w-full overflow-hidden rounded-full"
       >
-        <div className="bg-primary h-full transition-all" style={{ width: `${value}%` }} />
+        <div
+          className="bg-primary h-full rounded-full transition-all"
+          style={{ width: `${value}%` }}
+        />
       </div>
 
-      <p className="text-muted-foreground text-sm">{t('completeness', { percent })}</p>
+      <p className="text-muted-foreground text-xs">{t('completeness', { percent })}</p>
     </div>
   );
 }

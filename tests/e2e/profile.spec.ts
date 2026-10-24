@@ -38,6 +38,8 @@ test.describe('the profile editor', () => {
     const first = page.getByRole('article').first();
     await expect(first).toBeVisible();
 
+    // The controls sit behind the item's own "Details", closed by default.
+    await first.getByRole('button', { name: /^Show the details of/ }).click();
     await first.getByRole('switch', { name: 'Always include' }).click();
 
     // The indicator is the only confirmation there is — Bölüm 37.3, and there
@@ -62,6 +64,9 @@ test.describe('the profile editor', () => {
 
     const first = page.getByRole('article').first();
     await expect(first.getByLabel('Text')).toBeVisible();
+    // Opened, so the absence below is the gate's and not the fold's.
+    await first.getByRole('button', { name: /^Show the details of/ }).click();
+    await expect(first.getByRole('button', { name: /^Hide the details of/ })).toBeVisible();
     await expect(first.getByRole('slider', { name: 'Importance' })).toHaveCount(0);
     await expect(first.getByRole('switch', { name: 'Always include' })).toHaveCount(0);
   });
@@ -75,6 +80,11 @@ test.describe('the profile editor', () => {
     await asAccount(page);
     await page.goto('/en/profile');
     await page.getByRole('button', { name: 'Experience', exact: true }).click();
+    await page
+      .getByRole('article')
+      .first()
+      .getByRole('button', { name: /^Show the details of/ })
+      .click();
 
     const slider = page.getByRole('slider', { name: 'Importance' }).first();
     await expect(slider).toHaveAttribute('aria-valuenow', '0.6');

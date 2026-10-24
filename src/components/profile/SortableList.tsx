@@ -78,9 +78,9 @@ function Row({ id, label, position, total, disabled, onMove, children }: RowProp
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex items-start gap-2 ${isDragging ? 'opacity-60' : ''}`}
+      className={`flex items-start gap-1.5 sm:gap-2 ${isDragging ? 'relative z-10 opacity-70' : ''}`}
     >
-      <div className="flex flex-col items-center gap-0.5 pt-1">
+      <div className="text-muted-foreground flex flex-col items-center gap-0.5 pt-2">
         <Button
           type="button"
           variant="ghost"

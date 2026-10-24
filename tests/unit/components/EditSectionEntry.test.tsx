@@ -10,6 +10,7 @@ import { profileKeys } from '@/lib/api/queryKeys';
 import { patchEntry } from '@/lib/api/endpoints/profile';
 import { isApiError } from '@/lib/api/errors';
 import { fixture } from '@/mocks/profileFixture';
+import { signIn } from '@/mocks/sessionFixture';
 import type { Entry, Section } from '@/lib/api/endpoints/profile';
 import { useEditorUiStore } from '@/stores/editorUiStore';
 import { server } from '@/mocks/node';
@@ -190,13 +191,43 @@ describe('editing an entry', () => {
     await user.click(screen.getByRole('button', { name: 'Save the entry' }));
 
     await waitFor(() => expect(sent).toHaveLength(1));
+    // Every field the form shows, the link included (it clears to `null` like
+    // the other optional ones). The entry controls are absent: this session
+    // has no `canEditAtomControls`, and a form that cannot show them must not
+    // send them.
     expect(Object.keys(sent[0]!.body).sort()).toEqual([
       'endDate',
       'location',
       'organization',
       'startDate',
       'title',
+      'url',
     ]);
+  });
+
+  /**
+   * § 14's entry-level controls: the same `canEditAtomControls` gate as an
+   * atom's. Behind it, the form draws them and sends what was set — `active`
+   * included, because this is an edit.
+   */
+  it('sends the entry controls an account set', async () => {
+    signIn();
+    const sent = recordPatches();
+    const { user } = renderSections();
+    await openExperience(user);
+
+    await user.click(
+      screen.getByRole('button', { name: 'Edit the entry Senior Backend Engineer' }),
+    );
+    await user.click(await screen.findByRole('switch', { name: 'Always include' }));
+    const minimum = screen.getByLabelText(en.Editor.addEntry.minAtoms);
+    await user.clear(minimum);
+    await user.type(minimum, '3');
+    await user.click(screen.getByRole('button', { name: 'Save the entry' }));
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]!.body).toMatchObject({ alwaysInclude: true, minAtoms: 3, active: true });
+    expect(typeof sent[0]!.body.importance).toBe('number');
   });
 
   /**

@@ -24,6 +24,7 @@
  * wrong in.
  */
 
+import { useId, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
@@ -32,11 +33,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCreateEntry, usePatchEntry } from '@/hooks/useProfile';
+import { ImportanceSlider } from '@/components/profile/ImportanceSlider';
+import { Switch } from '@/components/ui/switch';
+import { useCapabilities } from '@/hooks/useSession';
 import {
+  DEFAULT_ENTRY_CONTROLS,
   entryForm,
+  MIN_ATOMS_RANGE,
   toEntryCreate,
   toEntryPatch,
   validationKey,
+  type EntryControls,
   type EntryFormValues,
 } from '@/lib/forms/profileSchemas';
 import { announce } from '@/stores/announcerStore';
@@ -49,18 +56,46 @@ const EMPTY: EntryFormValues = {
   title: '',
   organization: '',
   location: '',
+  url: '',
   startDate: '',
   endDate: '',
 };
+
+/** The three switches, in the order the atom's own controls use. */
+const SWITCHES = ['active', 'alwaysInclude', 'verbatim'] as const;
 
 export function EntryForm({ section, entry, onDone }: EntryFormProps) {
   const t = useTranslations('Editor.addEntry');
   const te = useTranslations('Editor.editEntry');
   const tv = useTranslations('Editor.validation');
+  const ta = useTranslations('Editor.atom');
   const create = useCreateEntry();
   const patch = usePatchEntry();
 
   const editing = entry !== undefined;
+  /**
+   * The entry-level controls (§ 14) — the same `canEditAtomControls` gate as
+   * an atom's, and for the same reason: § 9 gives an anonymous session the
+   * content and not the controls. Absent from the request when the gate is
+   * closed, so a guest's form can never send them.
+   */
+  const canControl = useCapabilities()?.canEditAtomControls === true;
+  const [controls, setControls] = useState<EntryControls>(
+    entry
+      ? {
+          importance: entry.importance ?? DEFAULT_ENTRY_CONTROLS.importance,
+          active: entry.active ?? true,
+          alwaysInclude: entry.alwaysInclude ?? false,
+          verbatim: entry.verbatim ?? false,
+          minAtoms: entry.minAtoms ?? DEFAULT_ENTRY_CONTROLS.minAtoms,
+        }
+      : DEFAULT_ENTRY_CONTROLS,
+  );
+  const minAtomsValid =
+    Number.isInteger(controls.minAtoms) &&
+    controls.minAtoms >= MIN_ATOMS_RANGE.min &&
+    controls.minAtoms <= MIN_ATOMS_RANGE.max;
+  const controlsId = useId();
   const pending = editing ? patch.isPending : create.isPending;
   const error = editing ? patch.error : create.error;
 
@@ -81,16 +116,18 @@ export function EntryForm({ section, entry, onDone }: EntryFormProps) {
           location: entry.location ?? '',
           startDate: entry.startDate ?? '',
           endDate: entry.endDate ?? '',
+          url: entry.url ?? '',
         }
       : EMPTY,
   });
 
   const submit = handleSubmit((values) => {
-    if (pending) return;
+    if (pending || (canControl && !minAtomsValid)) return;
+    const sent = canControl ? controls : undefined;
 
     if (editing) {
       patch.mutate(
-        { id: entry.id!, patch: toEntryPatch(values) },
+        { id: entry.id!, patch: toEntryPatch(values, sent) },
         {
           onSuccess: (updated) => {
             onDone();
@@ -101,7 +138,7 @@ export function EntryForm({ section, entry, onDone }: EntryFormProps) {
       return;
     }
 
-    create.mutate(toEntryCreate(section.id!, values), {
+    create.mutate(toEntryCreate(section.id!, values, sent), {
       onSuccess: (created) => {
         reset(EMPTY);
         onDone();
@@ -113,7 +150,7 @@ export function EntryForm({ section, entry, onDone }: EntryFormProps) {
   const field = (
     name: keyof EntryFormValues,
     label: string,
-    type: 'text' | 'date' = 'text',
+    type: 'text' | 'date' | 'url' = 'text',
     required = false,
   ) => {
     const errorId = `entry-${name}-error`;
@@ -142,10 +179,18 @@ export function EntryForm({ section, entry, onDone }: EntryFormProps) {
   };
 
   return (
-    <form onSubmit={submit} noValidate className="flex flex-col gap-3 rounded-lg border p-4">
+    <form
+      onSubmit={submit}
+      noValidate
+      className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-4 sm:p-5"
+    >
       {field('title', t('title'), 'text', true)}
-      {field('organization', t('organization'))}
-      {field('location', t('location'))}
+      <div className="grid gap-4 sm:grid-cols-2">
+        {field('organization', t('organization'))}
+        {field('location', t('location'))}
+      </div>
+      {field('url', t('url'), 'url')}
+      <p className="text-muted-foreground -mt-2 text-xs">{t('urlHint')}</p>
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="flex-1">{field('startDate', t('startDate'), 'date')}</div>
@@ -155,6 +200,57 @@ export function EntryForm({ section, entry, onDone }: EntryFormProps) {
       </div>
 
       <p className="text-muted-foreground text-xs">{t('endDateHint')}</p>
+
+      {canControl && (
+        <fieldset className="bg-muted/40 flex flex-col gap-4 rounded-lg border p-4">
+          <legend className="px-1 text-sm font-medium">{t('controls')}</legend>
+          <ImportanceSlider
+            value={controls.importance}
+            onChange={(importance) => setControls((current) => ({ ...current, importance }))}
+          />
+          <ul className="flex flex-col gap-3">
+            {SWITCHES.filter((name) => editing || name !== 'active').map((name) => (
+              <li key={name} className="flex items-start gap-3">
+                <Switch
+                  id={`${controlsId}-${name}`}
+                  aria-describedby={`${controlsId}-${name}-hint`}
+                  checked={controls[name]}
+                  onCheckedChange={(next) =>
+                    setControls((current) => ({ ...current, [name]: next }))
+                  }
+                />
+                <div className="flex flex-col gap-0.5">
+                  <Label htmlFor={`${controlsId}-${name}`}>{ta(`${name}.label`)}</Label>
+                  <p id={`${controlsId}-${name}-hint`} className="text-muted-foreground text-xs">
+                    {ta(`${name}.hint`)}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={`${controlsId}-minAtoms`}>{t('minAtoms')}</Label>
+            <Input
+              id={`${controlsId}-minAtoms`}
+              type="number"
+              inputMode="numeric"
+              min={MIN_ATOMS_RANGE.min}
+              max={MIN_ATOMS_RANGE.max}
+              step={1}
+              className="w-28"
+              value={Number.isNaN(controls.minAtoms) ? '' : controls.minAtoms}
+              aria-invalid={minAtomsValid ? undefined : true}
+              aria-describedby={`${controlsId}-minAtoms-hint`}
+              onChange={(event) =>
+                setControls((current) => ({ ...current, minAtoms: event.target.valueAsNumber }))
+              }
+            />
+            <p id={`${controlsId}-minAtoms-hint`} className="text-muted-foreground text-xs">
+              {minAtomsValid ? t('minAtomsHint') : tv('minAtomsRange')}
+            </p>
+          </div>
+        </fieldset>
+      )}
 
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={pending}>

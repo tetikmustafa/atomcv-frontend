@@ -12,6 +12,7 @@ import { server } from '@/mocks/node';
 import { signIn } from '@/mocks/sessionFixture';
 import { useAnnouncerStore } from '@/stores/announcerStore';
 import en from '@/messages/en.json';
+import { openAtomDetails } from '../../support/atomDetails';
 
 vi.mock('@/lib/i18n/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -62,6 +63,7 @@ async function renderEditor(atomId = 'atom-2') {
   }
 
   const utils = render(<AtomEditor atomId={atomId} />, { wrapper: Wrapper });
+  await openAtomDetails();
   await screen.findByLabelText(en.Editor.atomTags.label);
 
   return { ...utils, client };

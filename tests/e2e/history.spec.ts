@@ -48,7 +48,8 @@ test.describe('the history', () => {
 
     await page.getByRole('link', { name: 'Your resumes' }).click();
 
-    const rows = page.getByRole('listitem');
+    // Scoped to main: the sidebar's routes are a list too.
+    const rows = page.getByRole('main').getByRole('listitem');
     await expect(rows).toHaveCount(1);
     await expect(rows.first().getByRole('link')).toHaveAttribute('href', '/en/generations/gen-1');
     // `B-070`: the row is named by what the posting was for, which is the
