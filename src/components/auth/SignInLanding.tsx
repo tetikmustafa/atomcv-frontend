@@ -70,7 +70,7 @@ export function SignInLanding({ next, profile }: SignInLandingProps) {
   }, [signedIn, outcome, destination, router]);
 
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-6 px-8 py-16">
+    <div className="bg-card shadow-card mx-4 my-10 flex flex-col gap-6 rounded-2xl border p-6 sm:mx-auto sm:my-16 sm:w-full sm:max-w-md sm:p-8">
       {(isPending || (signedIn && !outcome)) && (
         <p role="status" aria-live="polite" className="text-muted-foreground text-sm">
           {t('completing')}

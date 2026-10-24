@@ -163,8 +163,8 @@ export function VerifyScreen({ selector, verifier }: VerifyScreenProps) {
 
 function Frame({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-6 px-8 py-16">
-      <h1 className="text-xl font-semibold">{title}</h1>
+    <div className="bg-card shadow-card mx-4 my-10 flex flex-col gap-6 rounded-2xl border p-6 sm:mx-auto sm:my-16 sm:w-full sm:max-w-md sm:p-8">
+      <h1 className="text-2xl font-semibold">{title}</h1>
       {children}
     </div>
   );

@@ -1,6 +1,4 @@
-import { getTranslations } from 'next-intl/server';
-import { Page } from '@/components/layout/Page';
-import { Skeleton } from '@/components/ui/skeleton';
+'use client';
 
 /**
  * What a screen looks like before its server half has arrived.
@@ -8,9 +6,20 @@ import { Skeleton } from '@/components/ui/skeleton';
  * The shape of a page — a title, a line under it, two cards — rather than a
  * spinner, so nothing jumps when the real one lands. The sentence is for
  * assistive technology; the grey blocks are hidden from it.
+ *
+ * **A client component, and that is what keeps the app's routes static.** A
+ * loading file receives no params, so a server `getTranslations` here could
+ * only find the locale by reading the request — which marked every route
+ * under `(app)` dynamic in the build. The `(app)` layout's provider already
+ * holds the messages.
  */
-export default async function Loading() {
-  const t = await getTranslations('Shell');
+
+import { useTranslations } from 'next-intl';
+import { Page } from '@/components/layout/Page';
+import { Skeleton } from '@/components/ui/skeleton';
+
+export default function Loading() {
+  const t = useTranslations('Shell');
 
   return (
     <Page>

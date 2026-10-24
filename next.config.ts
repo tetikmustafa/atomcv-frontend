@@ -6,6 +6,11 @@ const withNextIntl = createNextIntlPlugin('./src/lib/i18n/request.ts');
 const apiProxyTarget = process.env.API_PROXY_TARGET;
 
 const nextConfig: NextConfig = {
+  // Bottom-right, away from the sidebar: its default bottom-left corner sits
+  // on the sign-out button, which it then intercepts in development and in
+  // the e2e suite. Production draws no indicator at all.
+  devIndicators: { position: 'bottom-right' },
+
   /**
    * Emits a self-contained server bundle with only the dependencies actually
    * reached, so the runtime image does not carry node_modules.

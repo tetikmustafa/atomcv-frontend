@@ -52,7 +52,7 @@ export function SettingsScreen() {
         search, the browser's find and a screen reader's heading list all
         still reach it — the contents only make a long page short to cross.
       */}
-      <nav aria-label={t('sectionsLabel')} className="lg:sticky lg:top-6">
+      <nav aria-label={t('sectionsLabel')} className="min-w-0 lg:sticky lg:top-6">
         <ul className="flex gap-1 overflow-x-auto lg:flex-col">
           {listed.map((key) => (
             <li key={key}>
