@@ -22,15 +22,20 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import { Sparkles } from 'lucide-react';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { Directives } from '@/components/generation/Directives';
 import { JobProgress } from '@/components/generation/JobProgress';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Card, CardDescription, CardTitle } from '@/components/ui/card';
+import { NativeSelect } from '@/components/ui/native-select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useStartGeneration } from '@/hooks/useGeneration';
+import { useProfile } from '@/hooks/useProfile';
+import { MAX_PAGES_RANGE } from '@/lib/api/endpoints/profile';
 import { useCanWriteCoverLetter, useIsAnonymous } from '@/hooks/useSession';
 import { toErrorLike } from '@/lib/errors/errorLike';
 import { appearanceKeys } from '@/lib/api/queryKeys';
@@ -67,6 +72,12 @@ const HANDLED = [
   'sign_up',
   'retry',
 ] as const;
+
+/** One to the published ceiling, as choices rather than a free number. */
+const PAGE_OPTIONS = Array.from(
+  { length: MAX_PAGES_RANGE.max - MAX_PAGES_RANGE.min + 1 },
+  (_, index) => MAX_PAGES_RANGE.min + index,
+);
 
 function canResolve(action: Resolution['action']) {
   return (HANDLED as readonly string[]).includes(action);
@@ -106,6 +117,16 @@ export function GenerateScreen() {
    * states, so an empty string cannot be collapsed into either of the others.
    */
   const [language, setLanguage] = useState('');
+  /**
+   * The page limit for this one resume (§ 9 stage 4 lists it among the
+   * inputs). Empty is the profile's own default, and that is an omission on
+   * the wire rather than a number: sending the default back would turn a
+   * preference into a per-request override nobody chose. It used to reach
+   * the request only when the server offered `increase_page_limit`.
+   */
+  const [maxPages, setMaxPages] = useState('');
+  const { data: profile } = useProfile();
+  const usualPages = profile?.data.preferences?.defaults?.maxPages ?? 1;
   const [job, setJob] = useState<{ jobId: string; streamUrl?: string } | null>(null);
 
   /**
@@ -164,6 +185,7 @@ export function GenerateScreen() {
       // than a value: the profile's default may itself be `auto`, so sending
       // one of ours would overrule a preference the reader did set.
       ...(language === '' ? {} : { language }),
+      ...(maxPages === '' ? {} : { maxPages: Number(maxPages) }),
       // Omitted rather than sent empty where there is none: an empty value is
       // a **failure** to the challenge, while an absence is what a deployment
       // without a Turnstile secret expects (`B-083`).
@@ -321,37 +343,81 @@ export function GenerateScreen() {
 
   return (
     <form
-      className="flex flex-col gap-4"
+      className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]"
       onSubmit={(event) => {
         event.preventDefault();
         submit();
       }}
     >
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="job-posting">{t('postingLabel')}</Label>
+      {/*
+        Across both columns and above them: the ways out a refusal offers are
+        about the posting as often as about the options ("paste the full
+        posting"), and the options column is too narrow for a sentence and
+        three buttons.
+      */}
+      {start.error && (
+        <div className="lg:col-span-2">
+          <ErrorPanel error={start.error} onResolve={resolve} canResolve={canResolve} />
+        </div>
+      )}
+
+      <Card>
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="job-posting" className="text-base font-semibold">
+            {t('postingLabel')}
+          </Label>
+          <CardDescription id="job-posting-hint">{t('postingHint')}</CardDescription>
+        </div>
         <Textarea
           id="job-posting"
           name="jobDescription"
-          rows={12}
+          rows={16}
           value={posting}
+          aria-describedby="job-posting-hint"
           placeholder={t('postingPlaceholder')}
           onChange={(event) => setPosting(event.target.value)}
+          className="min-h-72 resize-y"
         />
-      </div>
+      </Card>
 
-      <Directives
-        emphasize={emphasize}
-        onEmphasizeChange={setEmphasize}
-        note={note}
-        onNoteChange={setNote}
-        customizationId={customizationId}
-        onCustomizationChange={setCustomizationId}
-        language={language}
-        onLanguageChange={setLanguage}
-        disabled={start.isPending}
-      />
+      <Card className="lg:sticky lg:top-6">
+        <CardTitle>{t('optionsTitle')}</CardTitle>
 
-      {/*
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="max-pages">{t('maxPages')}</Label>
+          <NativeSelect
+            id="max-pages"
+            value={maxPages}
+            disabled={start.isPending}
+            aria-describedby="max-pages-hint"
+            onChange={(event) => setMaxPages(event.target.value)}
+            className="sm:w-full"
+          >
+            <option value="">{t('maxPagesDefault', { count: usualPages })}</option>
+            {PAGE_OPTIONS.map((count) => (
+              <option key={count} value={String(count)}>
+                {t('pageCount', { count })}
+              </option>
+            ))}
+          </NativeSelect>
+          <p id="max-pages-hint" className="text-muted-foreground text-xs">
+            {t('maxPagesHint')}
+          </p>
+        </div>
+
+        <Directives
+          emphasize={emphasize}
+          onEmphasizeChange={setEmphasize}
+          note={note}
+          onNoteChange={setNote}
+          customizationId={customizationId}
+          onCustomizationChange={setCustomizationId}
+          language={language}
+          onLanguageChange={setLanguage}
+          disabled={start.isPending}
+        />
+
+        {/*
         The box, or the sentence that stands in for it (§ 35.7.3, `B-082`).
 
         Hidden rather than disabled, like the atom controls: a switch greyed
@@ -366,36 +432,34 @@ export function GenerateScreen() {
         would not cost anyone a generation — it would cost them a round trip
         and an error panel instead of a resume.
       */}
-      {canWriteCoverLetter && (
-        <div className="flex items-center gap-3">
-          <Switch id="cover-letter" checked={coverLetter} onCheckedChange={setCoverLetter} />
-          <Label htmlFor="cover-letter" className="font-normal">
-            {t('coverLetter')}
-          </Label>
-        </div>
-      )}
+        {canWriteCoverLetter && (
+          <div className="flex items-center gap-3">
+            <Switch id="cover-letter" checked={coverLetter} onCheckedChange={setCoverLetter} />
+            <Label htmlFor="cover-letter" className="font-normal">
+              {t('coverLetter')}
+            </Label>
+          </div>
+        )}
 
-      {/* Neither, until the session has answered: a sentence that says an
+        {/* Neither, until the session has answered: a sentence that says an
           account is needed, shown for a moment to somebody who has one, is a
           worse first impression than the space it occupies. */}
-      {!canWriteCoverLetter && anonymous === true && (
-        <p className="text-muted-foreground text-sm">
-          {t('coverLetterAccount')}{' '}
-          <Link href="/login?next=%2Fgenerate" className="underline underline-offset-4">
-            {t('coverLetterSignIn')}
-          </Link>
-        </p>
-      )}
+        {!canWriteCoverLetter && anonymous === true && (
+          <p className="text-muted-foreground text-sm">
+            {t('coverLetterAccount')}{' '}
+            <Link href="/login?next=%2Fgenerate" className="underline underline-offset-4">
+              {t('coverLetterSignIn')}
+            </Link>
+          </p>
+        )}
 
-      {challenge}
+        {challenge}
 
-      {start.error && (
-        <ErrorPanel error={start.error} onResolve={resolve} canResolve={canResolve} />
-      )}
-
-      <Button type="submit" disabled={start.isPending} className="w-fit">
-        {start.isPending ? t('submitting') : t('submit')}
-      </Button>
+        <Button type="submit" size="lg" disabled={start.isPending} className="w-full">
+          <Sparkles aria-hidden="true" />
+          {start.isPending ? t('submitting') : t('submit')}
+        </Button>
+      </Card>
     </form>
   );
 }

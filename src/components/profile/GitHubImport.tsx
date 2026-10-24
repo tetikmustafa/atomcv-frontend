@@ -89,7 +89,7 @@ export function GitHubImport() {
   }
 
   return (
-    <section className="border-border flex flex-col gap-3 rounded-md border p-4">
+    <section className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-5 sm:p-6">
       <h3 className="text-base font-medium">{t('title')}</h3>
       <p className="text-muted-foreground text-sm">{t('intro')}</p>
 

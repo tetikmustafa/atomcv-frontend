@@ -654,7 +654,13 @@
       "languageLabel": "Language for this one",
       "languageHint": "Which language this resume comes out in. Leave it alone to use your usual choice — the posting you are answering today need not be in the language you usually write in.",
       "languageDefault": "Your usual choice"
-    }
+    },
+    "postingTitle": "The job posting",
+    "postingHint": "Optional. Without one you get a general resume.",
+    "optionsTitle": "This resume",
+    "maxPages": "Page limit",
+    "maxPagesDefault": "Your usual ({count, plural, =1 {# page} other {# pages}})",
+    "maxPagesHint": "A ceiling, never a target: a thin profile makes a shorter resume rather than a padded one."
   },
   "Result": {
     "title": "Your resume",
@@ -746,7 +752,29 @@
     "feedbackGrantUnread": "Allowed until {until}. Nobody has looked yet.",
     "feedbackGrantRead": "Read on {at, date, short} at {at, time, short}.",
     "feedbackSend": "Send",
-    "feedbackSending": "Sending…"
+    "feedbackSending": "Sending…",
+    "heading": "{role, select, none {Your resume} other {{role}}}",
+    "headingAt": "{role} at {company}",
+    "eyebrow": "Resume",
+    "previewTitle": "Preview",
+    "previewShow": "Show the PDF",
+    "previewLoading": "Preparing the preview…",
+    "previewHint": "Exactly the file you download, typeset the same way.",
+    "previewFrame": "The resume as a PDF",
+    "downloadsTitle": "Download",
+    "adjustTitle": "Adjust this resume",
+    "trackTitle": "Track this application",
+    "trackHint": "Keep a record of where this resume went. It is linked to this exact version.",
+    "trackCompany": "Company",
+    "trackPosition": "Position",
+    "trackSubmit": "Add to applications",
+    "trackSaving": "Adding…",
+    "tracked": "This resume is in your applications.",
+    "trackedLink": "Open applications",
+    "trackAnnounce": "Added to your applications.",
+    "nudgeTitle": "Keep this profile",
+    "nudgeBody": "A guest session ends two hours after your last activity. With an account your profile, your resumes and where you sent them are kept — and nothing you did here is lost.",
+    "nudgeAction": "Create an account"
   },
   "Fit": {
     "heading": "How this matches the posting",

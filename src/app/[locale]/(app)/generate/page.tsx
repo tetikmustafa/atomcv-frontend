@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { GenerateScreen } from '@/components/generation/GenerateScreen';
 import { UsageNote } from '@/components/generation/UsageNote';
 import { routing } from '@/lib/i18n/routing';
+import { Page, PageHeader } from '@/components/layout/Page';
 
 /**
  * The generation route.
@@ -22,10 +23,9 @@ export default async function GeneratePage({ params }: PageProps<'/[locale]/gene
   const t = await getTranslations({ locale, namespace: 'Generation' });
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-8 py-12">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-xl font-semibold">{t('title')}</h1>
-        <p className="text-muted-foreground max-w-prose text-sm">{t('intro')}</p>
+    <Page>
+      <div className="flex flex-col gap-3">
+        <PageHeader title={t('title')} description={t('intro')} />
         {/*
           Outside `GenerateScreen` so it survives the swap from form to
           progress: the count moves the moment a job is queued, and a note
@@ -33,10 +33,10 @@ export default async function GeneratePage({ params }: PageProps<'/[locale]/gene
           there to report.
         */}
         <UsageNote />
-      </header>
+      </div>
 
       <GenerateScreen />
-    </div>
+    </Page>
   );
 }
 

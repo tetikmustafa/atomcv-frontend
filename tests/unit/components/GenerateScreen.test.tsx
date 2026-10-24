@@ -98,6 +98,30 @@ function findFailurePanel() {
 }
 
 describe('starting a generation', () => {
+  /**
+   * § 9 stage 4 lists the page limit among a resume's inputs. Left alone it is
+   * an omission — the profile's default decides, and sending that number back
+   * would turn a preference into an override nobody chose.
+   */
+  it('sends a page limit only when one was picked', async () => {
+    const user = userEvent.setup();
+    render(<GenerateScreen />, { wrapper });
+
+    await user.selectOptions(screen.getByLabelText(en.Generation.maxPages), '2');
+    await user.click(screen.getByRole('button', { name: 'Generate' }));
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(await sent(0)).toMatchObject({ maxPages: 2 });
+  });
+
+  it('leaves the page limit to the profile when none was picked', async () => {
+    const user = userEvent.setup();
+    render(<GenerateScreen />, { wrapper });
+
+    await user.click(screen.getByRole('button', { name: 'Generate' }));
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(await sent(0)).not.toHaveProperty('maxPages');
+  });
+
   it('sends no posting at all when the field is empty', async () => {
     await submitPosting();
 

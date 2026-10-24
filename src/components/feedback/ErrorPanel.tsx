@@ -68,7 +68,7 @@ export function ErrorPanel({ error, onResolve, canResolve, onRetry, onDismiss }:
     // response to something the user just did, and it is the answer to it.
     <div
       role="alert"
-      className="border-destructive/40 bg-destructive/5 flex flex-col gap-3 rounded-md border p-4 text-sm"
+      className="border-destructive/40 bg-destructive/5 flex flex-col gap-3 rounded-xl border p-4 text-sm"
     >
       <p>
         {describe({

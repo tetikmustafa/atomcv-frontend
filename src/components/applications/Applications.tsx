@@ -101,7 +101,7 @@ function ApplicationList() {
   return (
     <div className="flex flex-col gap-6">
       <form
-        className="border-border flex flex-col gap-3 rounded-md border p-4"
+        className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-5 sm:p-6"
         onSubmit={(event) => {
           event.preventDefault();
           submit();
@@ -197,7 +197,7 @@ function Row({ row }: { row: Application }) {
   }
 
   return (
-    <div className="border-border flex flex-col gap-3 rounded-md border p-4">
+    <div className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-5 sm:p-6">
       <div className="flex flex-wrap items-baseline gap-x-2">
         <span className="text-sm font-medium">{row.position}</span>
         <span className="text-muted-foreground text-sm">{row.company}</span>

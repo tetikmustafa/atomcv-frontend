@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { Page } from '@/components/layout/Page';
 import { GenerationResult } from '@/components/generation/GenerationResult';
 import { routing } from '@/lib/i18n/routing';
 
@@ -18,13 +19,12 @@ export default async function GenerationPage({ params }: PageProps<'/[locale]/ge
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
 
-  const t = await getTranslations({ locale, namespace: 'Result' });
-
+  // The heading is the result's own: it names the role the posting was for
+  // (`B-124`), which only the client-side read knows.
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-8 py-12">
-      <h1 className="text-xl font-semibold">{t('title')}</h1>
+    <Page>
       <GenerationResult generationId={id} />
-    </div>
+    </Page>
   );
 }
 

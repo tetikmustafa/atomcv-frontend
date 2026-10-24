@@ -13,7 +13,9 @@
  * said in words rather than drawn as a row of zeroes.
  */
 
+import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
+import { Download, RotateCcw } from 'lucide-react';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { ArchiveToggle } from '@/components/generation/ArchiveToggle';
 import { CoverLetter } from '@/components/generation/CoverLetter';
@@ -21,7 +23,12 @@ import { EditRequest } from '@/components/generation/EditRequest';
 import { Feedback } from '@/components/generation/Feedback';
 import { SelectionEditor } from '@/components/generation/SelectionEditor';
 import { FitReport } from '@/components/generation/FitReport';
-import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/layout/Page';
+import { PdfPreview } from '@/components/generation/PdfPreview';
+import { TrackApplication } from '@/components/generation/TrackApplication';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Card, CardDescription, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from '@/lib/i18n/navigation';
 import { languageName } from '@/lib/i18n/languageNames';
 import { useDownloadGeneration, useGenerationResult } from '@/hooks/useGeneration';
@@ -51,6 +58,7 @@ export function GenerationResult({ generationId }: { generationId: string }) {
   const pending = download.isPending ? download.variables.format : undefined;
   const canWriteCoverLetter = useCanWriteCoverLetter();
   const anonymous = useIsAnonymous();
+  const [downloaded, setDownloaded] = useState(false);
 
   function save(format: DownloadFormat) {
     download.mutate(
@@ -72,12 +80,26 @@ export function GenerationResult({ generationId }: { generationId: string }) {
 
           URL.revokeObjectURL(url);
           announce(t('announceDownloaded'));
+          setDownloaded(true);
         },
       },
     );
   }
 
-  if (isPending) return <p className="text-muted-foreground text-sm">{t('loading')}</p>;
+  if (isPending) {
+    return (
+      <div className="flex flex-col gap-6">
+        <p role="status" className="sr-only">
+          {t('loading')}
+        </p>
+        <Skeleton className="h-10 w-72" />
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <Skeleton className="aspect-[1/1.414] w-full rounded-xl" />
+          <Skeleton className="h-64 w-full rounded-xl" />
+        </div>
+      </div>
+    );
+  }
 
   // A failed read here is a 404 or a 5xx, and only the second is worth
   // repeating — `isRetriable` is what decides, inside the panel's own retry.
@@ -116,113 +138,187 @@ export function GenerationResult({ generationId }: { generationId: string }) {
   const shorterThanAllowed =
     data.pageCount !== undefined && data.maxPages !== undefined && data.pageCount < data.maxPages;
 
+  const heading =
+    data.roleTitle && data.companyName
+      ? t('headingAt', { role: data.roleTitle, company: data.companyName })
+      : (data.roleTitle ?? t('title'));
+
   return (
-    <div className="flex flex-col gap-4">
-      <p>
-        {t('ready')}
-        {data.pageCount !== undefined ? ` ${t('pages', { count: data.pageCount })}` : ''}
-      </p>
+    <div className="flex flex-col gap-6 sm:gap-8">
+      <PageHeader
+        eyebrow={t('eyebrow')}
+        title={heading}
+        description={
+          <>
+            {t('ready')}
+            {data.pageCount !== undefined ? ` ${t('pages', { count: data.pageCount })}` : ''}
+          </>
+        }
+        actions={
+          <Link href="/generate" className={buttonVariants({ variant: 'outline' })}>
+            <RotateCcw aria-hidden="true" />
+            {t('again')}
+          </Link>
+        }
+      />
 
-      {shorterThanAllowed && (
-        <p data-testid="length-note" className="text-muted-foreground text-sm">
-          {t('lengthNote', { pages: data.pageCount!, limit: data.maxPages! })}
-        </p>
+      {(shorterThanAllowed || languagesDiffer) && (
+        <div className="flex flex-col gap-2">
+          {shorterThanAllowed && (
+            <p
+              data-testid="length-note"
+              className="bg-muted/60 text-muted-foreground rounded-xl border px-4 py-3 text-sm"
+            >
+              {t('lengthNote', { pages: data.pageCount!, limit: data.maxPages! })}
+            </p>
+          )}
+
+          {languagesDiffer && (
+            <p
+              data-testid="language-note"
+              className="bg-muted/60 text-muted-foreground rounded-xl border px-4 py-3 text-sm"
+            >
+              {t('languageNote', {
+                content: languageName(data.contentLanguage, locale) ?? data.contentLanguage!,
+                posting: languageName(data.postingLanguage, locale) ?? data.postingLanguage!,
+              })}
+            </p>
+          )}
+        </div>
       )}
 
-      {languagesDiffer && (
-        <p data-testid="language-note" className="text-muted-foreground text-sm">
-          {t('languageNote', {
-            content: languageName(data.contentLanguage, locale) ?? data.contentLanguage!,
-            posting: languageName(data.postingLanguage, locale) ?? data.postingLanguage!,
-          })}
-        </p>
-      )}
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <Card className="gap-4">
+          <CardTitle>{t('previewTitle')}</CardTitle>
+          <PdfPreview generationId={generationId} />
+        </Card>
 
-      {download.error && <ErrorPanel error={download.error} />}
+        <div className="flex flex-col gap-6 lg:sticky lg:top-6">
+          <Card className="gap-4">
+            <CardTitle>{t('downloadsTitle')}</CardTitle>
 
-      <div className="flex flex-wrap items-center gap-3">
-        {/*
-          Four formats, one endpoint (`B-094`, `B-105`). Every button goes out
-          of service while any of them is fetching — they are the same request
-          to the same document — but only the one that was pressed says so,
-          because a second button announcing "preparing" is a claim about work
-          nobody asked for.
+            {download.error && <ErrorPanel error={download.error} />}
 
-          The order is what people want, not what the endpoint lists. PDF is
-          the product; Word is what some ATS ask for; HTML is for pasting into
-          a form; the source is for the one reader in a hundred who wants to
-          see the LaTeX, and it sits last and quietest for that reason.
-        */}
-        <Button type="button" onClick={() => save('pdf')} disabled={download.isPending}>
-          {pending === 'pdf' ? t('downloading') : t('download')}
-        </Button>
+            <div className="grid grid-cols-2 gap-2">
+              {/*
+                Four formats, one endpoint (`B-094`, `B-105`). Every button goes out
+                of service while any of them is fetching — they are the same request
+                to the same document — but only the one that was pressed says so,
+                because a second button announcing "preparing" is a claim about work
+                nobody asked for.
 
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => save('docx')}
-          disabled={download.isPending}
-        >
-          {pending === 'docx' ? t('downloading') : t('downloadDocx')}
-        </Button>
+                The order is what people want, not what the endpoint lists. PDF is
+                the product; Word is what some ATS ask for; HTML is for pasting into
+                a form; the source is for the one reader in a hundred who wants to
+                see the LaTeX, and it sits last and quietest for that reason.
+              */}
+              <Button
+                type="button"
+                className="col-span-2"
+                onClick={() => save('pdf')}
+                disabled={download.isPending}
+              >
+                <Download aria-hidden="true" />
+                {pending === 'pdf' ? t('downloading') : t('download')}
+              </Button>
 
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => save('html')}
-          disabled={download.isPending}
-        >
-          {pending === 'html' ? t('downloading') : t('downloadHtml')}
-        </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => save('docx')}
+                disabled={download.isPending}
+              >
+                {pending === 'docx' ? t('downloading') : t('downloadDocx')}
+              </Button>
 
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => save('source')}
-          disabled={download.isPending}
-        >
-          {pending === 'source' ? t('downloading') : t('downloadSource')}
-        </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => save('html')}
+                disabled={download.isPending}
+              >
+                {pending === 'html' ? t('downloading') : t('downloadHtml')}
+              </Button>
 
-        <Link href="/generate" className="text-sm underline underline-offset-4">
-          {t('again')}
-        </Link>
+              <Button
+                type="button"
+                variant="ghost"
+                className="col-span-2"
+                onClick={() => save('source')}
+                disabled={download.isPending}
+              >
+                {pending === 'source' ? t('downloading') : t('downloadSource')}
+              </Button>
+            </div>
+
+            {/*
+              § 22.6, and the backend asked for both halves by name. The page limit
+              is exact in the PDF, **approximate** in Word — the atoms are the ones
+              that fitted a typeset page and Word sets them in whatever room its own
+              fonts take — and in HTML it does not apply **at all**, because there
+              is no page to exceed.
+
+              The two are said separately rather than folded into "the limit is only
+              for the PDF". "Roughly one page" and "there is no such thing as a
+              page here" are different promises, and a reader who pastes the HTML
+              into a form needs the second one rather than the first.
+
+              Nothing claims a page count for any of the three, here or on the wire,
+              so this sentence is the only place the difference is stated.
+            */}
+            <p className="text-muted-foreground text-xs">{t('formatNote')}</p>
+
+            {/*
+              `B-102`. Beside the downloads because that is where somebody decides
+              this is the resume that mattered, and read back on the history screen
+              — a mark set in one place and read in another is a feature with one
+              end; the item says the history is where it is read.
+
+              `archived` is optional on the wire and absent means not archived: a
+              generation is not made archived. `=== true` rather than truthiness so
+              the switch is off while the field is missing rather than undefined,
+              which React would treat as uncontrolled.
+            */}
+            <div className="border-t pt-4">
+              <ArchiveToggle generationId={generationId} archived={data.archived === true} />
+            </div>
+          </Card>
+
+          {/*
+            After a guest has downloaded, which is the moment the concept names
+            (§ 12, "the most effective conversion moment"): they have seen the
+            value and do not want to lose the work. Not before — a sign-up box
+            on a result nobody has looked at yet is an interruption.
+          */}
+          {anonymous === true && downloaded && (
+            <Card className="gap-3">
+              <CardTitle>{t('nudgeTitle')}</CardTitle>
+              <CardDescription>{t('nudgeBody')}</CardDescription>
+              <Link
+                href={`/login?next=${encodeURIComponent(`/generations/${generationId}`)}`}
+                className={buttonVariants({ className: 'w-fit' })}
+              >
+                {t('nudgeAction')}
+              </Link>
+            </Card>
+          )}
+
+          <Card className="gap-4">
+            {data.fitReport ? (
+              <FitReport report={data.fitReport} />
+            ) : (
+              <p className="text-muted-foreground text-sm">{t('generalNote')}</p>
+            )}
+          </Card>
+        </div>
       </div>
 
-      {/*
-        § 22.6, and the backend asked for both halves by name. The page limit
-        is exact in the PDF, **approximate** in Word — the atoms are the ones
-        that fitted a typeset page and Word sets them in whatever room its own
-        fonts take — and in HTML it does not apply **at all**, because there
-        is no page to exceed.
-
-        The two are said separately rather than folded into "the limit is only
-        for the PDF". "Roughly one page" and "there is no such thing as a
-        page here" are different promises, and a reader who pastes the HTML
-        into a form needs the second one rather than the first.
-
-        Nothing claims a page count for any of the three, here or on the wire,
-        so this sentence is the only place the difference is stated.
-      */}
-      <p className="text-muted-foreground text-sm">{t('formatNote')}</p>
-
-      {/*
-        `B-102`. Beside the downloads because that is where somebody decides
-        this is the resume that mattered, and read back on the history screen
-        — a mark set in one place and read in another is a feature with one
-        end; the item says the history is where it is read.
-
-        `archived` is optional on the wire and absent means not archived: a
-        generation is not made archived. `=== true` rather than truthiness so
-        the switch is off while the field is missing rather than undefined,
-        which React would treat as uncontrolled.
-      */}
-      <ArchiveToggle generationId={generationId} archived={data.archived === true} />
-
-      {data.fitReport ? (
-        <FitReport report={data.fitReport} />
-      ) : (
-        <p className="text-muted-foreground text-sm">{t('generalNote')}</p>
+      {anonymous === false && (
+        <TrackApplication
+          generationId={generationId}
+          roleTitle={data.roleTitle}
+          companyName={data.companyName}
+        />
       )}
 
       {/*
@@ -240,7 +336,7 @@ export function GenerationResult({ generationId }: { generationId: string }) {
         existing because a newer one was made.
       */}
       {data.status === 'superseded' ? (
-        <div className="flex flex-col gap-2">
+        <Card className="gap-2">
           <p data-testid="superseded-note" className="text-muted-foreground text-sm">
             {t('supersededNote')}
           </p>
@@ -253,19 +349,22 @@ export function GenerationResult({ generationId }: { generationId: string }) {
               {t('supersededLink')}
             </Link>
           )}
-        </div>
+        </Card>
       ) : (
-        <>
+        <section aria-labelledby="adjust-heading" className="flex flex-col gap-4">
+          <h2 id="adjust-heading" className="text-lg font-semibold">
+            {t('adjustTitle')}
+          </h2>
           <EditRequest generationId={generationId} />
           {/*
-            The hand toggle, under the sentence box rather than beside it:
-            they do the same thing — an edit to the selection state — and the
-            difference the reader has to weigh is what each costs. Closed
-            until asked for, because the list is a second request and most
-            readers never open it.
-          */}
+              The hand toggle, under the sentence box rather than beside it:
+              they do the same thing — an edit to the selection state — and the
+              difference the reader has to weigh is what each costs. Closed
+              until asked for, because the list is a second request and most
+              readers never open it.
+            */}
           <SelectionEditor generationId={generationId} />
-        </>
+        </section>
       )}
 
       {/*
@@ -287,7 +386,7 @@ export function GenerationResult({ generationId }: { generationId: string }) {
         anonymous === true && (
           <p
             data-testid="cover-letter-account"
-            className="border-border text-muted-foreground rounded-md border p-4 text-sm"
+            className="bg-card text-muted-foreground rounded-xl border p-4 text-sm"
           >
             {t('coverLetterAccount')}
           </p>
