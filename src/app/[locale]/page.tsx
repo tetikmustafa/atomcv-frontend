@@ -265,10 +265,10 @@ export default async function LandingPage({ params }: PageProps<'/[locale]'>) {
             </div>
             <a
               href={`/${locale}/onboarding`}
-              className={cn(
-                buttonVariants({ size: 'lg', variant: 'outline' }),
-                'text-foreground shrink-0 border-transparent',
-              )}
+              // Secondary, not outline: the band is the primary colour, which is
+              // near-white in the dark theme, and outline's translucent fill
+              // there put white text on near-white (the axe sweep, dark).
+              className={cn(buttonVariants({ size: 'lg', variant: 'secondary' }), 'shrink-0')}
             >
               {t('cta')}
               <ArrowRight aria-hidden="true" />

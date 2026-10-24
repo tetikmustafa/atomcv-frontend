@@ -33,6 +33,7 @@
 import { useId } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import { useCapabilities } from '@/hooks/useSession';
 import { languageName } from '@/lib/i18n/languageNames';
 
@@ -78,11 +79,10 @@ export function ContentLanguages({
         <p id={`${fieldId}-source-hint`} className="text-muted-foreground text-xs">
           {t('sourceHint')}
         </p>
-        <select
+        <NativeSelect
           id={`${fieldId}-source`}
           value={sourceLanguage}
           aria-describedby={`${fieldId}-source-hint`}
-          className="border-border bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-fit rounded-lg border px-3 text-sm outline-none focus-visible:ring-3"
           onChange={(event) => {
             const next = event.target.value;
 
@@ -103,7 +103,7 @@ export function ContentLanguages({
               {languageName(code, locale) ?? code}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </div>
 
       <fieldset className="flex flex-col gap-2">

@@ -25,6 +25,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import { useCoverLetter } from '@/hooks/useGeneration';
 import { useErrorMessage } from '@/hooks/useErrorMessage';
@@ -161,11 +162,10 @@ export function CoverLetter({ generationId, letter }: CoverLetterProps) {
           {languages.length > 1 && (
             <div className="flex flex-col gap-2">
               <Label htmlFor={languageId}>{t('coverLetterLanguage')}</Label>
-              <select
+              <NativeSelect
                 id={languageId}
                 value={language}
                 onChange={(event) => setLanguage(event.target.value)}
-                className="border-input bg-background h-9 w-fit rounded-md border px-3 text-sm"
               >
                 <option value="">{t('coverLetterLanguageDefault')}</option>
                 {languages.map((code) => (
@@ -173,7 +173,7 @@ export function CoverLetter({ generationId, letter }: CoverLetterProps) {
                     {languageName(code, locale) ?? code}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
               <p className="text-muted-foreground text-xs">{t('coverLetterLanguageHint')}</p>
             </div>
           )}

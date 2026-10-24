@@ -44,8 +44,8 @@ I will run it myself.
   `main`
 - `gh pr create`, `gh pr merge`, `gh pr review`
 - `scripts/sync-handoff.sh`, or any script under `scripts/` whose job is
-  repo-to-repo sync. (**`sync-spec.sh` lives in `atomcv-backend`**; `INDEX.md`
-  names it as if it were here — backend-owned, so the fix is `F-042`.)
+  repo-to-repo sync. (**`sync-spec.sh` lives in `atomcv-backend`**, and
+  `INDEX.md` now says so — `F-042`, answered.)
 - Anything under `docker-compose.prod.yml` or touching the deploy pipeline
 - Database migrations against anything other than the local dev database
 - Any command that deletes data (`git clean -fdx`, `docker volume rm`, etc.)
@@ -273,6 +273,7 @@ npm run test:e2e     # Playwright, on port 3100
 npm run size         # build, then check the bundle budget
 npm run size:check   # check only — reads an existing build, used by CI
 npm run gen:api      # regenerate API types (backend must be running)
+node scripts/dev-mocked.mjs   # next dev on :3200 against the MSW handlers
 ./scripts/check-doc-sizes.sh   # rolling docs still within their limits
 ```
 

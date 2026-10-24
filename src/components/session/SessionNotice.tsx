@@ -62,9 +62,9 @@ export function SessionNotice() {
       role="status"
       aria-live="polite"
       data-testid="session-notice"
-      className="border-border bg-muted/50 border-b px-8 py-3 text-sm"
+      className="bg-muted/70 border-b px-4 py-3 text-sm sm:px-6 lg:px-8"
     >
-      <p className="mx-auto max-w-3xl">{t('expiring', { at })}</p>
+      <p className="mx-auto max-w-5xl">{t('expiring', { at })}</p>
     </div>
   );
 }

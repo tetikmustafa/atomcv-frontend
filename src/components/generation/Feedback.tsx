@@ -36,6 +36,7 @@ import { useFormatter, useTranslations } from 'next-intl';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import { useFeedback } from '@/hooks/useGeneration';
 import { announce } from '@/stores/announcerStore';
@@ -154,9 +155,8 @@ export function Feedback({ generationId, recorded }: FeedbackProps) {
           <div className="flex flex-col gap-3 pt-3">
             <div className="flex flex-col gap-2">
               <Label htmlFor="feedback-category">{t('feedbackCategory')}</Label>
-              <select
+              <NativeSelect
                 id="feedback-category"
-                className="border-border bg-background rounded-md border px-2 py-1 text-sm"
                 value={category ?? ''}
                 onChange={(event) =>
                   setCategory((event.target.value || undefined) as FeedbackRequest['category'])
@@ -168,7 +168,7 @@ export function Feedback({ generationId, recorded }: FeedbackProps) {
                     {t(`feedbackCategories.${option}`)}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
 
             <div className="flex flex-col gap-2">
