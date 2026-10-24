@@ -21,6 +21,7 @@ export type Version = number | string;
 
 const QUOTED = /^"[^"]*"$/;
 const BARE_NUMBER = /^\d+$/;
+const WEAKENED_NUMBER = /^W\/("\d+")$/;
 
 export class VersionError extends Error {
   constructor(message: string) {
@@ -56,9 +57,21 @@ export function toIfMatch(version: Version | undefined): string {
   if (QUOTED.test(version)) return version;
   if (BARE_NUMBER.test(version)) return `"${version}"`;
 
-  // Weak validators never match under If-Match, which uses strong comparison
-  // (RFC 9110 §13.1.1). Passing one through would guarantee the 412 this
-  // module exists to prevent, so it is refused where the cause is still legible.
+  /*
+    A weakened version number is the server's own tag after a proxy touched
+    it, and it goes back strong. nginx weakens every ETag on a response it
+    gzips (`"2"` arrives as `W/"2"`), and production gzips JSON — so this
+    used to throw on the profile head in production and nowhere else: the
+    settings and the head stopped saving without sending a request, and dev,
+    with no nginx in front, never saw it (measured 2026-10-24 behind the
+    deployment's own nginx.conf). The number is the row's version either way,
+    and the backend accepts both spellings for the same reason.
+
+    Anything else weak is still refused: If-Match compares strongly (RFC 9110
+    §13.1.1), and a weak tag that is not one of ours would only buy a 412.
+  */
+  const weakened = WEAKENED_NUMBER.exec(version);
+  if (weakened) return weakened[1]!;
   if (version.startsWith('W/')) {
     throw new VersionError(
       `If-Match requires a strong validator; ${version} is weak and would never match`,

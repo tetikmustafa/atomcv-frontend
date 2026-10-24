@@ -63,3 +63,32 @@ describe('the PDF preview', () => {
     expect(screen.queryByRole('button', { name: en.Result.previewShow })).toBeNull();
   });
 });
+
+/**
+ * Chrome on Android draws no PDF in a frame, and a fresh result on a phone
+ * opened a blank rectangle by itself. The browser says so, and is believed.
+ */
+describe('where the browser cannot show a PDF in the page', () => {
+  beforeEach(() => {
+    vi.stubGlobal('navigator', { ...navigator, pdfViewerEnabled: false });
+  });
+
+  it('does not fetch by itself, even for a result that was just made', () => {
+    render(<PdfPreview generationId="gen-1" fresh />, { wrapper: Wrapper });
+
+    expect(screen.getByText(en.Result.previewNoViewer)).toBeInTheDocument();
+    expect(downloads).toBe(0);
+  });
+
+  it('offers the file in a tab of its own instead of a frame', async () => {
+    const user = userEvent.setup();
+    render(<PdfPreview generationId="gen-1" />, { wrapper: Wrapper });
+
+    await user.click(screen.getByRole('button', { name: en.Result.previewPrepare }));
+
+    const link = await screen.findByRole('link', { name: en.Result.previewOpen });
+    expect(link).toHaveAttribute('href', 'blob:pdf');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(screen.queryByTitle(en.Result.previewFrame)).toBeNull();
+  });
+});

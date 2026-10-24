@@ -84,8 +84,8 @@ function Row({ id, label, position, total, disabled, onMove, children }: RowProp
         Sized as near a closed card as the arrows allow. With gaps and a full
         handle the column stood well over the row beside it, so a list of
         collapsed sections was spaced by its arrows rather than by its
-        content. The arrows keep 24px, the target size WCAG 2.2 asks for; the
-        handle, which a pointer drags rather than taps, gives up the rest.
+        content. Every control keeps 24px, the target size WCAG 2.2 asks for
+        and the axe sweep enforces; the gaps between them are what gave way.
       */}
       <div className="text-muted-foreground flex flex-col items-center pt-1">
         <Button
@@ -108,7 +108,7 @@ function Row({ id, label, position, total, disabled, onMove, children }: RowProp
           type="button"
           variant="ghost"
           size="icon-xs"
-          className="h-5! cursor-grab"
+          className="cursor-grab"
           disabled={disabled}
           aria-label={t('drag', { label })}
           {...attributes}
