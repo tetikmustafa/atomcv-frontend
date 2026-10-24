@@ -19,17 +19,28 @@
  *
  * The frame is the file itself, so what it shows is exactly what downloads:
  * the page limit can be checked by eye.
+ *
+ * **Not every browser draws a PDF in a frame.** Chrome on Android does not,
+ * and an `<iframe>` there is a blank rectangle — on the phone, where a fresh
+ * result now opens its preview by itself. `navigator.pdfViewerEnabled` says
+ * so in every current browser, and a `false` gets a link that opens the file
+ * in its own tab instead, asked for rather than fetched up front.
  */
 
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { Eye } from 'lucide-react';
+import { ExternalLink, Eye } from 'lucide-react';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { downloadGeneration } from '@/lib/api/endpoints/generations';
 import { generationKeys } from '@/lib/api/queryKeys';
+
+/** Absent (an older browser, or jsdom) is read as able: that was the behaviour. */
+function canShowPdfInline(): boolean {
+  return typeof navigator === 'undefined' || navigator.pdfViewerEnabled !== false;
+}
 
 export function PdfPreview({
   generationId,
@@ -40,7 +51,8 @@ export function PdfPreview({
   fresh?: boolean;
 }) {
   const t = useTranslations('Result');
-  const [asked, setAsked] = useState(fresh);
+  const [inline] = useState(canShowPdfInline);
+  const [asked, setAsked] = useState(fresh && inline);
   const [url, setUrl] = useState<string | null>(null);
 
   const pdf = useQuery({
@@ -70,10 +82,12 @@ export function PdfPreview({
   if (!asked) {
     return (
       <div className="bg-muted/40 flex w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-6 py-12 text-center">
-        <p className="text-muted-foreground max-w-xs text-sm">{t('previewHint')}</p>
+        <p className="text-muted-foreground max-w-xs text-sm">
+          {inline ? t('previewHint') : t('previewNoViewer')}
+        </p>
         <Button type="button" variant="outline" onClick={() => setAsked(true)}>
           <Eye aria-hidden="true" />
-          {t('previewShow')}
+          {inline ? t('previewShow') : t('previewPrepare')}
         </Button>
       </div>
     );
@@ -88,6 +102,23 @@ export function PdfPreview({
           {t('previewLoading')}
         </p>
         <Skeleton className="aspect-[1/1.414] w-full" />
+      </div>
+    );
+  }
+
+  if (!inline) {
+    return (
+      <div className="bg-muted/40 flex w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-6 py-12 text-center">
+        <p className="text-muted-foreground max-w-xs text-sm">{t('previewNoViewer')}</p>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener"
+          className={buttonVariants({ variant: 'outline' })}
+        >
+          <ExternalLink aria-hidden="true" />
+          {t('previewOpen')}
+        </a>
       </div>
     );
   }

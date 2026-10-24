@@ -32,9 +32,18 @@ describe('toIfMatch', () => {
     expect(() => toIfMatch(undefined)).toThrow(/ETag/);
   });
 
-  /** Weak validators never match under If-Match's strong comparison. */
-  it('refuses a weak validator instead of guaranteeing a 412', () => {
-    expect(() => toIfMatch('W/"7"')).toThrow(VersionError);
+  /**
+   * nginx weakens the ETag of every response it gzips, so behind the
+   * deployment the profile head arrives as `W/"7"`. Refusing it stopped every
+   * head and preferences write in production without a request being sent.
+   */
+  it('takes back a version a proxy weakened', () => {
+    expect(toIfMatch('W/"7"')).toBe('"7"');
+  });
+
+  /** Weak validators that are not ours never match under If-Match. */
+  it('refuses any other weak validator instead of guaranteeing a 412', () => {
+    expect(() => toIfMatch('W/"abc"')).toThrow(VersionError);
   });
 
   it('refuses values that are not versions at all', () => {
