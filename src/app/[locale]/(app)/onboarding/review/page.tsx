@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { Page } from '@/components/layout/Page';
 import { ReviewGate } from '@/components/onboarding/ReviewGate';
 import { routing } from '@/lib/i18n/routing';
 import { oneParam } from '@/lib/searchParams';
@@ -26,9 +27,9 @@ export default async function ReviewPage({
   setRequestLocale(locale);
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-8 py-12">
+    <Page>
       <ReviewGate {...(oneParam(query.job) ? { jobId: oneParam(query.job)! } : {})} />
-    </div>
+    </Page>
   );
 }
 

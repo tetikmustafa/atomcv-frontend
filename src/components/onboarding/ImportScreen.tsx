@@ -17,7 +17,11 @@
  */
 
 import { useRef, useState } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useFormatter, useLocale, useTranslations } from 'next-intl';
+import { FileText, UploadCloud } from 'lucide-react';
+import { OnboardingSteps } from '@/components/onboarding/OnboardingSteps';
+import { NativeSelect } from '@/components/ui/native-select';
+import { cn } from '@/lib/utils';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { UsageNote } from '@/components/generation/UsageNote';
@@ -30,7 +34,7 @@ import { useImportCv, useProfileReplaced } from '@/hooks/useProfileImport';
 import { useCapabilities, useIsAnonymous } from '@/hooks/useSession';
 import { toErrorLike } from '@/lib/errors/errorLike';
 import { languageName } from '@/lib/i18n/languageNames';
-import { useRouter } from '@/lib/i18n/navigation';
+import { Link, useRouter } from '@/lib/i18n/navigation';
 import { announce } from '@/stores/announcerStore';
 import { useEffect } from 'react';
 import type { Resolution } from '@/types/domain';
@@ -93,6 +97,15 @@ export function ImportScreen() {
   const input = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const format = useFormatter();
+
+  /** One way in for a picked file and a dropped one. */
+  function choose(next: File | null) {
+    setFile(next);
+    // The declaration was about the file being replaced (`B-119`).
+    setDeclaring(null);
+  }
   const [job, setJob] = useState<{ jobId: string; streamUrl?: string } | null>(null);
 
   /**
@@ -281,7 +294,8 @@ export function ImportScreen() {
 
   if (job) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-6">
+        <OnboardingSteps current="read" />
         <ImportProgress
           jobId={job.jobId}
           {...(job.streamUrl ? { streamUrl: job.streamUrl } : {})}
@@ -300,7 +314,7 @@ export function ImportScreen() {
 
   return (
     <form
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-6"
       onSubmit={(event) => {
         event.preventDefault();
         submit();
@@ -312,23 +326,71 @@ export function ImportScreen() {
         and `PROFILE_QUOTA_EXCEEDED` is otherwise the first time anybody hears
         this limit exists.
       */}
+      <OnboardingSteps current="upload" />
       <UsageNote metric="profile_extract" />
 
+      {/*
+        A drop target around the ordinary file input, not instead of it. The
+        input stays the control — labelled, focusable, the platform's own
+        picker on a phone — and the area around it also accepts a file
+        dragged onto it, which is what people do with a CV already open in a
+        folder (concept § 13, "drags the PDF in").
+      */}
       <div className="flex flex-col gap-2">
         <Label htmlFor="cv-file">{t('fileLabel')}</Label>
-        <input
-          ref={input}
-          id="cv-file"
-          name="file"
-          type="file"
-          onChange={(event) => {
-            setFile(event.target.files?.[0] ?? null);
-            // The declaration was about the file being replaced (`B-119`).
-            setDeclaring(null);
+        <div
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragging(true);
           }}
-          className="file:border-border file:bg-background text-sm file:mr-3 file:rounded-md file:border file:px-3 file:py-1.5 file:text-sm"
-        />
-        <p className="text-muted-foreground text-sm">{t('fileHint')}</p>
+          onDragLeave={() => setDragging(false)}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragging(false);
+            const dropped = event.dataTransfer.files?.[0];
+            if (dropped) choose(dropped);
+          }}
+          className={cn(
+            'bg-card flex flex-col items-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors',
+            dragging ? 'border-foreground bg-muted/60' : 'border-border',
+          )}
+        >
+          <span className="bg-muted flex size-12 items-center justify-center rounded-full">
+            {file ? (
+              <FileText className="size-5" aria-hidden="true" />
+            ) : (
+              <UploadCloud className="size-5" aria-hidden="true" />
+            )}
+          </span>
+          {file ? (
+            <p className="text-sm font-medium break-all">
+              {t('chosen', {
+                name: file.name,
+                size: format.number(file.size / 1024, {
+                  style: 'unit',
+                  unit: 'kilobyte',
+                  maximumFractionDigits: 0,
+                }),
+              })}
+            </p>
+          ) : (
+            <p className="text-base font-medium" aria-hidden="true">
+              {t('dropTitle')}
+            </p>
+          )}
+          <input
+            ref={input}
+            id="cv-file"
+            name="file"
+            type="file"
+            aria-describedby="cv-file-hint"
+            onChange={(event) => choose(event.target.files?.[0] ?? null)}
+            className="file:bg-primary file:text-primary-foreground max-w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:px-3 file:py-1.5 file:text-sm file:font-medium"
+          />
+          <p id="cv-file-hint" className="text-muted-foreground text-xs">
+            {t('fileHint')}
+          </p>
+        </div>
       </div>
 
       {/*
@@ -348,7 +410,7 @@ export function ImportScreen() {
           <p id="cv-language-hint" className="text-muted-foreground text-sm">
             {t('languageHint')}
           </p>
-          <select
+          <NativeSelect
             id="cv-language"
             name="language"
             value={declaring.language}
@@ -358,14 +420,13 @@ export function ImportScreen() {
                 current === null ? current : { ...current, language: event.target.value },
               )
             }
-            className="border-border bg-background w-fit rounded-md border px-3 py-1.5 text-sm"
           >
             {declaring.offered.map((code) => (
               <option key={code} value={code}>
                 {languageName(code, locale) ?? code}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       )}
 
@@ -379,9 +440,17 @@ export function ImportScreen() {
         />
       )}
 
-      <Button type="submit" disabled={!file || start.isPending} className="w-fit">
-        {start.isPending ? t('uploading') : t('upload')}
-      </Button>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <Button type="submit" size="lg" disabled={!file || start.isPending}>
+          {start.isPending ? t('uploading') : t('upload')}
+        </Button>
+        <p className="text-muted-foreground text-sm">
+          {t('manual')}{' '}
+          <Link href="/profile" className="text-foreground underline underline-offset-4">
+            {t('manualLink')}
+          </Link>
+        </p>
+      </div>
     </form>
   );
 }

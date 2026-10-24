@@ -31,7 +31,9 @@
  * of them; `warnings[]` carries places now.
  */
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { OnboardingSteps } from '@/components/onboarding/OnboardingSteps';
+import { languageName } from '@/lib/i18n/languageNames';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
@@ -49,6 +51,7 @@ export type ReviewGateProps = {
 
 export function ReviewGate({ jobId }: ReviewGateProps) {
   const t = useTranslations('Onboarding');
+  const locale = useLocale();
   const router = useRouter();
   const expandSections = useEditorUiStore((state) => state.expandSections);
 
@@ -121,10 +124,27 @@ export function ReviewGate({ jobId }: ReviewGateProps) {
   const total = job?.warningCount ?? job?.warnings?.length ?? 0;
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-xl font-semibold">{t('reviewTitle')}</h1>
-        <p className="text-muted-foreground text-sm">{t('reviewBody')}</p>
+    <div className="flex flex-col gap-6 sm:gap-8">
+      <OnboardingSteps current="review" />
+      <header className="flex flex-col gap-3">
+        <h1 className="text-2xl font-semibold sm:text-3xl">{t('reviewTitle')}</h1>
+        <p className="text-muted-foreground max-w-prose">{t('reviewBody')}</p>
+
+        {/*
+          What came out, counted — the result's three fields that nothing read
+          until now. Only when the reader arrived from the job: a review opened
+          later has no job to ask, and a count taken from today's profile would
+          describe edits rather than the import.
+        */}
+        {job?.sectionCount !== undefined && job.atomCount !== undefined && (
+          <p className="text-sm font-medium">
+            {t('summary', { sections: job.sectionCount, atoms: job.atomCount })}
+            {job.detectedLanguage &&
+              ` ${t('summaryLanguage', {
+                language: languageName(job.detectedLanguage, locale) ?? job.detectedLanguage,
+              })}`}
+          </p>
+        )}
 
         {total > 0 && (
           // A note, not a warning: nothing is broken and there is nothing to
@@ -132,7 +152,7 @@ export function ReviewGate({ jobId }: ReviewGateProps) {
           <p
             role="status"
             data-testid="review-warnings"
-            className="border-border bg-muted/50 rounded-md border px-3 py-2 text-sm"
+            className="bg-muted/60 rounded-xl border px-4 py-3 text-sm"
           >
             {t('reviewWarnings', { count: total })}
             {placedSectionIds.length > 0 && ` ${t('reviewWarningsOpened')}`}
@@ -179,8 +199,8 @@ export function ReviewGate({ jobId }: ReviewGateProps) {
         and one that follows the reader down the page can be pressed without
         the page having been read.
       */}
-      <div className="border-border flex justify-end border-t pt-4">
-        <Button type="button" onClick={() => router.push('/generate')}>
+      <div className="flex justify-end border-t pt-4">
+        <Button type="button" size="lg" onClick={() => router.push('/generate')}>
           {t('confirm')}
         </Button>
       </div>
