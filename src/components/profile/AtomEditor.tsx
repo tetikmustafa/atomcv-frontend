@@ -29,7 +29,7 @@ import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { SaveStatus } from '@/components/editor/SaveStatus';
 import { DeleteControl } from '@/components/profile/DeleteControl';
 import { ImportanceSlider } from '@/components/profile/ImportanceSlider';
-import { LockToggles, type LockToggle } from '@/components/profile/LockToggles';
+import { LockToggles, VerifiedToggle, type LockToggle } from '@/components/profile/LockToggles';
 import { RichText } from '@/components/profile/RichText';
 import { TagInput } from '@/components/profile/TagInput';
 import { StaleWording } from '@/components/profile/StaleWording';
@@ -519,6 +519,19 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
               />
             </>
           )}
+
+          {/*
+            Outside the account gate: the server treats `verified` as a fact
+            about the content, not a selection control, and accepts it from a
+            guest. It weighs 15% of the general-mode score (§ 19.4), so in a
+            resume made without a posting an item the person has confirmed
+            ranks above one nobody has looked at; a posting-driven run does
+            not read it, and the hint says only what is true of both.
+          */}
+          <VerifiedToggle
+            checked={atom.verified === true}
+            onChange={(value) => controls.change({ verified: value })}
+          />
 
           {/*
             The lists the pipeline reads: `skills` is what matching scores

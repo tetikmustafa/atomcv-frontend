@@ -125,7 +125,7 @@ export default async function HowItWorksPage({ params }: PageProps<'/[locale]/ho
             </h2>
             <ul className="grid gap-4 md:grid-cols-3">
               {QUESTION_KEYS.map((key) => (
-                <li key={key} className="flex flex-col gap-2 rounded-xl border p-5">
+                <li key={key} className="bg-card flex flex-col gap-2 rounded-xl border p-5">
                   <h3 className="font-semibold">{t(`questions.${key}.title`)}</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
                     {t(`questions.${key}.body`)}

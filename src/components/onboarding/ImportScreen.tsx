@@ -28,6 +28,7 @@ import { UsageNote } from '@/components/generation/UsageNote';
 import { ProgressBar } from '@/components/feedback/ProgressBar';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { usePhaseLabel } from '@/hooks/useErrorMessage';
 import { useJobStream } from '@/hooks/useJob';
 import { useImportCv, useProfileReplaced } from '@/hooks/useProfileImport';
@@ -391,6 +392,21 @@ export function ImportScreen() {
             {t('fileHint')}
           </p>
         </div>
+
+        {/*
+          For a CV that is not a file yet — copied out of a profile page, an
+          email, a document nobody can export. The server reads `.txt`
+          (`DocumentFormat.TXT`), so pasted text becomes exactly that and goes
+          through the same upload, the same challenge and the same quota; a
+          second route to the extractor would be a second set of refusals to
+          keep in step.
+        */}
+        <PasteText
+          onUse={(text) => {
+            if (input.current) input.current.value = '';
+            choose(new File([text], t('pastedName'), { type: 'text/plain' }));
+          }}
+        />
       </div>
 
       {/*
@@ -545,5 +561,44 @@ function ImportProgress({
       <ProgressBar pct={progress.pct} label={t('progressLabel')} valueText={caption} />
       <p className="text-muted-foreground text-sm">{caption}</p>
     </div>
+  );
+}
+
+/**
+ * The paste route, closed until asked for: most people arrive with a file,
+ * and an open text box beside the drop zone would ask them to choose between
+ * two things when they came to do one. `<details>` is the disclosure — it
+ * opens from the keyboard and says whether it is open without any script.
+ */
+function PasteText({ onUse }: { onUse: (text: string) => void }) {
+  const t = useTranslations('Onboarding');
+  const [text, setText] = useState('');
+
+  return (
+    <details className="group rounded-xl border px-4 py-3">
+      <summary className="cursor-pointer text-sm font-medium">{t('pasteSummary')}</summary>
+      <div className="mt-3 flex flex-col gap-2">
+        <Label htmlFor="cv-text">{t('pasteLabel')}</Label>
+        <Textarea
+          id="cv-text"
+          rows={10}
+          value={text}
+          aria-describedby="cv-text-hint"
+          onChange={(event) => setText(event.target.value)}
+        />
+        <p id="cv-text-hint" className="text-muted-foreground text-xs">
+          {t('pasteHint')}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-fit"
+          disabled={text.trim() === ''}
+          onClick={() => onUse(text)}
+        >
+          {t('pasteUse')}
+        </Button>
+      </div>
+    </details>
   );
 }

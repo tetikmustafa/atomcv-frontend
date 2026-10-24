@@ -200,9 +200,10 @@ describe('adding an entry', () => {
     );
     expect(bodies).toHaveLength(0);
     // The message is tied to the field it is about, not floating near it.
-    expect(screen.getByLabelText('Ended')).toHaveAttribute(
-      'aria-describedby',
-      'entry-endDate-error',
+    const ended = screen.getByLabelText('Ended');
+    expect(ended).toHaveAttribute('aria-describedby', `${ended.id}-error`);
+    expect(document.getElementById(`${ended.id}-error`)).toHaveTextContent(
+      'The end cannot come before the start.',
     );
   });
 

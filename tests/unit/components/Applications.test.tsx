@@ -9,6 +9,7 @@ import { Applications } from '@/components/applications/Applications';
 import { api } from '@/lib/api/client';
 import { ApiError, isApiError } from '@/lib/api/errors';
 import { applications, forgetGenerationOf } from '@/mocks/applicationHandlers';
+import { generationOf } from '@/mocks/generationFixture';
 import { server } from '@/mocks/node';
 import { signIn } from '@/mocks/sessionFixture';
 import { formats } from '@/lib/i18n/formats';
@@ -298,5 +299,35 @@ describe('the filter and the edit', () => {
     await user.click(screen.getByRole('button', { name: en.Applications.save }));
 
     await waitFor(() => expect(applications[0]?.company).toBe('Acme Ltd'));
+  });
+
+  /**
+   * A row recorded by hand had no way to reach its resume afterwards, and the
+   * "Open the resume" link is only as good as this value.
+   */
+  it('links a hand-recorded row to the resume that went with it', async () => {
+    signIn();
+    const job = await api.post<{ jobId: string }>('/generations', {
+      acknowledgePreflight: false,
+    });
+    const generationId = generationOf(job.jobId);
+    await record();
+    const user = userEvent.setup();
+
+    render(<Applications />, { wrapper: Wrapper });
+
+    await user.click(await screen.findByRole('button', { name: /^Edit / }));
+    const resume = screen.getByLabelText(en.Applications.resume);
+    await waitFor(() => expect(resume).toBeEnabled());
+    // Nothing linked yet, so "not linked" is on offer and chosen.
+    expect(resume).toHaveValue('');
+    await user.selectOptions(resume, generationId);
+    await user.click(screen.getByRole('button', { name: en.Applications.save }));
+
+    await waitFor(() => expect(applications[0]?.generationId).toBe(generationId));
+    expect(await screen.findByRole('link', { name: en.Applications.openResume })).toHaveAttribute(
+      'href',
+      `/generations/${generationId}`,
+    );
   });
 });

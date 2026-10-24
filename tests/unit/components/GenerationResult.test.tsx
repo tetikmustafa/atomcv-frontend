@@ -277,6 +277,62 @@ describe('a finished generation', () => {
   });
 
   /**
+   * `B-125`, § 23.2. The server reads every PDF back as text; the screen says
+   * what came back, as counts, and a defect is worded as the template's fault
+   * — the document is not taken away and the resume is not blamed.
+   */
+  describe('the machine-readability check', () => {
+    function jobOf(generationId: string) {
+      const job = generations.jobs.find(
+        (candidate) => candidate.kind === 'generation' && candidate.generationId === generationId,
+      );
+      if (job?.kind !== 'generation') throw new Error('no generation job');
+      return job;
+    }
+
+    it('says a clean read-back once, with the counts beside it', async () => {
+      const generationId = await generate();
+
+      render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+      expect(await screen.findByTestId('ats-verdict')).toHaveTextContent('Read back cleanly');
+      expect(screen.getByTestId('ats-headings')).toHaveTextContent('4/4');
+      expect(screen.getByTestId('ats-bullets')).toHaveTextContent('9/9');
+    });
+
+    it('owns a defect rather than blaming the resume', async () => {
+      const generationId = await generate();
+      jobOf(generationId).atsCheck = {
+        readable: false,
+        headingsFound: 3,
+        headingsExpected: 4,
+        bulletsFound: 9,
+        bulletsExpected: 9,
+        contactReadable: true,
+        orderPreserved: true,
+      };
+
+      render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('tr') });
+
+      const verdict = await screen.findByTestId('ats-verdict');
+      expect(verdict).toHaveTextContent('bizim şablonumuzun kusuru');
+      expect(screen.getByTestId('ats-headings')).toHaveTextContent('3/4');
+      // Still downloadable: § 23.2 reports and never refuses.
+      expect(screen.getByRole('button', { name: "PDF'i indir" })).toBeEnabled();
+    });
+
+    it('draws nothing for a generation made before the check was kept', async () => {
+      const generationId = await generate();
+      jobOf(generationId).atsCheck = null;
+
+      render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+      await screen.findByRole('button', { name: 'Download PDF' });
+      expect(screen.queryByTestId('ats-verdict')).not.toBeInTheDocument();
+    });
+  });
+
+  /**
    * `B-042`. `auto` resolves to the posting's language only when the profile
    * can actually be written in it; when it cannot, the document stays in the
    * profile's language and the two tags disagree. The reader pasted an
@@ -394,6 +450,33 @@ describe('the covering letter', () => {
     render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
 
     expect(await screen.findByTestId('cover-letter')).toBeInTheDocument();
+  });
+
+  /** For the form that wants an attachment: the text on screen, as a `.txt`. */
+  it('saves the letter on screen as a text file', async () => {
+    const saved: { name?: string; type?: string; text?: string } = {};
+    const create = vi.spyOn(URL, 'createObjectURL').mockImplementation((blob) => {
+      saved.type = (blob as Blob).type;
+      void (blob as Blob).text().then((text) => (saved.text = text));
+      return 'blob:letter';
+    });
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      saved.name = this.download;
+    });
+
+    const generationId = await generate({ acknowledgePreflight: false, coverLetter: true });
+    render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+    const letter = await screen.findByTestId('cover-letter');
+    await userEvent.click(screen.getByRole('button', { name: en.Result.coverLetterSave }));
+
+    expect(saved.name).toBe(`atomcv-cover-letter-${generationId}.txt`);
+    expect(saved.type).toBe('text/plain;charset=utf-8');
+    await waitFor(() => expect(saved.text).toBe(letter.textContent));
+    for (const spy of [create, revoke, click]) spy.mockRestore();
   });
 
   /**

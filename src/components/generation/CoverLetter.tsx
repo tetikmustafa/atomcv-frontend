@@ -82,6 +82,24 @@ export function CoverLetter({ generationId, letter }: CoverLetterProps) {
   const failure = write.error ? toErrorLike(write.error) : null;
   const rejected = failure?.code === REJECTED;
 
+  /**
+   * The letter as a `.txt`, for the form that wants an attachment rather than
+   * a text box. Built here from the text on screen: the server keeps the
+   * letter as plain text and has nothing to render (§ 34), so a download
+   * endpoint would hand back these same bytes after a round trip.
+   */
+  function save() {
+    if (!letter || typeof URL.createObjectURL !== 'function') return;
+    const url = URL.createObjectURL(new Blob([letter], { type: 'text/plain;charset=utf-8' }));
+    const anchor = document.createElement('a');
+
+    anchor.href = url;
+    anchor.download = `atomcv-cover-letter-${generationId}.txt`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    announce(t('coverLetterSaved'));
+  }
+
   async function copy() {
     if (!letter) return;
 
@@ -115,9 +133,12 @@ export function CoverLetter({ generationId, letter }: CoverLetterProps) {
             {letter}
           </p>
 
-          <div>
+          <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => void copy()}>
               {copied ? t('coverLetterCopied') : t('coverLetterCopy')}
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={save}>
+              {t('coverLetterSave')}
             </Button>
           </div>
         </>

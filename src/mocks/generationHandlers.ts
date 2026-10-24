@@ -30,6 +30,7 @@ import {
   isGenerationJob,
   COVER_LETTER_LIMIT,
   coverLetterText,
+  ATS_CLEAN,
   FIT_REPORT,
   generations,
   jobSnapshot,
@@ -395,6 +396,9 @@ function generationBody(job: MockGenerationJob): Schemas['GenerationResponse'] {
     ...(job.maxPages === undefined ? {} : { maxPages: job.maxPages }),
     createdAt: new Date(job.startedAt).toISOString(),
     ...(job.fitReport ? { fitReport: job.fitReport } : {}),
+    // `B-125`. Every mock PDF reads back cleanly, as the real templates do;
+    // a test that wants the defect copy overrides the response.
+    ...(job.atsCheck === null ? {} : { atsCheck: job.atsCheck ?? ATS_CLEAN }),
     // `B-042`. Omitted rather than blank, the way `F-010` settled it.
     ...(job.contentLanguage ? { contentLanguage: job.contentLanguage } : {}),
     ...(job.postingLanguage ? { postingLanguage: job.postingLanguage } : {}),

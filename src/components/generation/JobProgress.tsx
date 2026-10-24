@@ -14,6 +14,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from '@/lib/i18n/navigation';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { ProgressBar } from '@/components/feedback/ProgressBar';
+import { Button } from '@/components/ui/button';
 import { usePhaseLabel } from '@/hooks/useErrorMessage';
 import { useJobStream } from '@/hooks/useJob';
 import { announce } from '@/stores/announcerStore';
@@ -99,13 +100,9 @@ export function JobProgress({
     return (
       <div className="flex flex-col gap-4">
         <ErrorPanel error={progress.failure} onResolve={onResolve} canResolve={canResolve} />
-        <button
-          type="button"
-          onClick={onStartOver}
-          className="border-border hover:bg-muted w-fit rounded-md border px-4 py-2 text-sm"
-        >
+        <Button type="button" variant="outline" onClick={onStartOver} className="w-fit">
           {t('startOver')}
-        </button>
+        </Button>
       </div>
     );
   }
