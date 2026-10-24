@@ -104,6 +104,37 @@ describe('uploading a CV', () => {
   });
 
   /**
+   * A CV that is not a file yet. It goes up as `.txt`, which the server
+   * reads, through the same request — so it is the same challenge, quota and
+   * refusals as an upload rather than a second route to keep in step.
+   */
+  it('sends pasted text as a text file through the same upload', async () => {
+    const bodies: FormData[] = [];
+    const listen = async ({ request }: { request: Request }) => {
+      if (request.url.includes('/profile/import')) bodies.push(await request.clone().formData());
+    };
+    server.events.on('request:start', listen);
+    await renderImport();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByText(en.Onboarding.pasteSummary));
+    const use = screen.getByRole('button', { name: en.Onboarding.pasteUse });
+    expect(use).toBeDisabled();
+    await user.type(screen.getByLabelText(en.Onboarding.pasteLabel), 'Elif Yildirim, engineer');
+    await user.click(use);
+
+    expect(await screen.findByText(/pasted-cv\.txt/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: en.Onboarding.upload }));
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    server.events.removeListener('request:start', listen);
+    const sent = bodies[0]!.get('file') as File;
+    expect(sent.name).toBe('pasted-cv.txt');
+    expect(sent.type).toBe('text/plain');
+    expect(await sent.text()).toBe('Elif Yildirim, engineer');
+  });
+
+  /**
    * `B-122`: the bar names the step the job is on. Until then it drew one
    * sentence for the whole import, because the server sent English prose it
    * could not translate.

@@ -34,6 +34,8 @@ import {
   type SectionControls,
   type SectionFormValues,
 } from '@/lib/forms/profileSchemas';
+import { announce } from '@/stores/announcerStore';
+import type { Section } from '@/lib/api/endpoints/profile';
 
 /** The switches, with the message keys each one reads. */
 const SWITCHES = [
@@ -41,8 +43,6 @@ const SWITCHES = [
   { name: 'alwaysInclude', label: 'sectionAlwaysInclude' },
   { name: 'verbatim', label: 'sectionVerbatim' },
 ] as const;
-import { announce } from '@/stores/announcerStore';
-import type { Section } from '@/lib/api/endpoints/profile';
 
 const KINDS = sectionForm.shape.kind.options;
 const LAYOUTS = sectionForm.shape.layout.options;
@@ -149,7 +149,7 @@ export function SectionForm({ section, onDone }: SectionFormProps) {
       className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-4 sm:p-5"
     >
       <div className="flex flex-col gap-2">
-        <Label htmlFor="section-kind">{t('kind')}</Label>
+        <Label htmlFor={`${controlsId}-kind`}>{t('kind')}</Label>
 
         {/*
           A native `<select>`, not a Radix listbox. Bölüm 39.1 buys Radix for
@@ -161,7 +161,7 @@ export function SectionForm({ section, onDone }: SectionFormProps) {
         */}
         <NativeSelect
           className="sm:w-full"
-          id="section-kind"
+          id={`${controlsId}-kind`}
           {...register('kind', {
             /*
               Moved in the handler rather than in an effect watching `kind`.
@@ -184,8 +184,8 @@ export function SectionForm({ section, onDone }: SectionFormProps) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="section-layout">{t('layout')}</Label>
-        <p id="section-layout-hint" className="text-muted-foreground text-xs">
+        <Label htmlFor={`${controlsId}-layout`}>{t('layout')}</Label>
+        <p id={`${controlsId}-layout-hint`} className="text-muted-foreground text-xs">
           {t('layoutHint')}
         </p>
 
@@ -202,8 +202,8 @@ export function SectionForm({ section, onDone }: SectionFormProps) {
         */}
         <NativeSelect
           className="sm:w-full"
-          id="section-layout"
-          aria-describedby="section-layout-hint"
+          id={`${controlsId}-layout`}
+          aria-describedby={`${controlsId}-layout-hint`}
           {...register('layout', { onChange: () => setLayoutTouched(true) })}
         >
           {LAYOUTS.map((layout) => (
@@ -215,15 +215,15 @@ export function SectionForm({ section, onDone }: SectionFormProps) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="section-title">{t('title')}</Label>
+        <Label htmlFor={`${controlsId}-title`}>{t('title')}</Label>
         <Input
-          id="section-title"
+          id={`${controlsId}-title`}
           {...register('title')}
           aria-invalid={errors.title ? true : undefined}
-          {...(errors.title ? { 'aria-describedby': 'section-title-error' } : {})}
+          {...(errors.title ? { 'aria-describedby': `${controlsId}-title-error` } : {})}
         />
         {errors.title && (
-          <p id="section-title-error" role="alert" className="text-destructive text-xs">
+          <p id={`${controlsId}-title-error`} role="alert" className="text-destructive text-xs">
             {/* The schema carries a key, not a sentence — resolved here, the
                 same way a server error code is (rule 8). */}
             {tv(validationKey(errors.title.message))}

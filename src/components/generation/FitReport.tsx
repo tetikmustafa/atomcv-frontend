@@ -45,10 +45,7 @@ export function FitReport({ report }: { report: FitReportData }) {
   const suggested = (report.missingRequired ?? [])[0] ?? (report.missingPreferred ?? [])[0];
 
   return (
-    <section
-      aria-labelledby="fit-heading"
-      className="border-border flex flex-col gap-4 border-t pt-4"
-    >
+    <section aria-labelledby="fit-heading" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-baseline gap-x-3">
         <h2 id="fit-heading" className="text-base font-medium">
           {t('heading')}

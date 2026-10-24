@@ -22,6 +22,7 @@ import { CoverLetter } from '@/components/generation/CoverLetter';
 import { EditRequest } from '@/components/generation/EditRequest';
 import { Feedback } from '@/components/generation/Feedback';
 import { SelectionEditor } from '@/components/generation/SelectionEditor';
+import { AtsCheck } from '@/components/generation/AtsCheck';
 import { FitReport } from '@/components/generation/FitReport';
 import { PageHeader } from '@/components/layout/Page';
 import { PdfPreview } from '@/components/generation/PdfPreview';
@@ -310,6 +311,14 @@ export function GenerationResult({ generationId }: { generationId: string }) {
               <p className="text-muted-foreground text-sm">{t('generalNote')}</p>
             )}
           </Card>
+
+          {/* Absent on a generation made before the server kept it (`B-125`):
+              no card rather than a guess. */}
+          {data.atsCheck && (
+            <Card className="gap-4">
+              <AtsCheck check={data.atsCheck} />
+            </Card>
+          )}
         </div>
       </div>
 

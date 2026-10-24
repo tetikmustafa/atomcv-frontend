@@ -70,6 +70,13 @@ export type Generation = Returns<'readGeneration'>;
 export type FitReport = NonNullable<Generation['fitReport']>;
 
 /**
+ * The PDF read back as text, the way an applicant tracking system would read
+ * it (`B-125`, concept § 10.1). Counts and flags, never a heading's text.
+ * Absent on a generation made before the server kept it.
+ */
+export type AtsCheck = NonNullable<Generation['atsCheck']>;
+
+/**
  * One finished generation. Absent `fitReport` means general mode — there was
  * no posting to be relevant to, and a row of zeroes would read as a bad match
  * rather than as a different question.

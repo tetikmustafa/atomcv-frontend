@@ -101,6 +101,8 @@ export type MockGenerationJob = MockJobCommon & {
   generationId: string;
   /** Absent in general mode, exactly as the server omits it. */
   fitReport?: MockFitReport;
+  /** `B-125`. Unset reads back clean; `null` is a row from before the column. */
+  atsCheck?: NonNullable<Schemas['GenerationResponse']['atsCheck']> | null;
   /**
    * B-042's two language axes. Both are absent when blank, as the server
    * sends them, and `postingLanguage` is absent entirely in general mode:
@@ -417,6 +419,17 @@ export const FIT_REPORT: MockFitReport = {
   missingRequired: ['mikroservis'],
   missingPreferred: ['Terraform'],
   level: 'MODERATE',
+};
+
+/** `B-125`: the PDF read back as text, cleanly — what the real templates do. */
+export const ATS_CLEAN: NonNullable<Schemas['GenerationResponse']['atsCheck']> = {
+  readable: true,
+  headingsFound: 4,
+  headingsExpected: 4,
+  bulletsFound: 9,
+  bulletsExpected: 9,
+  contactReadable: true,
+  orderPreserved: true,
 };
 
 /** § 44.3's brake, for the test that asserts the paused screen. */

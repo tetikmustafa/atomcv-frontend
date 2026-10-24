@@ -1794,6 +1794,24 @@ export interface components {
              */
             archived: boolean;
         };
+        /**
+         * @description The generated PDF read back as text, the way an applicant tracking
+         *     system reads it. Counts and flags only. Absent on a generation made
+         *     before the check was kept.
+         */
+        AtsCheckResult: {
+            readable?: boolean;
+            /** Format: int32 */
+            headingsFound?: number;
+            /** Format: int32 */
+            headingsExpected?: number;
+            /** Format: int32 */
+            bulletsFound?: number;
+            /** Format: int32 */
+            bulletsExpected?: number;
+            contactReadable?: boolean;
+            orderPreserved?: boolean;
+        };
         /** @description How much of the posting's vocabulary the CV actually says. Counts, never a percentage. */
         FitReport: {
             /** Format: int32 */
@@ -1846,6 +1864,7 @@ export interface components {
             /** @description The company the posting was for, as Faz A read it; absent in general mode and when the posting named none */
             companyName?: string;
             fitReport?: components["schemas"]["FitReport"];
+            atsCheck?: components["schemas"]["AtsCheckResult"];
             /**
              * @description The language the document was written in, as a BCP 47 tag
              * @example tr

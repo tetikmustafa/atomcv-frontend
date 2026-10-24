@@ -36,7 +36,9 @@
 
 import { useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { ExternalLink, Star } from 'lucide-react';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -90,7 +92,7 @@ export function GitHubImport() {
 
   return (
     <section className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-5 sm:p-6">
-      <h3 className="text-base font-medium">{t('title')}</h3>
+      <h2 className="text-base font-semibold">{t('title')}</h2>
       <p className="text-muted-foreground text-sm">{t('intro')}</p>
 
       <div className="flex flex-wrap items-end gap-2">
@@ -134,7 +136,7 @@ export function GitHubImport() {
                     id={`${usernameId}-${name}`}
                     checked={picked.includes(name)}
                     disabled={apply.isPending}
-                    className="mt-1"
+                    className="accent-primary mt-1 size-4"
                     onChange={(event) =>
                       setPicked((current) =>
                         event.target.checked
@@ -150,6 +152,41 @@ export function GitHubImport() {
 
                     {suggestion.description && (
                       <p className="text-muted-foreground text-xs">{suggestion.description}</p>
+                    )}
+
+                    {/*
+                      What the server read the repository as: its stars, the
+                      languages that become the project's skills, and the page
+                      itself, so the reader can check it is the one they mean
+                      before it lands on a CV.
+                    */}
+                    <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                      {suggestion.stars !== undefined && suggestion.stars > 0 && (
+                        <span className="inline-flex items-center gap-1">
+                          <Star aria-hidden="true" className="size-3" />
+                          {t('stars', { count: suggestion.stars })}
+                        </span>
+                      )}
+                      {suggestion.url && (
+                        <a
+                          href={suggestion.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-foreground inline-flex items-center gap-1 underline-offset-4 hover:underline"
+                        >
+                          {t('open', { name })}
+                          <ExternalLink aria-hidden="true" className="size-3" />
+                        </a>
+                      )}
+                    </div>
+                    {suggestion.skills && suggestion.skills.length > 0 && (
+                      <ul aria-label={t('skillsLabel')} className="flex flex-wrap gap-1">
+                        {suggestion.skills.map((skill) => (
+                          <li key={skill}>
+                            <Badge variant="secondary">{skill}</Badge>
+                          </li>
+                        ))}
+                      </ul>
                     )}
 
                     {/*

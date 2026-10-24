@@ -132,7 +132,6 @@
     "reviewWarnings": "We were unsure about {count, plural, =1 {one thing} other {# things}} while reading.",
     "reviewWarningsOpened": "The sections they point at are open below.",
     "reviewWarningsElsewhere": "{count, plural, =1 {One of them pointed} other {# of them pointed}} nowhere in particular, so look through the rest as well.",
-    "reviewWarningsList": "What we were unsure about",
     "warning": "{code, select, ambiguous_date {A date could not be read.} missing_organization {An entry has no employer or school on it.} unclear_section {Something could not be placed in a section with any confidence.} scrambled_text {Some of the text came out of the file scrambled.} overlapping_dates {Two entries cover the same dates.} untranslatable_atom {A line could not be given an English wording.} unsupported_by_source {A name here does not appear in the file you uploaded.} other {Something could not be settled.}}",
     "warningAt": "{warning} In {section}.",
     "confirm": "Looks right — continue",
@@ -145,13 +144,16 @@
     },
     "stepState": "{state, select, done {done} current {current step} other {to do}}",
     "dropTitle": "Drop your CV here",
-    "dropOr": "or",
-    "browse": "choose a file",
     "chosen": "{name} · {size}",
     "summary": "We found {sections, plural, =0 {no sections} one {# section} other {# sections}} and {atoms, plural, =0 {no items} one {# item} other {# items}}.",
     "summaryLanguage": "Read as {language}.",
     "manual": "Rather type it yourself?",
-    "manualLink": "Build the profile by hand"
+    "manualLink": "Build the profile by hand",
+    "pasteSummary": "No file? Paste the text instead",
+    "pasteLabel": "The text of your CV",
+    "pasteHint": "Copied from anywhere — a profile page, an email, a document. It is read exactly like an uploaded file.",
+    "pasteUse": "Use this text",
+    "pastedName": "pasted-cv.txt"
   },
   "Applications": {
     "title": "Applications",
@@ -160,6 +162,7 @@
     "failed": "Your applications could not be fetched. Reload the page to try again.",
     "empty": "Nothing here yet. Add the first place you applied.",
     "addTitle": "Record an application",
+    "listTitle": "Your applications",
     "company": "Company",
     "position": "Position",
     "add": "Add",
@@ -178,7 +181,6 @@
     "notes": "Notes",
     "notesLabel": "Anything worth remembering",
     "saveNotes": "Save notes",
-    "forget": "Forget this",
     "description": "Where each resume went and how it is going.",
     "anonymousTitle": "Applications are kept for accounts",
     "filterLabel": "Show",
@@ -195,8 +197,14 @@
     "forgetTitle": "Forget this application?",
     "forgetBody": "The record of {position} at {company} goes. The resume it points at stays in your history.",
     "forgetConfirm": "Forget it",
-    "forgetCancel": "Keep it",
-    "forgetTrigger": "Forget {position} at {company}"
+    "forgetTrigger": "Forget {position} at {company}",
+    "resume": "Resume sent",
+    "resumeNone": "Not linked",
+    "resumeLinked": "The resume linked now",
+    "resumeGeneral": "General resume",
+    "resumeOption": "{role} · {date}",
+    "resumeOptionAt": "{role} — {company} · {date}",
+    "resumeHint": "Linking the resume lets this row open exactly what you sent."
   },
   "Session": {
     "expiring": "This session ends at {at, time, short} — two hours after your last activity here, so carrying on pushes it back. Nothing is saved to an account yet."
@@ -369,7 +377,6 @@
     "atom": {
       "loading": "Loading…",
       "text": "Text",
-      "marksDropped": "Saving this will keep the words and drop the highlighting on them. The editor that keeps it is not built yet.",
       "importance": "Importance",
       "active": {
         "label": "Available",
@@ -402,7 +409,11 @@
       "inactive": "Not used",
       "tagCount": "{count, plural, one {# skill} other {# skills}}",
       "source": "{source, select, cv_upload {From your CV} github {From GitHub} manual {Written here} other {{source}}}",
-      "verified": "Checked"
+      "verified": "Checked",
+      "verifiedToggle": {
+        "label": "I’ve checked this",
+        "hint": "Confirms the item is right as written. A general resume, made without a posting, puts checked items a little ahead."
+      }
     },
     "reorder": {
       "moveUp": "Move {label} up",
@@ -429,8 +440,7 @@
       "generate": "Generate a resume",
       "completenessTitle": "Completeness",
       "completenessHint": "A resume can be generated once the profile has contact details, at least one experience, education or project, and three skills.",
-      "sectionsTitle": "Sections",
-      "itemCount": "{count, plural, =0 {Empty} one {# item} other {# items}}"
+      "sectionsTitle": "Sections"
     },
     "github": {
       "title": "Add projects from GitHub",
@@ -446,7 +456,10 @@
       "add": "Add {count, plural, =1 {one project} other {# projects}}",
       "adding": "Adding…",
       "announceFound": "{count, plural, =0 {Nothing on offer} =1 {One project on offer} other {# projects on offer}}",
-      "announceApplied": "{count, plural, =0 {Nothing was added} =1 {One project added} other {# projects added}}"
+      "announceApplied": "{count, plural, =0 {Nothing was added} =1 {One project added} other {# projects added}}",
+      "stars": "{count, plural, =1 {1 star} other {# stars}}",
+      "open": "{name} on GitHub",
+      "skillsLabel": "Languages it brings"
     },
     "atomTags": {
       "label": "Labels",
@@ -488,8 +501,7 @@
       "addTone": "Register",
       "toneHint": "A second wording in the same language, for postings that read differently — a startup's casual advert, a bank's formal one.",
       "tone": "{tone, select, formal {Formal} casual {Casual} technical {Technical} other {Neutral}}",
-      "editTone": "Register of this wording",
-      "toneTaken": "This wording's language already has one in every register."
+      "editTone": "Register of this wording"
     },
     "entry": {
       "range": "{start} – {end}",
@@ -676,7 +688,6 @@
       "languageHint": "Which language this resume comes out in. Leave it alone to use your usual choice — the posting you are answering today need not be in the language you usually write in.",
       "languageDefault": "Your usual choice"
     },
-    "postingTitle": "The job posting",
     "postingHint": "Optional. Without one you get a general resume.",
     "optionsTitle": "This resume",
     "maxPages": "Page limit",
@@ -795,7 +806,9 @@
     "trackAnnounce": "Added to your applications.",
     "nudgeTitle": "Keep this profile",
     "nudgeBody": "A guest session ends two hours after your last activity. With an account your profile, your resumes and where you sent them are kept — and nothing you did here is lost.",
-    "nudgeAction": "Create an account"
+    "nudgeAction": "Create an account",
+    "coverLetterSave": "Download as .txt",
+    "coverLetterSaved": "The letter was saved as a text file."
   },
   "Fit": {
     "heading": "How this matches the posting",
@@ -807,6 +820,19 @@
     "missingRequired": "Missing required skills",
     "missingPreferred": "Missing preferred skills",
     "suggestion": "If you have {skill} experience, adding it to your profile would strengthen this match."
+  },
+  "Ats": {
+    "heading": "Machine readability",
+    "clean": "Read back cleanly: every heading, every bullet and your contact line came out of the PDF as text, in order.",
+    "defect": "Part of this PDF did not read back as text. That is a fault in our template, not in your resume — the document is still yours to use, and we have been told.",
+    "headings": "Section headings",
+    "bullets": "Bullet points",
+    "count": "{found, number}/{expected, number}",
+    "contact": "Contact line",
+    "order": "Reading order",
+    "ok": "{ok, select, true {Readable} other {Not readable}}",
+    "orderOk": "{ok, select, true {Kept} other {Mixed up}}",
+    "intro": "Applicant tracking systems read the text inside a PDF, not the picture of it. We read this one back the same way."
   },
   "Usage": {
     "label": "Today's usage",

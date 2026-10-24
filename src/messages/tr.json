@@ -132,7 +132,6 @@
     "reviewWarnings": "Okurken {count, plural, =1 {bir konuda} other {# konuda}} emin olamadık.",
     "reviewWarningsOpened": "İşaret ettikleri bölümleri aşağıda açık bıraktık.",
     "reviewWarningsElsewhere": "Bunlardan {count, plural, =1 {biri} other {# tanesi}} belirli bir yeri işaret etmiyordu, o yüzden kalanına da göz at.",
-    "reviewWarningsList": "Emin olamadıklarımız",
     "warning": "{code, select, ambiguous_date {Bir tarih okunamadı.} missing_organization {Bir kaydın kurum ya da şirket adı yok.} unclear_section {Bir şeyin hangi bölüme ait olduğu anlaşılamadı.} scrambled_text {Dosyadan çıkan metnin bir kısmı karışık geldi.} overlapping_dates {İki kayıt aynı tarihleri kapsıyor.} untranslatable_atom {Bir maddenin İngilizce karşılığı üretilemedi.} unsupported_by_source {Bu satırda, yüklediğiniz dosyada geçmeyen bir ad var.} other {Bir şey netleştirilemedi.}}",
     "warningAt": "{warning} {section} bölümünde.",
     "confirm": "Doğru görünüyor — devam et",
@@ -145,13 +144,16 @@
     },
     "stepState": "{state, select, done {tamamlandı} current {şu anki adım} other {sırada}}",
     "dropTitle": "CV'ni buraya bırak",
-    "dropOr": "ya da",
-    "browse": "bir dosya seç",
     "chosen": "{name} · {size}",
     "summary": "{sections, plural, =0 {Hiç bölüm} one {# bölüm} other {# bölüm}} ve {atoms, plural, =0 {hiç öğe} one {# öğe} other {# öğe}} bulduk.",
     "summaryLanguage": "{language} olarak okundu.",
     "manual": "Kendin yazmayı mı tercih edersin?",
-    "manualLink": "Profili elle oluştur"
+    "manualLink": "Profili elle oluştur",
+    "pasteSummary": "Dosyan yok mu? Metni yapıştır",
+    "pasteLabel": "CV'nin metni",
+    "pasteHint": "Herhangi bir yerden kopyalanmış olabilir — bir profil sayfası, bir e-posta, bir belge. Yüklenen bir dosya gibi okunur.",
+    "pasteUse": "Bu metni kullan",
+    "pastedName": "yapistirilan-cv.txt"
   },
   "Applications": {
     "title": "Başvurular",
@@ -160,6 +162,7 @@
     "failed": "Başvuruların getirilemedi. Tekrar denemek için sayfayı yenile.",
     "empty": "Henüz bir şey yok. Başvurduğun ilk yeri ekle.",
     "addTitle": "Bir başvuru kaydet",
+    "listTitle": "Başvuruların",
     "company": "Şirket",
     "position": "Pozisyon",
     "add": "Ekle",
@@ -178,7 +181,6 @@
     "notes": "Notlar",
     "notesLabel": "Hatırlamaya değer bir şey",
     "saveNotes": "Notları kaydet",
-    "forget": "Bunu unut",
     "description": "Her CV'nin nereye gittiği ve nasıl gittiği.",
     "anonymousTitle": "Başvurular hesaplar için tutulur",
     "filterLabel": "Göster",
@@ -195,8 +197,14 @@
     "forgetTitle": "Bu başvuru unutulsun mu?",
     "forgetBody": "{company} — {position} kaydı gider. İşaret ettiği CV geçmişinde kalır.",
     "forgetConfirm": "Unut",
-    "forgetCancel": "Kalsın",
-    "forgetTrigger": "{company} — {position} kaydını unut"
+    "forgetTrigger": "{company} — {position} kaydını unut",
+    "resume": "Gönderilen CV",
+    "resumeNone": "Bağlı değil",
+    "resumeLinked": "Şu an bağlı olan CV",
+    "resumeGeneral": "Genel CV",
+    "resumeOption": "{role} · {date}",
+    "resumeOptionAt": "{role} — {company} · {date}",
+    "resumeHint": "CV'yi bağlamak, bu satırın tam olarak gönderdiğin belgeyi açmasını sağlar."
   },
   "Session": {
     "expiring": "Bu oturum {at, time, short} itibarıyla sona eriyor — buradaki son işleminden iki saat sonra, yani çalışmaya devam etmek bu süreyi ileri atıyor. Henüz bir hesaba kaydedilmiş bir şey yok."
@@ -369,7 +377,6 @@
     "atom": {
       "loading": "Yükleniyor…",
       "text": "Metin",
-      "marksDropped": "Bunu kaydetmek kelimeleri korur, üzerlerindeki işaretlemeyi düşürür. İşaretlemeyi koruyan editör henüz yazılmadı.",
       "importance": "Önem",
       "active": {
         "label": "Kullanılabilir",
@@ -402,7 +409,11 @@
       "inactive": "Kullanılmıyor",
       "tagCount": "{count, plural, one {# beceri} other {# beceri}}",
       "source": "{source, select, cv_upload {CV'nden} github {GitHub'dan} manual {Burada yazıldı} other {{source}}}",
-      "verified": "Kontrol edildi"
+      "verified": "Kontrol edildi",
+      "verifiedToggle": {
+        "label": "Bunu kontrol ettim",
+        "hint": "Maddenin yazıldığı gibi doğru olduğunu onaylar. İlansız oluşturulan genel CV'de kontrol edilmiş maddeler biraz öne geçer."
+      }
     },
     "reorder": {
       "moveUp": "{label} yukarı taşı",
@@ -429,8 +440,7 @@
       "generate": "CV oluştur",
       "completenessTitle": "Tamamlanma",
       "completenessHint": "Profilde iletişim bilgileri, en az bir deneyim, eğitim ya da proje ve üç beceri olduğunda CV oluşturulabilir.",
-      "sectionsTitle": "Bölümler",
-      "itemCount": "{count, plural, =0 {Boş} one {# öğe} other {# öğe}}"
+      "sectionsTitle": "Bölümler"
     },
     "github": {
       "title": "GitHub'dan proje ekle",
@@ -446,7 +456,10 @@
       "add": "{count, plural, =1 {Bir projeyi} other {# projeyi}} ekle",
       "adding": "Ekleniyor…",
       "announceFound": "{count, plural, =0 {Sunulacak bir şey yok} =1 {Bir proje sunuluyor} other {# proje sunuluyor}}",
-      "announceApplied": "{count, plural, =0 {Hiçbir şey eklenmedi} =1 {Bir proje eklendi} other {# proje eklendi}}"
+      "announceApplied": "{count, plural, =0 {Hiçbir şey eklenmedi} =1 {Bir proje eklendi} other {# proje eklendi}}",
+      "stars": "{count, plural, =1 {1 yıldız} other {# yıldız}}",
+      "open": "GitHub'da {name}",
+      "skillsLabel": "Getireceği diller"
     },
     "atomTags": {
       "label": "Etiketler",
@@ -488,8 +501,7 @@
       "addTone": "Üslup",
       "toneHint": "Aynı dilde ikinci bir ifade, farklı okunan ilanlar için — bir girişimin samimi ilanı, bir bankanın resmî ilanı.",
       "tone": "{tone, select, formal {Resmî} casual {Samimi} technical {Teknik} other {Nötr}}",
-      "editTone": "Bu ifadenin üslubu",
-      "toneTaken": "Bu ifadenin dilinde her üslup için zaten bir ifade var."
+      "editTone": "Bu ifadenin üslubu"
     },
     "entry": {
       "range": "{start} – {end}",
@@ -676,7 +688,6 @@
       "languageHint": "Bu CV hangi dilde çıksın. Her zamanki tercihini kullanmak için dokunma — bugün cevapladığın ilan, genelde yazdığın dilde olmak zorunda değil.",
       "languageDefault": "Her zamanki tercihin"
     },
-    "postingTitle": "İş ilanı",
     "postingHint": "İsteğe bağlı. İlan olmadan genel bir CV alırsın.",
     "optionsTitle": "Bu CV",
     "maxPages": "Sayfa sınırı",
@@ -795,7 +806,9 @@
     "trackAnnounce": "Başvurularına eklendi.",
     "nudgeTitle": "Bu profili sakla",
     "nudgeBody": "Misafir oturumu son etkinliğinden iki saat sonra sona erer. Bir hesapla profilin, CV'lerin ve onları nereye gönderdiğin saklanır — burada yaptığın hiçbir şey kaybolmaz.",
-    "nudgeAction": "Hesap oluştur"
+    "nudgeAction": "Hesap oluştur",
+    "coverLetterSave": ".txt olarak indir",
+    "coverLetterSaved": "Mektup metin dosyası olarak kaydedildi."
   },
   "Fit": {
     "heading": "İlanla ne kadar örtüşüyor",
@@ -807,6 +820,19 @@
     "missingRequired": "Eksik zorunlu beceriler",
     "missingPreferred": "Eksik tercih edilen beceriler",
     "suggestion": "{skill} deneyimin varsa profiline eklemen bu ilanla eşleşmeni güçlendirir."
+  },
+  "Ats": {
+    "heading": "Makine okunabilirliği",
+    "clean": "Temiz okundu: her başlık, her madde ve iletişim satırın PDF'ten metin olarak, sırasıyla çıktı.",
+    "defect": "Bu PDF'in bir kısmı metin olarak geri okunamadı. Bu senin CV'nin değil bizim şablonumuzun kusuru — belge yine de senin, kullanabilirsin; bize de haber gitti.",
+    "headings": "Bölüm başlıkları",
+    "bullets": "Maddeler",
+    "count": "{found, number}/{expected, number}",
+    "contact": "İletişim satırı",
+    "order": "Okuma sırası",
+    "ok": "{ok, select, true {Okunuyor} other {Okunmuyor}}",
+    "orderOk": "{ok, select, true {Korundu} other {Karıştı}}",
+    "intro": "Başvuru takip sistemleri PDF'in görüntüsünü değil içindeki metni okur. Bu PDF'i biz de aynı şekilde geri okuduk."
   },
   "Usage": {
     "label": "Bugünkü kullanım",

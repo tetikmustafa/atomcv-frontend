@@ -43,6 +43,7 @@ import {
   useDeleteApplication,
   usePatchApplication,
 } from '@/hooks/useApplications';
+import { useGenerationHistory } from '@/hooks/useGeneration';
 import { useSession } from '@/hooks/useSession';
 import { APPLICATION_STATUSES, type Application } from '@/lib/api/endpoints/applications';
 import { Link } from '@/lib/i18n/navigation';
@@ -181,6 +182,7 @@ function ApplicationList() {
 
       {rows && rows.length > 0 && (
         <>
+          <h2 className="text-base font-semibold">{t('listTitle')}</h2>
           {/*
             Buttons that say whether they are pressed, rather than a select:
             the counts are the point, and a select hides all but one of them.
@@ -435,6 +437,7 @@ function EditForm({ row, onDone }: { row: Application; onDone: () => void }) {
   const [company, setCompany] = useState(row.company ?? '');
   const [position, setPosition] = useState(row.position ?? '');
   const [appliedAt, setAppliedAt] = useState(row.appliedAt?.slice(0, 10) ?? '');
+  const [generationId, setGenerationId] = useState(row.generationId ?? '');
   const id = row.id!;
 
   return (
@@ -451,6 +454,9 @@ function EditForm({ row, onDone }: { row: Application; onDone: () => void }) {
               company: company.trim(),
               position: position.trim(),
               ...(appliedAt ? { appliedAt } : {}),
+              // Sent only when it changed. The update has no way to clear a
+              // link, so "not linked" is offered only to a row that has none.
+              ...(generationId && generationId !== row.generationId ? { generationId } : {}),
             },
           },
           { onSuccess: onDone },
@@ -486,6 +492,12 @@ function EditForm({ row, onDone }: { row: Application; onDone: () => void }) {
           />
         </div>
       </div>
+      <ResumeSelect
+        id={`resume-${id}`}
+        value={generationId}
+        linked={row.generationId}
+        onChange={setGenerationId}
+      />
       {patch.error && <ErrorPanel error={patch.error} />}
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={patch.isPending}>
@@ -496,5 +508,66 @@ function EditForm({ row, onDone }: { row: Application; onDone: () => void }) {
         </Button>
       </div>
     </form>
+  );
+}
+
+/**
+ * Which resume went with this application (`ApplicationUpdate.generationId`).
+ *
+ * The row's "Open the resume" link is only as good as this value, and until
+ * now nothing could set it after the fact: a row recorded by hand stayed
+ * unlinked for good. The history is read when the form opens, not before —
+ * most visits to this screen never edit a row.
+ */
+function ResumeSelect({
+  id,
+  value,
+  linked,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  linked: string | undefined;
+  onChange: (value: string) => void;
+}) {
+  const t = useTranslations('Applications');
+  const format = useFormatter();
+  const history = useGenerationHistory();
+  const items = history.data?.pages.flatMap((page) => page.items ?? []) ?? [];
+  // A link to a resume older than the first page is still the row's value;
+  // it stays selectable rather than silently reading as another one.
+  const linkedMissing = linked !== undefined && !items.some((item) => item.generationId === linked);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={id}>{t('resume')}</Label>
+      <NativeSelect
+        id={id}
+        value={value}
+        aria-describedby={`${id}-hint`}
+        disabled={history.isPending}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        {linked === undefined && <option value="">{t('resumeNone')}</option>}
+        {linkedMissing && <option value={linked}>{t('resumeLinked')}</option>}
+        {items.map((item) => (
+          <option key={item.generationId} value={item.generationId}>
+            {item.companyName
+              ? t('resumeOptionAt', {
+                  role: item.roleTitle ?? t('resumeGeneral'),
+                  company: item.companyName,
+                  date: format.dateTime(new Date(item.createdAt!), { dateStyle: 'medium' }),
+                })
+              : t('resumeOption', {
+                  role: item.roleTitle ?? t('resumeGeneral'),
+                  date: format.dateTime(new Date(item.createdAt!), { dateStyle: 'medium' }),
+                })}
+          </option>
+        ))}
+      </NativeSelect>
+      <p id={`${id}-hint`} className="text-muted-foreground text-xs">
+        {t('resumeHint')}
+      </p>
+    </div>
   );
 }

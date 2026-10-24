@@ -55,3 +55,37 @@ export function LockToggles({ values, onChange, disabled }: LockTogglesProps) {
     </ul>
   );
 }
+
+/**
+ * "I have checked this" — `verified` on the atom.
+ *
+ * Its own switch rather than a fourth entry above: the three locks are
+ * account features (§ 14), and this one is not, so it is drawn for everybody.
+ */
+export function VerifiedToggle({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  const t = useTranslations('Editor.atom.verifiedToggle');
+  const id = useId();
+
+  return (
+    <div className="flex items-start gap-3">
+      <Switch
+        id={id}
+        aria-describedby={`${id}-hint`}
+        checked={checked}
+        onCheckedChange={onChange}
+      />
+      <div className="flex flex-col gap-0.5">
+        <Label htmlFor={id}>{t('label')}</Label>
+        <p id={`${id}-hint`} className="text-muted-foreground text-xs">
+          {t('hint')}
+        </p>
+      </div>
+    </div>
+  );
+}

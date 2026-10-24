@@ -37,7 +37,10 @@ export function OnboardingSteps({ current }: { current: OnboardingStep }) {
                 aria-hidden="true"
                 className={cn('h-1 rounded-full', state === 'todo' ? 'bg-muted' : 'bg-primary')}
               />
-              <span className="flex items-center gap-1.5 text-xs sm:text-sm">
+              {/* Number above the label on a phone, beside it from `sm`: four
+                  columns of 80px cannot hold "Gözden geçir" on one line, and
+                  a truncated step name is a step nobody can read. */}
+              <span className="flex flex-col items-start gap-1 text-xs sm:flex-row sm:items-center sm:gap-1.5 sm:text-sm">
                 <span
                   aria-hidden="true"
                   className={cn(
@@ -51,7 +54,7 @@ export function OnboardingSteps({ current }: { current: OnboardingStep }) {
                 </span>
                 <span
                   className={cn(
-                    'truncate',
+                    'leading-tight break-words sm:truncate',
                     state === 'todo' ? 'text-muted-foreground' : 'font-medium',
                   )}
                 >

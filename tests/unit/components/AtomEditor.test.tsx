@@ -140,6 +140,23 @@ describe('the atom editor', () => {
   });
 
   /**
+   * `verified` is a fact about the content rather than a selection control,
+   * and the server takes it from a guest — so the one switch that survives
+   * the gate is this one, and pressing it is saved like the others.
+   */
+  it('lets a guest mark an item as checked', async () => {
+    const user = userEvent.setup();
+    const { client } = await renderEditor('atom-1', { authenticated: false });
+
+    await waitFor(() => expect(client.getQueryData(sessionKeys.current())).toBeDefined());
+    await openAtomDetails();
+    await user.click(await screen.findByRole('switch', { name: /checked this/i }));
+
+    await waitFor(() => expect(cached(client)?.verified).toBe(true));
+    await waitFor(() => expect(cached(client)?.version).toBe(1));
+  });
+
+  /**
    * Rule 5. Radix carries this for the slider, and it is worth an assertion
    * because a hand-rolled drag surface is the usual way it gets lost.
    */

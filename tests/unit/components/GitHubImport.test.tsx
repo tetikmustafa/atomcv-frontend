@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { NextIntlClientProvider } from 'next-intl';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -110,6 +110,25 @@ describe('adding projects from GitHub', () => {
     expect(screen.getByTestId('github-effect-ingest-bench')).toHaveTextContent(
       /GitHub's own description/,
     );
+  });
+
+  it('shows what it read each repository as, and links to it', async () => {
+    const user = userEvent.setup();
+    renderImport();
+
+    await look(user);
+    await screen.findByText('query-monitor');
+
+    expect(screen.getByText('900 stars')).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: 'query-monitor on GitHub' });
+    expect(link).toHaveAttribute('href', 'https://github.com/elifyildirim/query-monitor');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    const languages = screen.getAllByRole('list', { name: 'Languages it brings' });
+    expect(
+      within(languages[0]!)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['go', 'postgres']);
   });
 
   it('sends only what was picked, and says how many landed', async () => {

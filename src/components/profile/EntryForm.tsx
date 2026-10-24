@@ -153,14 +153,15 @@ export function EntryForm({ section, entry, onDone }: EntryFormProps) {
     type: 'text' | 'date' | 'url' = 'text',
     required = false,
   ) => {
-    const errorId = `entry-${name}-error`;
+    const fieldId = `${controlsId}-field-${name}`;
+    const errorId = `${fieldId}-error`;
     const message = errors[name]?.message;
 
     return (
       <div className="flex flex-col gap-2">
-        <Label htmlFor={`entry-${name}`}>{label}</Label>
+        <Label htmlFor={fieldId}>{label}</Label>
         <Input
-          id={`entry-${name}`}
+          id={fieldId}
           type={type}
           {...register(name)}
           {...(required ? { 'aria-required': true } : {})}
