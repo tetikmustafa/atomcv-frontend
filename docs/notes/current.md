@@ -33,159 +33,55 @@ kalemlerinin tamamıydı — kasıtlı boşluklar dahil. Blog ve üçüncü aray
 kapsam dışı bırakıldı, ikisi de frontend'in kendi kararıyla; gerekçeleri
 arşivde.
 
-### Gerçek uca karşı ölçüm, ve atlanmış bir madde (2026-09-20)
+### Kapanış denetimi ve son arayüz (2026-10-23 / 10-24)
 
-**`B-101` sıraya hiç girmemişti.** Analizde "küçük iş" diye durdu ve
-D1…D14'ün hiçbirine yazılmadı; kapanış "on yedisi de kapandı" diye bildirildi
-ve yanlıştı. Üstelik atlanan şey, `F-038`'de tekrar tekrar işaret edilen
-muhafızın ta kendisi — **şemanın dokümanı geçmesine izin veren şeyin
-yokluğu**. Bir kapanış listesinin kendi kalemini düşürmesi, listenin ölçülmesi
-gereken şey olduğunu söylüyor.
+**Üç paralel denetim** (spec↔kod, tel kapsaması, arayüz) işlevleri neredeyse
+tam buldu ve görsel katmanı değil: stok gri shadcn, `src`'de 7 responsive
+sınıf, 375px'te taşan bir başlık, kart/rozet/iskelet/boş durum yok. Görsel yön
+**monokrom ve cilalı** seçildi (kullanıcı kararı): kırık beyaz sayfa üstünde
+beyaz kartlar, tek renk hâlâ yıkıcı kırmızı. Kayıt satır satır commit'lerde;
+burada yalnız sonradan sorulacak olanlar.
 
-Şimdi CI'da: `contract-check` backend'in `main/openapi.json`'ını çekiyor,
-tipleri yeniden üretiyor ve commit'liyle farkta düşüyor. **`main`, `build`
-değil** — maddenin asıl bulgusu buydu: eski URL üretilen ve gitignore'lu bir
-yolu gösteriyordu, yani hep 404 veriyor ve iş hep "skipping" dalına gidiyordu.
-**Atlayan bir muhafız, hiç olmayandan kötüdür: başarı bildirir.** `curl`
-`--fail-with-body` ile, çünkü sessizlik bu işin ortadan kaldırmak için var
-olduğu arıza biçimi. Yerelde koşuldu: backend'in commit'li şeması bizim
-`api.d.ts`'imizle **birebir**.
-
-**Yeni yüzeyin hepsi yalnız MSW'ye karşı doğrulanmıştı**, ve mock kendisiyle
-çelişemez. `:8080`'e karşı bir sonda koşuldu (§ Test ve ölçüm'ün kuralı) —
-etiketler, şablon registry'si, özelleştirmeler, GitHub önerileri, bölüm düzeni,
-`emphasize`/`note` sınırları. 18 kontrolün 17'si geçti; "düşen" biri sondanın
-kendi hatasıydı (`POST /auth/session` diye bir uç yok). **Üç fark çıktı.**
-
-**1. Registry'nin sayıları § 33.5'in tablosundan farklı.** Klasik 53 (tablo
-~54), modern 52 (tablo ~50). Bölüm kendi sayılarını "katalog için, yaklaşık"
-diye yazıyor ve uç zaten **ölçülmüş** cevabı vermek için var — yani çelişki
-değil, ama mock tabloyu kopyalamıştı. Kopyalanmış bir tablo *doğru görünür*:
-fark, ekranın sunucunun hiç göndermediği bir rakamı basması için yeterli.
-Mock artık ölçülen değerleri taşıyor, ve **sürümler de aynı değil** (klasik 6,
-modern 3, kompakt 2 — ilk taslak üçüne de 6 vermişti).
-
-**2. `POST /customizations` yankılamıyor, çözüyor.** Yalnız `fontSizePt`
-gönderilen bir istek, kenar boşluğu, satır aralığı, aile ve vurgu rengi
-şablonun kendisinden doldurulmuş olarak geri geliyor. Yankılayan bir mock,
-ekranın **boşluklara** karşı yazılıp üretimde gerçek sayılarla karşılaşmasına
-izin verirdi — sürprizin yanlış yönü: geliştirmede "—", dağıtımda "0.55in"
-gösteren bir liste, canlıya çıkana kadar kimsenin bulmadığı bir kusurdur.
-
-**3. Bilinmeyen bir `customizationId` reddedilmiyor** — `202`, iş kuyruğa
-giriyor. Uç açıklaması "başkasına ait bir set bulunamaz" diyor. Bu
-`B-116`'nın `two_column`'uyla **aynı şekil**: kişi bir şey seçiyor, hiçbir şey
-söylenmiyor, belgesi başkasını basıyor. `F-040`.
-
-**Bir de küçük bir alan adı farkı:** çok uzun bir terim `emphasize[0]` diye
-geri geliyor, `emphasize` diye değil — listeyi adlandıran bir cümleyle
-içindeki girdiyi adlandıran cümle arasındaki fark.
-
-**Kapasite testi sayıya değil iddiaya bağlandı.** Ölçülen değerleri teste
-yazmak, bir rakamı sabitlemek olurdu; test artık ucu okuyup ekranın **onu**
-bastığını doğruluyor — birisi makul görünen bir sayıyı koda gömdüğü gün düşer.
-
-**`B-100`…`B-116` ACK'lendi ve indi.** `to-frontend.md` 347 → **43 satır**;
-satır satır kayıt `resolved/to-frontend-2026-09.md`'de.
-
-### `B-117`…`B-119` — backend'in üç cevabı (2026-09-21)
-
-**`B-117` kod yazdırmadı:** dördü de D6 ve D12'de inmişti (`note`,
-`customizationId`, `GET /templates`, `/customizations` + 20 tavanı).
-
-**Sapma — tipler koşan sunucudan değil, backend'in commit'li şemasından
-üretildi.** `:8080`'deki derleme bayattı: `npm run gen:api` `api.d.ts`'i **hiç
-değiştirmedi**, ne `maxPages` ne `language` içindeydi. Kaynak
-`../atomcv-backend/openapi.json` (CI'ın `contract-check`'i de `main`'den onu
-çekiyor). **Bayat bir sunucu, eksik bir şemadan ayırt edilemez** — ikisi de
-"alan yok" der, ve dokümanın yanıldığı sonucuna götürür. Ayırt eden şey,
-şemanın **iki kopyasının** olması oldu.
-
-**`B-119` bir politikayı tersine çevirdi, kuralı değil.** `B-114` kaydı
-"`choose_language` çizilmiyor" diyor ve gerekçesi *cevabın gidecek alanı yok*
-idi; alan geldi, düğme çizildi. Yokluğunu doğrulayan test silinmedi,
-**yerine geçeni yazıldı** — o test zaten "alan indiği gün bu düğme borçtur"
-demek için vardı. Dropping kuralı yerinde: `keep_top_pinned` hâlâ düşüyor.
-Seçicinin listesi **iki yarısı da sunucunun**: reddin `detectedCandidates`'i
-önce (onaylanması en olası cevap), sonra `capabilities.allowedLanguages`.
-Beyan **dosya değişince düşer** — bir CV hakkında verilen cevap ötekini
-bağlamaz, üstelik beyan tespiti atlattığı için sessizce yanlış dil yazardı.
-
-**`B-118`'in notu yalnız üretimin kendi sınırına karşı çiziliyor.** `maxPages`
-yoksa not yok: eksik bir alan "sınır bir sayfaydı" demek değil. Satırda da
-**tek olgu** — sayfa sayısının yanına "kısa" rozeti aynı şeyi ikinci kez, ve
-doğru çıkmış bir belgeden daha yüksek sesle söylerdi. Bayat bir
-`customizationId`'nin `404`'ünde ekran **cümle yazmıyor**: paneli sunucunun
-metni çiziyor, ekranın yaptığı yalnız ölü seçimi düşürüp listeyi tazelemek —
-onarım, hata arayüzü değil (kural 7). Onarılmazsa bir sonraki basış aynı ölü
-id'yi yollar, yani çıkış değil döngü olur.
-
-**Kapı sırası ölçüldü, madde açılmadı.** Backend yeniden başlayınca üç sonda:
-11 MB + `language=zz` → **`413`**; `.png` + `language=zz` → **`400`,
-`fields:["language"]`** (`415` değil); aynı `.png` dilsiz → **`409`**. Sıra
-**413 → `400` → 409 → 415**; mock `language`'ı 413'ün önüne koymuştu,
-düzeltildi. Sorulacak değil bakılacak bir şeydi — `B-051`'de kapı sırası bir
-kez varsayılmış ve yanlış çıkmıştı. Aynı koşuda `gen:api` commit'li şemadan
-üretilenle **bayt bayt aynı** dosyayı verdi, yani yukarıdaki sapma kapandı.
-
-### Doküman–kod denetimi: üç yüzey telde vardı, ekranda yoktu (2026-09-21)
-
-**Bütün dokümanlar koda karşı ölçüldü** — spec'in 19 dosyası, ürün konsept
-dokümanı, handoff, notlar — ve taban sağlam çıktı: 61/61 uç bağlı, şemanın 198
-alanının 193'ü okunuyor, 40/40 hata kodu iki dilde, 605/605 çeviri anahtarı,
-34 kapalı sözlükte karşılıksız değer yok.
-
-**Ama üç yüzey kasıtlı boşluk tablosunda da değildi, yani unutulmuşlardı.**
-Aradaki fark önemli: bu tablodaki her satır bir karardır, kaydı olmayan bir
-eksik ise kimsenin vermediği bir karardır.
-
-- **Veri export.** İstemci fonksiyonları iki aşama önce yazılmış,
-  **çağıran yoktu** — oysa üç ayrı kullanıcıya görünen cümle o hakkı vaat
-  ediyor (gizlilik politikasının hakları, şartların bildirim süresi,
-  `GENERATION_PAUSED`'ın kendi metni), § 58.2 "en önemli güvence" diyor ve
-  EK C.1 yayın kapısına kutu koymuş. `DataExport` indi, herkese — anonim
-  dahil, çünkü uç `401` beyan etmiyor ve iki saatte sönecek bir profil
-  kopyalanmaya en çok değer olan.
-- **Çıktı dili — § 38.1'in üçüncü ekseni.** `GenerationRequest.language`
-  gönderilmiyordu, `defaults.cvLanguage` ve `coverLetterLanguage` hiç
-  okunmuyordu. `GenerateScreen`'in yorumu "sayfa bütçesi ve dil profilin karar
-  verdiği yerde kalır" diyordu — **profilde de o kararı verdirecek bir kontrol
-  yoktu**, yani zincir iki ucundan da kopuktu. Artık üretim başına
-  (`Directives`, kapalı panelde) **ve** varsayılan olarak seçilebiliyor.
-- **Yazım stili.** `writingStyle`'ın dördü de yazılabilirdi; frontend'deki tek
-  izi `CvAppearance`'ın onları **silinmekten koruması** idi.
-
-**Dördüncüsü uygularken çıktı: `defaults.maxPages`.** Ürünün merkezî vaadi, ve
-yalnızca sunucu `increase_page_limit` çözümünü gönderdiğinde isteğe
-ulaşıyordu. Aynı bölüme girdi.
-
-**Seçeneklerin kaynağı `enabledLanguages`, `allowedLanguages` değil.** İkincisi
-profilin hangi dilleri *tutabileceğini* söyler; ekranda sorulan şey bu CV'nin
-hangi dilde basılacağı. Sözcüklemesi olmayan bir dil seçtiren liste,
-sunucunun karşılayamayacağı bir seçim sunar. Tek dil varsa seçici çizilmiyor —
-anonim oturumun hâli bu.
-
-**`useReplacePreferences` artık birleştiriyor.** İki ekran tercih yazdığı anda
-"sahip olmadığın alanları da taşı" kuralı iki yerde hatırlanmak zorunda
-kalıyordu, ve unutan kopya bir bölümü sessizce sıfırlardı. `writingStyle`
-**değiştiriliyor** (tek sahibi var, boşaltılan kutu bir silmedir), `defaults`
-**birleştiriliyor** (iki sahibi var), `defaults.appearance` o birleşmenin bir
-anahtarı olduğu için yine bütün gidiyor — "sıfırlama bir eksiltmedir" böyle
-doğru kalıyor. Muhafızı negatif kontrolle doğrulandı: birleştirme geri
-alındığında test düşüyor.
-
-**Bundle:** ayarlar 243.8 → **245.9**, üretim 227.5 → **229.5**, onboarding
-221.6 → **224.0** (tavan 280 / kendi payı 105). `next/dynamic` gerekmedi.
-
-**Backend'e beş madde** — `F-041`…`F-045`. Dördü onların sahip olduğu metin,
-biri gerçek bir tel sorusu (cover letter'ın dili istek başına seçilemiyor).
+- **Kabuk.** `lg`'den yukarı yapışkan kenar çubuğu, altında başlık + `Sheet`;
+  ikisi de tek `AppSidebar`. Sheet kapalıyken içeriği DOM'da yok — bu yüzden
+  link adları iki kez görünmüyor. Footer kök layout'tan çıktı, her alan kendi
+  çiziyor. Arayüz dili için `LocaleSwitcher` (uygulama) ve düz linkler
+  (pazarlama, 0 KB JS korunuyor).
+- **Ekleme — `NativeSelect`.** Dokuz el yapımı `<select>` tek stile indi; Radix
+  select değil, çünkü telefonda platform seçicisi daha iyi ve popper her rotaya
+  kilobayt eklerdi.
+- **Ekleme — atom kartı katlanır.** Kontroller "Ayrıntılar"ın arkasında,
+  durumları rozet olarak görünür. Testler `tests/support/atomDetails.ts` ile
+  düğmeye basarak açıyor.
+- **Sapma — başvuru takibi "varsayılan açık" değil, tek basış.** Konsept § 9
+  "varsayılan açık" diyor; sonuç ekranı ilanın rolü/şirketiyle (`B-124`) ön
+  dolu bir kart sunuyor ve basılmayı bekliyor: gönderilmeyebilecek bir
+  başvurunun kaydını kendiliğinden yazmak kişinin planı hakkında bir tahmin olurdu.
+- **PDF önizleme isteğe bağlı yükleniyor**: her indirme belgeyi yeniden derliyor
+  (§ 57.4, saklama yok), kendiliğinden yüklenen önizleme her ziyarette bir
+  derleme olurdu. CSP `frame-src blob:` backend'de eklendi.
+- **Başvuruda `generationId` yoksa artık bir şey iddia edilmiyor.** "O CV
+  silindi" diyordu; elle eklenen her satırda da `null`, tel ikisini ayıramaz.
+- **Profili silme** (`DELETE /profile`) — şema ölçüldü: `generations` ve
+  `template_customizations` `profiles`'tan `CASCADE`, başvurular `SET NULL`.
+  Onay metni bunu söylüyor.
+- **Backend'e bu turda giden düzeltmeler:** `B-120`…`B-124` (yazı tipi
+  sözlüğü, mektup dili, içe aktarma fazları, `keepPinned`, sonuçta rol/şirket +
+  misafire giriş/bölüm kontrolleri kapalı), OTLP log anahtarı, script modları,
+  log rotasyonu, frontend health-check, `APP_BASE_URL` muhafızı.
 
 ### Dağıtım günü — sırayla denenecekler
 
 Kod tarafında hiçbiri beklemiyor; hepsi **ölçüm** bekliyor.
 
-1. **`NEXT_PUBLIC_SITE_URL`'i ayarla.** Canonical, hreflang, `robots.txt` ve
-   `sitemap.xml` hepsi ondan kuruluyor; ayarlanmazsa localhost'a düşüyor.
+1. **İmajı `--build-arg NEXT_PUBLIC_SITE_URL=…` ve
+   `--build-arg NEXT_PUBLIC_TURNSTILE_SITE_KEY=…` ile kur** (Dockerfile,
+   2026-10-24). İkisi de derlemede gömülüyor; konteynere sonradan verilen ortam
+   değişkeni hiçbir şeyi değiştirmez. Site URL'si yoksa canonical, hreflang,
+   `robots.txt` ve `sitemap.xml` localhost'u adlandırır; site anahtarı yoksa
+   widget çizilmez ve prod — challenge'ı zorunlu tutan — her girişi ve misafir
+   işlemini `CHALLENGE_FAILED` ile reddeder. Dockerfile bu argümanları
+   **almıyordu** (kapanış turunda bulundu).
 2. **CSP'yi gözle** (`B-100`). Politika `default-src 'self'` idi ve
    Turnstile'ın script'iyle iframe'ini sessizce blokluyordu — düzeltildi, ve
    düzeldiğinin tek kanıtı widget'ın çizilmesi.
@@ -227,8 +123,21 @@ taraması, tema, `canAddAlternatives`, bağımlılıklar), **D1…D14'ün tamam�
 
 ## Kasıtlı boşluklar — sorulmadan "düzeltilmez"
 
+**2026-10-24'te baştan sayıldı.** Tablonun on üç satırından dokuzu ya kapandı ya
+zaten bayattı (kodda vardı): PDF önizleme, `keep_top_pinned` (`B-123`),
+`fontFamily`'nin dördüncüsü (`B-120`), başvuru filtresi, mark farkında editör
+(D13), profil dil eksenleri (D13), bölüm düzeni (D13), sözcüklemeyi tek başına
+silme (D13), "bir sayfadan kısa" notu (`B-118`). Kalanlar:
+
 | Boşluk | Neden böyle |
 |---|---|
+| **"Yeniden hesaplanıyor…" göstergesi yok** | § 33.3/§ 37.5 istiyor, durumu yayımlayan uç yok, ve `B-091` ekranda bir şey gerekmediğini söylüyor. Beklenmeyen bir iş için bekleme hissi üretmek olurdu. |
+| **Atom başına skor gösterilmiyor** | Konsept § 10.3 "skor görünürlüğü" diyor; § 35.3.1 skoru **bilerek** yayımlamıyor (madde yanındaki sayı kişinin kendi emeği hakkında bir hüküm gibi okunur). Eşleşen terimler ve dışarıda kalma nedeni gösteriliyor. |
+| **Sentry bağlı değil** | Gönderilecek yer yokken yazılan kod çalıştığını hiç görmeyeceğimiz bakım yükü; dağıtım günü listesinde. |
+| **Uygulama içi sürüm duyurusu yok** | Bir sürümü yayımlayan uç yok; banner iki tarafın da sahip olmadığı bir doğruluk kaynağı olurdu. `CHANGELOG.md` var. |
+| **Profil tamamlanma eşiği üretim düğmesini önceden kilitlemiyor** | Şema yalnız `completeness` (yüzde) veriyor, hangi şartın eksik olduğunu değil; ret `INSUFFICIENT_PROFILE` + `complete_profile` çözümüyle geliyor. Eksik listesi yayımlanırsa düğme önceden konuşabilir. |
+
+---|---|
 | **Sonuç ekranında PDF önizlemesi yok** | Ölçülmüş bir karar: react-pdf ~300 KB ve gösterebileceği tek yeni şey PDF'in kendisi. *(Aynı satır bir zamanlar uygunluk raporunu da sayıyordu; rapor `B-041` ile indi ve 2026-08-25'te gerçek uca karşı doğrulandı. Kasıtlı boşluk listesi bayatlayabiliyor — denetlenmesi gerekiyor.)* |
 | **"Bir sayfadan kısa CV" notu yazılmadı** | `pageCount` tam sayı ve sunucu "sayfa dolmadı" diye bir sinyal göndermiyor. Sinyalsiz yazılırsa her CV'de çıkar. |
 | **`keep_top_pinned` düğmesi çizilmiyor** | Şema sabitlenmiş atomları isteğe koyacak bir alan yayımlamıyor; çizilse basılınca hiçbir şey yapmazdı. |

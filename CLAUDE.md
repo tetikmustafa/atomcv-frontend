@@ -273,7 +273,6 @@ npm run test:e2e     # Playwright, on port 3100
 npm run size         # build, then check the bundle budget
 npm run size:check   # check only — reads an existing build, used by CI
 npm run gen:api      # regenerate API types (backend must be running)
-node scripts/dev-mocked.mjs   # next dev on :3200 against the MSW handlers
 ./scripts/check-doc-sizes.sh   # rolling docs still within their limits
 ```
 
