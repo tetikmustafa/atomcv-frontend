@@ -906,7 +906,25 @@
       "preparing": "Dosya hazırlanıyor…",
       "formats": "JSON tam kopya, başka bir program okusun diye. Markdown okunabilir olan, başka bir yere yapıştırmak için — yalnız bu uygulamanın kullandığı kısımları dışarıda bırakır.",
       "announceStarted": "İndirme başladı"
-    }
+    },
+    "description": "CV'lerinin nasıl göründüğü ve okunduğu, verilerin ve hesabın.",
+    "sectionsLabel": "Ayar bölümleri",
+    "nav": {
+      "appearance": "Görünüş",
+      "defaults": "Yazım",
+      "data": "Verilerin",
+      "emails": "E-postalar",
+      "danger": "Silme"
+    },
+    "dangerTitle": "Tehlikeli bölge",
+    "dangerIntro": "İkisi de kalıcı. İstersen önce yukarıdan verilerini indir.",
+    "deleteProfileTitle": "Profile baştan başla",
+    "deleteProfileIntro": "Profilini, içindeki her şeyi ve ondan yapılmış her CV'yi siler. Hesabın kalır, başvuru listen de.",
+    "deleteProfileAction": "Profilimi sil",
+    "deleteProfileConfirmTitle": "Profilin silinsin mi?",
+    "deleteProfileConfirmBody": "{sections, plural, =0 {Her bölüm} =1 {Bir bölüm} other {# bölüm}} ve {atoms, plural, =0 {her öğe} =1 {bir öğe} other {# öğe}}, tüm ifadeleri, etiketleri ve kilitleriyle silinir — onlarla birlikte bu profilden yapılmış her CV ve kayıtlı görünüşlerin de. Hesabın kalır; başvuruların yerinde durur ama işaret ettikleri CV'ler olmadan. Geri alınamaz.",
+    "deleteProfileConfirm": "Profili sil",
+    "deleteProfileDone": "Profilin silindi."
   },
   "Appearance": {
     "title": "CV’nin görünüşü",
@@ -925,7 +943,15 @@
       "removeBody": "Bunlarla ürettiğin CV'ler etkilenmiyor — her biri kendi kurulduğu ayarları taşıyor.",
       "removeConfirm": "Sil",
       "full": "{max, number} setin hepsi dolu. Yenisini saklamak için birini sil.",
-      "announceKept": "{name} adıyla saklandı"
+      "announceKept": "{name} adıyla saklandı",
+      "savedSummary": "{family} · {size} pt · {margin} in · {spacing}×",
+      "rename": "Yeniden adlandır",
+      "renameLabel": "{name} için yeni ad",
+      "renameSave": "Adı kaydet",
+      "update": "Geçerli ayarları kullan",
+      "updateHint": "{name} içindekini yukarıdaki görünüşle değiştir.",
+      "updated": "{name} artık geçerli ayarları tutuyor.",
+      "renamed": "Adı {name} oldu."
     },
     "templateCapacity": "Sayfada yaklaşık {lines, number} satır",
     "templates": {

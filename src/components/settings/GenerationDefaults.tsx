@@ -42,6 +42,7 @@ import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useProfile, useReplacePreferences } from '@/hooks/useProfile';
@@ -180,9 +181,12 @@ export function GenerationDefaults() {
   const languageOptions = [LANGUAGE_FOLLOWS_POSTING, ...languages];
 
   return (
-    <section className="flex flex-col gap-6" aria-labelledby={`${fieldId}-heading`}>
+    <section
+      className="bg-card shadow-card flex flex-col gap-6 rounded-xl border p-5 sm:p-6"
+      aria-labelledby={`${fieldId}-heading`}
+    >
       <div>
-        <h2 id={`${fieldId}-heading`} className="text-lg font-medium">
+        <h2 id={`${fieldId}-heading`} className="text-lg font-semibold">
           {t('title')}
         </h2>
         <p className="text-muted-foreground text-sm">{t('intro')}</p>
@@ -219,9 +223,8 @@ export function GenerationDefaults() {
             <p id={`${fieldId}-cv-language-hint`} className="text-muted-foreground text-xs">
               {t('cvLanguageHint')}
             </p>
-            <select
+            <NativeSelect
               id={`${fieldId}-cv-language`}
-              className="border-input bg-background w-fit rounded-md border px-3 py-2 text-sm"
               value={draft.cvLanguage}
               aria-describedby={`${fieldId}-cv-language-hint`}
               onChange={(event) => set('cvLanguage', event.target.value)}
@@ -233,14 +236,13 @@ export function GenerationDefaults() {
                     : (languageName(code, locale) ?? code)}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </div>
 
           <div className="flex flex-col gap-2">
             <Label htmlFor={`${fieldId}-letter-language`}>{t('coverLetterLanguageLabel')}</Label>
-            <select
+            <NativeSelect
               id={`${fieldId}-letter-language`}
-              className="border-input bg-background w-fit rounded-md border px-3 py-2 text-sm"
               value={draft.coverLetterLanguage}
               onChange={(event) => set('coverLetterLanguage', event.target.value)}
             >
@@ -251,7 +253,7 @@ export function GenerationDefaults() {
                     : (languageName(code, locale) ?? code)}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </div>
         </>
       )}

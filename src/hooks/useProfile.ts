@@ -15,9 +15,10 @@
  */
 
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { profileKeys } from '@/lib/api/queryKeys';
+import { appearanceKeys, applicationKeys, generationKeys, profileKeys } from '@/lib/api/queryKeys';
 import type { Version } from '@/lib/api/etag';
 import {
+  deleteProfile,
   addVariant,
   applyGitHubSuggestions,
   createAtom,
@@ -884,6 +885,37 @@ export function invalidateWholeProfile(client: QueryClient) {
   void client.invalidateQueries({ queryKey: profileKeys.entries() });
   void client.invalidateQueries({ queryKey: ATOM_COLLECTIONS });
   void client.invalidateQueries({ queryKey: profileKeys.head() });
+}
+
+/**
+ * Deleting the whole profile, and starting again (`DELETE /profile`).
+ *
+ * It had a client function and no caller: re-importing with `mode=replace`
+ * and deleting the account were the only ways to start over, and the first
+ * needs a CV to hand while the second loses the account.
+ *
+ * **Measured against the schema, the cascade is wider than the profile**:
+ * `generations.profile_id` and `template_customizations.profile_id` are
+ * `ON DELETE CASCADE`, so every resume and every saved appearance goes with
+ * it, and applications lose the resume they pointed at (`SET NULL`). The
+ * confirmation says so, and this drops all four caches — the next read of the
+ * profile is a fresh, empty one the server creates.
+ */
+export function useDeleteProfile() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      deleteProfile(
+        client.getQueryData<Versioned<Profile>>(profileKeys.head())?.version as Version,
+      ),
+    onSuccess: () => {
+      invalidateWholeProfile(client);
+      void client.invalidateQueries({ queryKey: generationKeys.all });
+      void client.invalidateQueries({ queryKey: appearanceKeys.customizations() });
+      void client.invalidateQueries({ queryKey: applicationKeys.list() });
+    },
+  });
 }
 
 /**

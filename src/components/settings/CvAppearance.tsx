@@ -215,9 +215,12 @@ export function CvAppearance() {
   const fontSize = appearance.fontSizePt;
 
   return (
-    <section className="flex flex-col gap-6" aria-labelledby="cv-appearance">
+    <section
+      className="bg-card shadow-card flex flex-col gap-6 rounded-xl border p-5 sm:p-6"
+      aria-labelledby="cv-appearance"
+    >
       <div className="flex flex-col gap-1">
-        <h2 id="cv-appearance" className="text-lg font-medium">
+        <h2 id="cv-appearance" className="text-lg font-semibold">
           {t('title')}
         </h2>
         <p className="text-muted-foreground text-sm">{t('intro')}</p>
