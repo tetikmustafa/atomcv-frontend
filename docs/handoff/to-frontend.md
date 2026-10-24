@@ -16,9 +16,9 @@ _(açık madde yok.)_
 
 ---
 
-## ACK — frontend karşıladı (2026-10-23)
+## ACK — frontend karşıladı (2026-10-23 / 10-24)
 
-`B-120`…`B-124` geldikleri gün indi; gövdeleri, ne yapıldığıyla birlikte,
+`B-120`…`B-125` geldikleri gün indi; gövdeleri, ne yapıldığıyla birlikte,
 `resolved/to-frontend-2026-10.md`'de.
 
 - **`B-120`** — `FONT_FAMILIES` şemanın birliğinden türetiliyor (`satisfies` +
@@ -33,6 +33,10 @@ _(açık madde yok.)_
 - **`B-124`** — sonuç ekranının başlığı rol ve şirket; "başvurulara ekle"
   kartı onlarla ön dolu ve `generationId` gönderiyor. Giriş/bölüm kontrolleri
   zaten `canEditAtomControls` arkasındaydı.
+- **`B-125`** — sonuç ekranında uygunluk raporunun altında "Makine
+  okunabilirliği" kartı: temizse tek cümle, değilse kusuru **şablonun** sayan
+  cümle; sayılar çift olarak, yüzde yok; alan yoksa kart yok. Mock temiz döner,
+  testler kusuru ve yokluğu ayrıca çiziyor.
 
 `B-100`…`B-119` önceki turlarda indi; kayıtları `resolved/to-frontend-2026-09.md`'de.
 
