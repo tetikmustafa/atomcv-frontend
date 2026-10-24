@@ -402,6 +402,7 @@ function generationBody(job: MockGenerationJob): Schemas['GenerationResponse'] {
     // `B-042`. Omitted rather than blank, the way `F-010` settled it.
     ...(job.contentLanguage ? { contentLanguage: job.contentLanguage } : {}),
     ...(job.postingLanguage ? { postingLanguage: job.postingLanguage } : {}),
+    ...(job.requestedLanguage ? { requestedLanguage: job.requestedLanguage } : {}),
     // Absent when none was written, which is a state the reader can act on
     // rather than an error: a letter that could not be written does not
     // fail the generation (`B-056`).
@@ -706,6 +707,9 @@ export const generationHandlers = [
         control that has just been drawn.
       */
       contentLanguage: body.language ?? 'tr',
+      // The mock always manages the language it was asked for; a test that
+      // wants the fallback rewrites `contentLanguage` on the job.
+      ...(body.language ? { requestedLanguage: body.language } : {}),
       ...(jobDescription === ''
         ? {}
         : { postingLanguage: looksEnglish(jobDescription) ? 'en' : 'tr' }),

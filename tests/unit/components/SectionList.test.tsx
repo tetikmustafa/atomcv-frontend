@@ -62,6 +62,11 @@ function wordingOf(atom: HTMLElement): string {
   const plain = within(atom).queryByRole('textbox', { name: 'Text' });
   if (plain) return (plain as HTMLTextAreaElement).value;
 
+  // A marked wording reads as its sentence until its parts are opened, and
+  // closed there is nothing unsaved for the preview to disagree with.
+  const parts = within(atom).queryAllByLabelText(/^Part \d+$/);
+  if (parts.length === 0) return within(atom).getByTestId('wording-preview').textContent ?? '';
+
   return within(atom)
     .getAllByLabelText(/^Part \d+$/)
     .map((field) => (field as HTMLInputElement).value)
@@ -143,7 +148,8 @@ describe('the section list', () => {
       stop. What is being tested here is the flush on unmount, and that is the
       same either way.
     */
-    const field = within(first).getByLabelText('Part 1');
+    await user.click(within(first).getByRole('button', { name: /^Edit the text of/ }));
+    const field = await within(first).findByLabelText('Part 1');
 
     await user.clear(field);
     await user.type(field, 'Half a thought ');

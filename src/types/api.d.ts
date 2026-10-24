@@ -1875,6 +1875,16 @@ export interface components {
              * @example en
              */
             postingLanguage?: string;
+            /**
+             * @description The language the request asked for, absent when it named none.
+             *     When it differs from `contentLanguage` the translation that
+             *     language needed could not be finished, and the CV was written
+             *     in the profile's own language instead -- one document is
+             *     written in one language. Asking again usually completes it:
+             *     the wordings already translated were kept.
+             * @example tr
+             */
+            requestedLanguage?: string;
             /** @description The covering letter, as plain text with blank lines between its parts */
             coverLetter?: string;
             /** @description What this person already said about it, and the 48-hour diagnostic permission if they opened one. Absent when they have not judged it. */

@@ -28,5 +28,30 @@ export const formats = {
       hour: 'numeric',
       minute: 'numeric',
     },
+    /**
+     * The hour alone, for an instant the reader already knows is today — the
+     * anonymous session's end, two hours out at most.
+     *
+     * Named, because ICU resolves `{x, time, short}` through **this** table and
+     * not through a time-only default: `short` above carries the date, so a
+     * message that printed `{x, date, short} {x, time, short}` showed the date
+     * and the hour twice — "25 Oct 2026, 03:00 25 Oct 2026, 03:00" under the
+     * quota counter, measured on 2026-10-24. A message wanting both now asks
+     * for `short` once.
+     */
+    clock: {
+      hour: 'numeric',
+      minute: 'numeric',
+    },
+    /**
+     * A calendar day, for a value the wire sends as `format: date` — an
+     * application's date. Format it in UTC: the string is a day, not an
+     * instant, and the reader's zone would move it.
+     */
+    day: {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    },
   },
 } satisfies Formats;

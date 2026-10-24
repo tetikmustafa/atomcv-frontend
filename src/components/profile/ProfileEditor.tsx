@@ -51,7 +51,10 @@ export function ProfileEditor({ embedded = false }: { embedded?: boolean }) {
   if (error) return <ErrorPanel error={error} onRetry={() => void refetch()} />;
 
   const profile = data.data;
-  const headline = profile.headline || t('untitled');
+  // The person's name first: an import fills the contact block and rarely a
+  // headline, and "Untitled profile" over a profile that opens with the
+  // person's own name read as if the import had lost it.
+  const headline = profile.contact?.name?.trim() || profile.headline || t('untitled');
 
   return (
     <div className="flex flex-col gap-6 sm:gap-8">

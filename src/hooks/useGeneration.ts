@@ -87,8 +87,8 @@ export function useDownloadGeneration() {
  * position — a missing entry would mean the metric does not exist, and there
  * is no such state (`B-039`).
  */
-export function useUsage() {
-  return useQuery<Usage[]>({ queryKey: accountKeys.usage(), queryFn: getUsage });
+export function useUsage({ enabled = true }: { enabled?: boolean } = {}) {
+  return useQuery<Usage[]>({ queryKey: accountKeys.usage(), queryFn: getUsage, enabled });
 }
 
 /**

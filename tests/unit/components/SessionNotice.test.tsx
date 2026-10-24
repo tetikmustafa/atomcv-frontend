@@ -6,6 +6,7 @@ import { http, HttpResponse } from 'msw';
 import { axe } from 'jest-axe';
 import { describe, expect, it } from 'vitest';
 import { SessionNotice } from '@/components/session/SessionNotice';
+import { formats } from '@/lib/i18n/formats';
 import type { Session } from '@/lib/api/endpoints/auth';
 import { sessionKeys } from '@/lib/api/queryKeys';
 import { server } from '@/mocks/node';
@@ -34,7 +35,7 @@ async function renderNotice() {
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <NextIntlClientProvider locale="en" messages={en}>
+      <NextIntlClientProvider locale="en" messages={en} formats={formats}>
         <QueryClientProvider client={client}>{children}</QueryClientProvider>
       </NextIntlClientProvider>
     );

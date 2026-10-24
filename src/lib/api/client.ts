@@ -82,7 +82,7 @@ async function send(
   method: string,
   path: string,
   body?: unknown,
-  options: RequestOptions & { contentType?: string } = {},
+  options: RequestOptions & { contentType?: string; isRetry?: boolean } = {},
 ): Promise<Response> {
   assertBrowser(path);
 
@@ -115,10 +115,9 @@ async function send(
   // A missing token sends no header rather than an empty one: before the
   // first response there is nothing to echo, and `403 CSRF_TOKEN_INVALID`
   // with a reload is a better outcome than a header that claims a value.
-  if (isUnsafeMethod(method)) {
-    const token = readCsrfToken();
-    if (token) headers.set(CSRF_HEADER, token);
-  }
+  const unsafe = isUnsafeMethod(method);
+  const csrfToken = unsafe ? readCsrfToken() : undefined;
+  if (csrfToken) headers.set(CSRF_HEADER, csrfToken);
 
   let response: Response;
   try {
@@ -135,9 +134,53 @@ async function send(
     throw new NetworkError(cause);
   }
 
-  if (!response.ok) throw await toApiError(response);
+  if (!response.ok) {
+    const error = await toApiError(response);
+    if (unsafe && !options.isRetry && recoverSession) {
+      // A write sent before the first response had planted the token: the
+      // session read plants it, and the repeat reads it afresh. A token that
+      // was sent and refused is a different case and is not repeated.
+      const missingToken = error.code === 'CSRF_TOKEN_INVALID' && !csrfToken;
+      const missingSession = error.code === 'AUTHENTICATION_REQUIRED';
+      if (
+        (missingToken || missingSession) &&
+        (await recoverSession(missingToken ? 'token' : 'session'))
+      ) {
+        return send(method, path, body, { ...options, isRetry: true });
+      }
+    }
+    throw error;
+  }
 
   return response;
+}
+
+/**
+ * How a write refused for want of a session gets one, registered by the
+ * providers because only they hold the session query.
+ *
+ * Two real paths reach it, both anonymous. A first-time visitor who acts
+ * before `GET /auth/session` has answered has no `sid` yet — measured: a
+ * CV upload clicked right after the page drew came back `401`, "you need to
+ * be signed in", on the screen that says no account is needed. And a guest
+ * session lapses after two idle hours while the tab stays open. In both the
+ * read stamps a fresh anonymous session and the write is worth one repeat.
+ *
+ * It answers `false` for a caller last seen signed in: repeating that write
+ * under a brand-new anonymous session would put it somewhere the person
+ * would never look.
+ *
+ * The same race refuses the write one step earlier when the `XSRF-TOKEN`
+ * cookie has not arrived either — `403 CSRF_TOKEN_INVALID`, "refresh the
+ * page", measured on the same upload. That one is retried for anybody, since
+ * fetching a token changes nobody's identity.
+ */
+type Recovery = (reason: 'session' | 'token') => Promise<boolean>;
+
+let recoverSession: Recovery | undefined;
+
+export function setSessionRecovery(recover: Recovery | undefined) {
+  recoverSession = recover;
 }
 
 async function readBody<T>(response: Response): Promise<T> {

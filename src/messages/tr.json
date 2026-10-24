@@ -7,7 +7,7 @@
     "UNPARSEABLE_JOB_DESCRIPTION": "{reason, select,\n  too_short {Bu ilan üzerinde çalışmak için fazla kısa. İlanın tamamını yapıştır — en çok işe yarayan kısım aranan nitelikler.}\n  too_long {Bu, okuyabileceğimiz her ilandan uzun. İlanı çevresindeki sayfa olmadan, tek başına yapıştır.}\n  low_entropy {Bu metin ilan olarak okunamayacak kadar kendini tekrar ediyor. Bütün bir sayfa yapıştırdıysan yalnız ilanı dene.}\n  not_job_like {Bu bize ilan gibi görünmedi. Öyleyse yine de devam edebilirsin.}\n  low_confidence {İlanı okuduk ama bir uyarlama yapacak kadar emin olamadık — işin ne istediğini tahmin etmemeyi tercih ederiz.}\n  too_few_skills {İlanı okuduk ama içinden {skillsFound, plural, =0 {hiç yetkinlik} =1 {tek bir yetkinlik} other {# yetkinlik}} çıktı; bu da bir uyarlama yapmaya yetmiyor.}\n  suspicious_output {Bu ilanı okuyuşumuz bozuk döndü. Yapıştırdığın metinde bir sorun yok — tekrar sormak genellikle çözüyor.}\n  other {Bu ilanı çözümleyemedik.}\n}",
     "CONFLICTING_PREFERENCES": "Sabitlediğin içerik yaklaşık {pinnedPages, number} sayfa tutuyor, sınır ise {maxPages, plural, =1 {bir sayfa} other {# sayfa}}.",
     "FEATURE_REQUIRES_ACCOUNT": "{feature, select,\n  atom_controls {Önem, kullanılabilirlik ve iki kilit için hesap gerekiyor. Bu maddenin geri kalanını düzenlemeye devam edebilirsin.}\n  alternatives {İkinci bir yazım eklemek için hesap gerekiyor. Buradaki yazımı düzenlemek için gerekmiyor.}\n  cover_letter {Ön yazı için hesap gerekiyor. CV'ne bir şey olmadı.}\n  feedback {Bir CV hakkında görüş bildirmek için hesap gerekiyor — dönüş yapabileceğimiz bir yer olması lazım.}\n  archive {Bir CV'yi saklamak için hesap gerekiyor. Hesapsız, buradaki her şey oturumla birlikte gidiyor; yani işaretin saklayacağı bir şey kalmıyor.}\n  other {Bunun için hesap gerekiyor.}\n}",
-    "QUOTA_EXCEEDED": "{metric, select, generation {Bugün üretebileceğin CV hakkını doldurdun.} profile_extract {Bugün yapabileceğin profil içe aktarma hakkını doldurdun.} other {Bugünkü hakkını doldurdun.}} {resetsAt, date, short} {resetsAt, time, short}’te yenilenir.",
+    "QUOTA_EXCEEDED": "{metric, select, generation {Bugün üretebileceğin CV hakkını doldurdun.} profile_extract {Bugün yapabileceğin profil içe aktarma hakkını doldurdun.} other {Bugünkü hakkını doldurdun.}} {resetsAt, date, short}’te yenilenir.",
     "ALL_PROVIDERS_UNAVAILABLE": "Yapay zekâ sağlayıcılarının hiçbiri yanıt vermedi; şu an tekrar denemek yardımcı olmaz. Hiçbir şey kaybolmadı, profiline dokunulmadı.",
     "COMPILATION_FAILED": "Belge oluşturulamadı. {detail}",
     "PAGE_LIMIT_EXCEEDED": "İçeriğin {actual, plural, =1 {bir sayfa} other {# sayfa}} tuttu, sınır ise {limit, plural, =1 {bir} other {#}}. İçerik gidebildiği kadar kısaltıldı.",
@@ -24,7 +24,7 @@
     "EXTRACTION_TIMEOUT": "Bu dosyayı okumak çok uzun sürdü ve durduruldu. Uzun bir CV'nin süresi yetmeyebilir; aynı dosyayla tekrar denemeye değer.",
     "LANGUAGE_UNDETECTED": "Bunun hangi dilde yazıldığını anlayamadık. En yakın tahminler: {detectedCandidates}.",
     "TRANSLATION_FAILED": "Bu sözcükleme yeniden üretilemedi, o yüzden bayat işaretli kalıyor. Başka bir şey değişmedi.",
-    "PROFILE_QUOTA_EXCEEDED": "{caller, select,\n  account {Bugünkü {limit, plural, =1 {bir profil} other {# profil}} sınırına ulaştın.}\n  anonymous {Şu an bu ağdan daha fazla CV okunamıyor. Hesap olmadan hak ağ başına sayılıyor, yani onu harcayan sen olmayabilirsin.}\n  other {Şu an daha fazla CV okunamıyor — bugünkü {limit, plural, =1 {bir profil} other {# profil}} sınırına ulaşıldı.}\n} {resetsAt, date, short} {resetsAt, time, short}’te yenilenir.",
+    "PROFILE_QUOTA_EXCEEDED": "{caller, select,\n  account {Bugünkü {limit, plural, =1 {bir profil} other {# profil}} sınırına ulaştın.}\n  anonymous {Şu an bu ağdan daha fazla CV okunamıyor. Hesap olmadan hak ağ başına sayılıyor, yani onu harcayan sen olmayabilirsin.}\n  other {Şu an daha fazla CV okunamıyor — bugünkü {limit, plural, =1 {bir profil} other {# profil}} sınırına ulaşıldı.}\n} {resetsAt, date, short}’te yenilenir.",
     "ANONYMOUS_SESSION_EXPIRED": "Bu oturum, buradaki son işleminden iki saat sonra sona erdi.",
     "ATOM_LIMIT_EXCEEDED": "Sınır {limit, plural, =1 {bir madde} other {# madde}}; şu anda {current, number} tane var.",
     "PROFILE_ALREADY_EXISTS": "Bu hesabın zaten bir profili var.",
@@ -207,7 +207,7 @@
     "resumeHint": "CV'yi bağlamak, bu satırın tam olarak gönderdiğin belgeyi açmasını sağlar."
   },
   "Session": {
-    "expiring": "Bu oturum {at, time, short} itibarıyla sona eriyor — buradaki son işleminden iki saat sonra, yani çalışmaya devam etmek bu süreyi ileri atıyor. Henüz bir hesaba kaydedilmiş bir şey yok."
+    "expiring": "Bu oturum {at, time, clock} itibarıyla sona eriyor — buradaki son işleminden iki saat sonra, yani çalışmaya devam etmek bu süreyi ileri atıyor. Henüz bir hesaba kaydedilmiş bir şey yok."
   },
   "Auth": {
     "title": "Giriş yap",
@@ -375,6 +375,10 @@
       "useTheirs": "Diğer halini kullan"
     },
     "atom": {
+      "textEditOpen": "“{text}” metnini düzenle",
+      "textEditDone": "“{text}” için düzenleyiciyi kapat",
+      "textEditOpenShort": "Metni düzenle",
+      "textEditDoneShort": "Bitti",
       "loading": "Yükleniyor…",
       "text": "Metin",
       "importance": "Önem",
@@ -741,7 +745,7 @@
     },
     "loading": "CV’n getiriliyor…",
     "generalNote": "İlan verilmedi, yani karşılaştırılacak bir şey yok.",
-    "languageNote": "{content} yazıldı, {posting} değil. Bir CV tek dilde yazılır ve bu sayfaya girecek her şeyin {posting} sözcüklemesi tamamlanamadı — o yüzden yarısı bir dilde olmak yerine profilinin kendi dilinden kuruldu.",
+    "languageNote": "{content} yazıldı, {posting} değil. Bir CV tek dilde yazılır ve bu sayfaya girecek her şeyin {posting} sözcüklemesi tamamlanamadı — o yüzden yarısı bir dilde olmak yerine profilinin kendi dilinden kuruldu. Çevrilen sözcüklemeler saklandı, yani yeniden istemek çoğu zaman işi tamamlıyor.",
     "lengthNote": "{pages, plural, =1 {Bir sayfa} other {# sayfa}} çıktı, izin verilen {limit, plural, =1 {bir sayfaydı} other {# sayfaydı}}. Kalan yer doldurulmadı — bir CV, profilinde yazan kadar uzundur, daha fazlası değil.",
     "coverLetterTitle": "Ön yazı",
     "coverLetterAccount": "Ön yazı için hesap gerekiyor. Bu CV, hesabın olsaydı nasıl üretilecekse öyle üretildi ve aynı şekilde indiriliyor.",
@@ -782,7 +786,7 @@
     "feedbackCommentHint": "Saklanıyor ve hiçbir kayda yazılmıyor. Burada sana geri gösterilmiyor, çünkü zaten sende.",
     "feedbackGrant": "Neyin ters gittiğini görebilmemiz için bu CV'yi 48 saat boyunca okumamıza izin ver. Baktığımız başka her şey sayı ve ölçüm, senin kelimelerin değil.",
     "feedbackGrantUnread": "{until} tarihine kadar izinli. Henüz kimse bakmadı.",
-    "feedbackGrantRead": "{at, date, short} {at, time, short} itibarıyla okundu.",
+    "feedbackGrantRead": "{at, date, short} itibarıyla okundu.",
     "feedbackSend": "Gönder",
     "feedbackSending": "Gönderiliyor…",
     "heading": "{role, select, none {CV'n} other {{role}}}",
@@ -838,7 +842,7 @@
     "label": "Bugünkü kullanım",
     "metric": "{metric, select, generation {CV} profile_extract {Profil içe aktarma} other {Hak}}",
     "count": "{limit} hakkın {used} tanesi",
-    "renews": "{resetsAt, date, short} {resetsAt, time, short}’te yenilenir",
+    "renews": "{resetsAt, date, short}’te yenilenir",
     "none": "Bugünlük hakkın kalmadı"
   },
   "Footer": {
@@ -896,7 +900,7 @@
     "deleteIntro": "Burada sana ait olan her şeyi siler. Geri alınamaz.",
     "deleteAction": "Hesabımı sil",
     "deleteConfirmTitle": "Hesabın silinsin mi?",
-    "deleteConfirmBody": "Bu, profilini — {sections, plural, =1 {bir bölüm} other {# bölüm}} ve {atoms, plural, =1 {bir madde} other {# madde}} — {generations, plural, =0 {ürettiğin bütün CV'leri} =1 {ürettiğin tek CV'yi} other {ürettiğin # CV'nin hepsini}} ve onlardan çıkan belgeleri, sırada bekleyen işleri, kullanım sayaçlarını ve e-posta tercihlerini siler. Geri alınamaz.\n\nİki şey kalıyor. Üretimlerinin maliyet kaydı, seninle bağı koparılmış olarak duruyor; artık kimseyi göstermiyor. Ve adresin bir kez geri döndüyse ya da bizi şikâyet ettiyse, o kayıt hesaba değil **adrese** ait olduğu için kalıyor — silmek, bize yazma dememiş olan bir adrese yeniden yazmamıza izin verirdi.\n\nYapay zekâ sağlayıcıları kendi taraflarında kısa ömürlü kayıtlar tutabiliyor. Hangileri olduğu gizlilik politikasında.",
+    "deleteConfirmBody": "Bu, profilini — {sections, plural, =1 {bir bölüm} other {# bölüm}} ve {atoms, plural, =1 {bir madde} other {# madde}} — {generations, plural, =0 {ürettiğin bütün CV'leri} =1 {ürettiğin tek CV'yi} other {ürettiğin # CV'nin hepsini}} ve onlardan çıkan belgeleri, sırada bekleyen işleri, kullanım sayaçlarını ve e-posta tercihlerini siler. Geri alınamaz.\n\nİki şey kalıyor. Üretimlerinin maliyet kaydı, seninle bağı koparılmış olarak duruyor; artık kimseyi göstermiyor. Ve adresin bir kez geri döndüyse ya da bizi şikâyet ettiyse, o kayıt hesaba değil adrese ait olduğu için kalıyor — silmek, bize yazma dememiş olan bir adrese yeniden yazmamıza izin verirdi.\n\nYapay zekâ sağlayıcıları kendi taraflarında kısa ömürlü kayıtlar tutabiliyor. Hangileri olduğu gizlilik politikasında.",
     "deleteConfirmAction": "Her şeyi sil",
     "generationDefaults": {
       "title": "CV nasıl yazılsın",

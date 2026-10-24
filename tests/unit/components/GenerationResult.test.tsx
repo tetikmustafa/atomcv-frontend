@@ -386,6 +386,28 @@ describe('a finished generation', () => {
       expect(screen.queryByTestId('language-note')).not.toBeInTheDocument();
     });
 
+    /**
+     * The language the request named, not the posting's, when there was one.
+     * A Turkish CV asked for against an English posting that came out in
+     * English agrees with the posting, and the reader was told nothing.
+     */
+    it('says so when the language asked for could not be finished', async () => {
+      const generationId = await generate({
+        jobDescription: POSTING,
+        acknowledgePreflight: false,
+        language: 'tr',
+      });
+      const job = generations.jobs.find(
+        (candidate) => 'generationId' in candidate && candidate.generationId === generationId,
+      )!;
+      Object.assign(job, { contentLanguage: 'en', postingLanguage: 'en' });
+
+      render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+      const note = await screen.findByTestId('language-note');
+      expect(note).toHaveTextContent('Written in English, not Turkish');
+    });
+
     it('stays quiet in general mode, where there was no posting to read', async () => {
       const generationId = await generate();
 

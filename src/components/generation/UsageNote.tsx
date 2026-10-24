@@ -25,15 +25,25 @@
 
 import { useTranslations } from 'next-intl';
 import { useUsage } from '@/hooks/useGeneration';
+import { useSession } from '@/hooks/useSession';
+import type { Usage } from '@/lib/api/endpoints/account';
+import type { Capabilities } from '@/lib/api/endpoints/auth';
 
 /** The two the server counts (§ 44.2). */
 export type UsageMetric = 'generation' | 'profile_extract';
 
 export function UsageNote({ metric = 'generation' }: { metric?: UsageMetric } = {}) {
   const t = useTranslations('Usage');
-  const { data } = useUsage();
+  const session = useSession().data;
+  // `/account/usage` is an account's endpoint and answers a guest `401` —
+  // measured, on every visit to the two screens that draw this. A guest's
+  // counters arrive with the session instead.
+  const { data } = useUsage({ enabled: session?.authenticated === true });
 
-  const generation = data?.find((entry) => entry.metric === metric);
+  const generation =
+    session && !session.authenticated
+      ? fromCapabilities(session.capabilities, metric)
+      : data?.find((entry) => entry.metric === metric);
 
   if (
     !generation ||
@@ -76,4 +86,19 @@ export function UsageNote({ metric = 'generation' }: { metric?: UsageMetric } = 
       )}
     </p>
   );
+}
+
+function fromCapabilities(capabilities: Capabilities, metric: UsageMetric): Usage {
+  const [limit, used] =
+    metric === 'generation'
+      ? [capabilities.dailyGenerationQuota, capabilities.generationsUsedToday]
+      : [capabilities.dailyProfileQuota, capabilities.profilesUsedToday];
+
+  return {
+    metric,
+    limit,
+    used,
+    remaining: Math.max(0, limit - used),
+    ...(capabilities.quotaResetsAt ? { resetsAt: capabilities.quotaResetsAt } : {}),
+  };
 }

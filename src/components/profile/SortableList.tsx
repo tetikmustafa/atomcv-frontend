@@ -80,7 +80,14 @@ function Row({ id, label, position, total, disabled, onMove, children }: RowProp
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`flex items-start gap-1.5 sm:gap-2 ${isDragging ? 'relative z-10 opacity-70' : ''}`}
     >
-      <div className="text-muted-foreground flex flex-col items-center gap-0.5 pt-2">
+      {/*
+        Sized as near a closed card as the arrows allow. With gaps and a full
+        handle the column stood well over the row beside it, so a list of
+        collapsed sections was spaced by its arrows rather than by its
+        content. The arrows keep 24px, the target size WCAG 2.2 asks for; the
+        handle, which a pointer drags rather than taps, gives up the rest.
+      */}
+      <div className="text-muted-foreground flex flex-col items-center pt-1">
         <Button
           type="button"
           variant="ghost"
@@ -101,7 +108,7 @@ function Row({ id, label, position, total, disabled, onMove, children }: RowProp
           type="button"
           variant="ghost"
           size="icon-xs"
-          className="cursor-grab"
+          className="h-5! cursor-grab"
           disabled={disabled}
           aria-label={t('drag', { label })}
           {...attributes}

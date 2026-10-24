@@ -296,8 +296,16 @@ function Row({ row }: { row: Application }) {
               <>
                 {' · '}
                 {/* Rule 9: a date is never hand-formatted. This one is in the
-                    reader's own language — it is the interface, not a CV. */}
-                {t('appliedOn', { date: format.dateTime(new Date(row.appliedAt), 'short') })}
+                    reader's own language — it is the interface, not a CV.
+
+                    A calendar day (`format: date`), so `day` and in UTC:
+                    `new Date('2026-10-24')` is midnight UTC, which `short`
+                    printed as "24 Oct 2026, 03:00" in Istanbul — an hour
+                    nobody applied at — and which west of Greenwich is the
+                    23rd. */}
+                {t('appliedOn', {
+                  date: format.dateTime(new Date(row.appliedAt), 'day', { timeZone: 'UTC' }),
+                })}
               </>
             )}
           </p>

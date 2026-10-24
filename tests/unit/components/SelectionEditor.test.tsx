@@ -423,6 +423,9 @@ describe('choosing the lines by hand', () => {
     });
     await openPanel(user);
 
-    expect(await axe(container)).toHaveNoViolations();
+    // A result made a moment ago opens its PDF preview, and axe cannot look
+    // inside a frame under jsdom ("Respondable target must be a frame"). The
+    // frame's own name is asserted where the preview is tested.
+    expect(await axe(container, { iframes: false })).toHaveNoViolations();
   });
 });

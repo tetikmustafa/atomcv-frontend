@@ -117,8 +117,15 @@ export function GenerationResult({ generationId }: { generationId: string }) {
     is drawn only when both are there and they disagree.
   */
   const contentLang = primaryLanguage(data.contentLanguage);
-  const postingLang = primaryLanguage(data.postingLanguage);
-  const languagesDiffer = Boolean(contentLang && postingLang && contentLang !== postingLang);
+  /*
+    What the CV was meant to be in: the language the request named, when it
+    named one, and otherwise the posting's. The first used to be invisible —
+    a person who chose Turkish and got English was told nothing, because the
+    posting was English too and the two tags agreed (measured, 2026-10-24).
+  */
+  const wantedTag = data.requestedLanguage ?? data.postingLanguage;
+  const wantedLang = primaryLanguage(wantedTag);
+  const languagesDiffer = Boolean(contentLang && wantedLang && contentLang !== wantedLang);
 
   /*
     `B-118`, `F-039`: a thin profile may produce a CV shorter than it was
@@ -181,7 +188,7 @@ export function GenerationResult({ generationId }: { generationId: string }) {
             >
               {t('languageNote', {
                 content: languageName(data.contentLanguage, locale) ?? data.contentLanguage!,
-                posting: languageName(data.postingLanguage, locale) ?? data.postingLanguage!,
+                posting: languageName(wantedTag, locale) ?? wantedTag!,
               })}
             </p>
           )}
@@ -191,7 +198,7 @@ export function GenerationResult({ generationId }: { generationId: string }) {
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <Card className="gap-4">
           <CardTitle>{t('previewTitle')}</CardTitle>
-          <PdfPreview generationId={generationId} />
+          <PdfPreview generationId={generationId} fresh={isFresh(data.createdAt)} />
         </Card>
 
         <div className="flex flex-col gap-6 lg:sticky lg:top-6">
@@ -415,4 +422,12 @@ export function GenerationResult({ generationId }: { generationId: string }) {
       {anonymous === false && <Feedback generationId={generationId} recorded={data.feedback} />}
     </div>
   );
+}
+
+/** How long a result counts as just produced, for the preview that opens itself. */
+const FRESH_MS = 10 * 60 * 1000;
+
+function isFresh(createdAt: string | undefined): boolean {
+  if (!createdAt) return false;
+  return Date.now() - new Date(createdAt).getTime() < FRESH_MS;
 }

@@ -67,6 +67,7 @@ describe('an atom with one wording', () => {
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
     // As parts, because this wording is marked (D13). What matters here is
     // that the wording is editable at all without a strip around it.
+    await userEvent.setup().click(await screen.findByRole('button', { name: /^Edit the text of/ }));
     expect(await screen.findByLabelText('Part 1')).toBeInTheDocument();
   });
 });
@@ -246,9 +247,12 @@ describe('an atom with several wordings', () => {
     // described the neighbourhood rather than the thing.
     // `span`, because the textarea holds the same characters as its own
     // default value and the preview is the half being asserted.
-    expect(
-      within(screen.getByRole('tabpanel')).getByText('ETL hatları kurdum', { selector: 'span' }),
-    ).toBeVisible();
+    //
+    // This wording has no marks, so its field is the whole of it: there is
+    // no separate preview to blank.
+    expect(within(screen.getByRole('tabpanel')).getByLabelText('Text')).toHaveValue(
+      'ETL hatları kurdum',
+    );
 
     release();
     await waitFor(() =>
