@@ -37,8 +37,11 @@ export function LifecycleEmails() {
   if (!settings) return null;
 
   return (
-    <section className="flex flex-col gap-3" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`} className="text-lg font-medium">
+    <section
+      className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-5 sm:p-6"
+      aria-labelledby={`${id}-heading`}
+    >
+      <h2 id={`${id}-heading`} className="text-lg font-semibold">
         {t('emailsTitle')}
       </h2>
 

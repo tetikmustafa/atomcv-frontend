@@ -138,6 +138,32 @@ describe('keeping a set of appearance settings', () => {
   });
 
   /**
+   * `PATCH /customizations/{id}` had a hook and no caller: a set could only
+   * be deleted and kept again to change its name. Only the name travels on a
+   * rename — sending the settings would replace them too.
+   */
+  it('renames one without touching what it holds', async () => {
+    const user = userEvent.setup();
+    await renderAppearance();
+
+    await user.type(nameField(), 'First draft');
+    await user.click(screen.getByRole('button', { name: en.Appearance.presets.keep }));
+    await screen.findByText('First draft');
+
+    await user.click(screen.getByRole('button', { name: en.Appearance.presets.rename }));
+    const field = screen.getByLabelText('New name for First draft');
+    await user.clear(field);
+    await user.type(field, 'Final');
+    await user.click(screen.getByRole('button', { name: en.Appearance.presets.renameSave }));
+
+    await waitFor(() => expect(calls.some((call) => call.method === 'PATCH')).toBe(true));
+    expect(JSON.parse(await calls.find((call) => call.method === 'PATCH')!.body)).toEqual({
+      name: 'Final',
+    });
+    expect(await screen.findByText('Final')).toBeInTheDocument();
+  });
+
+  /**
    * Deleting warns about nothing, and that is correct rather than careless: a
    * generation made with a set holds the settings themselves in its snapshot
    * rather than an id, so every resume already sent still re-renders exactly

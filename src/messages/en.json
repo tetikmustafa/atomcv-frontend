@@ -906,7 +906,25 @@
       "preparing": "Preparing the file…",
       "formats": "JSON is the complete copy, meant to be read by another program. Markdown is the readable one, for pasting somewhere else — it leaves out the parts only this app uses.",
       "announceStarted": "Download started"
-    }
+    },
+    "description": "How your resumes look and read, your data, and your account.",
+    "sectionsLabel": "Settings sections",
+    "nav": {
+      "appearance": "Appearance",
+      "defaults": "Writing",
+      "data": "Your data",
+      "emails": "Emails",
+      "danger": "Delete"
+    },
+    "dangerTitle": "Danger zone",
+    "dangerIntro": "Both are permanent. Download your data above first if you may want it.",
+    "deleteProfileTitle": "Start the profile again",
+    "deleteProfileIntro": "Removes your profile with everything in it and every resume made from it. Your account stays, and so does your list of applications.",
+    "deleteProfileAction": "Delete my profile",
+    "deleteProfileConfirmTitle": "Delete your profile?",
+    "deleteProfileConfirmBody": "This deletes {sections, plural, =0 {every section} =1 {one section} other {# sections}} and {atoms, plural, =0 {every item} =1 {one item} other {# items}} with all their wordings, tags and locks — and with them every resume made from this profile and your saved appearances. Your account stays, and your applications keep their place without the resumes they pointed at. It cannot be undone.",
+    "deleteProfileConfirm": "Delete the profile",
+    "deleteProfileDone": "Your profile was deleted."
   },
   "Appearance": {
     "title": "How your resume looks",
@@ -925,7 +943,15 @@
       "removeBody": "Resumes you already made with them are unaffected — each one keeps the settings it was built with.",
       "removeConfirm": "Delete",
       "full": "That is all {max, number} of them. Delete one to keep another.",
-      "announceKept": "Kept as {name}"
+      "announceKept": "Kept as {name}",
+      "savedSummary": "{family} · {size} pt · {margin} in · {spacing}×",
+      "rename": "Rename",
+      "renameLabel": "New name for {name}",
+      "renameSave": "Save name",
+      "update": "Use current settings",
+      "updateHint": "Replace what {name} holds with the appearance above.",
+      "updated": "{name} now holds the current settings.",
+      "renamed": "Renamed to {name}."
     },
     "templateCapacity": "About {lines, number} lines a page",
     "templates": {

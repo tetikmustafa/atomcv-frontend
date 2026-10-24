@@ -205,18 +205,20 @@ function Row({ row }: { row: GenerationSummary }) {
         <FileText className="size-4" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-1">
-      {label.length > 0 && (
-        <span className="flex flex-wrap items-baseline gap-x-2 text-sm">
-          {row.roleTitle && <span className="font-medium">{row.roleTitle}</span>}
-          {row.companyName && <span className="text-muted-foreground">{row.companyName}</span>}
+        {label.length > 0 && (
+          <span className="flex flex-wrap items-baseline gap-x-2 text-sm">
+            {row.roleTitle && <span className="font-medium">{row.roleTitle}</span>}
+            {row.companyName && <span className="text-muted-foreground">{row.companyName}</span>}
+          </span>
+        )}
+        <span className={label.length > 0 ? 'text-muted-foreground text-xs' : 'text-sm'}>
+          {facts.join(' · ')}
         </span>
-      )}
-      <span className={label.length > 0 ? 'text-muted-foreground text-xs' : 'text-sm'}>
-        {facts.join(' · ')}
-      </span>
-      {row.status && row.status !== 'completed' && (
-        <span className="text-muted-foreground text-xs">{t('status', { status: row.status })}</span>
-      )}
+        {row.status && row.status !== 'completed' && (
+          <span className="text-muted-foreground text-xs">
+            {t('status', { status: row.status })}
+          </span>
+        )}
       </span>
       {row.archived === true && (
         <Badge variant="outline" className="hidden sm:inline-flex" aria-hidden="true">

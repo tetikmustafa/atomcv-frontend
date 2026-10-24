@@ -10,6 +10,7 @@
  */
 
 import { http, HttpResponse } from 'msw';
+import { generations } from './generationFixture';
 import { problem } from './problem';
 import {
   fixture,
@@ -1388,6 +1389,33 @@ export const profileHandlers = [
    * removed only the section would leave orphans in the fixture and let a
    * confirmation that under-counts pass its tests.
    */
+  /**
+   * Deleting the whole profile. The real cascade reaches past it — the
+   * resumes and the saved appearances are `ON DELETE CASCADE` from
+   * `profiles` — so the mock empties those too, and the next read is the
+   * fresh empty profile the server creates on demand.
+   */
+  http.delete('*/api/v1/profile', ({ request }) => {
+    const refused = precondition(request, '/api/v1/profile', fixture.profileVersion);
+    if (refused) return refused;
+
+    fixture.sections = [];
+    fixture.entries = [];
+    fixture.atoms = [];
+    fixture.customizations = [];
+    fixture.profile = {
+      ...fixture.profile,
+      headline: '',
+      selfDescription: '',
+      contact: {},
+      completeness: 0,
+    };
+    fixture.profileVersion += 1;
+    generations.jobs = generations.jobs.filter((job) => job.kind === 'import');
+
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   http.delete('*/api/v1/profile/sections/:id', ({ request, params }) => {
     const id = String(params.id);
     const instance = `/api/v1/profile/sections/${id}`;
