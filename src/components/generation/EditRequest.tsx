@@ -77,7 +77,7 @@ export function EditRequest({ generationId }: { generationId: string }) {
 
   if (job) {
     return (
-      <section className="border-border flex flex-col gap-3 rounded-md border p-4">
+      <section className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-5 sm:p-6">
         <h2 className="text-base font-medium">{t('editTitle')}</h2>
 
         <JobProgress
@@ -104,7 +104,7 @@ export function EditRequest({ generationId }: { generationId: string }) {
 
   return (
     <form
-      className="border-border flex flex-col gap-3 rounded-md border p-4"
+      className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-5 sm:p-6"
       onSubmit={(event) => {
         event.preventDefault();
         submit();

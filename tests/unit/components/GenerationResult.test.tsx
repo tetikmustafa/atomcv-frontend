@@ -913,3 +913,46 @@ describe('marking a resume to keep', () => {
     );
   });
 });
+
+describe('the application this resume went to', () => {
+  beforeEach(signIn);
+
+  /**
+   * `ApplicationCreate.generationId` was on the wire and nothing sent it, so
+   * no row could say which resume went. Prefilled from what the posting said
+   * (`B-124`), sent on one press, and the card then says it is done.
+   */
+  it('is added with this resume attached, from what the posting named', async () => {
+    const bodies: Promise<string>[] = [];
+    const capture = ({ request }: { request: Request }) => {
+      if (request.method === 'POST' && request.url.endsWith('/applications')) {
+        bodies.push(request.clone().text());
+      }
+    };
+    server.events.on('request:start', capture);
+
+    try {
+      const generationId = await generate({
+        acknowledgePreflight: true,
+        jobDescription:
+          'Senior backend engineer. Go, PostgreSQL and Kafka in production; on-call for payments.',
+      });
+      render(<GenerationResult generationId={generationId} />, { wrapper: wrapperFor('en') });
+
+      expect(await screen.findByLabelText(en.Result.trackPosition)).toHaveValue(
+        'Senior Backend Engineer',
+      );
+      await userEvent.type(screen.getByLabelText(en.Result.trackCompany), 'Acme');
+      await userEvent.click(screen.getByRole('button', { name: en.Result.trackSubmit }));
+
+      await waitFor(() => expect(bodies).toHaveLength(1));
+      expect(JSON.parse(await bodies[0]!)).toMatchObject({
+        generationId,
+        position: 'Senior Backend Engineer',
+      });
+      expect(await screen.findByText(en.Result.tracked)).toBeInTheDocument();
+    } finally {
+      server.events.removeListener('request:start', capture);
+    }
+  });
+});

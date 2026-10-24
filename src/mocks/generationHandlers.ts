@@ -377,6 +377,9 @@ function generationBody(job: MockGenerationJob): Schemas['GenerationResponse'] {
     // that is the point of keeping it (`B-088`) — what changes is that it
     // is no longer the one to edit.
     status: job.supersededBy ? 'superseded' : 'completed',
+    // What the posting was for, as the history row says it (`B-124`).
+    ...(job.roleTitle ? { roleTitle: job.roleTitle } : {}),
+    ...(job.companyName ? { companyName: job.companyName } : {}),
     // Only on a retired row, which is the only place it means anything
     // (`B-097`). The edge runs the other way in the database — the edit
     // writes the new row naming the old — and this is the direction a

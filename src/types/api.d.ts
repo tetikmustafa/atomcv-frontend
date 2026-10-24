@@ -1838,6 +1838,13 @@ export interface components {
             maxPages?: number;
             /** Format: date-time */
             createdAt?: string;
+            /**
+             * @description The role the posting was for, as Faz A read it; absent in general mode and when the posting named none
+             * @example Backend Engineer
+             */
+            roleTitle?: string;
+            /** @description The company the posting was for, as Faz A read it; absent in general mode and when the posting named none */
+            companyName?: string;
             fitReport?: components["schemas"]["FitReport"];
             /**
              * @description The language the document was written in, as a BCP 47 tag

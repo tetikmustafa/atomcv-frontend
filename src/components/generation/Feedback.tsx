@@ -119,8 +119,8 @@ export function Feedback({ generationId, recorded }: FeedbackProps) {
   const grant = recorded?.contentGrant;
 
   return (
-    <section className="border-border flex flex-col gap-3 rounded-md border p-4">
-      <h2 className="text-sm font-medium">{t('feedbackTitle')}</h2>
+    <section className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-5 sm:p-6">
+      <h2 className="text-base font-semibold">{t('feedbackTitle')}</h2>
 
       <div className="flex gap-2">
         {([1, -1] as const).map((value) => (

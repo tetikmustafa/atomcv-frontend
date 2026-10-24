@@ -52,6 +52,7 @@ import { useCustomizations } from '@/hooks/useAppearance';
 import { useProfile } from '@/hooks/useProfile';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import { languageName } from '@/lib/i18n/languageNames';
 
@@ -137,7 +138,7 @@ export function Directives({
       </Button>
 
       {open && (
-        <div id={panelId} className="border-border flex flex-col gap-4 rounded-md border p-4">
+        <div id={panelId} className="bg-muted/40 flex flex-col gap-4 rounded-lg border p-4">
           <TagInput
             label={t('emphasizeLabel')}
             hint={t('emphasizeHint')}
@@ -180,11 +181,10 @@ export function Directives({
             <div className="flex flex-col gap-2">
               <Label htmlFor={appearanceId}>{t('appearanceLabel')}</Label>
               <p className="text-muted-foreground text-xs">{t('appearanceHint')}</p>
-              <select
+              <NativeSelect
                 id={appearanceId}
                 value={customizationId}
                 disabled={disabled}
-                className="border-border bg-background h-9 w-fit rounded-lg border px-3 text-sm"
                 onChange={(event) => onCustomizationChange(event.target.value)}
               >
                 <option value="">{t('appearanceDefault')}</option>
@@ -193,7 +193,7 @@ export function Directives({
                     {set.name}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
           )}
 
@@ -210,11 +210,10 @@ export function Directives({
             <div className="flex flex-col gap-2">
               <Label htmlFor={languageId}>{t('languageLabel')}</Label>
               <p className="text-muted-foreground text-xs">{t('languageHint')}</p>
-              <select
+              <NativeSelect
                 id={languageId}
                 value={language}
                 disabled={disabled}
-                className="border-border bg-background h-9 w-fit rounded-lg border px-3 text-sm"
                 onChange={(event) => onLanguageChange(event.target.value)}
               >
                 <option value="">{t('languageDefault')}</option>
@@ -223,7 +222,7 @@ export function Directives({
                     {languageName(code, locale) ?? code}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
           )}
         </div>

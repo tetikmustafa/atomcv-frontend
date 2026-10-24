@@ -53,7 +53,7 @@ export function DeleteAccount() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-medium">{t('deleteTitle')}</h2>
+      <h2 className="text-base font-semibold">{t('deleteTitle')}</h2>
       <p className="text-muted-foreground text-sm">{t('deleteIntro')}</p>
 
       <Button

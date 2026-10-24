@@ -99,8 +99,8 @@ export function CoverLetter({ generationId, letter }: CoverLetterProps) {
   }
 
   return (
-    <section className="border-border flex flex-col gap-3 rounded-md border p-4">
-      <h2 className="text-sm font-medium">{t('coverLetterTitle')}</h2>
+    <section className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-5 sm:p-6">
+      <h2 className="text-base font-semibold">{t('coverLetterTitle')}</h2>
 
       {letter ? (
         <>

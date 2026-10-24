@@ -122,7 +122,7 @@ export function SelectionEditor({ generationId }: { generationId: string }) {
 
   if (job) {
     return (
-      <section className="border-border flex flex-col gap-3 rounded-md border p-4">
+      <section className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-5 sm:p-6">
         <h2 className="text-base font-medium">{t('selectionTitle')}</h2>
 
         <JobProgress
@@ -164,7 +164,7 @@ export function SelectionEditor({ generationId }: { generationId: string }) {
   return (
     <section
       id={listId}
-      className="border-border flex flex-col gap-3 rounded-md border p-4"
+      className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-5 sm:p-6"
       aria-busy={selection.isPending}
     >
       <h2 className="text-base font-medium">{t('selectionTitle')}</h2>
