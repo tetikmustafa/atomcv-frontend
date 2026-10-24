@@ -14,6 +14,7 @@ import { fixture } from '@/mocks/profileFixture';
 import { signIn } from '@/mocks/sessionFixture';
 import { formats } from '@/lib/i18n/formats';
 import en from '@/messages/en.json';
+import { openAtomDetails } from '../../support/atomDetails';
 import type { Variant } from '@/lib/api/endpoints/profile';
 
 vi.mock('@/lib/i18n/navigation', () => ({
@@ -50,7 +51,9 @@ async function mountEditor() {
   for (const atom of atoms) client.setQueryData(profileKeys.atom(atom.id!), atom);
   client.setQueryData(profileKeys.atoms(), atoms);
 
-  return render(<AtomEditor atomId={ATOM_ID} />, { wrapper: Wrapper });
+  const utils = render(<AtomEditor atomId={ATOM_ID} />, { wrapper: Wrapper });
+  await openAtomDetails();
+  return utils;
 }
 
 async function rejection(promise: Promise<unknown>): Promise<ApiError> {
@@ -83,14 +86,24 @@ describe('adding a wording', () => {
    * An empty select is a question with no answers. When every enabled
    * language already has a wording, the control is not drawn at all.
    */
-  it('is not offered when every language already has one', async () => {
+  /**
+   * Every language has a neutral wording, and the language is still offered —
+   * for its other registers. The pair the server refuses duplicates of is
+   * language **and** tone, and a register is a real second wording: a casual
+   * one for a startup's advert, a formal one for a bank's.
+   */
+  it('offers only the registers a language still has room for', async () => {
     signIn();
     fixture.profile.enabledLanguages = ['en'];
+    const user = userEvent.setup();
 
     await mountEditor();
 
-    await screen.findByLabelText(en.Editor.atom.text);
-    expect(screen.queryByRole('button', { name: en.Editor.variants.add })).not.toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: en.Editor.variants.add }));
+    const register = screen.getByLabelText(en.Editor.variants.addTone);
+    expect(
+      Array.from(register.querySelectorAll('option')).map((option) => option.textContent),
+    ).toEqual(['Formal', 'Casual', 'Technical']);
   });
 
   it('writes the wording before the variant exists, and opens it', async () => {

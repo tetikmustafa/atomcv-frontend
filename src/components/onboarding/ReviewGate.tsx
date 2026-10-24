@@ -172,7 +172,7 @@ export function ReviewGate({ jobId }: ReviewGateProps) {
         )}
       </header>
 
-      <ProfileEditor />
+      <ProfileEditor embedded />
 
       {/*
         At the end rather than pinned: the button means "I have read this",

@@ -117,36 +117,40 @@ export function ProfileHead({ profile }: { profile: Profile }) {
   const panelId = 'profile-head-panel';
 
   return (
-    <section aria-labelledby="profile-head-heading" className="flex flex-col gap-2">
-      <h2 id="profile-head-heading" className="sr-only">
-        {t('title')}
-      </h2>
+    <section
+      aria-labelledby="profile-head-heading"
+      className="bg-card shadow-card flex flex-col gap-3 rounded-xl border p-4 sm:p-5"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="profile-head-heading" className="text-base font-semibold">
+          {t('title')}
+        </h2>
 
-      {/* Visible whether or not the panel is open: until this existed, a
+        {/* Visible whether or not the panel is open: until this existed, a
           profile's own contact details appeared nowhere in the editor. */}
-      {summary && <p className="text-muted-foreground text-sm">{summary}</p>}
+        {summary && <p className="text-muted-foreground text-sm">{summary}</p>}
 
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="self-start"
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => {
-          // Closing flushes rather than cancels, for the same reason
-          // collapsing a section does: a sentence finished a moment ago must
-          // not disappear with the panel (P8).
-          if (open) autosave.flush();
-          setOpen(!open);
-        }}
-      >
-        {open ? t('hide') : t('edit')}
-      </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => {
+            // Closing flushes rather than cancels, for the same reason
+            // collapsing a section does: a sentence finished a moment ago must
+            // not disappear with the panel (P8).
+            if (open) autosave.flush();
+            setOpen(!open);
+          }}
+        >
+          {open ? t('hide') : t('edit')}
+        </Button>
+      </div>
 
       {open && (
-        <div id={panelId} className="flex flex-col gap-3 rounded-lg border p-4">
-          <div className="flex flex-col gap-2">
+        <div id={panelId} className="grid gap-4 border-t pt-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-2 sm:col-span-2">
             <Label htmlFor="head-headline">{t('headline')}</Label>
             <Input
               id="head-headline"
@@ -171,7 +175,7 @@ export function ProfileHead({ profile }: { profile: Profile }) {
             </div>
           ))}
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 sm:col-span-2">
             <Label htmlFor="head-selfDescription">{t('selfDescription')}</Label>
             <Textarea
               id="head-selfDescription"
@@ -182,7 +186,8 @@ export function ProfileHead({ profile }: { profile: Profile }) {
             />
           </div>
 
-          {/*
+          <div className="flex flex-col gap-3 sm:col-span-2">
+            {/*
             The content-language axis (D13, § 38.1). It was a deliberate gap
             whose reason changed under it: the note said
             `capabilities.allowedLanguages` was not published, and it has been
@@ -194,23 +199,23 @@ export function ProfileHead({ profile }: { profile: Profile }) {
             the same `PUT`: the head is replaced whole, so a language change
             and a headline change are one write and must not race.
           */}
-          <ContentLanguages
-            sourceLanguage={value.sourceLanguage}
-            enabledLanguages={value.enabledLanguages ?? []}
-            onChange={edit}
-          />
+            <ContentLanguages
+              sourceLanguage={value.sourceLanguage}
+              enabledLanguages={value.enabledLanguages ?? []}
+              onChange={edit}
+            />
 
-          <SaveStatus
-            status={autosave.status}
-            onRetry={autosave.retry}
-            onDiscard={() => {
-              autosave.discard();
-              // Back to the server's copy, which is what "take theirs" means.
-              setDraft(null);
-            }}
-          />
+            <SaveStatus
+              status={autosave.status}
+              onRetry={autosave.retry}
+              onDiscard={() => {
+                autosave.discard();
+                // Back to the server's copy, which is what "take theirs" means.
+                setDraft(null);
+              }}
+            />
 
-          {/*
+            {/*
             `SaveStatus` says a save failed; it does not say why, and for the
             rest of the editor that is right — an atom's save fails for
             transient reasons and the sentence would be noise.
@@ -226,9 +231,10 @@ export function ProfileHead({ profile }: { profile: Profile }) {
             because 37.4's two buttons are the answer there, and a second
             explanation beside them would be competing advice.
           */}
-          {autosave.status === 'error' && autosave.error ? (
-            <ErrorPanel error={autosave.error} />
-          ) : null}
+            {autosave.status === 'error' && autosave.error ? (
+              <ErrorPanel error={autosave.error} />
+            ) : null}
+          </div>
         </div>
       )}
     </section>

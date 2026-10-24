@@ -22,20 +22,25 @@
  */
 
 import { memo, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import dynamic from 'next/dynamic';
+import { useFormatter, useTranslations } from 'next-intl';
+import { SlidersHorizontal } from 'lucide-react';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { SaveStatus } from '@/components/editor/SaveStatus';
 import { DeleteControl } from '@/components/profile/DeleteControl';
 import { ImportanceSlider } from '@/components/profile/ImportanceSlider';
 import { LockToggles, type LockToggle } from '@/components/profile/LockToggles';
 import { RichText } from '@/components/profile/RichText';
-import { RunEditor } from '@/components/profile/RunEditor';
 import { TagInput } from '@/components/profile/TagInput';
 import { StaleWording } from '@/components/profile/StaleWording';
 import { TranslatedWording } from '@/components/profile/TranslatedWording';
 import { AddWording } from '@/components/profile/AddWording';
 import { AtomTags } from '@/components/profile/AtomTags';
 import { VariantTabs } from '@/components/profile/VariantTabs';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useAccountResolution } from '@/hooks/useAccountResolution';
@@ -51,9 +56,22 @@ import {
 import { useCapabilities } from '@/hooks/useSession';
 import { plainText } from '@/lib/content/plainText';
 import { createRun, parseRichContent, toContentPayload, type Run } from '@/lib/content/richContent';
-import type { AtomPatch } from '@/lib/api/endpoints/profile';
+import type { AtomPatch, Variant } from '@/lib/api/endpoints/profile';
+
+type VariantTone = NonNullable<Variant['tone']>;
 
 export type AtomEditorProps = { atomId: string };
+
+/**
+ * The mark-aware editor, loaded only when a wording with marks is opened
+ * (rule 4, § 36.3). It was imported statically while a comment below said it
+ * was lazy — so every profile paid for it, although most atoms have no marks
+ * and most sessions never open one that does.
+ */
+const RunEditor = dynamic(
+  () => import('@/components/profile/RunEditor').then((module) => module.RunEditor),
+  { ssr: false, loading: () => <Skeleton className="h-16 w-full" /> },
+);
 
 /**
  * The three lists, with the lengths the schema declares. Copied rather than
@@ -83,6 +101,8 @@ function hasMarks(runs: Run[]): boolean {
 function AtomEditorImpl({ atomId }: AtomEditorProps) {
   const t = useTranslations('Editor.atom');
   const tDelete = useTranslations('Editor.delete');
+  const tv = useTranslations('Editor.variants');
+  const format = useFormatter();
   const { data: atom, isPending, error: readError } = useAtom(atomId);
   /*
     One cache entry, two hundred observers — which is what `useQuery` on a
@@ -113,6 +133,14 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
   // Variants come back primary-first, so the first one is the wording used
   // when nothing more specific is asked for — the right thing to open on.
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  /**
+   * Whether the controls are open. Closed by default, and that is the point:
+   * an open section of two hundred atoms used to draw two hundred sliders,
+   * six switches and three tag fields apiece, so the profile read as a form
+   * rather than as a CV. The wording — the content — stays on screen; what
+   * the controls say is summarised beside it, so nothing is hidden unseen.
+   */
+  const [expanded, setExpanded] = useState(false);
   const selected = variants.find((variant) => variant.id === selectedId) ?? variants[0];
 
   const content = selected?.content ? parseRichContent(selected.content) : undefined;
@@ -269,8 +297,18 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
     </div>
   );
 
+  const flags = [
+    atom.active === false ? t('inactive') : null,
+    atom.alwaysInclude ? t('alwaysInclude.label') : null,
+    atom.verbatim ? t('verbatim.label') : null,
+  ].filter((flag): flag is string => flag !== null);
+  const detailsId = `${atomId}-details`;
+
   return (
-    <article className="flex flex-col gap-4 rounded-lg border p-4" data-atom-id={atomId}>
+    <article
+      className="bg-card flex flex-col gap-3 rounded-lg border p-3 sm:p-4"
+      data-atom-id={atomId}
+    >
       {/*
         One wording needs no tab strip, and today every atom has exactly one.
         Rendering tabs for a single variant would be chrome around nothing.
@@ -332,100 +370,197 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
       )}
 
       {/*
-        `B-081`'s second item, and the reason it waited: the endpoint existed
-        from Stage 1 and nothing called it, so `canAddAlternatives` was a
-        capability with no control behind it.
-
-        Placed after the wording rather than inside the tab strip — an atom
-        with one wording has no strip, and that is precisely the atom somebody
-        wants to add a second wording to. Switching to the new tab is the
-        whole point of the callback: what was just written should be what is
-        on screen.
+        What the hidden controls say, in words (rule 6): a reader who never
+        opens the details still sees that an item is locked or unused. Then the
+        two things done to an item as a whole — opening it, deleting it.
       */}
-      <AddWording
-        atomId={atomId}
-        variants={variants}
-        languages={profile?.data.enabledLanguages ?? []}
-        onAdded={(variantId) => {
-          // The same flush a tab switch does, for the same reason: an
-          // unsaved draft belongs to the wording it was typed into, and
-          // `useAutosave` flushes on unmount into whichever is selected.
-          wording.flush();
-          setDraft(null);
-          setSelectedId(variantId);
-        }}
-      />
+      <div className="flex flex-wrap items-center gap-1.5">
+        {atom.source && atom.source !== 'manual' && (
+          <Badge variant="muted">{t('source', { source: atom.source })}</Badge>
+        )}
+        {atom.verified && <Badge variant="outline">{t('verified')}</Badge>}
+        {capabilities?.canEditAtomControls === true && (
+          <Badge variant="outline">
+            {t('importanceValue', {
+              value: format.number(atom.importance ?? 0, { maximumFractionDigits: 2 }),
+            })}
+          </Badge>
+        )}
+        {flags.map((flag) => (
+          <Badge key={flag} variant="secondary">
+            {flag}
+          </Badge>
+        ))}
+        {(atom.skills?.length ?? 0) > 0 && (
+          <Badge variant="muted">{t('tagCount', { count: atom.skills!.length })}</Badge>
+        )}
 
-      {/*
-        `canEditAtomControls` (§ 35.7). Hidden rather than disabled, and the
-        difference matters at this scale: a locked control repeated beside
-        every one of two hundred atoms is an upsell in the middle of the
-        person's own work, and § 9's promise is a **narrower** product, not a
-        nagging one. Nothing is lost by their absence — manual control is
-        optional by design, and the default output is the same either way.
-
-        Closed while the session is still loading: a slider that appears and
-        then vanishes can be dragged in between, and the save would be
-        refused. The server enforces this regardless; the gate is UX.
-      */}
-      {capabilities?.canEditAtomControls === true && (
-        <>
-          <ImportanceSlider
-            value={atom.importance ?? 0}
-            onChange={(value) => importance.change({ importance: value })}
+        <div className="ml-auto flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-expanded={expanded}
+            aria-controls={detailsId}
+            aria-label={t(expanded ? 'detailsHide' : 'detailsShow', { text: label })}
+            onClick={() => setExpanded((open) => !open)}
+          >
+            <SlidersHorizontal aria-hidden="true" />
+            {t('details')}
+          </Button>
+          <DeleteControl
+            triggerLabel={tDelete('atomTrigger', { text: label })}
+            title={tDelete('atomTitle')}
+            description={tDelete('atomCascade', { wordings: variants.length })}
+            confirmLabel={tDelete('atomConfirm')}
+            onConfirm={() => remove.mutateAsync(atomId)}
+            isPending={remove.isPending}
+            error={remove.error}
+            onReset={remove.reset}
           />
-          <SaveStatus
-            status={importance.status}
-            onRetry={importance.retry}
-            onDiscard={importance.discard}
-          />
+        </div>
+      </div>
 
-          <LockToggles
-            values={{
-              active: atom.active ?? true,
-              alwaysInclude: atom.alwaysInclude ?? false,
-              verbatim: atom.verbatim ?? false,
+      {expanded && (
+        <div
+          id={detailsId}
+          className="bg-muted/40 flex flex-col gap-4 rounded-lg border p-3 sm:p-4"
+        >
+          {/*
+            The register of the wording on screen (`VariantPatch.tone`). It
+            could be read off a tab and set nowhere: `tone` reached the editor
+            only as text in a tab label. Behind the same capability as a second
+            wording, because a register only means something next to another.
+          */}
+          {capabilities?.canAddAlternatives === true && selected?.id && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor={`${atomId}-tone`}>{tv('editTone')}</Label>
+              <NativeSelect
+                id={`${atomId}-tone`}
+                value={selected.tone ?? ''}
+                disabled={patchVariant.isPending}
+                onChange={(event) =>
+                  patchVariant.mutate({
+                    atomId,
+                    variantId: selected.id!,
+                    // `null` returns it to the neutral register; omitted would
+                    // leave it alone.
+                    body: { tone: (event.target.value || null) as VariantTone | null },
+                  })
+                }
+              >
+                {(['', 'formal', 'casual', 'technical'] as const).map((register) => (
+                  <option key={register || 'neutral'} value={register}>
+                    {tv('tone', { tone: register || 'neutral' })}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
+          )}
+
+          {/*
+            `B-081`'s second item, and the reason it waited: the endpoint existed
+            from Stage 1 and nothing called it, so `canAddAlternatives` was a
+            capability with no control behind it.
+
+            Placed after the wording rather than inside the tab strip — an atom
+            with one wording has no strip, and that is precisely the atom somebody
+            wants to add a second wording to. Switching to the new tab is the
+            whole point of the callback: what was just written should be what is
+            on screen.
+          */}
+          <AddWording
+            atomId={atomId}
+            variants={variants}
+            languages={profile?.data.enabledLanguages ?? []}
+            onAdded={(variantId) => {
+              // The same flush a tab switch does, for the same reason: an
+              // unsaved draft belongs to the wording it was typed into, and
+              // `useAutosave` flushes on unmount into whichever is selected.
+              wording.flush();
+              setDraft(null);
+              setSelectedId(variantId);
             }}
-            onChange={(toggle: LockToggle, value) => controls.change({ [toggle]: value })}
           />
-        </>
+
+          {/*
+            `canEditAtomControls` (§ 35.7). Hidden rather than disabled, and the
+            difference matters at this scale: a locked control repeated beside
+            every one of two hundred atoms is an upsell in the middle of the
+            person's own work, and § 9's promise is a **narrower** product, not a
+            nagging one. Nothing is lost by their absence — manual control is
+            optional by design, and the default output is the same either way.
+
+            Closed while the session is still loading: a slider that appears and
+            then vanishes can be dragged in between, and the save would be
+            refused. The server enforces this regardless; the gate is UX.
+          */}
+          {capabilities?.canEditAtomControls === true && (
+            <>
+              <div className="flex flex-col gap-1">
+                <ImportanceSlider
+                  value={atom.importance ?? 0}
+                  onChange={(value) => importance.change({ importance: value })}
+                />
+                <SaveStatus
+                  status={importance.status}
+                  onRetry={importance.retry}
+                  onDiscard={importance.discard}
+                />
+              </div>
+
+              <LockToggles
+                values={{
+                  active: atom.active ?? true,
+                  alwaysInclude: atom.alwaysInclude ?? false,
+                  verbatim: atom.verbatim ?? false,
+                }}
+                onChange={(toggle: LockToggle, value) => controls.change({ [toggle]: value })}
+              />
+            </>
+          )}
+
+          {/*
+            The lists the pipeline reads: `skills` is what matching scores
+            against, and `metrics` and `properNouns` are what the rewrite
+            validator checks a model did not lose or invent. Each patch replaces
+            the whole list, which is why `TagInput` hands back the complete array.
+            Grouped with the toggles on the 0ms gesture — adding a tag is one
+            decision, not a stream of keystrokes.
+          */}
+          {TAG_FIELDS.map(({ field, maxLength }) => (
+            <TagInput
+              key={field}
+              label={t(`${field}.label`)}
+              hint={t(`${field}.hint`)}
+              maxLength={maxLength}
+              values={atom[field] ?? []}
+              onChange={(values) => controls.change({ [field]: values })}
+            />
+          ))}
+
+          <SaveStatus
+            status={controls.status}
+            onRetry={controls.retry}
+            onDiscard={controls.discard}
+          />
+
+          {/*
+            The labels, and they are **not** one of the lists above (`B-103`).
+            Those are fields on `AtomPatch` and get replaced whole; a tag is a row
+            with an id, added and removed one call at a time and carrying who put
+            it there. It also has its own error surface, because it has its own
+            request — the save indicator above belongs to the patch.
+
+            Drawn for everybody. The lists next to it are, and `atom_controls` —
+            the one capability that closes controls here — names importance,
+            availability and the two locks. A tag is neither: it is how somebody
+            says what their own work was about, and a quarter of the raw score
+            reads it.
+          */}
+          <AtomTags atomId={atomId} tags={atom.tags ?? []} />
+        </div>
       )}
-
-      {/*
-        The lists the pipeline reads: `skills` is what matching scores
-        against, and `metrics` and `properNouns` are what the rewrite
-        validator checks a model did not lose or invent. Each patch replaces
-        the whole list, which is why `TagInput` hands back the complete array.
-        Grouped with the toggles on the 0ms gesture — adding a tag is one
-        decision, not a stream of keystrokes.
-      */}
-      {TAG_FIELDS.map(({ field, maxLength }) => (
-        <TagInput
-          key={field}
-          label={t(`${field}.label`)}
-          hint={t(`${field}.hint`)}
-          maxLength={maxLength}
-          values={atom[field] ?? []}
-          onChange={(values) => controls.change({ [field]: values })}
-        />
-      ))}
-
-      <SaveStatus status={controls.status} onRetry={controls.retry} onDiscard={controls.discard} />
-
-      {/*
-        The labels, and they are **not** one of the lists above (`B-103`).
-        Those are fields on `AtomPatch` and get replaced whole; a tag is a row
-        with an id, added and removed one call at a time and carrying who put
-        it there. It also has its own error surface, because it has its own
-        request — the save indicator above belongs to the patch.
-
-        Drawn for everybody. The lists next to it are, and `atom_controls` —
-        the one capability that closes controls here — names importance,
-        availability and the two locks. A tag is neither: it is how somebody
-        says what their own work was about, and a quarter of the raw score
-        reads it.
-      */}
-      <AtomTags atomId={atomId} tags={atom.tags ?? []} />
 
       {/*
         A refused save is already reported by the indicator next to the field
@@ -435,29 +570,6 @@ function AtomEditorImpl({ atomId }: AtomEditorProps) {
       {failed ? (
         <ErrorPanel error={failed} onResolve={account.onResolve} canResolve={account.canResolve} />
       ) : null}
-
-      {/*
-        Last, and behind a confirmation.
-
-        The name has to be the bullet's own text — `describeAtom` does the same
-        job for the move buttons, and for the same reason: a list of two
-        hundred buttons all called "Delete" cannot be navigated by keyboard.
-        Its wordings go with it, so the count is said when there is more than
-        one; a wording cannot be deleted on its own here anyway (the server
-        refuses to remove a primary one, measured), so the atom is the unit.
-      */}
-      <div className="border-t pt-3">
-        <DeleteControl
-          triggerLabel={tDelete('atomTrigger', { text: label })}
-          title={tDelete('atomTitle')}
-          description={tDelete('atomCascade', { wordings: variants.length })}
-          confirmLabel={tDelete('atomConfirm')}
-          onConfirm={() => remove.mutateAsync(atomId)}
-          isPending={remove.isPending}
-          error={remove.error}
-          onReset={remove.reset}
-        />
-      </div>
     </article>
   );
 }

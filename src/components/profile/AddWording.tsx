@@ -27,12 +27,18 @@ import { useLocale, useTranslations } from 'next-intl';
 import { ErrorPanel } from '@/components/feedback/ErrorPanel';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import { useAddVariant } from '@/hooks/useProfile';
 import { useCapabilities } from '@/hooks/useSession';
 import { languageName } from '@/lib/i18n/languageNames';
 import type { Variant } from '@/lib/api/endpoints/profile';
 import { announce } from '@/stores/announcerStore';
+
+type Tone = NonNullable<Variant['tone']>;
+
+/** The neutral register and the schema's three named ones. */
+const REGISTERS = ['', 'formal', 'casual', 'technical'] as const satisfies readonly (Tone | '')[];
 
 export type AddWordingProps = {
   atomId: string;
@@ -52,18 +58,32 @@ export function AddWording({ atomId, variants, languages, onAdded }: AddWordingP
 
   const [open, setOpen] = useState(false);
   const [language, setLanguage] = useState<string | null>(null);
+  const [tone, setTone] = useState<Tone | ''>('');
   const [text, setText] = useState('');
 
-  // The neutral register only: a wording per tone is a second axis, and one
-  // the editor has no control for. Offering the language alone keeps the pair
-  // the server refuses duplicates of — language and tone — unambiguous.
-  const missing = languages.filter(
-    (code) => !variants.some((variant) => variant.language === code && !variant.tone),
-  );
+  /**
+   * Which registers each language still has room for. The server refuses a
+   * second wording with the same language **and** tone, so the pair is the
+   * unit, and a language is offered while any of its four slots is free.
+   * Neutral (`''`) first: it is the wording a resume falls back to. This used
+   * to offer the neutral register only — the tone had no control anywhere.
+   */
+  const freeTones = (code: string) =>
+    REGISTERS.filter(
+      (register) =>
+        !variants.some((variant) => variant.language === code && (variant.tone ?? '') === register),
+    );
+  // A language with no neutral wording first: a missing language is the gap a
+  // resume in it would fall into, a missing register only a refinement.
+  const missing = languages
+    .filter((code) => freeTones(code).length > 0)
+    .sort((a, b) => Number(!freeTones(a).includes('')) - Number(!freeTones(b).includes('')));
 
   if (!capabilities?.canAddAlternatives || missing.length === 0) return null;
 
   const chosen = language && missing.includes(language) ? language : missing[0]!;
+  const tones = freeTones(chosen);
+  const chosenTone = tones.includes(tone) ? tone : tones[0]!;
   const nameOf = (code: string) => languageName(code, locale) ?? code;
 
   function submit() {
@@ -76,7 +96,12 @@ export function AddWording({ atomId, variants, languages, onAdded }: AddWordingP
         // Runs, because that is what content is — one unmarked run here. The
         // editor drops marks on a text edit too, and says so; this is the
         // same limit at the moment a wording is created.
-        body: { content: { runs: [{ t: wording, m: [] }] }, language: chosen },
+        body: {
+          content: { runs: [{ t: wording, m: [] }] },
+          language: chosen,
+          // Left out for the neutral register, which is how the schema says it.
+          ...(chosenTone ? { tone: chosenTone } : {}),
+        },
       },
       {
         onSuccess: (variant) => {
@@ -104,30 +129,50 @@ export function AddWording({ atomId, variants, languages, onAdded }: AddWordingP
   }
 
   return (
-    <div className="border-border flex flex-col gap-3 rounded-md border p-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Label htmlFor={`${atomId}-wording-language`} className="text-sm font-normal">
-          {t('addLanguage')}
-        </Label>
+    <div className="bg-card flex flex-col gap-3 rounded-lg border p-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`${atomId}-wording-language`}>{t('addLanguage')}</Label>
 
-        {/*
-          A select even for one option. The alternative is a button that names
-          the language, which reads as "add Turkish" until a third language is
-          enabled and then silently becomes a different control.
-        */}
-        <select
-          id={`${atomId}-wording-language`}
-          value={chosen}
-          onChange={(event) => setLanguage(event.target.value)}
-          className="border-border bg-background rounded-md border px-2 py-1 text-sm"
-        >
-          {missing.map((code) => (
-            <option key={code} value={code}>
-              {nameOf(code)}
-            </option>
-          ))}
-        </select>
+          {/*
+            A select even for one option. The alternative is a button that
+            names the language, which reads as "add Turkish" until a third
+            language is enabled and then silently becomes a different control.
+          */}
+          <NativeSelect
+            id={`${atomId}-wording-language`}
+            value={chosen}
+            onChange={(event) => setLanguage(event.target.value)}
+            className="sm:w-full"
+          >
+            {missing.map((code) => (
+              <option key={code} value={code}>
+                {nameOf(code)}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`${atomId}-wording-tone`}>{t('addTone')}</Label>
+          <NativeSelect
+            id={`${atomId}-wording-tone`}
+            value={chosenTone}
+            aria-describedby={`${atomId}-wording-tone-hint`}
+            onChange={(event) => setTone(event.target.value as Tone | '')}
+            className="sm:w-full"
+          >
+            {tones.map((register) => (
+              <option key={register || 'neutral'} value={register}>
+                {t('tone', { tone: register || 'neutral' })}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
       </div>
+      <p id={`${atomId}-wording-tone-hint`} className="text-muted-foreground -mt-1 text-xs">
+        {t('toneHint')}
+      </p>
 
       <div className="flex flex-col gap-2">
         <Label htmlFor={`${atomId}-wording-text`}>{t('addText')}</Label>

@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { Page } from '@/components/layout/Page';
 import { ProfileEditor } from '@/components/profile/ProfileEditor';
 import { routing } from '@/lib/i18n/routing';
 
@@ -24,7 +25,11 @@ export default async function ProfilePage({ params }: PageProps<'/[locale]/profi
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
 
-  return <ProfileEditor />;
+  return (
+    <Page>
+      <ProfileEditor />
+    </Page>
+  );
 }
 
 export async function generateMetadata({ params }: PageProps<'/[locale]/profile'>) {

@@ -357,7 +357,15 @@
       "properNouns": {
         "label": "Adlar",
         "hint": "Yeniden yazımın uyduramayacağı ya da değiştiremeyeceği kişi, ürün ve şirket adları."
-      }
+      },
+      "details": "Ayrıntılar",
+      "detailsShow": "“{text}” ayrıntılarını göster",
+      "detailsHide": "“{text}” ayrıntılarını gizle",
+      "importanceValue": "Önem {value}",
+      "inactive": "Kullanılmıyor",
+      "tagCount": "{count, plural, one {# beceri} other {# beceri}}",
+      "source": "{source, select, cv_upload {CV'nden} github {GitHub'dan} manual {Burada yazıldı} other {{source}}}",
+      "verified": "Kontrol edildi"
     },
     "reorder": {
       "moveUp": "{label} yukarı taşı",
@@ -379,7 +387,13 @@
       "loading": "Profilin yükleniyor…",
       "untitled": "Adsız profil",
       "completenessLabel": "Profil tamamlanma oranı",
-      "completeness": "Profil: {percent} tamamlandı"
+      "completeness": "Profil: {percent} tamamlandı",
+      "description": "Bir CV'nin kurulabileceği her şey. Her satır ayrı bir öğe: sırasını değiştir, kilitle ya da ikinci bir ifade ekle.",
+      "generate": "CV oluştur",
+      "completenessTitle": "Tamamlanma",
+      "completenessHint": "Profilde iletişim bilgileri, en az bir deneyim, eğitim ya da proje ve üç beceri olduğunda CV oluşturulabilir.",
+      "sectionsTitle": "Bölümler",
+      "itemCount": "{count, plural, =0 {Boş} one {# öğe} other {# öğe}}"
     },
     "github": {
       "title": "GitHub'dan proje ekle",
@@ -433,11 +447,17 @@
       "staleRefreshing": "Bunun dayandığı ifade değişti. Yenisi yazılıyor.",
       "staleYours": "Bunun dayandığı ifade değişti, ve bu hali sen yazdın. Sen istemedikçe hiçbir şey onu değiştirmeyecek.",
       "staleRegenerate": "Yeni kaynaktan yeniden yaz",
-      "staleKeepMine": "Benim yazdığımı koru"
+      "staleKeepMine": "Benim yazdığımı koru",
+      "addTone": "Üslup",
+      "toneHint": "Aynı dilde ikinci bir ifade, farklı okunan ilanlar için — bir girişimin samimi ilanı, bir bankanın resmî ilanı.",
+      "tone": "{tone, select, formal {Resmî} casual {Samimi} technical {Teknik} other {Nötr}}",
+      "editTone": "Bu ifadenin üslubu",
+      "toneTaken": "Bu ifadenin dilinde her üslup için zaten bir ifade var."
     },
     "entry": {
       "range": "{start} – {end}",
-      "rangeOngoing": "{start} – günümüz"
+      "rangeOngoing": "{start} – günümüz",
+      "inactive": "Kullanılmıyor"
     },
     "add": {
       "label": "Madde ekle",
@@ -456,7 +476,14 @@
       "adding": "Ekleniyor…",
       "cancel": "Vazgeç",
       "added": "{title} bölümü eklendi.",
-      "loadingForm": "Form açılıyor…"
+      "loadingForm": "Form açılıyor…",
+      "controls": "Seçim buna nasıl davranır",
+      "sectionActive": "Bu bölümü kullan",
+      "sectionActiveHint": "Kapatırsan profilinde kalır ama hiçbir CV'ye girmez.",
+      "sectionAlwaysInclude": "Her zaman dahil et",
+      "sectionAlwaysIncludeHint": "Sayfa bütçesi ne derse desin seçim onu çıkaramaz.",
+      "sectionVerbatim": "Asla yeniden yazma",
+      "sectionVerbatimHint": "Tam yazıldığı gibi basılır; hiçbir yeniden yazım ona dokunmaz."
     },
     "runs": {
       "intro": "Bu cümle parçalardan oluşuyor ve her parça etiketlenebilir. Etiketleri şablon okuyor — bir teknolojinin ya da bir sayının sayfada nasıl görüneceğine o karar veriyor.",
@@ -510,7 +537,12 @@
       "adding": "Ekleniyor…",
       "cancel": "Vazgeç",
       "added": "{title} eklendi.",
-      "loadingForm": "Form açılıyor…"
+      "loadingForm": "Form açılıyor…",
+      "url": "Bağlantı",
+      "urlHint": "Bir şirket sayfası, bir depo ya da bir yayın — başlığın yanına basılır.",
+      "controls": "Seçim buna nasıl davranır",
+      "minAtoms": "Basılmaya değer en az madde",
+      "minAtomsHint": "Bundan azsa, yarı boş basılmak yerine kaydın tamamı dışarıda kalır."
     },
     "validation": {
       "titleRequired": "Buranın bir adı olmalı.",
@@ -519,7 +551,10 @@
       "locationTooLong": "Bu fazla uzun.",
       "endBeforeStart": "Bitiş, başlangıçtan önce olamaz.",
       "invalid": "Bu doğru görünmüyor.",
-      "invalidDate": "Bu bir tarih değil."
+      "invalidDate": "Bu bir tarih değil.",
+      "invalidUrl": "http:// ya da https:// ile başlayan tam bir adres gir.",
+      "urlTooLong": "En fazla 300 karakter kullan.",
+      "minAtomsRange": "0 ile 50 arasında bir tam sayı kullan."
     },
     "head": {
       "title": "Bilgilerin",
