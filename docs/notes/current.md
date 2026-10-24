@@ -69,6 +69,20 @@ burada yalnız sonradan sorulacak olanlar.
   sözlüğü, mektup dili, içe aktarma fazları, `keepPinned`, sonuçta rol/şirket +
   misafire giriş/bölüm kontrolleri kapalı), OTLP log anahtarı, script modları,
   log rotasyonu, frontend health-check, `APP_BASE_URL` muhafızı.
+- **İkinci tur (2026-10-24) — konseptte olup kimsenin görmediği beş şey.**
+  (1) **ATS doğrulaması** (konsept § 10.1) her PDF'te koşuyordu, sonucu yalnız
+  bir sayaca gidiyordu: backend V18 ile saklıyor (`B-125`), sonuç ekranında
+  "Makine okunabilirliği" kartı. Kusur cümlesi şablonu suçluyor, CV'yi değil
+  (§ 23.2: raporlar, reddetmez). (2) **`verified`** hiçbir ekrandan
+  yazılamıyordu; genel modda skorun %15'i. Misafire de açık — sunucu onu
+  kontrol saymıyor. İpucu yalnız genel modu vaat ediyor, çünkü ilanlı skorlama
+  onu okumuyor. (3) **Başvuruyu sonradan CV'ye bağlama** (`ApplicationUpdate.generationId`);
+  bağ koparılamıyor (alan yok), bu yüzden "bağlı değil" yalnız bağsız satıra
+  sunuluyor. (4) **Metni yapıştırma**: `.txt` olarak aynı yüklemeden gidiyor
+  (sunucu `TXT` okuyor) — aynı challenge, kota ve retler. (5) Mektubu
+  **`.txt` indirme**, istemcide: sunucunun render edeceği bir şey yok.
+  Ayrıca GitHub önerilerinde yıldız/bağlantı/diller, form id'leri `useId`
+  (iki form aynı anda açıkken çakışıyordu), dokuz ölü çeviri anahtarı silindi.
 
 ### Dağıtım günü — sırayla denenecekler
 
@@ -137,20 +151,6 @@ silme (D13), "bir sayfadan kısa" notu (`B-118`). Kalanlar:
 | **Uygulama içi sürüm duyurusu yok** | Bir sürümü yayımlayan uç yok; banner iki tarafın da sahip olmadığı bir doğruluk kaynağı olurdu. `CHANGELOG.md` var. |
 | **Profil tamamlanma eşiği üretim düğmesini önceden kilitlemiyor** | Şema yalnız `completeness` (yüzde) veriyor, hangi şartın eksik olduğunu değil; ret `INSUFFICIENT_PROFILE` + `complete_profile` çözümüyle geliyor. Eksik listesi yayımlanırsa düğme önceden konuşabilir. |
 
----|---|
-| **Sonuç ekranında PDF önizlemesi yok** | Ölçülmüş bir karar: react-pdf ~300 KB ve gösterebileceği tek yeni şey PDF'in kendisi. *(Aynı satır bir zamanlar uygunluk raporunu da sayıyordu; rapor `B-041` ile indi ve 2026-08-25'te gerçek uca karşı doğrulandı. Kasıtlı boşluk listesi bayatlayabiliyor — denetlenmesi gerekiyor.)* |
-| **"Bir sayfadan kısa CV" notu yazılmadı** | `pageCount` tam sayı ve sunucu "sayfa dolmadı" diye bir sinyal göndermiyor. Sinyalsiz yazılırsa her CV'de çıkar. |
-| **`keep_top_pinned` düğmesi çizilmiyor** | Şema sabitlenmiş atomları isteğe koyacak bir alan yayımlamıyor; çizilse basılınca hiçbir şey yapmazdı. |
-| **Metin düzenleme düz metin, mark'ları düşürüyor** | Mark farkında editör kural 4'ün lazy-load edeceği bileşen ve henüz yok. Kabul edilebilir olmasının tek sebebi **söylenmesi**: atomun gerçekten mark'ı varsa kaydetmeden **önce** uyarı çıkıyor (P8). |
-| **Sözcükleme tek başına silinemiyor** | Sunucuda iki ayrı kural var (B-036); silinmek istenen şey madde. Uç fonksiyonu ve iki reddi de üreten mock duruyor. |
-| **Profil başında dil eksenleri düzenlenemiyor** | `sourceLanguage`/`enabledLanguages` **içerik dili** ekseni (Bölüm 38.1), arayüz dili değil. Form ikisini de olduğu gibi geçiriyor ve ikisi de gövdede zorunlu (B-035). ⚠ **Gerekçesi bayatladı ve düzeltildi (2026-09-08):** satır "hangi diller sunulabilir `capabilities`'e bağlı ve o yayımlanmadı" diyordu — `allowedLanguages` yayımlanıyor ve okunuyor, gerçek uca karşı `["en","tr"]`. Bekleyen bağımlılık yok; kalan şey **çizilmemiş bir kontrol**, yani karar. Denetimde 8 satırın 7'si doğru çıktı, bu biri değil. |
-| **Bölüm düzeni seçtiren arayüz yok** | `sections.layout` beş değer alıyor (`B-073` ile `paragraph` da) ama hiçbir ekran onu göstermiyor ya da seçtirmiyor; sunucu her bölüm türü için doğrusunu zaten yazıyor. Çizilecekse beşinin de ICU adı ve About için `paragraph` varsayılanı gerekir — yarım hâli kullanıcıya anlamını bilmediği bir seçim verir. |
-| **"Yeniden hesaplanıyor…" göstergesi yok** | § 33.3 istiyor, durumu yayımlayan uç yok, ve `B-091` ekranda bir şey gerekmediğini söylüyor. Beklenmeyen bir iş için bekleme hissi üretmek olurdu. |
-| ~~**`format=source` düğmesi yok**~~ | **Kapandı, D5 (2026-09-20).** Gerekçesi "uç `400` dönüyor" idi ve `B-105` ikisini birden indirdi — `source` da `html` de. İki aşama boyunca çizilmemesi doğruydu: bir indirme düğmesinin hata paneli açması, hiç çizilmemiş olmasından kötüdür. |
-| **Başvurularda duruma göre süzme yok** | `B-093`: sayfalama gerektiğinde birlikte geliyor. Filtresi olmayan bir liste, filtresi olan bir ucın taklidinden iyidir. |
-| **Sentry bağlı değil** | **Karar, 2026-09-21** — ve bugüne kadar hiçbir yerde yazılı olmaması bulgunun kendisiydi. § 5.7 onu hata takibi aracı seçiyor, EK C.1 yayın listesinde bir kutusu var; frontend'de ne bağımlılık ne kod vardı, ve tek kayıt D14'te `.env.example`'dan `NEXT_PUBLIC_SENTRY_DSN`'in silinmesiydi — yani *örnek dosya* hakkında bir karar, hata takibi hakkında değil. Gerekçe analitiğinkiyle aynı: gönderilecek yer yokken yazılan kod, çalıştığını hiç görmediğimiz bir bakım yükü. Dağıtım günü listesinde, madde 6. |
-| **Uygulama içi sürüm duyurusu yok** | § 55 "sürüm iletişimi + changelog" istiyor; `CHANGELOG.md` yazıldı, **banner yazılmadı**. Bir sürümü yayımlayan uç yok, yani banner frontend'de bir sabit olurdu — sunucunun bilmediği bir olguyu söylemek için düzenlenip dağıtılan bir metin, ve iki tarafın da sahip olmadığı bir doğruluk kaynağı. Bir sürüm akışı indiğinde banner onun üstünde küçük bir ekran. |
-| **`fontFamily`'nin dördüncü değeri çizilmiyor** | § 38.5 dört yazı tipi sayıyor (Pagella/`book` dahil), arayüz üçünü sunuyor, ve şema alanı düz `string` olduğu için **hiçbir kontrol farkı göremiyor**. Tahmin etmek `B-116`'nın `two_column`'la düzelttiği hatayı ters yönden tekrarlamak olurdu: küme `F-041`'le soruldu, gelene kadar üç kalıyor. |
 
 ---
 
