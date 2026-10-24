@@ -34,7 +34,7 @@ PATTERNS=(
   'gh pr create'
   'gh pr merge'
   'gh pr review'
-  'sync-spec\.sh'
+  'sync-error-catalogue\.sh'
   'sync-handoff\.sh'
   'docker-compose\.prod\.yml'
   'git clean -fdx'

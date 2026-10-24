@@ -119,10 +119,10 @@ at a time.
 
 ## Documentation
 
-`docs/` holds the full product and architecture specification (Turkish),
-split by access pattern: `docs/spec/` is the specification itself — a
-read-only copy synced from the backend repository — and `docs/INDEX.md`
-routes a task to the right file. **Never read a spec file end to end.**
+`docs/` holds the product concept (Turkish) and the generated error
+catalogue. The architecture specification that guided the build was retired
+once the product was finished; the code, its tests and the OpenAPI schema are
+the authority now, and git history keeps the old text.
 
 `docs/STATUS.md` says where both repositories are, `docs/handoff/` is the
 cross-repo channel, and `docs/notes/current.md` holds this repository's own
@@ -130,12 +130,6 @@ build notes.
 
 `CLAUDE.md` is the working context: the decisions taken, the ones deliberately
 deferred, and what each later stage needs.
-
-**The specification stays in Turkish, by decision.** Code, comments, commit
-messages and every file in this list are English and will remain so, which is
-what somebody reading the code needs. Translating ~9,400 lines of
-specification would also mean keeping two copies in step, and the reader it
-would serve does not exist yet.
 
 ## Contributing and security
 

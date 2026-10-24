@@ -94,10 +94,6 @@ of it, and the two are kept key-for-key identical. Both files are ICU
 MessageFormat — Turkish has no plural and English does, so string
 concatenation is not an option.
 
-One exception runs the other way: where the specification fixes exact
-user-facing wording, the Turkish string is reproduced verbatim and the English
-is written to match it.
-
 ## Commits
 
 Conventional Commits, and the body is where the reasoning goes. A message that
@@ -106,9 +102,6 @@ considered instead is the part nobody can reconstruct later.
 
 ## What is out of scope
 
-- **Translating `docs/spec/**` into English.** Decided against: it is ~9,400
-  lines, it would need keeping in step in two languages, and the code a
-  contributor reads is already English.
 - **A third interface language.** The cost is not the 600 keys — it is that
   every ICU branch has to be checked by hand, and a language with no users is
   a tax on every message written afterwards.
